@@ -1,0 +1,50 @@
+@KgWebApi.Net_HostAddress = http://localhost:5058
+
+GET {{KgWebApi.Net_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+创建歌单
+{
+  "data": {
+    "last_area": "gztx",
+    "info": {
+      "list_create_listid": 5,
+      "source": 1,
+      "tags": "",
+      "status": 1,
+      "list_create_gid": "collection_3_2413242059_5_0",
+      "global_collection_id": "collection_3_2413242059_5_0",
+      "is_edit": 1,
+      "is_pri": 0,
+      "pub_new": 0,
+      "create_time": 1768805445,
+      "number": 1,
+      "list_create_userid": 2413242059,
+      "update_time": 1768805445,
+      "is_copy": 0,
+      "count": 0,
+      "sort": 0,
+      "name": "test2",
+      "pub_type": 0,
+      "list_ver": 0,
+      "is_per": 0,
+      "is_featured": 0,
+      "pic": "",
+      "list_create_username": "2413242059",
+      "code": 1,
+      "per_num": 0,
+      "listid": 5,
+      "intro": "",
+      "type": 0
+    },
+    "pre_total_ver": 9,
+    "total_ver": 10,
+    "userid": 2413242059,
+    "need_to_upfile": 1,
+    "list_count": 5,
+    "last_time": 1768805445
+  },
+  "status": 1,
+  "error_code": 0
+}

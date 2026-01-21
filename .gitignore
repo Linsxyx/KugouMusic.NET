@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+
+
+
+.vscode/
+.idea/
+.claude
+docs/
+*.user
+*.suo
+*.userprefs
+Player/
+KuGou.Audio.Native/
