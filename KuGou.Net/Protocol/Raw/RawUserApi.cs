@@ -202,11 +202,12 @@ public class RawUserApi(IKgTransport transport)
     /// </summary>
     public async Task<JsonElement> GetOneDayVipAsync()
     {
+        string receiveDay = DateTime.Today.ToString("yyyy-MM-dd");
         var request = new KgRequest
         {
             Method = HttpMethod.Post,
             Path = "/youth/v1/recharge/receive_vip_listen_song",
-            Params = new Dictionary<string, string> { { "source_id", "90137" } },
+            Params = new Dictionary<string, string> { { "source_id", "90139" },{"receive_day",receiveDay} },
             SignatureType = SignatureType.Default
         };
         return await transport.SendAsync(request);

@@ -33,10 +33,11 @@ internal class Program
     private static KgSessionManager? _sessionManager;
     private static AuthClient? _authClient;
     private static DeviceClient? _deviceClient;
+    private static DiscoveryClient? _discoveryClient; 
     private static MusicClient? _musicClient;
     private static PlaylistClient? _playlistClient;
     private static UserClient? _userClient;
-    private static LyricClient? _lyricClient; // 如果你封装了 Client 的话
+    private static LyricClient? _lyricClient; 
 
     // 播放器 (保持不变)
     private static SimpleAudioPlayer? _player;
@@ -52,30 +53,27 @@ internal class Program
         _sessionManager = sessionMgr;
 
         // 组装各层 (Raw -> Client)
-        var rawLogin = new RawLoginApi(transport);
+        var rawLogin = new RawLoginApi(transport,_sessionManager);
         var rawSearch = new RawSearchApi(transport);
         var rawDevice = new RawDeviceApi(transport);
         var rawUser = new RawUserApi(transport);
         var rawPlaylist = new RawPlaylistApi(transport);
         var rawLyric = new RawLyricApi(transport);
-
+        var rawDiscovery = new RawDiscoveryApi(transport); 
         _authClient = new AuthClient(rawLogin, _sessionManager);
         _deviceClient = new DeviceClient(rawDevice, _sessionManager);
         _musicClient = new MusicClient(rawSearch, _sessionManager); // 注意：新版 MusicClient 封装了 Search
         _playlistClient = new PlaylistClient(rawPlaylist, _sessionManager);
         _userClient = new UserClient(rawUser, _sessionManager);
         _lyricClient = new LyricClient(rawLyric);
+        _discoveryClient = new DiscoveryClient(rawDiscovery, _sessionManager);
 
 
         _player = new SimpleAudioPlayer();
 
         await LoadLocalSessionOrLogin();
 
-        // 3. 必须步骤：初始化设备风控
-        // 如果文件里没 DFID，这一步会去联网注册
-        _ = Task.Run(async () => await _deviceClient!.InitDeviceAsync());
-
-        // 4. 进入主循环 (保持原有逻辑)
+        
         Console.WriteLine("=== KuGou Console Player (SDK v2) ===");
 
         while (true)
@@ -109,6 +107,10 @@ internal class Program
                 else if (input == "m")
                 {
                     await ListUserPlaylists();
+                }
+                else if (input == "daily") // 4. 每日推荐指令
+                {
+                    await GetDailyRecommendations();
                 }
                 else if (input.StartsWith("sel "))
                 {
@@ -146,7 +148,7 @@ internal class Program
         if (saved != null && !string.IsNullOrEmpty(saved.Token))
         {
             Console.WriteLine($"[系统] 已加载本地用户: {saved.UserId}");
-            _sessionManager?.UpdateAuth(saved.UserId, saved.Token, saved.VipType, saved.VipToken);
+            //_sessionManager?.UpdateAuth(saved.UserId, saved.Token, saved.VipType, saved.VipToken);
             // 恢复风控信息，避免重复注册
             if (!string.IsNullOrEmpty(saved.Dfid))
             {
@@ -162,6 +164,37 @@ internal class Program
         {
             Console.WriteLine("[系统] 未登录，以游客身份运行。");
         }
+    }
+    
+    private static async Task GetDailyRecommendations()
+    {
+        Console.WriteLine("正在获取每日推荐...");
+        
+        // 使用 DiscoveryClient 获取强类型数据
+        var response = await _discoveryClient!.GetRecommendedSongsAsync();
+
+        if (response == null || response.Songs.Count == 0)
+        {
+            Console.WriteLine("未获取到推荐歌曲 (可能未登录或 Token 失效)。");
+            return;
+        }
+
+        CurrentList.Clear();
+        Console.WriteLine($"\n--- {response.Date} 每日推荐 ---");
+
+        foreach (var item in response.Songs)
+        {
+            CurrentList.Add(new SongViewModel
+            {
+                Name = item.Name,
+                Singer = item.SingerName, // 每日推荐接口里的 author_name 已经是拼接好的
+                Hash = item.Hash, // 这里也可以优先取 item.HashFlac 或 item.Hash320
+                AlbumId = item.AlbumId,
+                DurationSeconds = item.Duration
+            });
+        }
+        
+        PrintList();
     }
 
     // --- 获取个人歌单 (适配 UserClient) ---
@@ -283,7 +316,7 @@ internal class Program
         var song = CurrentList[index];
         Console.WriteLine($"\n正在解析: {song.Name} ...");
 
-        var playData = await _musicClient!.GetPlayInfoAsync(song.Hash, "high");
+        var playData = await _musicClient!.GetPlayInfoAsync(song.Hash, "128");
 
         if (playData?.Status != 1)
         {
@@ -292,19 +325,18 @@ internal class Program
         }
 
 
-        if (playData.Urls != null)
-        {
-            var url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
+        
+        var url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
 
-            // 2. 获取歌词
-            var lyrics = await LoadLyrics(song.Hash, song.Name);
+        // 2. 获取歌词
+        var lyrics = await LoadLyrics(song.Hash, song.Name);
 
-            Console.WriteLine("正在缓冲...");
-            if (url != null && _player!.Load(url))
-                EnterPlaybackMode(song, lyrics);
-            else
-                Console.WriteLine("❌ 播放失败。");
-        }
+        Console.WriteLine("正在缓冲...");
+        if (url != null && _player!.Load(url))
+            EnterPlaybackMode(song, lyrics);
+        else
+            Console.WriteLine("❌ 播放失败。");
+        
     }
 
     private static async Task<KrcLyric?> LoadLyrics(string hash, string name)

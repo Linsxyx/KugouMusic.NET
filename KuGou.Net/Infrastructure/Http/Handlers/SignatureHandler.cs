@@ -18,20 +18,21 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
         var timeStr = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
 
         // 1. 准备参数 (保持原有逻辑)
-        var currentDfid = kgReq.SpecificDfid ?? session.Dfid;
+        //var currentDfid = kgReq.SpecificDfid ?? session.Dfid;
+        var currentDfid = "-";
         var currentMid = KgUtils.CalcNewMid(currentDfid);
         var currentUuid = KgUtils.Md5(currentDfid + currentMid);
 
         var mergedParams = new Dictionary<string, string>(kgReq.Params);
 
-        if (!mergedParams.ContainsKey("appid")) mergedParams["appid"] = KuGouConfig.AppId;
-        if (!mergedParams.ContainsKey("clientver")) mergedParams["clientver"] = KuGouConfig.ClientVer;
-        if (!mergedParams.ContainsKey("dfid")) mergedParams["dfid"] = currentDfid;
-        if (!mergedParams.ContainsKey("mid")) mergedParams["mid"] = currentMid;
-        if (!mergedParams.ContainsKey("uuid")) mergedParams["uuid"] = currentUuid;
+        mergedParams.TryAdd("appid", KuGouConfig.AppId);
+        mergedParams.TryAdd("clientver", KuGouConfig.ClientVer);
+        mergedParams.TryAdd("dfid", currentDfid);
+        mergedParams.TryAdd("mid", currentMid);
+        mergedParams.TryAdd("uuid", currentUuid);
         if (!mergedParams.ContainsKey("userid")) mergedParams["userid"] = session.UserId;
 
-        if (!mergedParams.ContainsKey("clienttime")) mergedParams["clienttime"] = timeStr;
+        mergedParams.TryAdd("clienttime", timeStr);
 
         if (!mergedParams.ContainsKey("token") && !string.IsNullOrEmpty(session.Token))
             mergedParams["token"] = session.Token;
@@ -76,6 +77,11 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
         request.Headers.TryAddWithoutValidation("dfid", currentDfid);
         request.Headers.TryAddWithoutValidation("mid", currentMid);
         request.Headers.TryAddWithoutValidation("clienttime", mergedParams["clienttime"]);
+        
+        request.Headers.TryAddWithoutValidation("kg-rc", "1");
+        request.Headers.TryAddWithoutValidation("kg-thash", "5d816a0");
+        request.Headers.TryAddWithoutValidation("kg-rec", "1");
+        request.Headers.TryAddWithoutValidation("kg-rf", "B9EDA08A64250DEFFBCADDEE00F8F25F");
 
         return await base.SendAsync(request, cancellationToken);
     }

@@ -1,6 +1,9 @@
 using System.Text.Json;
+using KuGou.Net.Abstractions.Models;
+using KuGou.Net.Adapters.Common;
 using KuGou.Net.Protocol.Raw;
 using KuGou.Net.Protocol.Session;
+using KuGou.Net.util;
 
 namespace KuGou.Net.Clients;
 
@@ -40,10 +43,15 @@ public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     /// <summary>
     ///     获取每日推荐歌曲
     /// </summary>
-    public async Task<JsonElement> GetRecommendedSongsAsync()
+    public async Task<DailyRecommendResponse?> GetRecommendedSongsAsync()
     {
         var uid = GetUserId();
-        return await rawApi.GetRecommendSongAsync(uid);
+        var json = await rawApi.GetRecommendSongAsync(uid);
+        
+        return KgApiResponseParser.Parse<DailyRecommendResponse>(
+            json, 
+            AppJsonContext.Default.DailyRecommendResponse
+        );
     }
 
 

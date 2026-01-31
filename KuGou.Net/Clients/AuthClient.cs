@@ -36,13 +36,16 @@ public class AuthClient(
             var newToken = data.GetProperty("token").GetString();
             var newUserId = data.GetProperty("userid").ToString();
             //var vipType = data.GetProperty("is_vip").ToString();
+            var t1 = data.GetProperty("t1").GetString();
 
             if (!string.IsNullOrEmpty(newToken))
             {
-                sessionManager.UpdateAuth(newUserId, newToken, "0", "");
+                sessionManager.UpdateAuth(newUserId, newToken, "0", "",t1);
                 KgSessionStore.Save(sessionManager.Session);
                 //logger.LogInformation($"Token 登录成功! UserID: {newUserId}");
             }
+            
+            var newT1 = data.TryGetProperty("t1", out var t1El) ? t1El.GetString() : "";
         }
 
         //logger.LogWarning("[Auth] 登录 失败，返回数据中未找到 data 节点。");
@@ -60,7 +63,7 @@ public class AuthClient(
 
     /// <summary>
     ///     检查二维码扫码状态
-    ///     返回: 0=等待, 1=已扫码, 2=过期, 4=登录成功
+    ///     返回: 0=等待, 1=已扫码, 2=过期, 4=登录成功,暂时不可用
     /// </summary>
     public async Task<JsonElement> CheckQrStatusAsync(string key)
     {
@@ -75,7 +78,7 @@ public class AuthClient(
 
             if (!string.IsNullOrEmpty(newToken))
             {
-                sessionManager.UpdateAuth(newUserId, newToken, "0", "");
+                sessionManager.UpdateAuth(newUserId, newToken, "0", "","");
                 KgSessionStore.Save(sessionManager.Session);
                 //logger.LogInformation($"Token 刷新成功! UserID: {newUserId}");
             }
@@ -111,10 +114,11 @@ public class AuthClient(
             var newToken = res.Token;
             var newUserId = res.UserId.ToString();
             var vipType = res.IsVip.ToString();
+            var t1 = res.T1;
 
             if (!string.IsNullOrEmpty(newToken))
             {
-                sessionManager.UpdateAuth(newUserId, newToken, vipType, "");
+                sessionManager.UpdateAuth(newUserId, newToken, vipType, "",t1);
                 KgSessionStore.Save(sessionManager.Session);
                 //logger.LogInformation($"Token 刷新成功! UserID: {newUserId}");
             }
