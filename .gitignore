@@ -1,5 +1,7 @@
 **/bin/
 **/obj/
+**/config/
+**/runtimes/
 
 
 
@@ -10,5 +12,4 @@ docs/
 *.user
 *.suo
 *.userprefs
-Player/
 KuGou.Audio.Native/

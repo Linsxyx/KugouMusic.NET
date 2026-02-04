@@ -1,0 +1,18 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="TestMusic.App"
+             xmlns:local="using:TestMusic"
+             xmlns:labs="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+  
+             <Application.Styles>
+                 <suki:SukiTheme ThemeColor="Blue"  /> 
+                 <labs:ControlThemes/>
+             </Application.Styles>
+</Application>

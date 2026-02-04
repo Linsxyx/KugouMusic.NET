@@ -1,0 +1,126 @@
+<suki:SukiWindow xmlns="https://github.com/avaloniaui"
+                   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                   xmlns:vm="using:TestMusic.ViewModels"
+                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 
+                   xmlns:suki="https://github.com/kikipoulet/SukiUI"
+                   mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+                   x:Class="TestMusic.Views.MainWindow"
+                   x:DataType="vm:MainWindowViewModel"
+                   Name="Root"
+                   Icon="/Assets/avalonia-logo.ico"
+                   Title="TestMusic">
+
+    
+    <!--<Design.DataContext>
+        ~1~ 仅用于设计时预览，实际上由DI注入 @1@
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>-->
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        
+        <!-- 顶部：搜索栏 -->
+        <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" Margin="10">
+            <TextBox Grid.Column="0" Text="{Binding SearchKeyword}" Watermark="输入歌名、歌手..." />
+            <Button Grid.Column="1" Content="搜索" Command="{Binding SearchCommand}" Margin="5,0"/>
+            <Button Grid.Column="2" Content="每日推荐" Command="{Binding GetDailyRecommendationsCommand}"/>
+        </Grid>
+
+        <!-- 中间：分割内容 -->
+        <Grid Grid.Row="1" ColumnDefinitions="200, *">
+            
+            <!-- 左侧：我的歌单 -->
+            <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="0,0,1,0" Padding="5">
+                <Grid RowDefinitions="Auto, *">
+                    <Button Grid.Row="0" Content="刷新我的歌单" Command="{Binding GetMyPlaylistsCommand}" HorizontalAlignment="Stretch"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding UserPlaylists}" Margin="0,5,0,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:PlaylistItem">
+                                <StackPanel Orientation="Vertical" Spacing="2" Background="Transparent">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Count, StringFormat='{}共 {0} 首'}" FontSize="12" Foreground="Gray"/>
+                                    <!-- 歌单点击加载事件，通过按钮模拟点击区域 -->
+                                    <Button Content="加载" 
+                                            HorizontalAlignment="Right"
+                                            Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).LoadPlaylistSongsCommand}"
+                                            CommandParameter="{Binding Id}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- 右侧：歌曲列表 -->
+            <DataGrid Grid.Column="1" ItemsSource="{Binding Songs}" AutoGenerateColumns="False" IsReadOnly="True" Margin="5">
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="操作">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate DataType="vm:SongItem">
+                                <Button Content="播放" 
+                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).PlaySongCommand}"
+                                        CommandParameter="{Binding .}"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="歌名" Binding="{Binding Name}" Width="*"/>
+                    <DataGridTextColumn Header="歌手" Binding="{Binding Singer}" Width="150"/>
+                    <DataGridTextColumn Header="时长" Binding="{Binding DurationSeconds, StringFormat='{}{0:F0}s'}" Width="80"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <!-- 底部：播放控制栏 -->
+        <Border Grid.Row="2" Background="#F0F0F0" Padding="10" BorderBrush="Gray" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                
+                <!-- 播放信息 -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Width="200">
+                    <TextBlock Text="{Binding CurrentPlayingSong.Name, TargetNullValue='未播放'}" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding CurrentPlayingSong.Singer}" FontSize="12"/>
+                </StackPanel>
+
+                <!-- 歌词与进度 -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding CurrentLyricText}" 
+                               HorizontalAlignment="Center" 
+                               FontSize="16" 
+                               Foreground="#007ACC" 
+                               FontWeight="Bold" 
+                               TextWrapping="NoWrap"/>
+                    <TextBlock Text="{Binding CurrentLyricTrans}" 
+                               HorizontalAlignment="Center" 
+                               FontSize="12" 
+                               Foreground="Gray"/>
+                    
+                    <Grid ColumnDefinitions="Auto, *, Auto" Margin="0,5,0,0" Width="400">
+                        <TextBlock Text="{Binding CurrentPositionSeconds, StringFormat='{}{0:F0}'}" VerticalAlignment="Center"/>
+                        <ProgressBar Grid.Column="1" 
+                                     Minimum="0" 
+                                     Maximum="{Binding TotalDurationSeconds}" 
+                                     Value="{Binding CurrentPositionSeconds}" 
+                                     Height="4" 
+                                     Margin="10,0"/>
+                        <TextBlock Grid.Column="2" Text="{Binding TotalDurationSeconds, StringFormat='{}{0:F0}'}" VerticalAlignment="Center"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- 控制按钮 -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Button Content="停止" Command="{Binding TogglePlayPauseCommand}"/>
+                    <!-- 音量控制可以绑定到 _player.SetVolume，这里简化省略 -->
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- 状态栏覆盖 -->
+        <TextBlock Grid.Row="2" 
+                   Text="{Binding StatusMessage}" 
+                   VerticalAlignment="Bottom" 
+                   HorizontalAlignment="Left" 
+                   FontSize="10" 
+                   Foreground="Gray"
+                   Margin="5,0,0,2"/>
+    </Grid>
+</suki:SukiWindow>

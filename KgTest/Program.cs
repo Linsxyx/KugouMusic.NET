@@ -23,7 +23,7 @@ public class SongViewModel
 public class UserPlaylistViewModel
 {
     public string Name { get; set; } = "";
-    public string Id { get; set; } = ""; // global_collection_id
+    public string Id { get; set; } = ""; 
     public int Count { get; set; }
 }
 
@@ -62,7 +62,7 @@ internal class Program
         var rawDiscovery = new RawDiscoveryApi(transport); 
         _authClient = new AuthClient(rawLogin, _sessionManager);
         _deviceClient = new DeviceClient(rawDevice, _sessionManager);
-        _musicClient = new MusicClient(rawSearch, _sessionManager); // 注意：新版 MusicClient 封装了 Search
+        _musicClient = new MusicClient(rawSearch, _sessionManager); 
         _playlistClient = new PlaylistClient(rawPlaylist, _sessionManager);
         _userClient = new UserClient(rawUser, _sessionManager);
         _lyricClient = new LyricClient(rawLyric);
@@ -108,7 +108,7 @@ internal class Program
                 {
                     await ListUserPlaylists();
                 }
-                else if (input == "daily") // 4. 每日推荐指令
+                else if (input == "daily") 
                 {
                     await GetDailyRecommendations();
                 }
@@ -308,35 +308,63 @@ internal class Program
 
         PrintList();
     }
+    
+    private static int _currentIndex = -1; 
 
     private static async Task PlaySong(int index)
     {
         if (index < 0 || index >= CurrentList.Count) return;
+        _currentIndex = index;
 
-        var song = CurrentList[index];
-        Console.WriteLine($"\n正在解析: {song.Name} ...");
-
-        var playData = await _musicClient!.GetPlayInfoAsync(song.Hash, "128");
-
-        if (playData?.Status != 1)
+        // 进入播放循环
+        while (_currentIndex >= 0 && _currentIndex < CurrentList.Count)
         {
-            Console.WriteLine("❌ 无法获取播放链接");
-            return;
+            var song = CurrentList[_currentIndex];
+            Console.WriteLine($"\n[队列] 正在准备第 {_currentIndex + 1} 首: {song.Name}");
+
+            // 1. 获取播放地址
+            var playData = await _musicClient!.GetPlayInfoAsync(song.Hash, "high");
+            if (playData?.Status != 1 || playData.Urls.Count == 0)
+            {
+                Console.WriteLine($"❌ 无法获取播放链接: {song.Name}，3秒后尝试下一首...");
+                await Task.Delay(3000);
+                _currentIndex++;
+                continue;
+            }
+
+            var url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
+        
+            // 2. 获取歌词
+            var lyrics = await LoadLyrics(song.Hash, song.Name);
+
+            // 3. 载入并进入 UI
+            if (url != null && _player!.Load(url))
+            {
+                var result = EnterPlaybackMode(song, lyrics);
+
+                if (result == PlaybackResult.Exit)
+                {
+                    break; // 彻底退出循环，回到主菜单
+                }
+                else if (result == PlaybackResult.Previous)
+                {
+                    _currentIndex--; // 索引减1，循环会继续执行
+                }
+                else // PlaybackResult.Next
+                {
+                    _currentIndex++; // 索引加1
+                }
+            }
+            else
+            {
+                Console.WriteLine("❌ 播放失败，尝试下一首...");
+                _currentIndex++;
+                await Task.Delay(2000);
+            }
         }
 
-
-        
-        var url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
-
-        // 2. 获取歌词
-        var lyrics = await LoadLyrics(song.Hash, song.Name);
-
-        Console.WriteLine("正在缓冲...");
-        if (url != null && _player!.Load(url))
-            EnterPlaybackMode(song, lyrics);
-        else
-            Console.WriteLine("❌ 播放失败。");
-        
+        Console.Clear();
+        Console.WriteLine("已停止播放，返回主菜单。");
     }
 
     private static async Task<KrcLyric?> LoadLyrics(string hash, string name)
@@ -384,10 +412,12 @@ internal class Program
             Console.WriteLine($"[{i + 1}] {s.Name} - {s.Singer} ({timeStr})");
         }
     }
+    
+    private enum PlaybackResult { Next, Previous, Exit }
 
     // --- UI 逻辑 (保持不变) ---
     // --- UI 逻辑 (修复歌词显示问题) ---
-    private static void EnterPlaybackMode(SongViewModel song, KrcLyric? lyrics)
+    private static PlaybackResult EnterPlaybackMode(SongViewModel song, KrcLyric? lyrics)
     {
         _player!.SetVolume(1.0f);
         _player.Play();
@@ -426,7 +456,10 @@ internal class Program
 
         while (isPlaying)
         {
-            if (_player.IsStopped) break;
+            if (_player.IsStopped) 
+            {
+                return PlaybackResult.Next; 
+            }
 
             var currentPos = _player.GetPosition();
             var currentMs = currentPos.TotalMilliseconds;
@@ -538,8 +571,13 @@ internal class Program
                 {
                     case ConsoleKey.Q:
                         _player.Stop();
-                        isPlaying = false;
-                        break;
+                        return PlaybackResult.Exit; 
+                    case ConsoleKey.N:
+                        _player.Stop();
+                        return PlaybackResult.Next; 
+                    case ConsoleKey.B:
+                        _player.Stop();
+                        return PlaybackResult.Previous; 
                     case ConsoleKey.UpArrow:
                         currentVol = Math.Clamp(currentVol + 0.05f, 0f, 1f);
                         _player.SetVolume(currentVol);
@@ -566,9 +604,10 @@ internal class Program
             Thread.Sleep(50);
         }
 
-        Console.CursorVisible = true;
+        /*Console.CursorVisible = true;
         Console.Clear();
-        Console.WriteLine("播放结束。");
+        Console.WriteLine("播放结束。");*/
+        return PlaybackResult.Next;
     }
 
 // --- 辅助绘制方法 ---

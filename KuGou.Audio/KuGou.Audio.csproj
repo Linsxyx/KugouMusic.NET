@@ -11,5 +11,4 @@
         <PackageReference Include="ManagedBass" Version="4.0.2"/>
     </ItemGroup>
 
-
 </Project>

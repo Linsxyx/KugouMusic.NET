@@ -45,7 +45,7 @@ public class AuthClient(
                 //logger.LogInformation($"Token 登录成功! UserID: {newUserId}");
             }
             
-            var newT1 = data.TryGetProperty("t1", out var t1El) ? t1El.GetString() : "";
+            //var newT1 = data.TryGetProperty("t1", out var t1El) ? t1El.GetString() : "";
         }
 
         //logger.LogWarning("[Auth] 登录 失败，返回数据中未找到 data 节点。");
@@ -63,7 +63,7 @@ public class AuthClient(
 
     /// <summary>
     ///     检查二维码扫码状态
-    ///     返回: 0=等待, 1=已扫码, 2=过期, 4=登录成功,暂时不可用
+    ///     返回: 0=等待, 1=已扫码, 2=过期, 4=登录成功,登录完记得刷下token拿t1
     /// </summary>
     public async Task<JsonElement> CheckQrStatusAsync(string key)
     {
@@ -131,6 +131,6 @@ public class AuthClient(
     //退出登录
     public void LogOutAsync()
     {
-        KgSessionStore.Clear();
+        sessionManager.Logout();
     }
 }

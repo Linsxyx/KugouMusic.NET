@@ -16,8 +16,8 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
 
         var session = sessionManager.Session;
         var timeStr = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-
-        // 1. 准备参数 (保持原有逻辑)
+        
+        
         //var currentDfid = kgReq.SpecificDfid ?? session.Dfid;
         var currentDfid = "-";
         var currentMid = KgUtils.CalcNewMid(currentDfid);
@@ -39,7 +39,7 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
 
         if (kgReq.SignatureType == SignatureType.V5 && mergedParams.ContainsKey("hash"))
         {
-            var paramMid = mergedParams.ContainsKey("mid") ? mergedParams["mid"] : currentMid;
+            var paramMid = mergedParams.GetValueOrDefault("mid", currentMid);
             mergedParams["key"] = KgSigner.CalcV5Key(mergedParams["hash"], mergedParams["userid"], paramMid);
         }
 
