@@ -1,6 +1,5 @@
 using System.Text.Json;
-using KuGou.Audio;
-using KuGou.Net.Abstractions.Models;
+using SimpleAudio;
 using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
 using KuGou.Net.Infrastructure.Http;
@@ -23,7 +22,7 @@ public class SongViewModel
 public class UserPlaylistViewModel
 {
     public string Name { get; set; } = "";
-    public string Id { get; set; } = ""; 
+    public string Id { get; set; } = "";
     public int Count { get; set; }
 }
 
@@ -33,11 +32,11 @@ internal class Program
     private static KgSessionManager? _sessionManager;
     private static AuthClient? _authClient;
     private static DeviceClient? _deviceClient;
-    private static DiscoveryClient? _discoveryClient; 
+    private static DiscoveryClient? _discoveryClient;
     private static MusicClient? _musicClient;
     private static PlaylistClient? _playlistClient;
     private static UserClient? _userClient;
-    private static LyricClient? _lyricClient; 
+    private static LyricClient? _lyricClient;
 
     // 播放器 (保持不变)
     private static SimpleAudioPlayer? _player;
@@ -46,6 +45,8 @@ internal class Program
     private static readonly List<SongViewModel> CurrentList = new();
     private static readonly List<UserPlaylistViewModel> UserPlaylists = new();
 
+    private static int _currentIndex = -1;
+
     private static async Task Main()
     {
         // 1. 初始化 SDK (替代 DI 容器)
@@ -53,16 +54,16 @@ internal class Program
         _sessionManager = sessionMgr;
 
         // 组装各层 (Raw -> Client)
-        var rawLogin = new RawLoginApi(transport,_sessionManager);
+        var rawLogin = new RawLoginApi(transport, _sessionManager);
         var rawSearch = new RawSearchApi(transport);
-        var rawDevice = new RawDeviceApi(transport);
+        var rawDevice = new RawDeviceApi(transport,_sessionManager);
         var rawUser = new RawUserApi(transport);
         var rawPlaylist = new RawPlaylistApi(transport);
         var rawLyric = new RawLyricApi(transport);
-        var rawDiscovery = new RawDiscoveryApi(transport); 
+        var rawDiscovery = new RawDiscoveryApi(transport);
         _authClient = new AuthClient(rawLogin, _sessionManager);
         _deviceClient = new DeviceClient(rawDevice, _sessionManager);
-        _musicClient = new MusicClient(rawSearch, _sessionManager); 
+        _musicClient = new MusicClient(rawSearch, _sessionManager);
         _playlistClient = new PlaylistClient(rawPlaylist, _sessionManager);
         _userClient = new UserClient(rawUser, _sessionManager);
         _lyricClient = new LyricClient(rawLyric);
@@ -73,7 +74,7 @@ internal class Program
 
         await LoadLocalSessionOrLogin();
 
-        
+
         Console.WriteLine("=== KuGou Console Player (SDK v2) ===");
 
         while (true)
@@ -108,7 +109,7 @@ internal class Program
                 {
                     await ListUserPlaylists();
                 }
-                else if (input == "daily") 
+                else if (input == "daily")
                 {
                     await GetDailyRecommendations();
                 }
@@ -165,11 +166,11 @@ internal class Program
             Console.WriteLine("[系统] 未登录，以游客身份运行。");
         }
     }
-    
+
     private static async Task GetDailyRecommendations()
     {
         Console.WriteLine("正在获取每日推荐...");
-        
+
         // 使用 DiscoveryClient 获取强类型数据
         var response = await _discoveryClient!.GetRecommendedSongsAsync();
 
@@ -183,7 +184,6 @@ internal class Program
         Console.WriteLine($"\n--- {response.Date} 每日推荐 ---");
 
         foreach (var item in response.Songs)
-        {
             CurrentList.Add(new SongViewModel
             {
                 Name = item.Name,
@@ -192,8 +192,7 @@ internal class Program
                 AlbumId = item.AlbumId,
                 DurationSeconds = item.Duration
             });
-        }
-        
+
         PrintList();
     }
 
@@ -308,8 +307,6 @@ internal class Program
 
         PrintList();
     }
-    
-    private static int _currentIndex = -1; 
 
     private static async Task PlaySong(int index)
     {
@@ -333,7 +330,7 @@ internal class Program
             }
 
             var url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
-        
+
             // 2. 获取歌词
             var lyrics = await LoadLyrics(song.Hash, song.Name);
 
@@ -342,18 +339,12 @@ internal class Program
             {
                 var result = EnterPlaybackMode(song, lyrics);
 
-                if (result == PlaybackResult.Exit)
-                {
-                    break; // 彻底退出循环，回到主菜单
-                }
-                else if (result == PlaybackResult.Previous)
-                {
+                if (result == PlaybackResult.Exit) break; // 彻底退出循环，回到主菜单
+
+                if (result == PlaybackResult.Previous)
                     _currentIndex--; // 索引减1，循环会继续执行
-                }
                 else // PlaybackResult.Next
-                {
                     _currentIndex++; // 索引加1
-                }
             }
             else
             {
@@ -412,8 +403,6 @@ internal class Program
             Console.WriteLine($"[{i + 1}] {s.Name} - {s.Singer} ({timeStr})");
         }
     }
-    
-    private enum PlaybackResult { Next, Previous, Exit }
 
     // --- UI 逻辑 (保持不变) ---
     // --- UI 逻辑 (修复歌词显示问题) ---
@@ -456,10 +445,7 @@ internal class Program
 
         while (isPlaying)
         {
-            if (_player.IsStopped) 
-            {
-                return PlaybackResult.Next; 
-            }
+            if (_player.IsStopped) return PlaybackResult.Next;
 
             var currentPos = _player.GetPosition();
             var currentMs = currentPos.TotalMilliseconds;
@@ -571,13 +557,13 @@ internal class Program
                 {
                     case ConsoleKey.Q:
                         _player.Stop();
-                        return PlaybackResult.Exit; 
+                        return PlaybackResult.Exit;
                     case ConsoleKey.N:
                         _player.Stop();
-                        return PlaybackResult.Next; 
+                        return PlaybackResult.Next;
                     case ConsoleKey.B:
                         _player.Stop();
-                        return PlaybackResult.Previous; 
+                        return PlaybackResult.Previous;
                     case ConsoleKey.UpArrow:
                         currentVol = Math.Clamp(currentVol + 0.05f, 0f, 1f);
                         _player.SetVolume(currentVol);
@@ -682,6 +668,13 @@ internal class Program
     private static int GetIntProperty(JsonElement element, string propertyName, int @default = 0)
     {
         return element.TryGetProperty(propertyName, out var result) ? result.GetInt32() : @default;
+    }
+
+    private enum PlaybackResult
+    {
+        Next,
+        Previous,
+        Exit
     }
 
     private enum LyricMode

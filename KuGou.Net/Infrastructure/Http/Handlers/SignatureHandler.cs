@@ -16,10 +16,10 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
 
         var session = sessionManager.Session;
         var timeStr = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        
-        
-        //var currentDfid = kgReq.SpecificDfid ?? session.Dfid;
-        var currentDfid = "-";
+
+
+        var currentDfid = kgReq.SpecificDfid ?? session.Dfid;
+        //var currentDfid = "-";
         var currentMid = KgUtils.CalcNewMid(currentDfid);
         var currentUuid = KgUtils.Md5(currentDfid + currentMid);
 
@@ -77,7 +77,7 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
         request.Headers.TryAddWithoutValidation("dfid", currentDfid);
         request.Headers.TryAddWithoutValidation("mid", currentMid);
         request.Headers.TryAddWithoutValidation("clienttime", mergedParams["clienttime"]);
-        
+
         request.Headers.TryAddWithoutValidation("kg-rc", "1");
         request.Headers.TryAddWithoutValidation("kg-thash", "5d816a0");
         request.Headers.TryAddWithoutValidation("kg-rec", "1");

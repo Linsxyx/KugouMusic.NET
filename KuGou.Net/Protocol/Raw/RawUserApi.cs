@@ -9,7 +9,7 @@ namespace KuGou.Net.Protocol.Raw;
 public class RawUserApi(IKgTransport transport)
 {
     /// <summary>
-    ///     获取用户详细信息 (对应 /v3/get_my_info)
+    ///     获取用户详细信息 
     /// </summary>
     public async Task<JsonElement> GetUserDetailAsync(string userid, string token)
     {
@@ -46,7 +46,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取 VIP 信息 (对应 /v1/get_union_vip)
+    ///     获取 VIP 信息 
     /// </summary>
     public async Task<JsonElement> GetUserVipDetailAsync()
     {
@@ -63,7 +63,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取用户歌单 (对应 /v7/get_all_list)
+    ///     获取用户歌单 
     /// </summary>
     public async Task<JsonElement> GetAllListAsync(string userid, string token, int page, int pageSize)
     {
@@ -96,7 +96,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取听歌历史 (对应 /playhistory/v1/get_songs)
+    ///     获取听歌历史 
     /// </summary>
     public async Task<JsonElement> GetPlayHistoryAsync(string userid, string token, string? bp = null)
     {
@@ -122,7 +122,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取听歌排行 (对应 /v2/get_list)
+    ///     获取听歌排行 
     /// </summary>
     public async Task<JsonElement> GetListenListAsync(string userid, string token, int type)
     {
@@ -159,7 +159,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取关注歌手 (对应 /v4/follow_list)
+    ///     获取关注歌手 
     /// </summary>
     public async Task<JsonElement> GetFollowSingerListAsync(string userid, string token)
     {
@@ -198,16 +198,16 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     领取一天 VIP
+    ///     领取当天 VIP
     /// </summary>
     public async Task<JsonElement> GetOneDayVipAsync()
     {
-        string receiveDay = DateTime.Today.ToString("yyyy-MM-dd");
+        var receiveDay = DateTime.Today.ToString("yyyy-MM-dd");
         var request = new KgRequest
         {
             Method = HttpMethod.Post,
             Path = "/youth/v1/recharge/receive_vip_listen_song",
-            Params = new Dictionary<string, string> { { "source_id", "90139" },{"receive_day",receiveDay} },
+            Params = new Dictionary<string, string> { { "source_id", "90139" }, { "receive_day", receiveDay } },
             SignatureType = SignatureType.Default
         };
         return await transport.SendAsync(request);
@@ -226,6 +226,25 @@ public class RawUserApi(IKgTransport transport)
             {
                 { "kugouid", userid },
                 { "ad_type", "1" }
+            },
+            SignatureType = SignatureType.Default
+        };
+        return await transport.SendAsync(request);
+    }
+    
+    
+    /// <summary>
+    ///     获取当月已领取 VIP 天数
+    /// </summary>
+    public async Task<JsonElement> GetVipRecordAsync()
+    {
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/youth/v1/activity/get_month_vip_record",
+            Params = new Dictionary<string, string>
+            {
+                { "latest_limit", "100" },
             },
             SignatureType = SignatureType.Default
         };

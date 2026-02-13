@@ -57,14 +57,12 @@ public class LoginController(AuthClient authClient, ILogger<LoginController> log
     }
 
     /// <summary>
-    ///     刷新 Token (保活)
+    ///     刷新 Token 
     /// </summary>
     [HttpPost("refresh")]
     public async Task<IActionResult> RefreshToken()
     {
         var result = await authClient.RefreshSessionAsync();
-
-        /*if (result == null) return Unauthorized(new { status = 0, msg = "未登录或登录已失效" });*/
 
         return Ok(result);
     }

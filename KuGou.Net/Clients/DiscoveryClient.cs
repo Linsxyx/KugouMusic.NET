@@ -47,9 +47,9 @@ public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     {
         var uid = GetUserId();
         var json = await rawApi.GetRecommendSongAsync(uid);
-        
+
         return KgApiResponseParser.Parse<DailyRecommendResponse>(
-            json, 
+            json,
             AppJsonContext.Default.DailyRecommendResponse
         );
     }

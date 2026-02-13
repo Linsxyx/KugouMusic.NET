@@ -90,10 +90,14 @@ public record DailyRecommendSong : KgBaseModel
     // ================= 封面与推荐语 =================
 
     /// <summary>
-    ///     带尺寸占位符的封面 (例如: .../{size}/...)
+    ///     封面
     /// </summary>
     [property: JsonPropertyName("sizable_cover")]
-    public string SizableCover { get; set; } = "";
+    public string? SizableCover
+    {
+        get => field?.Replace("{size}", "100");
+        set;
+    }
 
     /// <summary>
     ///     推荐理由/文案 (例如: "人气歌曲推荐")

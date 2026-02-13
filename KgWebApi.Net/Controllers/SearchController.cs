@@ -102,8 +102,9 @@ public class SearchController(MusicClient musicClient, ILogger<SearchController>
 
         return Ok(result);
     }
-
-    //获取热搜
+    /// <summary>
+    ///     获取热搜
+    /// </summary>
     [HttpGet("hot")]
     public async Task<IActionResult> GetHot()
     {

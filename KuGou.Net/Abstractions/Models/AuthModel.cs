@@ -54,16 +54,3 @@ public record SendCodeResponse(
 {
     [JsonExtensionData] public Dictionary<string, object>? ExtraData { get; set; }
 }
-
-/// <summary>
-///     刷新 Token 响应
-/// </summary>
-/*public record RefreshTokenResponse(
-    [property: JsonPropertyName("userid")] string UserId,
-    [property: JsonPropertyName("token")] string Token,
-    [property: JsonPropertyName("vip_type")]
-    string? VipType
-)
-{
-    [JsonExtensionData] public Dictionary<string, object>? ExtraData { get; set; }
-}*/

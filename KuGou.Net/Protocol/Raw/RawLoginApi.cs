@@ -7,17 +7,17 @@ using KuGou.Net.util;
 
 namespace KuGou.Net.Protocol.Raw;
 
-public class RawLoginApi(IKgTransport transport ,KgSessionManager sessionManager)
+public class RawLoginApi(IKgTransport transport, KgSessionManager sessionManager)
 {
     private const string LiteT1Key = "5e4ef500e9597fe004bd09a46d8add98";
     private const string LiteT1Iv = "04bd09a46d8add98";
-    
+
     private const string LiteT2Key = "fd14b35e3f81af3817a20ae7adae7020";
     private const string LiteT2Iv = "17a20ae7adae7020";
-    
+
     // T2 加密中间的一个固定 Hash，来自 JS 源码
     private const string T2FixedHash = "0f607264fc6318a92b9e13c65db7cd3c";
-    
+
     // 3116 专用的 LiteKey (用于 Token 刷新时的 P3 加密)
     private const string LiteAppKey = "c24f74ca2820225badc01946dba4fdf7";
     private const string LiteAppIv = "adc01946dba4fdf7";
@@ -34,7 +34,7 @@ public class RawLoginApi(IKgTransport transport ,KgSessionManager sessionManager
     {
         var session = sessionManager.Session;
         var dateTime = DateTimeOffset.Now.ToUnixTimeMilliseconds(); // ms
-        
+
         // 1. T1 计算: AES(|timestamp)
         // JS: const t1 = cryptoAesEncrypt(`|${dateTime}`, ...)
         var t1Raw = $"|{dateTime}";
@@ -79,14 +79,14 @@ public class RawLoginApi(IKgTransport transport ,KgSessionManager sessionManager
             ["key"] = KgSigner.CalcLoginKey(dateTime),
             ["pk"] = pk,
             ["params"] = aesStr,
-            
+
             // Lite 版新增参数
             //["dfid"] = session.Dfid,
             ["dfid"] = "-",
             ["dev"] = session.InstallDev,
-            ["gitversion"] = "5f0b7c4" 
+            ["gitversion"] = "5f0b7c4"
         };
-        
+
         if (session.UserId != "0") dataMap["userid"] = session.UserId;
 
         var request = new KgRequest
@@ -199,9 +199,9 @@ public class RawLoginApi(IKgTransport transport ,KgSessionManager sessionManager
 
         // 1. T1 计算
         var lastT1 = session.T1;
-        var t1Raw = string.IsNullOrEmpty(lastT1) 
-            ? $"|{dateNow}" 
-            : $"{lastT1}|{dateNow}"; 
+        var t1Raw = string.IsNullOrEmpty(lastT1)
+            ? $"|{dateNow}"
+            : $"{lastT1}|{dateNow}";
         var (t1Enc, _) = KgCrypto.AesEncrypt(t1Raw, LiteT1Key, LiteT1Iv);
 
         // 2. T2 计算 (同登录)
@@ -249,7 +249,7 @@ public class RawLoginApi(IKgTransport transport ,KgSessionManager sessionManager
         {
             Method = HttpMethod.Post,
             BaseUrl = ApiHost,
-            Path = "/v5/login_by_token", 
+            Path = "/v5/login_by_token",
             SpecificRouter = LoginRouter,
             Body = body,
             SignatureType = SignatureType.Default
@@ -260,8 +260,8 @@ public class RawLoginApi(IKgTransport transport ,KgSessionManager sessionManager
         // 使用 randomAesKey 解密返回的 secu_params
         return TryDecryptResponse(response, randomAesKey);
     }
-    
-    
+
+
     private JsonElement TryDecryptResponse(JsonElement response, string aesKey)
     {
         try
@@ -269,35 +269,31 @@ public class RawLoginApi(IKgTransport transport ,KgSessionManager sessionManager
             // 简单判断状态
             if (response.TryGetProperty("status", out var s) && s.GetInt32() == 1 &&
                 response.TryGetProperty("data", out var dataElem))
-            {
                 if (dataElem.TryGetProperty("secu_params", out var secuElem))
                 {
                     // 解密
                     var decryptedJson = KgCrypto.AesDecrypt(secuElem.GetString()!, aesKey);
-                    
+
                     // 这里我们需要把解密出来的字段合并回 data 节点
                     // 因为 System.Text.Json 的 JsonElement 是只读的，所以需要重建 JsonObject
-                    
                     var rootNode = JsonNode.Parse(response.GetRawText());
                     var dataNode = rootNode?["data"] as JsonObject;
                     var decryptedNode = JsonNode.Parse(decryptedJson) as JsonObject;
-                    
-                    if(dataNode != null && decryptedNode != null)
+
+                    if (dataNode != null && decryptedNode != null)
                     {
-                        foreach(var kv in decryptedNode)
-                        {
+                        foreach (var kv in decryptedNode)
                             // 覆盖或添加字段 (token, t1, userid 等)
                             dataNode[kv.Key] = kv.Value?.DeepClone();
-                        }
-                        return JsonSerializer.Deserialize<JsonElement>(rootNode!.ToJsonString(), AppJsonContext.Default.JsonElement);
+                        return JsonSerializer.Deserialize(rootNode!.ToJsonString(), AppJsonContext.Default.JsonElement);
                     }
                 }
-            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[RawLoginApi] 解密响应失败: {ex.Message}");
         }
+
         return response;
     }
 }

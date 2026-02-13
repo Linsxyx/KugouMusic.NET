@@ -1,8 +1,7 @@
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
-using System.Linq;
 using Avalonia.Markup.Xaml;
 using KuGou.Net.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +10,7 @@ using TestMusic.Views;
 
 namespace TestMusic;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {
@@ -20,12 +19,11 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        
         BindingPlugins.DataValidators.RemoveAt(0);
         var collection = new ServiceCollection();
         collection.AddKuGouSdk();
         collection.AddTransient<MainWindowViewModel>();
-        
+
         var services = collection.BuildServiceProvider();
 
         var vm = services.GetRequiredService<MainWindowViewModel>();
@@ -48,9 +46,6 @@ public partial class App : Application
             BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
 
         // remove each entry found
-        foreach (var plugin in dataValidationPluginsToRemove)
-        {
-            BindingPlugins.DataValidators.Remove(plugin);
-        }
+        foreach (var plugin in dataValidationPluginsToRemove) BindingPlugins.DataValidators.Remove(plugin);
     }
 }

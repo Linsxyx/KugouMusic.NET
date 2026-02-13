@@ -33,6 +33,13 @@ public record SongInfo : KgBaseModel
     [property: JsonPropertyName("Duration")]
     public int Duration { get; set; }
 
+    [property: JsonPropertyName("Image")]
+    public string? Cover
+    {
+        get => field?.Replace("{size}", "100");
+        set;
+    }
+
     // 其他几十个字段（Res, HQ, SQ, MvHash...）全部自动进 Extras
 }
 

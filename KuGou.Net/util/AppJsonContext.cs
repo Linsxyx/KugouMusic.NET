@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using KuGou.Net.Abstractions.Models;
+using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Protocol.Session;
 
 namespace KuGou.Net.util;
@@ -38,6 +39,7 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(SearchHotResponse))]
 [JsonSerializable(typeof(List<SearchHotCategory>))]
 [JsonSerializable(typeof(List<SearchHotKeyword>))]
+[JsonSerializable(typeof(VipReceiveHistoryResponse))] 
 [JsonSerializable(typeof(UserVipResponse))]
 [JsonSerializable(typeof(UserDetailModel))]
 [JsonSerializable(typeof(OneDayVipModel))]

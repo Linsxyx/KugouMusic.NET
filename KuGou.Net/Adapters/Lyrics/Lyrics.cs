@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace KuGou.Net.Abstractions.Models;
+namespace KuGou.Net.Adapters.Lyrics;
 
 /// <summary>
 ///     最终解析出来的歌词对象
@@ -39,15 +39,17 @@ public class KrcWord
 
 internal class LanguageContainer
 {
-    [JsonPropertyName("content")] public List<LanguageSection>? Content { get; set; }
+    [property: JsonPropertyName("content")]
+    public List<LanguageSection>? Content { get; set; }
 }
 
 internal class LanguageSection
 {
-    [JsonPropertyName("type")] public int Type { get; set; } // 1: 翻译, 0: 音译
+    [property: JsonPropertyName("type")] public int Type { get; set; } // 1: 翻译, 0: 音译
 
     // 注意：酷狗返回的 lyricContent 是字符串数组的数组 [ ["第一行翻译"], ["第二行翻译"] ]
-    [JsonPropertyName("lyricContent")] public List<List<string>>? LyricContent { get; set; }
+    [property: JsonPropertyName("lyricContent")]
+    public List<List<string>>? LyricContent { get; set; }
 }
 
 public record LyricResult(

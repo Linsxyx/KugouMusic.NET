@@ -6,32 +6,42 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         
+       <!-- <PublishAot>true</PublishAot>-->
+
     </PropertyGroup>
 
     <ItemGroup>
-        <Folder Include="Models\"/>
         <AvaloniaResource Include="Assets\**"/>
+        <Folder Include="Models\" />
+        <Folder Include="Styles\" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Labs.Controls" Version="11.3.1" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11" />
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.11" />
+        <PackageReference Include="Avalonia" Version="11.3.11"/>
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.11"/>
+        <PackageReference Include="Avalonia.Labs.Controls" Version="11.3.1"/>
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.11"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.11"/>
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
         <PackageReference Include="Avalonia.Diagnostics" Version="11.3.11">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
-        <PackageReference Include="SukiUI" Version="6.0.4-nightly20260124" />
-        <PackageReference Include="Svg.Controls.Avalonia" Version="11.3.9.2" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2"/>
+        <PackageReference Include="SukiUI" Version="6.0.4-nightly20260124"/>
+        <PackageReference Include="Svg.Controls.Avalonia" Version="11.3.9.2"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\KuGou.Audio\KuGou.Audio.csproj" />
-      <ProjectReference Include="..\KuGou.Net\KuGou.Net.csproj" />
+        <ProjectReference Include="..\SimpleAudio\SimpleAudio.csproj" />
+        <ProjectReference Include="..\KuGou.Net\KuGou.Net.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Controls\SongListControl.axaml.cs">
+        <DependentUpon>SongListControl.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
     </ItemGroup>
 </Project>

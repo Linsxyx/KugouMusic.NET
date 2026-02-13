@@ -40,11 +40,11 @@ public class AuthClient(
 
             if (!string.IsNullOrEmpty(newToken))
             {
-                sessionManager.UpdateAuth(newUserId, newToken, "0", "",t1);
+                sessionManager.UpdateAuth(newUserId, newToken, "0", "", t1);
                 KgSessionStore.Save(sessionManager.Session);
                 //logger.LogInformation($"Token 登录成功! UserID: {newUserId}");
             }
-            
+
             //var newT1 = data.TryGetProperty("t1", out var t1El) ? t1El.GetString() : "";
         }
 
@@ -78,7 +78,7 @@ public class AuthClient(
 
             if (!string.IsNullOrEmpty(newToken))
             {
-                sessionManager.UpdateAuth(newUserId, newToken, "0", "","");
+                sessionManager.UpdateAuth(newUserId, newToken, "0", "", "");
                 KgSessionStore.Save(sessionManager.Session);
                 //logger.LogInformation($"Token 刷新成功! UserID: {newUserId}");
             }
@@ -118,7 +118,7 @@ public class AuthClient(
 
             if (!string.IsNullOrEmpty(newToken))
             {
-                sessionManager.UpdateAuth(newUserId, newToken, vipType, "",t1);
+                sessionManager.UpdateAuth(newUserId, newToken, vipType, "", t1);
                 KgSessionStore.Save(sessionManager.Session);
                 //logger.LogInformation($"Token 刷新成功! UserID: {newUserId}");
             }

@@ -4,15 +4,21 @@
              xmlns:local="using:TestMusic"
              xmlns:labs="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:converters="clr-namespace:TestMusic.Converters"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
-        <local:ViewLocator/>
+        <local:ViewLocator />
     </Application.DataTemplates>
-  
-             <Application.Styles>
-                 <suki:SukiTheme ThemeColor="Blue"  /> 
-                 <labs:ControlThemes/>
-             </Application.Styles>
+
+    <Application.Styles>
+        <suki:SukiTheme ThemeColor="Blue" />
+        <labs:ControlThemes />
+    </Application.Styles>
+    
+    <Application.Resources>
+        <converters:SecondsToMinutesSecondsConverter x:Key="SecondsToTimeConverter"/>
+    </Application.Resources>
+    
 </Application>

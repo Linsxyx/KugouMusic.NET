@@ -43,6 +43,17 @@ public class UserClient(RawUserApi rawApi, KgSessionManager sessionManager)
             AppJsonContext.Default.UserVipResponse
         );
     }
+    
+    /// <summary>
+    ///     获取当月已领取 VIP 天数
+    /// </summary>
+    public async Task<VipReceiveHistoryResponse?> GetVipRecordAsync()
+    {
+        var json = await rawApi.GetVipRecordAsync();
+        return KgApiResponseParser.Parse<VipReceiveHistoryResponse>(
+            json,
+            AppJsonContext.Default.VipReceiveHistoryResponse);
+    }
 
     /// <summary>
     ///     获取用户歌单
