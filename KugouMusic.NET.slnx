@@ -1,9 +1,9 @@
 <Solution>
-    <Project Path="ConsoleApp1/ConsoleApp1.csproj" />
-    <Project Path="KgTest/KgTest.csproj" />
-    <Project Path="KgWebApi.Net/KgWebApi.Net.csproj" />
-    <Project Path="KuGou.Net/KuGou.Net.csproj" />
-    <Project Path="SimpleAudio.Native\SimpleAudio.Native.csproj" />
-    <Project Path="SimpleAudio\SimpleAudio.csproj" />
-    <Project Path="TestMusic/TestMusic.csproj" />
+    <Project Path="ConsoleApp1/ConsoleApp1.csproj"/>
+    <Project Path="KgTest/KgTest.csproj"/>
+    <Project Path="KgWebApi.Net/KgWebApi.Net.csproj"/>
+    <Project Path="KuGou.Net/KuGou.Net.csproj"/>
+    <Project Path="SimpleAudio.Native\SimpleAudio.Native.csproj"/>
+    <Project Path="SimpleAudio\SimpleAudio.csproj"/>
+    <Project Path="TestMusic/TestMusic.csproj"/>
 </Solution>

@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:TestMusic.ViewModels"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="60"
+             Name="RootWindow"
+             x:Class="TestMusic.Controls.SongListItemControl"
+             x:DataType="vm:SongItem">
+
+    <suki:GlassCard Margin="0,2" Padding="5" CornerRadius="8">
+        <Grid ColumnDefinitions="Auto, *, 150, 80, 150" Background="Transparent">
+            <!-- 1. 封面 -->
+            <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" Width="45" Height="45" Margin="5">
+                <controls:AsyncImage Source="{Binding Cover}" Stretch="UniformToFill" />
+            </Border>
+
+            <!-- 2. 歌名 -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+                <TextBlock Text="{Binding Name}" FontWeight="DemiBold" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <!-- 3. 歌手 -->
+            <TextBlock Grid.Column="2" Text="{Binding Singer}" VerticalAlignment="Center" Foreground="Gray"
+                       TextTrimming="CharacterEllipsis" />
+
+            <!-- 4. 时长 (需要你自己有个转换器，这里简化显示) -->
+            <TextBlock Grid.Column="3"
+                       Text="{Binding DurationSeconds,Converter={StaticResource SecondsToTimeConverter}}"
+                       VerticalAlignment="Center" Foreground="Gray" />
+
+            <!-- 5. 操作按钮组 -->
+            <!-- 关键点：使用 #RootWindow 找到主窗口的 DataContext -->
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
+                        HorizontalAlignment="Right" Margin="0,0,10,0">
+
+                <Button Classes="Basic" ToolTip.Tip="播放"
+                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlaySongCommand}"
+                        CommandParameter="{Binding .}">
+                    <TextBlock Text="▶" FontWeight="Bold" />
+                </Button>
+
+                <!-- 添加到下一首按钮 -->
+                <Button Classes="Basic" ToolTip.Tip="下一首播放"
+                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).AddToNextCommand}"
+                        CommandParameter="{Binding .}">
+                    <TextBlock Text="+" FontWeight="Bold" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </suki:GlassCard>
+</UserControl>

@@ -1,10 +1,10 @@
 using System.Text.Json;
-using SimpleAudio;
 using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Protocol.Raw;
 using KuGou.Net.Protocol.Session;
+using SimpleAudio;
 
 namespace KgTest;
 
@@ -56,7 +56,7 @@ internal class Program
         // 组装各层 (Raw -> Client)
         var rawLogin = new RawLoginApi(transport, _sessionManager);
         var rawSearch = new RawSearchApi(transport);
-        var rawDevice = new RawDeviceApi(transport,_sessionManager);
+        var rawDevice = new RawDeviceApi(transport, _sessionManager);
         var rawUser = new RawUserApi(transport);
         var rawPlaylist = new RawPlaylistApi(transport);
         var rawLyric = new RawLyricApi(transport);

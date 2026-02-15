@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\SimpleAudio\SimpleAudio.csproj" />
+        <ProjectReference Include="..\SimpleAudio\SimpleAudio.csproj"/>
         <ProjectReference Include="..\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>
 

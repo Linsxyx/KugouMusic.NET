@@ -57,7 +57,7 @@ public class LoginController(AuthClient authClient, ILogger<LoginController> log
     }
 
     /// <summary>
-    ///     刷新 Token 
+    ///     刷新 Token
     /// </summary>
     [HttpPost("refresh")]
     public async Task<IActionResult> RefreshToken()

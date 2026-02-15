@@ -20,7 +20,7 @@ public class YouthController(UserClient userService) : ControllerBase
         var result = await userService.UpgradeVipRewardAsync();
         return Ok(result);
     }
-    
+
     [HttpGet("month/vip/record")]
     public async Task<IActionResult> GetVipRecordAsync()
     {

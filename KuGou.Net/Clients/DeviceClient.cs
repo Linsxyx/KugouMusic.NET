@@ -1,4 +1,3 @@
-using System.Text.Json;
 using KuGou.Net.Protocol.Raw;
 using KuGou.Net.Protocol.Session;
 using KuGou.Net.util;
@@ -22,7 +21,7 @@ public class DeviceClient(RawDeviceApi rawApi, KgSessionManager sessionManager)
     private async Task<bool> RegisterDeviceAsync()
     {
         var session = sessionManager.Session;
-        
+
         // 调用新的 V2 接口
         // 此时 Session.InstallGuid 已经在 SessionManager 初始化时生成好了
         var json = await rawApi.RegisterDevAsync(session.UserId, session.Token);
@@ -30,7 +29,6 @@ public class DeviceClient(RawDeviceApi rawApi, KgSessionManager sessionManager)
         // 解析结果
         if (json.TryGetProperty("status", out var s) && s.GetInt32() == 1 &&
             json.TryGetProperty("data", out var data))
-        {
             if (data.TryGetProperty("dfid", out var dfidElem))
             {
                 var serverDfid = dfidElem.GetString();
@@ -46,7 +44,7 @@ public class DeviceClient(RawDeviceApi rawApi, KgSessionManager sessionManager)
                     return true;
                 }
             }
-        }
+
         Console.WriteLine("[Device] 注册失败。");
         return false;
     }

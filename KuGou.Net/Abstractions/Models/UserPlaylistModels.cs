@@ -34,7 +34,12 @@ public record UserPlaylistItem : KgBaseModel
     [JsonPropertyName("count")] public int Count { get; set; }
 
     // 封面图 (可能为空字符串)
-    [JsonPropertyName("pic")] public string Pic { get; set; } = "";
+    [JsonPropertyName("pic")]
+    public string? Pic
+    {
+        get => field?.Replace("{size}", "300");
+        set;
+    }
 
     // 是否默认歌单 (1=默认收藏, 2=我喜欢, 0=自建)
     [JsonPropertyName("is_def")] public int IsDefault { get; set; }

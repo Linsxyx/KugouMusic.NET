@@ -5,130 +5,211 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:suki="https://github.com/kikipoulet/SukiUI"
                  xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
-                 xmlns:views="using:TestMusic.Views"
-                 xmlns:controls1="clr-namespace:TestMusic.Controls"
+                 xmlns:views="clr-namespace:TestMusic.Views"
+                 xmlns:localControls="clr-namespace:TestMusic.Controls"
                  mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
                  x:Class="TestMusic.Views.MainWindow"
                  x:DataType="vm:MainWindowViewModel"
-                 Name="Root"
+                 Name="RootWindow"
                  Icon="/Assets/avalonia-logo.ico"
                  Title="KuGou Avalonia Player"
                  BackgroundStyle="Bubble">
 
-    <Grid RowDefinitions="Auto, *, Auto">
-        
-        <!-- 顶部搜索栏 (保持不变) -->
-        <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" Margin="15">
-            <TextBox Grid.Column="0" Text="{Binding SearchKeyword}" Watermark="搜索歌曲、歌手..." Theme="{StaticResource SukiTextBox}"/>
-            <Button Grid.Column="1" Classes="Outlined" Command="{Binding SearchCommand}" Margin="10,0" Theme="{StaticResource SukiPrimaryButton}">
-                <PathIcon Data="{x:Static suki:Icons.Search}" Margin="0,0,5,0"></PathIcon>
-            </Button>
-            <Button Grid.Column="2" Content="每日推荐" Command="{Binding GetDailyRecommendationsCommand}" Theme="{StaticResource SukiFlatButton}"/>
-        </Grid>
+    <suki:SukiWindow.DataTemplates>
 
-        <!-- 中间内容区域 -->
-        <Grid Grid.Row="1" ColumnDefinitions="250, *">
-            <!-- 左侧：歌单列表 -->
-            <suki:GlassCard Grid.Column="0" Margin="10,0,5,10">
-                <Grid RowDefinitions="Auto, *">
-                    <Button Grid.Row="0" Content="刷新我的歌单" Command="{Binding GetMyPlaylistsCommand}" HorizontalAlignment="Stretch" Margin="0,0,0,10"/>
-                    <ListBox Grid.Row="1" ItemsSource="{Binding UserPlaylists}" Background="Transparent">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:PlaylistItem">
-                                <StackPanel Spacing="5" Margin="0,5">
-                                    <TextBlock Text="{Binding Name}" FontWeight="DemiBold"/>
-                                    <Grid ColumnDefinitions="*, Auto">
-                                        <TextBlock Text="{Binding Count, StringFormat='{}{0} 首'}" FontSize="12" Foreground="Gray"/>
-                                        <Button Grid.Column="1" Classes="Basic" Width="25" Height="25" Padding="5,2"
-                                                Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).LoadPlaylistSongsCommand}"
-                                                CommandParameter="{Binding Id}">
-                                            <Svg Path="/Assets/plus-circle-svgrepo-com.svg" />
-                                        </Button>
-                                    </Grid>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+        <DataTemplate DataType="vm:DailyRecommendViewModel">
+            <views:DailyRecommendView />
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:MyPlaylistsViewModel">
+            <views:MyPlaylistsView />
+        </DataTemplate>
+    </suki:SukiWindow.DataTemplates>
+
+    <suki:SukiWindow.Styles>
+        <!-- 遮罩层动画 -->
+        <Style Selector="Border#QueueBackdrop">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border#QueueBackdrop.open">
+            <Setter Property="IsVisible" Value="True" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <!-- 播放列表面板动画 -->
+        <Style Selector="Border#QueuePanel">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="RenderTransform" Value="translateY(20px)" />
+            <Setter Property="Transitions">
+                <Transitions>
+
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border#QueuePanel.open">
+            <Setter Property="IsVisible" Value="True" />
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="RenderTransform" Value="translateY(0)" />
+        </Style>
+    </suki:SukiWindow.Styles>
+
+    <Grid Name="MainGrid" RowDefinitions="*, Auto">
+
+        <suki:SukiSideMenu Grid.Row="0"
+                           ItemsSource="{Binding Pages}"
+                           SelectedItem="{Binding ActivePage}"
+                           IsSearchEnabled="False">
+
+            <suki:SukiSideMenu.HeaderContent>
+                <Grid ColumnDefinitions="Auto, *" Margin="20,10,20,30">
+                    <TextBox Text="{Binding SearchKeyword}" Watermark="搜索歌曲..." Grid.ColumnSpan="2" />
+                    <Button Grid.Column="1" Classes="Basic" Command="{Binding SearchCommand}"
+                            HorizontalAlignment="Right">
+                        <PathIcon Data="{x:Static suki:Icons.Search}" Margin="0,0,5,0" />
+                    </Button>
                 </Grid>
-            </suki:GlassCard>
+            </suki:SukiSideMenu.HeaderContent>
 
-            <!-- 右侧：歌曲列表控件 -->
-            <suki:GlassCard Grid.Column="1" Margin="5,0,10,10">
-                <controls1:SongListControl/>
-            </suki:GlassCard>
-        </Grid>
+            <suki:SukiSideMenu.ItemTemplate>
+                <DataTemplate>
+                    <suki:SukiSideMenuItem Header="{Binding DisplayName}">
+                        <suki:SukiSideMenuItem.Icon>
+                            <Svg Path="{Binding Icon}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        </suki:SukiSideMenuItem.Icon>
+                    </suki:SukiSideMenuItem>
+                </DataTemplate>
+            </suki:SukiSideMenu.ItemTemplate>
 
-        <!-- 底部播放栏 -->
-        <suki:GlassCard Grid.Row="2" Margin="10,0,10,10" Padding="10">
+            <suki:SukiSideMenu.FooterContent>
+                <StackPanel HorizontalAlignment="Center" Margin="10">
+                    <TextBlock Text="v1.0.0" Foreground="Gray" FontSize="10" />
+                </StackPanel>
+            </suki:SukiSideMenu.FooterContent>
+        </suki:SukiSideMenu>
+
+        <suki:GlassCard Grid.Row="1" Margin="10,0,10,10" Padding="10">
             <Grid ColumnDefinitions="250, *, 200">
-                
-                <!-- 1. 左侧：当前歌曲信息 -->
                 <Grid Grid.Column="0" ColumnDefinitions="Auto, *">
-                    <Border CornerRadius="8" ClipToBounds="True" Width="60" Height="60">
-                        <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}" Stretch="UniformToFill"/>
+                    <Border CornerRadius="8" ClipToBounds="True" Width="55" Height="55">
+                        <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
                     </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
-                        <TextBlock Text="{Binding CurrentPlayingSong.Name, TargetNullValue='未播放'}" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="{Binding CurrentPlayingSong.Singer}" FontSize="12" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
+                        <TextBlock Text="{Binding CurrentPlayingSong.Name, TargetNullValue='未播放'}" FontWeight="Bold"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding CurrentPlayingSong.Singer}" FontSize="12" Opacity="0.6"
+                                   TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Grid>
-
-                <!-- 2. 中间：控制按钮 + 进度条 + 歌词 -->
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="5">
-                    
-                    <!-- 歌词展示 -->
-                    <StackPanel HorizontalAlignment="Center" Height="40">
-                         <TextBlock Text="{Binding CurrentLyricText}" HorizontalAlignment="Center" FontWeight="Bold" Foreground="{DynamicResource SukiPrimaryColor}"/>
-                         <TextBlock Text="{Binding CurrentLyricTrans}" HorizontalAlignment="Center" FontSize="12" Foreground="Gray"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <StackPanel HorizontalAlignment="Center" Height="42" Margin="0,0,0,5">
+                        <TextBlock Text="{Binding CurrentLyricText}"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="Bold"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource SukiPrimaryColor}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding CurrentLyricTrans}"
+                                   HorizontalAlignment="Center"
+                                   FontSize="11"
+                                   Foreground="Gray"
+                                   TextTrimming="CharacterEllipsis" />
                     </StackPanel>
 
-                    <!-- 控制按钮组 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
-                        <Button Width="50" Height="50" Command="{Binding PlayPreviousCommand}" Classes="Basic" ToolTip.Tip="上一首">
-                            <Svg Path="/Assets/backward-svgrepo-com.svg" />
+                    <!-- 2. 控制按钮组 -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="25">
+                        <Button Command="{Binding PlayPreviousCommand}" Width="45" Height="45" Classes="Basic"
+                                ToolTip.Tip="上一首">
+                            <Svg Path="/Assets/backward.svg" />
                         </Button>
 
-                        <!-- 播放/暂停 动态文本或图标 -->
-                        <Button Command="{Binding TogglePlayPauseCommand}" Classes="Basic" Width="50" Height="50" CornerRadius="25">
-                            <Button.Content>
-                                <Panel>
-                                    <Svg Path="/Assets/pause-svgrepo-com.svg" IsVisible="{Binding IsPlayingAudio}" />
-                                    <Svg Path="/Assets/play-svgrepo-com.svg" IsVisible="{Binding !IsPlayingAudio}" />
-                                </Panel>
-                            </Button.Content>
-                            
+                        <Button Command="{Binding TogglePlayPauseCommand}" Width="45" Height="45" Classes="Basic">
+                            <Panel>
+                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" IsVisible="{Binding IsPlayingAudio}"
+                                     VerticalAlignment="Center" HorizontalAlignment="Center" ToolTip.Tip="暂停" />
+                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" IsVisible="{Binding !IsPlayingAudio}"
+                                     VerticalAlignment="Center" HorizontalAlignment="Center" ToolTip.Tip="播放" />
+                            </Panel>
                         </Button>
 
-                        <Button Width="50" Height="50" Command="{Binding PlayNextCommand}" Classes="Basic" ToolTip.Tip="下一首">
-                            <Svg Path="/Assets/forward-svgrepo-com.svg" />
+                        <Button Command="{Binding PlayNextCommand}" Width="45" Height="45" Classes="Basic"
+                                ToolTip.Tip="下一首">
+                            <Svg Path="/Assets/next-svgrepo-com.svg" />
                         </Button>
                     </StackPanel>
 
-                    <!-- 进度条 (Slider) -->
-                    <Grid ColumnDefinitions="Auto, *, Auto" Margin="20,0">
-                        <TextBlock Text="{Binding CurrentPositionSeconds,Converter={StaticResource SecondsToTimeConverter}}" FontSize="12" VerticalAlignment="Center"/>
-                        
-                        <!-- 绑定 CurrentPositionSeconds，ViewModel里有防抖逻辑 -->
-                        <Slider Grid.Column="1" 
-                                Minimum="0" 
-                                Maximum="{Binding TotalDurationSeconds}" 
+                    <!-- 3. 进度条区域 -->
+                    <Grid ColumnDefinitions="Auto, *, Auto" Margin="30,0">
+                        <TextBlock
+                            Text="{Binding CurrentPositionSeconds,Converter={StaticResource SecondsToTimeConverter}}"
+                            FontSize="11" VerticalAlignment="Center" Opacity="0.7" />
+
+                        <Slider Name="Slider1"
+                                Grid.Column="1"
+                                Minimum="0"
+                                Maximum="{Binding TotalDurationSeconds}"
                                 Value="{Binding CurrentPositionSeconds}"
                                 Margin="10,0"
-                                IsSnapToTickEnabled="False"/>
-                                
-                        <TextBlock Grid.Column="2" Text="{Binding TotalDurationSeconds,Converter={StaticResource SecondsToTimeConverter}}" FontSize="12" VerticalAlignment="Center"/>
+                                IsSnapToTickEnabled="False"
+                                x:DataType="vm:MainWindowViewModel">
+                            <!--<Slider.Resources>
+                                <Color x:Key="SukiPrimaryColor">#444450</Color>
+                            </Slider.Resources>-->
+
+                        </Slider>
+
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding TotalDurationSeconds,Converter={StaticResource SecondsToTimeConverter}}"
+                                   FontSize="11" VerticalAlignment="Center" Opacity="0.7" />
                     </Grid>
                 </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15"
+                            Margin="0,0,10,0">
+                    <Grid ColumnDefinitions="Auto, *,Auto">
+                        <Svg Width="25" Height="25" Path="/Assets/volume-max-svgrepo-com.svg" Margin="0,0,5,0" />
+                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding MusicVolume}" Width="100">
+                            <!--<Slider.Resources>
+                                <Color x:Key="SukiPrimaryColor">#444450</Color>
+                            </Slider.Resources>-->
+                        </Slider>
+                        <Button Command="{Binding ToggleQueuePaneCommand}"
+                                Classes="Basic"
+                                Grid.Column="2"
+                                HorizontalAlignment="Right">
+                            <Svg Path="/Assets/PlayList.svg" />
+                        </Button>
 
-                <!-- 3. 右侧：音量与状态 -->
-                <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="5" Margin="10,0">
-                    <Grid ColumnDefinitions="Auto, *">
-                        <Svg Width="25" Height="25" Path="/Assets/volume-max-svgrepo-com.svg" Margin="0,0,5,0"/>
-                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding MusicVolume}" Width="100"/>
                     </Grid>
-                    <TextBlock Text="{Binding StatusMessage}" FontSize="10" Foreground="Gray" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+
+
                 </StackPanel>
             </Grid>
         </suki:GlassCard>
+
+        <Border Name="QueuePanel"
+                Grid.Row="0"
+                Classes.open="{Binding IsQueuePaneOpen}"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Width="350"
+                Height="500"
+                Margin="0,0,20,5"
+                ClipToBounds="False">
+            <!--~1~ 使用 BoxShadow 增加悬浮感 @1@
+            <Border.BoxShadow>
+                <BoxShadows>0 10 30 5 #30000000</BoxShadows>
+            </Border.BoxShadow>-->
+
+            <!-- 内部放置提取出来的播放列表控件 -->
+            <localControls:PlaybackQueueControl />
+        </Border>
+
     </Grid>
 </suki:SukiWindow>

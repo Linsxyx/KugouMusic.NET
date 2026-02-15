@@ -17,22 +17,21 @@ public static class KrcParser
         if (string.IsNullOrEmpty(krcText)) return result;
 
         var lines = krcText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-        
+
         List<List<string>>? translationList = null;
         List<List<string>>? romanizationList = null;
 
-        
+
         foreach (var line in lines)
         {
-            
             if (line.StartsWith("[language:"))
             {
                 try
                 {
                     var base64 = line.Substring(10, line.Length - 11);
 
-                    
-                    base64 = base64.Replace("-", "+").Replace("_", "/"); 
+
+                    base64 = base64.Replace("-", "+").Replace("_", "/");
                     var mod4 = base64.Length % 4;
                     if (mod4 > 0) base64 += new string('=', 4 - mod4);
 
@@ -43,11 +42,10 @@ public static class KrcParser
 
                     if (langData?.Content != null)
                     {
-                        
                         var transSection = langData.Content.FirstOrDefault(x => x.Type == 1);
                         if (transSection != null) translationList = transSection.LyricContent;
 
-                        
+
                         var romSection = langData.Content.FirstOrDefault(x => x.Type == 0);
                         if (romSection != null) romanizationList = romSection.LyricContent;
                     }
@@ -59,7 +57,7 @@ public static class KrcParser
 
                 continue;
             }
-            
+
             var metaMatch = Regex.Match(line, @"^\[([a-zA-Z]+):(.*)\]$");
             if (metaMatch.Success)
             {
@@ -68,12 +66,11 @@ public static class KrcParser
                 result.MetaData[key] = val;
             }
         }
-        
+
 
         var lineIndex = 0;
         foreach (var line in lines)
         {
-            
             if (line.StartsWith("[") && line.Contains(":") && !Regex.IsMatch(line, @"^\[\d+,\d+\]"))
                 continue;
 
@@ -90,7 +87,7 @@ public static class KrcParser
                 Duration = duration
             };
 
-            
+
             var wordMatches = Regex.Matches(rawContent, @"<(\d+),(\d+),\d+>([^<]+)");
             var sbContent = new StringBuilder();
 
@@ -110,18 +107,18 @@ public static class KrcParser
                     sbContent.Append(wText);
                 }
             else
-                
+
                 sbContent.Append(rawContent);
 
             krcLine.Content = sbContent.ToString();
 
-            
+
             if (translationList != null && lineIndex < translationList.Count)
             {
                 var tLines = translationList[lineIndex];
                 if (tLines != null && tLines.Count > 0) krcLine.Translation = tLines[0];
             }
-            
+
             if (romanizationList != null && lineIndex < romanizationList.Count)
             {
                 var rLines = romanizationList[lineIndex];

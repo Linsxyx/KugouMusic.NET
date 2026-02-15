@@ -43,7 +43,7 @@ public class UserClient(RawUserApi rawApi, KgSessionManager sessionManager)
             AppJsonContext.Default.UserVipResponse
         );
     }
-    
+
     /// <summary>
     ///     获取当月已领取 VIP 天数
     /// </summary>

@@ -9,7 +9,7 @@ namespace KuGou.Net.Protocol.Raw;
 public class RawUserApi(IKgTransport transport)
 {
     /// <summary>
-    ///     获取用户详细信息 
+    ///     获取用户详细信息
     /// </summary>
     public async Task<JsonElement> GetUserDetailAsync(string userid, string token)
     {
@@ -46,7 +46,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取 VIP 信息 
+    ///     获取 VIP 信息
     /// </summary>
     public async Task<JsonElement> GetUserVipDetailAsync()
     {
@@ -63,7 +63,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取用户歌单 
+    ///     获取用户歌单
     /// </summary>
     public async Task<JsonElement> GetAllListAsync(string userid, string token, int page, int pageSize)
     {
@@ -96,7 +96,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取听歌历史 
+    ///     获取听歌历史
     /// </summary>
     public async Task<JsonElement> GetPlayHistoryAsync(string userid, string token, string? bp = null)
     {
@@ -122,7 +122,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取听歌排行 
+    ///     获取听歌排行
     /// </summary>
     public async Task<JsonElement> GetListenListAsync(string userid, string token, int type)
     {
@@ -159,7 +159,7 @@ public class RawUserApi(IKgTransport transport)
     }
 
     /// <summary>
-    ///     获取关注歌手 
+    ///     获取关注歌手
     /// </summary>
     public async Task<JsonElement> GetFollowSingerListAsync(string userid, string token)
     {
@@ -231,8 +231,8 @@ public class RawUserApi(IKgTransport transport)
         };
         return await transport.SendAsync(request);
     }
-    
-    
+
+
     /// <summary>
     ///     获取当月已领取 VIP 天数
     /// </summary>
@@ -244,7 +244,7 @@ public class RawUserApi(IKgTransport transport)
             Path = "/youth/v1/activity/get_month_vip_record",
             Params = new Dictionary<string, string>
             {
-                { "latest_limit", "100" },
+                { "latest_limit", "100" }
             },
             SignatureType = SignatureType.Default
         };

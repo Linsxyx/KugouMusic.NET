@@ -102,6 +102,7 @@ public class SearchController(MusicClient musicClient, ILogger<SearchController>
 
         return Ok(result);
     }
+
     /// <summary>
     ///     获取热搜
     /// </summary>

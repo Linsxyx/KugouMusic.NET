@@ -16,9 +16,9 @@
         <suki:SukiTheme ThemeColor="Blue" />
         <labs:ControlThemes />
     </Application.Styles>
-    
+
     <Application.Resources>
-        <converters:SecondsToMinutesSecondsConverter x:Key="SecondsToTimeConverter"/>
+        <converters:SecondsToMinutesSecondsConverter x:Key="SecondsToTimeConverter" />
     </Application.Resources>
-    
+
 </Application>

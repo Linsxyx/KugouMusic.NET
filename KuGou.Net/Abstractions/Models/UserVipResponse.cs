@@ -13,19 +13,17 @@ public record UserVipResponse : KgBaseModel
 
     [JsonPropertyName("vip_type")] public int VipType { get; set; }
 
-    // 核心业务数据：具体的 VIP 类型列表
     [JsonPropertyName("busi_vip")] public List<BusiVipInfo> BusiVipList { get; set; } = new();
 
-    // ================= 辅助属性 (方便业务判断) =================
 
     /// <summary>
-    ///     是否为畅听 VIP (SVIP) - 对应 product_type: "svip"
+    ///     是否为概念版 VIP (SVIP) - 对应 product_type: "svip"
     /// </summary>
     public bool IsSuperVip => BusiVipList.Any(x =>
         x.ProductType == "svip" && x.IsVip == 1);
 
     /// <summary>
-    ///     是否为概念版 VIP (TVIP) - 对应 product_type: "tvip"
+    ///     是否为畅听 VIP (TVIP) - 对应 product_type: "tvip"
     /// </summary>
     public bool IsConceptVip => BusiVipList.Any(x =>
         x.ProductType == "tvip" && x.IsVip == 1);
@@ -41,8 +39,8 @@ public record BusiVipInfo
 
     /// <summary>
     ///     VIP 类型标识
-    ///     <para>svip = 畅听VIP</para>
-    ///     <para>tvip = 概念版VIP</para>
+    ///     <para>svip = 概念版VIP</para>
+    ///     <para>tvip = 畅听VIP</para>
     /// </summary>
     [JsonPropertyName("product_type")]
     public string ProductType { get; set; } = "";

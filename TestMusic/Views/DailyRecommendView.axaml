@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestMusic.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:localControls="using:TestMusic.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="TestMusic.Views.DailyRecommendView"
+             x:DataType="vm:DailyRecommendViewModel">
+
+    <suki:GlassCard Margin="15" Padding="20">
+        <Grid RowDefinitions="Auto, *">
+            <TextBlock Text="每日推荐歌曲" FontSize="26" FontWeight="Bold" Margin="0,0,0,15" />
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding Songs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <localControls:SongListItemControl />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </suki:GlassCard>
+</UserControl>

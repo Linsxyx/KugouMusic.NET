@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestMusic.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:localControls="using:TestMusic.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="TestMusic.Views.MyPlaylistsView"
+             x:DataType="vm:MyPlaylistsViewModel">
+
+    <Grid Margin="15">
+        <!-- 视图 A：歌单列表 (大图标格子模式) -->
+        <Grid IsVisible="{Binding !IsShowingSongs}" RowDefinitions="Auto, *">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,20">
+                <TextBlock Text="我的歌单" FontSize="28" FontWeight="Bold" />
+                <!-- 刷新按钮 -->
+                <Button Classes="Basic"
+                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToMyPlaylistsCommand}">
+                    <TextBlock Text="重刷列表" FontSize="12" Foreground="Gray" />
+                </Button>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding Playlists}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <!-- 使用 WrapPanel 实现自动流式换行 -->
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- 每一个歌单方块 -->
+                            <Button Width="160" Height="200" Margin="8" Padding="0"
+                                    Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).LoadPlaylistDetailsCommand}"
+                                    CommandParameter="{Binding Id}">
+                                <suki:GlassCard Padding="0" CornerRadius="12">
+                                    <Grid RowDefinitions="*, Auto">
+                                        <!-- 歌单封面占位 -->
+                                        <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
+                                                CornerRadius="12,12,0,0">
+                                            <controls:AsyncImage Source="{Binding Cover}" />
+                                        </Border>
+                                        <!-- 歌单信息 -->
+                                        <StackPanel Grid.Row="1"
+                                                    Background="{DynamicResource SukiCardBackground}">
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Count, StringFormat='{}{0} 首'}"
+                                                       FontSize="11" Foreground="Gray" />
+                                        </StackPanel>
+                                    </Grid>
+                                </suki:GlassCard>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- 视图 B：歌单详情 (歌曲列表模式) -->
+        <Grid IsVisible="{Binding IsShowingSongs}" RowDefinitions="Auto, *">
+            <StackPanel Grid.Row="0" Margin="0,0,0,20">
+                <Button Command="{Binding GoBackCommand}" Theme="{StaticResource SukiOutlinedButton}"
+                        Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="←" FontWeight="Bold" />
+                        <TextBlock Text="返回列表" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="{Binding SelectedPlaylist.Name}" FontSize="28" FontWeight="Bold" />
+                <TextBlock Text="{Binding SelectedPlaylistSongs.Count, StringFormat='{}共 {0} 首歌曲'}"
+                           FontSize="12" Foreground="Gray" />
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1">
+                <!-- 复用我们之前写的歌曲行控件 -->
+                <ItemsControl ItemsSource="{Binding SelectedPlaylistSongs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <localControls:SongListItemControl />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

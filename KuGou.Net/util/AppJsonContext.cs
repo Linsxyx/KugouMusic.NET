@@ -39,7 +39,7 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(SearchHotResponse))]
 [JsonSerializable(typeof(List<SearchHotCategory>))]
 [JsonSerializable(typeof(List<SearchHotKeyword>))]
-[JsonSerializable(typeof(VipReceiveHistoryResponse))] 
+[JsonSerializable(typeof(VipReceiveHistoryResponse))]
 [JsonSerializable(typeof(UserVipResponse))]
 [JsonSerializable(typeof(UserDetailModel))]
 [JsonSerializable(typeof(OneDayVipModel))]

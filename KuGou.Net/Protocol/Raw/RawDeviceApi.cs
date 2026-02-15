@@ -27,9 +27,9 @@ public class RawDeviceApi(IKgTransport transport, KgSessionManager sessionManage
             ["basebandVer"] = "",
             ["batteryLevel"] = 100,
             ["batteryStatus"] = 3,
-            ["brand"] = "Redmi",     // 伪装成小米
+            ["brand"] = "Redmi", // 伪装成小米
             ["buildSerial"] = "unknown",
-            ["device"] = "marble",   // Redmi Note 12 Turbo 代号
+            ["device"] = "marble", // Redmi Note 12 Turbo 代号
             ["imei"] = session.InstallGuid, // ★ 关键：绑定 GUID
             ["imsi"] = "",
             ["manufacturer"] = "Xiaomi",
@@ -89,9 +89,9 @@ public class RawDeviceApi(IKgTransport transport, KgSessionManager sessionManage
             RawBody = aesStr, // 直接发送 AES 加密后的 Base64 字符串
             ContentType = "text/plain", // 通常这种加密体也是 plain text
             SignatureType = SignatureType.Default,
-            
+
             // 注册时还没有 DFID，Header 里的 dfid 设为 "-"
-            SpecificDfid = "-" 
+            SpecificDfid = "-"
         };
 
         var response = await transport.SendAsync(request);
@@ -108,21 +108,16 @@ public class RawDeviceApi(IKgTransport transport, KgSessionManager sessionManage
             string? encryptedContent = null;
 
             // 处理 Transport 层返回的几种可能格式
-            if (response.ValueKind == JsonValueKind.Object && 
+            if (response.ValueKind == JsonValueKind.Object &&
                 response.TryGetProperty("__raw_base64__", out var raw))
-            {
                 encryptedContent = raw.GetString();
-            }
-            else if (response.ValueKind == JsonValueKind.String)
-            {
-                encryptedContent = response.GetString();
-            }
+            else if (response.ValueKind == JsonValueKind.String) encryptedContent = response.GetString();
 
             if (!string.IsNullOrEmpty(encryptedContent))
             {
                 // 使用相同的 Key 解密
                 var decryptedJson = KgCrypto.PlaylistAesDecrypt(encryptedContent, aesKey);
-                
+
                 // 解析解密后的 JSON
                 using var doc = JsonDocument.Parse(decryptedJson);
                 return doc.RootElement.Clone();
@@ -132,6 +127,7 @@ public class RawDeviceApi(IKgTransport transport, KgSessionManager sessionManage
         {
             Console.WriteLine($"[RawDeviceApi] 解密失败: {ex.Message}");
         }
+
         return response;
     }
 }

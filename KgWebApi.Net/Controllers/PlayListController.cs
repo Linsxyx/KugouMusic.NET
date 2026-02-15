@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace KgWebApi.Net.Controllers;
 
 [ApiController]
-[Route("[controller]")] 
+[Route("[controller]")]
 public class PlayListController(PlaylistClient playlistClient) : ControllerBase
 {
     [HttpGet("detail")]

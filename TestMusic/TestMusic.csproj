@@ -5,15 +5,15 @@
         <Nullable>enable</Nullable>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-        
-       <!-- <PublishAot>true</PublishAot>-->
+
+        <!--<PublishAot>true</PublishAot>-->
 
     </PropertyGroup>
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
-        <Folder Include="Models\" />
-        <Folder Include="Styles\" />
+        <Folder Include="Models\"/>
+        <Folder Include="Styles\"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -34,14 +34,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\SimpleAudio\SimpleAudio.csproj" />
+        <ProjectReference Include="..\SimpleAudio\SimpleAudio.csproj"/>
         <ProjectReference Include="..\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="Controls\SongListControl.axaml.cs">
-        <DependentUpon>SongListControl.axaml</DependentUpon>
-        <SubType>Code</SubType>
-      </Compile>
+        <Compile Update="Views\MyPlaylistsView.axaml.cs">
+            <DependentUpon>MyPlaylistsView.axaml</DependentUpon>
+            <SubType>Code</SubType>
+        </Compile>
+        <Compile Update="Views\DailyRecommendView.axaml.cs">
+            <DependentUpon>DailyRecommendView.axaml</DependentUpon>
+            <SubType>Code</SubType>
+        </Compile>
     </ItemGroup>
 </Project>

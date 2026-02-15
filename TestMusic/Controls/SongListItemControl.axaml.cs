@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace TestMusic.Controls;
 
-public partial class SongListControl : UserControl
+public partial class SongListItemControl : UserControl
 {
-    public SongListControl()
+    public SongListItemControl()
     {
         InitializeComponent();
     }
