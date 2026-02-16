@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestMusic.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:localControls="using:TestMusic.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="TestMusic.Views.SearchView"
+             x:DataType="vm:SearchViewModel">
+
+    <suki:GlassCard Margin="15" Padding="20">
+        <Grid RowDefinitions="Auto, *">
+            <!-- 搜索栏 -->
+            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,0,0,15">
+                <TextBox Text="{Binding SearchKeyword}"
+                         Watermark="输入歌曲名或歌手名..."
+                         Grid.Column="0" />
+                <Button Grid.Column="1"
+                        Command="{Binding SearchCommand}"
+                        IsEnabled="{Binding IsSearching, Converter={x:Static BoolConverters.Not}}"
+                        Margin="10,0,0,0"
+                        Padding="20,0">
+                    <PathIcon Data="{x:Static suki:Icons.Search}" />
+                </Button>
+            </Grid>
+
+            <!-- 状态信息 -->
+            <TextBlock Grid.Row="1"
+                       Text="{Binding StatusMessage}"
+                       FontSize="12"
+                       Foreground="Gray"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,10"
+                       IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+            <!-- 搜索结果列表 -->
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding Songs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <localControls:SongListItemControl />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </suki:GlassCard>
+</UserControl>

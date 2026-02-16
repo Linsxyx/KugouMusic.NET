@@ -6,7 +6,7 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 
-        <!--<PublishAot>true</PublishAot>-->
+        <ApplicationIcon>Assets\Test.ico</ApplicationIcon>
 
     </PropertyGroup>
 
@@ -46,6 +46,15 @@
         <Compile Update="Views\DailyRecommendView.axaml.cs">
             <DependentUpon>DailyRecommendView.axaml</DependentUpon>
             <SubType>Code</SubType>
+        </Compile>
+        <Compile Update="Controls\LoginControl.axaml.cs">
+            <DependentUpon>LoginControl.axaml</DependentUpon>
+        </Compile>
+        <Compile Update="Views\UserView.axaml.cs">
+            <DependentUpon>UserView.axaml</DependentUpon>
+        </Compile>
+        <Compile Update="Views\LoginWindow.axaml.cs">
+            <DependentUpon>LoginWindow.axaml</DependentUpon>
         </Compile>
     </ItemGroup>
 </Project>

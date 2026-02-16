@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,6 +12,7 @@ using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using SimpleAudio;
+using TestMusic.Views;
 
 namespace TestMusic.ViewModels;
 
@@ -21,14 +23,18 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly AuthClient _authClient;
     private readonly DeviceClient _deviceClient;
     private readonly DiscoveryClient _discoveryClient;
+
+    // --- 子 ViewModel ---
     private readonly LyricClient _lyricClient;
     private readonly MusicClient _musicClient;
     private readonly DispatcherTimer _playbackTimer;
 
     private readonly SimpleAudioPlayer _player;
     private readonly PlaylistClient _playlistClient;
+    private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
+    private readonly UserViewModel _userViewModel;
 
     [ObservableProperty] private PageViewModelBase _activePage;
 
@@ -56,7 +62,10 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private string _statusMessage = "就绪";
     [ObservableProperty] private double _totalDurationSeconds;
+    [ObservableProperty] private string? _userAvatar;
 
+    // --- 用户信息 (用于底部显示) ---
+    [ObservableProperty] private string _userName = "未登录";
 
     // --- 构造函数 ---
     public MainWindowViewModel(
@@ -67,7 +76,10 @@ public partial class MainWindowViewModel : ObservableObject
         MusicClient musicClient,
         PlaylistClient playlistClient,
         UserClient userClient,
-        LyricClient lyricClient)
+        LyricClient lyricClient,
+        LoginViewModel loginViewModel,
+        SearchViewModel searchViewModel,
+        UserViewModel userViewModel)
     {
         _sessionManager = sessionManager;
         _authClient = authClient;
@@ -77,6 +89,14 @@ public partial class MainWindowViewModel : ObservableObject
         _playlistClient = playlistClient;
         _userClient = userClient;
         _lyricClient = lyricClient;
+
+        LoginViewModel = loginViewModel;
+        _searchViewModel = searchViewModel;
+        _userViewModel = userViewModel;
+
+        // 订阅登录成功事件
+        LoginViewModel.LoginSuccess += OnLoginSuccess;
+        _userViewModel.LogoutRequested += OnLogoutRequested;
 
         _player = new SimpleAudioPlayer();
         _player.PlaybackEnded += () => Dispatcher.UIThread.Post(() => PlayNextCommand.Execute(null));
@@ -98,10 +118,16 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
+    // --- 主窗口引用 (用于弹出登录窗口) ---
+    public Window? MainWindow { get; set; }
+
     public ObservableCollection<PageViewModelBase> Pages { get; } = new();
     public ObservableCollection<SongItem> PlaybackQueue { get; } = new();
 
-    // --- 原版登录与VIP逻辑 (完全复原) ---
+    // --- 暴露 LoginViewModel 供 Dialog 使用 ---
+    public LoginViewModel LoginViewModel { get; }
+
+    // --- 登录相关 ---
     private async Task LoadLocalSessionOrLogin()
     {
         try
@@ -117,6 +143,7 @@ public partial class MainWindowViewModel : ObservableObject
                 }
 
                 IsLoggedIn = true;
+                await LoadUserInfo();
                 StatusMessage = $"已加载本地用户: {saved.UserId}";
                 _ = Task.Run(async () =>
                 {
@@ -141,6 +168,25 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    private async Task LoadUserInfo()
+    {
+        try
+        {
+            var userInfo = await _userClient.GetUserInfoAsync();
+            if (userInfo != null)
+            {
+                UserName = userInfo.Name ?? "未知用户";
+                UserAvatar = string.IsNullOrWhiteSpace(userInfo.Pic) ? null : userInfo.Pic;
+                _userViewModel.UserName = UserName;
+                _userViewModel.UserAvatar = UserAvatar;
+            }
+        }
+        catch
+        {
+            // 忽略加载用户信息失败
+        }
+    }
+
     private async Task TryGetVip()
     {
         var history = await _userClient.GetVipRecordAsync();
@@ -159,6 +205,82 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    private void OnLoginSuccess()
+    {
+        Dispatcher.UIThread.Post(async () =>
+        {
+            IsLoggedIn = true;
+            await LoadUserInfo();
+            StatusMessage = "登录成功";
+
+            // 后台初始化设备
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _deviceClient.InitDeviceAsync();
+                }
+                catch
+                {
+                    // 忽略
+                }
+            });
+
+            // 加载推荐
+            await GetDailyRecommendations();
+        });
+    }
+
+    private void OnLogoutRequested()
+    {
+        Dispatcher.UIThread.Post(async () =>
+        {
+            IsLoggedIn = false;
+            UserName = "未登录";
+            UserAvatar = null;
+            StatusMessage = "已退出登录";
+
+            // 返回每日推荐页面
+            var dailyVm = Pages.OfType<DailyRecommendViewModel>().FirstOrDefault();
+            if (dailyVm != null) ActivePage = dailyVm;
+        });
+    }
+
+    [RelayCommand]
+    private void ShowLoginDialog()
+    {
+        if (MainWindow == null) return;
+
+        var loginWindow = new LoginWindow
+        {
+            DataContext = LoginViewModel
+        };
+
+        // 订阅登录成功事件关闭窗口
+        void OnLoginSuccess()
+        {
+            loginWindow.Close();
+        }
+
+        LoginViewModel.LoginSuccess += OnLoginSuccess;
+        loginWindow.Closed += (_, _) => LoginViewModel.LoginSuccess -= OnLoginSuccess;
+
+        loginWindow.Show(MainWindow);
+    }
+
+    [RelayCommand]
+    private void NavigateToUser()
+    {
+        if (!IsLoggedIn)
+        {
+            ShowLoginDialog();
+            return;
+        }
+
+        _ = _userViewModel.LoadUserInfoAsync();
+        ActivePage = _userViewModel;
+    }
+
 
     [RelayCommand]
     private async Task PlaySong(SongItem? song)
@@ -175,6 +297,8 @@ public partial class MainWindowViewModel : ObservableObject
             songsToQueue = dailyVm.Songs.ToList();
         else if (currentPage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
             songsToQueue = playlistVm.SelectedPlaylistSongs.ToList();
+        else if (currentPage is SearchViewModel searchVm)
+            songsToQueue = searchVm.Songs.ToList();
 
         // 如果当前页面没有歌曲列表，或者列表为空，只添加当前歌曲
         if (songsToQueue.Count == 0) songsToQueue = new List<SongItem> { song };
@@ -387,35 +511,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(SearchKeyword)) return;
 
-        // 暂时借用 DailyRecommendVM 来显示搜索结果，或者你可以新建一个 SearchViewModel
-        var vm = Pages.OfType<DailyRecommendViewModel>().FirstOrDefault();
-        if (vm == null) return;
+        // 切换到搜索页面
+        ActivePage = _searchViewModel;
 
-        // 切换到该页面
-        ActivePage = vm;
-        StatusMessage = $"正在搜索: {SearchKeyword} ...";
-
-        try
-        {
-            var response = await _musicClient.SearchAsync(SearchKeyword);
-            vm.Songs.Clear(); // 清空原有列表
-
-            foreach (var item in response)
-                vm.Songs.Add(new SongItem
-                {
-                    Name = item.Name,
-                    Singer = item.Singer,
-                    Hash = item.Hash,
-                    Cover =
-                        string.IsNullOrWhiteSpace(item.Cover) ? DefaultCover : item.Cover,
-                    DurationSeconds = item.Duration
-                });
-            StatusMessage = $"搜索完成，找到 {vm.Songs.Count} 首歌曲。";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"搜索失败: {ex.Message}";
-        }
+        // 执行搜索
+        await _searchViewModel.SearchAsync(SearchKeyword);
+        StatusMessage = _searchViewModel.StatusMessage;
     }
 
     private bool CanSearch()

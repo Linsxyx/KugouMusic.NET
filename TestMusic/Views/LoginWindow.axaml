@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TestMusic.ViewModels"
+        xmlns:suki="https://github.com/kikipoulet/SukiUI"
+        x:Class="TestMusic.Views.LoginWindow"
+        x:DataType="vm:LoginViewModel"
+        Title="登录"
+        Width="350"
+        Height="400"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ExtendClientAreaToDecorationsHint="True">
+
+    <suki:GlassCard Margin="20" CornerRadius="15" Padding="25">
+        <StackPanel Spacing="15">
+            <TextBlock Text="手机号登录" FontSize="20" FontWeight="Bold"
+                       HorizontalAlignment="Center" Margin="0,0,0,10" />
+
+            <!-- 手机号输入 -->
+            <TextBox Text="{Binding Mobile}"
+                     Watermark="手机号"
+                     MaxLength="11" />
+
+            <!-- 验证码输入 + 发送按钮 -->
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBox Grid.Column="0"
+                         Text="{Binding Code}"
+                         Watermark="验证码"
+                         MaxLength="6" />
+                <Button Grid.Column="1"
+                        Classes="Discrete"
+                        Content="{Binding Countdown, Converter={StaticResource CountdownTextConverter}}"
+                        IsEnabled="{Binding Countdown, Converter={StaticResource CountdownEnabledConverter}}"
+                        Command="{Binding SendCodeCommand}"
+                        Margin="10,0,0,0"
+                        Width="90" />
+            </Grid>
+
+            <!-- 登录按钮 -->
+            <Button Classes="Discrete"
+                    Content="登录"
+                    Command="{Binding LoginCommand}"
+
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" />
+
+            <!-- 状态信息 -->
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="12"
+                       Foreground="Gray"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+    </suki:GlassCard>
+</Window>

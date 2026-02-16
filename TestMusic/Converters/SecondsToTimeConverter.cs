@@ -30,7 +30,7 @@ public class SecondsToMinutesSecondsConverter : IValueConverter
         return "00:00";
     }
 
-    
+
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         return value;

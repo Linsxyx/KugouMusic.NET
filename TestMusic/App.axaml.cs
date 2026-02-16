@@ -22,6 +22,11 @@ public class App : Application
         BindingPlugins.DataValidators.RemoveAt(0);
         var collection = new ServiceCollection();
         collection.AddKuGouSdk();
+
+        // 注册 ViewModels
+        collection.AddTransient<LoginViewModel>();
+        collection.AddTransient<SearchViewModel>();
+        collection.AddTransient<UserViewModel>();
         collection.AddTransient<MainWindowViewModel>();
 
         var services = collection.BuildServiceProvider();

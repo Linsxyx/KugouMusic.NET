@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestMusic.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             x:Class="TestMusic.Views.UserView"
+             x:DataType="vm:UserViewModel">
+
+    <suki:GlassCard Margin="40" Padding="30">
+        <Grid RowDefinitions="Auto, *, Auto">
+            <!-- 用户信息区域 -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,30">
+                <!-- 头像 -->
+                <Border Grid.Column="0"
+                        Width="80" Height="80"
+                        CornerRadius="40"
+                        ClipToBounds="True"
+                        Background="#E0E0E0">
+                    <controls:AsyncImage Source="{Binding UserAvatar}"
+                                         Stretch="UniformToFill" />
+                </Border>
+
+                <!-- 用户名和VIP状态 -->
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="20,0">
+                    <TextBlock Text="{Binding UserName}"
+                               FontSize="24"
+                               FontWeight="Bold" />
+                    <TextBlock Text="{Binding VipStatus}"
+                               FontSize="14"
+                               Foreground="Gray"
+                               Margin="0,5,0,0" />
+                    <TextBlock Text="{Binding UserId, StringFormat='ID: {0}'}"
+                               FontSize="12"
+                               Foreground="Gray"
+                               Margin="0,3,0,0" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 统计信息（可选） -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal"
+                        HorizontalAlignment="Center" Spacing="40" />
+
+            <!-- 退出登录按钮 -->
+            <Button Grid.Row="2"
+                    Classes="Basic"
+                    Command="{Binding LogoutCommand}"
+                    HorizontalAlignment="Right"
+                    Padding="30,10"
+                    ToolTip.Tip="退出登录">
+                <PathIcon Data="{x:Static suki:Icons.Logout}" />
+            </Button>
+        </Grid>
+    </suki:GlassCard>
+</UserControl>

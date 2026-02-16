@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TestMusic.ViewModels"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             x:Class="TestMusic.Controls.UserAvatarControl"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Panel>
+        <!-- 未登录状态 -->
+        <Button Classes="Basic"
+                Command="{Binding ShowLoginDialogCommand}"
+                IsVisible="{Binding !IsLoggedIn}">
+            <TextBlock Text="点击登录" Foreground="{DynamicResource SukiPrimaryColor}" />
+        </Button>
+
+        <!-- 已登录状态 -->
+        <Button Classes="Basic"
+                Command="{Binding NavigateToUserCommand}"
+                IsVisible="{Binding IsLoggedIn}"
+                Padding="5">
+            <Grid ColumnDefinitions="Auto, Auto">
+                <!-- 圆形头像 -->
+                <Border Grid.Column="0"
+                        Width="32" Height="32"
+                        CornerRadius="16"
+                        ClipToBounds="True"
+                        Background="#E0E0E0">
+                    <controls:AsyncImage Source="{Binding UserAvatar}"
+                                         Stretch="UniformToFill" />
+                </Border>
+                <!-- 用户名 -->
+                <TextBlock Grid.Column="1"
+                           Text="{Binding UserName}"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0"
+                           MaxWidth="80"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </Button>
+    </Panel>
+</UserControl>

@@ -19,6 +19,8 @@
 
     <Application.Resources>
         <converters:SecondsToMinutesSecondsConverter x:Key="SecondsToTimeConverter" />
+        <converters:CountdownTextConverter x:Key="CountdownTextConverter" />
+        <converters:CountdownEnabledConverter x:Key="CountdownEnabledConverter" />
     </Application.Resources>
 
 </Application>

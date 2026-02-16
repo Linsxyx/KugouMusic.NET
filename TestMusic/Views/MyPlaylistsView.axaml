@@ -18,7 +18,7 @@
                 <!-- 刷新按钮 -->
                 <Button Classes="Basic"
                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToMyPlaylistsCommand}">
-                    <TextBlock Text="重刷列表" FontSize="12" Foreground="Gray" />
+                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="Black" />
                 </Button>
             </StackPanel>
 

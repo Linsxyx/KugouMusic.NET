@@ -11,7 +11,7 @@
                  x:Class="TestMusic.Views.MainWindow"
                  x:DataType="vm:MainWindowViewModel"
                  Name="RootWindow"
-                 Icon="/Assets/avalonia-logo.ico"
+                 Icon="/Assets/Test.ico"
                  Title="KuGou Avalonia Player"
                  BackgroundStyle="Bubble">
 
@@ -23,6 +23,14 @@
 
         <DataTemplate DataType="vm:MyPlaylistsViewModel">
             <views:MyPlaylistsView />
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:SearchViewModel">
+            <views:SearchView />
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:UserViewModel">
+            <views:UserView />
         </DataTemplate>
     </suki:SukiWindow.DataTemplates>
 
@@ -89,8 +97,9 @@
             </suki:SukiSideMenu.ItemTemplate>
 
             <suki:SukiSideMenu.FooterContent>
-                <StackPanel HorizontalAlignment="Center" Margin="10">
-                    <TextBlock Text="v1.0.0" Foreground="Gray" FontSize="10" />
+                <StackPanel HorizontalAlignment="Center" Margin="10" Spacing="8">
+                    <localControls:UserAvatarControl />
+                    <TextBlock Text="v1.0.0" Foreground="Gray" FontSize="10" HorizontalAlignment="Center" />
                 </StackPanel>
             </suki:SukiSideMenu.FooterContent>
         </suki:SukiSideMenu>
