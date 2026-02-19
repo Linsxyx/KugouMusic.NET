@@ -37,6 +37,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly UserViewModel _userViewModel;
 
     [ObservableProperty] private PageViewModelBase _activePage;
+    [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
 
     private List<KrcLine> _currentLyrics = new();
 
@@ -48,6 +49,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private double _currentPositionSeconds;
     [ObservableProperty] private bool _isDraggingProgress;
     [ObservableProperty] private bool _isLoggedIn;
+
+    [ObservableProperty] private bool _isNowPlayingOpen;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(TogglePlayPauseCommand))]
     private bool _isPlayingAudio;
@@ -117,6 +120,8 @@ public partial class MainWindowViewModel : ObservableObject
             await GetDailyRecommendations();
         });
     }
+
+    public ObservableCollection<LyricLineViewModel> LyricLines { get; } = new();
 
     // --- 主窗口引用 (用于弹出登录窗口) ---
     public Window? MainWindow { get; set; }
@@ -389,6 +394,10 @@ public partial class MainWindowViewModel : ObservableObject
         CurrentLyricTrans = "";
         _currentLyrics.Clear();
 
+        // 1. 清空界面绑定的歌词集合
+        LyricLines.Clear();
+        CurrentLyricLine = null;
+
         try
         {
             var searchJson = await _lyricClient.SearchLyricAsync(hash, null, name, "no");
@@ -415,6 +424,20 @@ public partial class MainWindowViewModel : ObservableObject
                 {
                     var krc = KrcParser.Parse(lyricResult.DecodedContent);
                     _currentLyrics = krc.Lines;
+
+                    // 2. 【关键修复】填充 LyricLines 集合供界面显示
+                    // 注意：这里假设你的 KrcLine 对象有 Content, Translation, StartTime, Duration 属性
+                    // 如果属性名不同，请根据实际 KuGou.Net 的定义调整
+                    foreach (var line in _currentLyrics)
+                        LyricLines.Add(new LyricLineViewModel
+                        {
+                            Content = line.Content,
+                            Translation = line.Translation,
+                            StartTime = line.StartTime,
+                            Duration = line.Duration,
+                            IsActive = false
+                        });
+
                     CurrentLyricText = _currentLyrics.Count > 0 ? "" : "暂无歌词";
                 }
             }
@@ -427,17 +450,25 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void UpdateLyrics(double currentMs)
     {
-        if (_currentLyrics.Count == 0) return;
+        if (LyricLines.Count == 0) return;
 
-        var currentLine =
-            _currentLyrics.FirstOrDefault(x => currentMs >= x.StartTime && currentMs < x.StartTime + x.Duration);
 
-        if (currentLine == null) currentLine = _currentLyrics.LastOrDefault(x => x.StartTime <= currentMs);
+        var currentVm =
+            LyricLines.FirstOrDefault(x => currentMs >= x.StartTime && currentMs < x.StartTime + x.Duration);
 
-        if (currentLine != null)
+        if (currentVm == null)
+            currentVm = LyricLines.LastOrDefault(x => x.StartTime <= currentMs);
+
+        if (currentVm != null && currentVm != CurrentLyricLine)
         {
-            CurrentLyricText = currentLine.Content;
-            CurrentLyricTrans = currentLine.Translation;
+            if (CurrentLyricLine != null)
+                CurrentLyricLine.IsActive = false;
+
+            CurrentLyricLine = currentVm;
+            CurrentLyricLine.IsActive = true;
+
+            CurrentLyricText = currentVm.Content;
+            CurrentLyricTrans = currentVm.Translation;
         }
     }
 
@@ -655,5 +686,17 @@ public partial class MainWindowViewModel : ObservableObject
     private void ToggleQueuePane()
     {
         IsQueuePaneOpen = !IsQueuePaneOpen;
+    }
+
+    [RelayCommand]
+    private void OpenNowPlaying()
+    {
+        IsNowPlayingOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseNowPlaying()
+    {
+        IsNowPlayingOpen = false;
     }
 }

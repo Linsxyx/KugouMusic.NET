@@ -85,7 +85,7 @@ public record SingerLite : KgBaseModel
     [property: JsonPropertyName("avatar")]
     public string SingerPic
     {
-        get => field.Replace("{size}", "100");
+        get => field.Replace("{size}", "300");
         set;
     } = "";
 }

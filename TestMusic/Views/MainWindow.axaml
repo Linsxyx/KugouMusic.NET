@@ -4,7 +4,6 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:suki="https://github.com/kikipoulet/SukiUI"
-                 xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
                  xmlns:views="clr-namespace:TestMusic.Views"
                  xmlns:localControls="clr-namespace:TestMusic.Controls"
                  mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
@@ -69,12 +68,12 @@
         </Style>
     </suki:SukiWindow.Styles>
 
-    <Grid Name="MainGrid" RowDefinitions="*, Auto">
+    <Grid Name="MainGrid">
 
-        <suki:SukiSideMenu Grid.Row="0"
-                           ItemsSource="{Binding Pages}"
-                           SelectedItem="{Binding ActivePage}"
-                           IsSearchEnabled="False">
+        <suki:SukiSideMenu
+            ItemsSource="{Binding Pages}"
+            SelectedItem="{Binding ActivePage}"
+            IsSearchEnabled="False">
 
             <suki:SukiSideMenu.HeaderContent>
                 <Grid ColumnDefinitions="Auto, *" Margin="20,10,20,30">
@@ -97,110 +96,14 @@
             </suki:SukiSideMenu.ItemTemplate>
 
             <suki:SukiSideMenu.FooterContent>
-                <StackPanel HorizontalAlignment="Center" Margin="10" Spacing="8">
+                <StackPanel HorizontalAlignment="Center" Margin="10,10,10,100" Spacing="8">
                     <localControls:UserAvatarControl />
                     <TextBlock Text="v1.0.0" Foreground="Gray" FontSize="10" HorizontalAlignment="Center" />
                 </StackPanel>
             </suki:SukiSideMenu.FooterContent>
         </suki:SukiSideMenu>
 
-        <suki:GlassCard Grid.Row="1" Margin="10,0,10,10" Padding="10">
-            <Grid ColumnDefinitions="250, *, 200">
-                <Grid Grid.Column="0" ColumnDefinitions="Auto, *">
-                    <Border CornerRadius="8" ClipToBounds="True" Width="55" Height="55">
-                        <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0">
-                        <TextBlock Text="{Binding CurrentPlayingSong.Name, TargetNullValue='未播放'}" FontWeight="Bold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding CurrentPlayingSong.Singer}" FontSize="12" Opacity="0.6"
-                                   TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                </Grid>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                    <StackPanel HorizontalAlignment="Center" Height="42" Margin="0,0,0,5">
-                        <TextBlock Text="{Binding CurrentLyricText}"
-                                   HorizontalAlignment="Center"
-                                   FontWeight="Bold"
-                                   FontSize="14"
-                                   Foreground="{DynamicResource SukiPrimaryColor}"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding CurrentLyricTrans}"
-                                   HorizontalAlignment="Center"
-                                   FontSize="11"
-                                   Foreground="Gray"
-                                   TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-
-                    <!-- 2. 控制按钮组 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="25">
-                        <Button Command="{Binding PlayPreviousCommand}" Width="45" Height="45" Classes="Basic"
-                                ToolTip.Tip="上一首">
-                            <Svg Path="/Assets/backward.svg" />
-                        </Button>
-
-                        <Button Command="{Binding TogglePlayPauseCommand}" Width="45" Height="45" Classes="Basic">
-                            <Panel>
-                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" IsVisible="{Binding IsPlayingAudio}"
-                                     VerticalAlignment="Center" HorizontalAlignment="Center" ToolTip.Tip="暂停" />
-                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" IsVisible="{Binding !IsPlayingAudio}"
-                                     VerticalAlignment="Center" HorizontalAlignment="Center" ToolTip.Tip="播放" />
-                            </Panel>
-                        </Button>
-
-                        <Button Command="{Binding PlayNextCommand}" Width="45" Height="45" Classes="Basic"
-                                ToolTip.Tip="下一首">
-                            <Svg Path="/Assets/next-svgrepo-com.svg" />
-                        </Button>
-                    </StackPanel>
-
-                    <!-- 3. 进度条区域 -->
-                    <Grid ColumnDefinitions="Auto, *, Auto" Margin="30,0">
-                        <TextBlock
-                            Text="{Binding CurrentPositionSeconds,Converter={StaticResource SecondsToTimeConverter}}"
-                            FontSize="11" VerticalAlignment="Center" Opacity="0.7" />
-
-                        <Slider Name="Slider1"
-                                Grid.Column="1"
-                                Minimum="0"
-                                Maximum="{Binding TotalDurationSeconds}"
-                                Value="{Binding CurrentPositionSeconds}"
-                                Margin="10,0"
-                                IsSnapToTickEnabled="False"
-                                x:DataType="vm:MainWindowViewModel">
-                            <!--<Slider.Resources>
-                                <Color x:Key="SukiPrimaryColor">#444450</Color>
-                            </Slider.Resources>-->
-
-                        </Slider>
-
-                        <TextBlock Grid.Column="2"
-                                   Text="{Binding TotalDurationSeconds,Converter={StaticResource SecondsToTimeConverter}}"
-                                   FontSize="11" VerticalAlignment="Center" Opacity="0.7" />
-                    </Grid>
-                </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15"
-                            Margin="0,0,10,0">
-                    <Grid ColumnDefinitions="Auto, *,Auto">
-                        <Svg Width="25" Height="25" Path="/Assets/volume-max-svgrepo-com.svg" Margin="0,0,5,0" />
-                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding MusicVolume}" Width="100">
-                            <!--<Slider.Resources>
-                                <Color x:Key="SukiPrimaryColor">#444450</Color>
-                            </Slider.Resources>-->
-                        </Slider>
-                        <Button Command="{Binding ToggleQueuePaneCommand}"
-                                Classes="Basic"
-                                Grid.Column="2"
-                                HorizontalAlignment="Right">
-                            <Svg Path="/Assets/PlayList.svg" />
-                        </Button>
-
-                    </Grid>
-
-
-                </StackPanel>
-            </Grid>
-        </suki:GlassCard>
+        <localControls:BottomPlaybackControl />
 
         <Border Name="QueuePanel"
                 Grid.Row="0"
@@ -209,14 +112,8 @@
                 VerticalAlignment="Bottom"
                 Width="350"
                 Height="500"
-                Margin="0,0,20,5"
+                Margin="0,0,20,100"
                 ClipToBounds="False">
-            <!--~1~ 使用 BoxShadow 增加悬浮感 @1@
-            <Border.BoxShadow>
-                <BoxShadows>0 10 30 5 #30000000</BoxShadows>
-            </Border.BoxShadow>-->
-
-            <!-- 内部放置提取出来的播放列表控件 -->
             <localControls:PlaybackQueueControl />
         </Border>
 

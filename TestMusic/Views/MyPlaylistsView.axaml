@@ -15,7 +15,6 @@
         <Grid IsVisible="{Binding !IsShowingSongs}" RowDefinitions="Auto, *">
             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,20">
                 <TextBlock Text="我的歌单" FontSize="28" FontWeight="Bold" />
-                <!-- 刷新按钮 -->
                 <Button Classes="Basic"
                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToMyPlaylistsCommand}">
                     <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="Black" />
@@ -26,24 +25,20 @@
                 <ItemsControl ItemsSource="{Binding Playlists}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <!-- 使用 WrapPanel 实现自动流式换行 -->
                             <WrapPanel />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <!-- 每一个歌单方块 -->
                             <Button Width="160" Height="200" Margin="8" Padding="0"
                                     Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).LoadPlaylistDetailsCommand}"
                                     CommandParameter="{Binding Id}">
                                 <suki:GlassCard Padding="0" CornerRadius="12">
                                     <Grid RowDefinitions="*, Auto">
-                                        <!-- 歌单封面占位 -->
                                         <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
                                                 CornerRadius="12,12,0,0">
                                             <controls:AsyncImage Source="{Binding Cover}" />
                                         </Border>
-                                        <!-- 歌单信息 -->
                                         <StackPanel Grid.Row="1"
                                                     Background="{DynamicResource SukiCardBackground}">
                                             <TextBlock Text="{Binding Name}" FontWeight="Bold"
@@ -76,7 +71,6 @@
             </StackPanel>
 
             <ScrollViewer Grid.Row="1">
-                <!-- 复用我们之前写的歌曲行控件 -->
                 <ItemsControl ItemsSource="{Binding SelectedPlaylistSongs}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>

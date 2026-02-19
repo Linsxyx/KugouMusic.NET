@@ -1,0 +1,170 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:vm="using:TestMusic.ViewModels"
+             x:Class="TestMusic.Controls.NowPlaying"
+             x:DataType="vm:MainWindowViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Grid#Root">
+            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="RenderTransform" Value="translateY(200px)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Grid#Root.open">
+            <Setter Property="IsVisible" Value="True" />
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="RenderTransform" Value="translateY(0)" />
+        </Style>
+
+        <Style Selector="ListBoxItem">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0,15" /> <!-- 增加行间距 -->
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Background="Transparent"
+                                      BorderBrush="Transparent"
+                                      BorderThickness="0"
+                                      CornerRadius="{TemplateBinding CornerRadius}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Content="{TemplateBinding Content}"
+                                      Padding="{TemplateBinding Padding}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="TextBlock.LyricText">
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Opacity" Value="0.4" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                    <DoubleTransition Property="FontSize" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                    <EffectTransition Property="Effect" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+            <Setter Property="RenderTransform" Value="scale(0.9)" />
+            <Setter Property="Effect" Value="blur(1)" />
+        </Style>
+
+        <Style Selector="TextBlock.LyricText.active">
+            <Setter Property="Opacity" Value="1.0" />
+            <Setter Property="FontSize" Value="32" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="RenderTransform" Value="scale(1.0)" />
+            <Setter Property="Effect" Value="blur(0)" />
+        </Style>
+
+        <!-- 翻译行样式 -->
+        <Style Selector="TextBlock.TransText">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="#CCFFFFFF" />
+            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="Margin" Value="0,5,0,0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="TextBlock.TransText.active">
+            <Setter Property="Opacity" Value="1.0" />
+        </Style>
+
+    </UserControl.Styles>
+
+    <Grid Name="Root" Classes.open="{Binding IsNowPlayingOpen}">
+        <Panel>
+            <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}"
+                                 Stretch="UniformToFill">
+                <controls:AsyncImage.Effect>
+                    <BlurEffect Radius="100" />
+                </controls:AsyncImage.Effect>
+            </controls:AsyncImage>
+            <Border Background="#50000000" />
+            <Border>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#20000000" Offset="0" />
+                        <GradientStop Color="#80000000" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+            </Border>
+        </Panel>
+        <Grid RowDefinitions="Auto, *" Margin="40">
+            <Button Grid.Row="0"
+                    Command="{Binding CloseNowPlayingCommand}"
+                    Classes="Basic" HorizontalAlignment="Left" Margin="0,10,0,0">
+                <Border Background="#30FFFFFF" CornerRadius="20" Padding="15,8">
+                    <PathIcon Data="{x:Static suki:Icons.ChevronDown}" Foreground="White" Width="15" Height="15" />
+                </Border>
+            </Button>
+
+            <Grid Grid.Row="1" ColumnDefinitions="4*, 6*" Margin="0,30,0,50">
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="40">
+                    <suki:GlassCard CornerRadius="20" Padding="0" Width="380" Height="380">
+                        <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
+                    </suki:GlassCard>
+
+                    <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">
+                        <TextBlock Text="{Binding CurrentPlayingSong.Name}"
+                                   FontSize="32" FontWeight="Bold" Foreground="White"
+                                   TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding CurrentPlayingSong.Singer}"
+                                   FontSize="22" Foreground="#DDFFFFFF"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </StackPanel>
+
+                <ListBox Grid.Column="1"
+                         Name="LyricsList"
+                         ItemsSource="{Binding LyricLines}"
+                         SelectedItem="{Binding CurrentLyricLine}"
+                         Background="Transparent"
+                         Margin="60,0,0,0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                         SelectionChanged="OnLyricsSelectionChanged">
+
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:LyricLineViewModel">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Content}"
+                                           Classes="LyricText"
+                                           Classes.active="{Binding IsActive}"
+                                           TextWrapping="Wrap" />
+
+
+                                <TextBlock Text="{Binding Translation}"
+                                           Classes="TransText"
+                                           Classes.active="{Binding IsActive}"
+                                           IsVisible="{Binding Translation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Grid.Column="1" Text="暂无歌词"
+                           IsVisible="{Binding !LyricLines.Count}"
+                           Foreground="White" Opacity="0.5" FontSize="24" FontWeight="Bold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

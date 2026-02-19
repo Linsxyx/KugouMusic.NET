@@ -5,31 +5,29 @@
              x:Class="TestMusic.Controls.PlaybackQueueControl"
              x:DataType="vm:MainWindowViewModel">
 
-    <suki:GlassCard CornerRadius="15" Margin="5">
+    <suki:GlassCard CornerRadius="15" Margin="5" IsOpaque="True">
         <Grid RowDefinitions="Auto, *">
-            <!-- 头部：标题与清空 -->
             <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,10">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="播放队列" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding PlaybackQueue.Count, StringFormat='({0})'}"
-                               FontSize="12" Foreground="Gray" VerticalAlignment="Center" />
+                               FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
                 <Button Grid.Column="1" Classes="Basic" Content="清空"
                         Command="{Binding ClearQueueCommand}"
                         FontSize="12" Foreground="{DynamicResource SukiPrimaryColor}" />
             </Grid>
 
-            <!-- 列表部分 -->
             <ListBox Grid.Row="1"
                      ItemsSource="{Binding PlaybackQueue}"
-                     Background="#FFFFFFFF"
-                     BorderThickness="0"
-                     SelectedItem="{Binding CurrentPlayingSong}">
+                     BorderThickness="0">
                 <ListBox.Styles>
                     <Style Selector="ListBoxItem">
-                        <Setter Property="Padding" Value="10,8" />
-                        <Setter Property="CornerRadius" Value="8" />
-                        <Setter Property="Margin" Value="5,2" />
+                        <Setter Property="Padding" Value="12,10" />
+                        <Setter Property="CornerRadius" Value="10" />
+                        <Setter Property="Margin" Value="6,4" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="Cursor" Value="Hand" />
                     </Style>
                 </ListBox.Styles>
                 <ListBox.ItemTemplate>
@@ -42,7 +40,6 @@
                                 <TextBlock Text="{Binding Singer}" FontSize="11" />
                             </StackPanel>
 
-                            <!-- 操作按钮：播放此项 & 移除 -->
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Button Classes="Basic"
                                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlaySongCommand}"

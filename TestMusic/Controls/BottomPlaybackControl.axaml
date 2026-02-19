@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:vm="using:TestMusic.ViewModels"
+             xmlns:local="clr-namespace:TestMusic.Controls"
+             x:Class="TestMusic.Controls.BottomPlaybackControl"
+             x:DataType="vm:MainWindowViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="suki|GlassCard#MiniPlayer">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="suki|GlassCard#MiniPlayer.hidden">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid>
+
+        <local:NowPlaying ZIndex="100" />
+
+        <suki:GlassCard Name="MiniPlayer"
+                        VerticalAlignment="Bottom"
+                        Margin="15,0,15,15" Padding="12,8"
+                        CornerRadius="16"
+                        Classes.hidden="{Binding IsNowPlayingOpen}"
+                        Height="80"
+                        IsOpaque="True">
+
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                <Button Grid.Column="0" Command="{Binding OpenNowPlayingCommand}"
+                        Classes="Basic" Padding="0" Cursor="Hand">
+                    <Grid ColumnDefinitions="Auto, Auto">
+                        <Border CornerRadius="8" ClipToBounds="True" Width="56" Height="56">
+                            <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" Spacing="3">
+                            <TextBlock Text="{Binding CurrentPlayingSong.Name, TargetNullValue='KuGou Music'}"
+                                       FontWeight="Bold" FontSize="14" MaxWidth="180" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding CurrentPlayingSong.Singer, TargetNullValue='Ready'}"
+                                       FontSize="12" Opacity="0.6" MaxWidth="180" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
+
+                <Grid Grid.Column="1" RowDefinitions="Auto, Auto" VerticalAlignment="Center"
+                      HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
+                        <Button Command="{Binding PlayPreviousCommand}" Classes="Basic" ToolTip.Tip="上一首">
+                            <Svg Path="/Assets/backward.svg" Width="18" Height="18" />
+                        </Button>
+                        <Button Command="{Binding TogglePlayPauseCommand}" Classes="Basic" Width="36" Height="36">
+                            <Panel>
+                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
+                                     IsVisible="{Binding IsPlayingAudio}" />
+                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
+                                     IsVisible="{Binding !IsPlayingAudio}" />
+                            </Panel>
+                        </Button>
+                        <Button Command="{Binding PlayNextCommand}" Classes="Basic" ToolTip.Tip="下一首">
+                            <Svg Path="/Assets/next-svgrepo-com.svg" Width="18" Height="18" />
+                        </Button>
+                    </StackPanel>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Width="400" Margin="0,4,0,0">
+                        <TextBlock
+                            Text="{Binding CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                            FontSize="10" Opacity="0.5" VerticalAlignment="Center" />
+                        <Slider Grid.Column="1" Minimum="0" Maximum="{Binding TotalDurationSeconds}"
+                                Value="{Binding CurrentPositionSeconds}"
+                                Margin="8,0" IsSnapToTickEnabled="False"
+                                HorizontalAlignment="Stretch">
+                            <Slider.Resources>
+                            </Slider.Resources>
+                        </Slider>
+                        <TextBlock Grid.Column="2"
+                                   Text="{Binding TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                                   FontSize="10" Opacity="0.5" VerticalAlignment="Center" />
+                    </Grid>
+                </Grid>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="15" VerticalAlignment="Center"
+                            Margin="0,0,10,0">
+                    <Grid ColumnDefinitions="Auto, Auto">
+                        <Svg Path="/Assets/volume-max-svgrepo-com.svg" Width="16" Height="16" Margin="0,0,8,0" />
+                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding MusicVolume}" Width="80">
+                            <Slider.Resources>
+                            </Slider.Resources>
+                        </Slider>
+                    </Grid>
+                    <Button Command="{Binding ToggleQueuePaneCommand}" Classes="Basic">
+                        <Svg Path="/Assets/PlayList.svg" Width="20" Height="20" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </suki:GlassCard>
+    </Grid>
+</UserControl>

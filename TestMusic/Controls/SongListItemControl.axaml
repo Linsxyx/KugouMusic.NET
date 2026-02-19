@@ -32,7 +32,6 @@
                        VerticalAlignment="Center" Foreground="Gray" />
 
             <!-- 5. 操作按钮组 -->
-            <!-- 关键点：使用 #RootWindow 找到主窗口的 DataContext -->
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
                         HorizontalAlignment="Right" Margin="0,0,10,0">
 

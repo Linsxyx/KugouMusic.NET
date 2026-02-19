@@ -22,8 +22,7 @@
                     <controls:AsyncImage Source="{Binding UserAvatar}"
                                          Stretch="UniformToFill" />
                 </Border>
-
-                <!-- 用户名和VIP状态 -->
+                
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="20,0">
                     <TextBlock Text="{Binding UserName}"
                                FontSize="24"
