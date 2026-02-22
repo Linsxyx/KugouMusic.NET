@@ -21,19 +21,19 @@ public class RawDeviceApi(IKgTransport transport, KgSessionManager sessionManage
         // 注意：imei 和 uuid 必须使用 Session 中的 InstallGuid
         var hardwareInfo = new JsonObject
         {
-            ["availableRamSize"] = 4983533568L, // 模拟 6GB RAM
+            ["availableRamSize"] = 4983533568L, 
             ["availableRomSize"] = 48114719L,
             ["availableSDSize"] = 48114717L,
             ["basebandVer"] = "",
             ["batteryLevel"] = 100,
             ["batteryStatus"] = 3,
-            ["brand"] = "Redmi", // 伪装成小米
+            ["brand"] = "Redmi",
             ["buildSerial"] = "unknown",
-            ["device"] = "marble", // Redmi Note 12 Turbo 代号
-            ["imei"] = session.InstallGuid, // ★ 关键：绑定 GUID
+            ["device"] = "marble", 
+            ["imei"] = session.InstallGuid,
             ["imsi"] = "",
             ["manufacturer"] = "Xiaomi",
-            ["uuid"] = session.InstallGuid, // ★ 关键：绑定 GUID
+            ["uuid"] = session.InstallGuid, 
             ["accelerometer"] = false,
             ["accelerometerValue"] = "",
             ["gravity"] = false,

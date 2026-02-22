@@ -89,7 +89,7 @@
 
     <Grid Name="Root" Classes.open="{Binding IsNowPlayingOpen}">
         <Panel>
-            <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}"
+            <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}"
                                  Stretch="UniformToFill">
                 <controls:AsyncImage.Effect>
                     <BlurEffect Radius="100" />
@@ -117,24 +117,56 @@
             <Grid Grid.Row="1" ColumnDefinitions="4*, 6*" Margin="0,30,0,50">
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="40">
-                    <suki:GlassCard CornerRadius="20" Padding="0" Width="380" Height="380">
-                        <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
+                    <suki:GlassCard CornerRadius="20" Padding="0" Width="350" Height="350">
+                        <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
                     </suki:GlassCard>
 
                     <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">
-                        <TextBlock Text="{Binding CurrentPlayingSong.Name}"
-                                   FontSize="32" FontWeight="Bold" Foreground="White"
-                                   TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding CurrentPlayingSong.Singer}"
-                                   FontSize="22" Foreground="#DDFFFFFF"
+                        <TextBlock Text="{Binding Player.CurrentPlayingSong.Name}"
+                                   FontSize="28" FontWeight="Bold" Foreground="White"
+                                     TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Player.CurrentPlayingSong.Singer}"
+                                   FontSize="18" Foreground="#DDFFFFFF"
                                    TextTrimming="CharacterEllipsis" />
+                        
+                        
+
+                <Grid RowDefinitions="Auto, Auto" VerticalAlignment="Center"
+                      HorizontalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
+                        <Button Command="{Binding Player.PlayPreviousCommand}" Classes="Basic" ToolTip.Tip="上一首">
+                            <Svg Path="/Assets/backward.svg" Css="path { fill: white; }" Width="18" Height="18" />
+                        </Button>
+                        <Button Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic" Width="36" Height="36">
+                            <Panel>
+                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24" Css="path { fill: white; }"
+                                     IsVisible="{Binding Player.IsPlayingAudio}" />
+                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24" Css="path { fill: white; }"
+                                     IsVisible="{Binding !Player.IsPlayingAudio}" />
+                            </Panel>
+                        </Button>
+                        <Button Command="{Binding Player.PlayNextCommand}" Classes="Basic" ToolTip.Tip="下一首">
+                            <Svg Path="/Assets/next-svgrepo-com.svg" Css="path { fill: white; }" Width="18" Height="18" />
+                        </Button>
+                    </StackPanel>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Width="400" Margin="0,4,0,0">
+                        <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Player.TotalDurationSeconds}"
+                                Value="{Binding Player.CurrentPositionSeconds}"
+                                Margin="8,0" IsSnapToTickEnabled="False"
+                                HorizontalAlignment="Stretch"
+                                Classes="Player" />
+                    </Grid>
+                </Grid>
+                            
+            
                     </StackPanel>
                 </StackPanel>
 
                 <ListBox Grid.Column="1"
                          Name="LyricsList"
-                         ItemsSource="{Binding LyricLines}"
-                         SelectedItem="{Binding CurrentLyricLine}"
+                         ItemsSource="{Binding Player.LyricLines}"
+                         SelectedItem="{Binding Player.CurrentLyricLine}"
                          Background="Transparent"
                          Margin="60,0,0,0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -161,7 +193,7 @@
                 </ListBox>
 
                 <TextBlock Grid.Column="1" Text="暂无歌词"
-                           IsVisible="{Binding !LyricLines.Count}"
+                           IsVisible="{Binding !Player.LyricLines.Count}"
                            Foreground="White" Opacity="0.5" FontSize="24" FontWeight="Bold"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>

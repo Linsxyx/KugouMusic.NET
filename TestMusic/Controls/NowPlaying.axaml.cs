@@ -40,7 +40,7 @@ public partial class NowPlaying : UserControl
         }, DispatcherPriority.Input);
     }
 
-    private void ScrollToCenter(ListBox listBox, object item)
+    private async void ScrollToCenter(ListBox listBox, object item)
     {
         var scrollViewer = listBox.GetVisualDescendants()
             .OfType<ScrollViewer>()
@@ -48,33 +48,42 @@ public partial class NowPlaying : UserControl
 
         if (scrollViewer == null)
             return;
-
+        
         listBox.ScrollIntoView(item);
-
-        Dispatcher.UIThread.Post(() =>
+        
+        for (int i = 0; i < 3; i++)
         {
-            var container = listBox.ContainerFromItem(item);
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+        }
+
+        var container = listBox.ContainerFromItem(item);
+        if (container == null)
+        {
+            listBox.UpdateLayout();
+            container = listBox.ContainerFromItem(item);
+        
             if (container == null)
                 return;
+        }
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-            var transform = container.TransformToVisual(scrollViewer);
-            if (transform == null)
-                return;
+        var transform = container.TransformToVisual(scrollViewer);
+        if (transform == null)
+            return;
 
-            var position = transform.Value.Transform(new Point(0, 0));
+        var position = transform.Value.Transform(new Point(0, 0));
 
-            var itemCenter = position.Y + container.Bounds.Height / 2;
-            var viewportCenter = scrollViewer.Viewport.Height / 2;
+        var itemCenter = position.Y + container.Bounds.Height / 2;
+        var viewportCenter = scrollViewer.Viewport.Height / 2;
 
-            var targetOffset = scrollViewer.Offset.Y + (itemCenter - viewportCenter);
+        var targetOffset = scrollViewer.Offset.Y + (itemCenter - viewportCenter);
 
-            targetOffset = Math.Clamp(
-                targetOffset,
-                0,
-                scrollViewer.Extent.Height - scrollViewer.Viewport.Height
-            );
+        targetOffset = Math.Clamp(
+            targetOffset,
+            0,
+            scrollViewer.Extent.Height - scrollViewer.Viewport.Height
+        );
 
-            scrollViewer.Offset = new Vector(0, targetOffset);
-        }, DispatcherPriority.Render);
+        scrollViewer.Offset = new Vector(0, targetOffset);
     }
 }

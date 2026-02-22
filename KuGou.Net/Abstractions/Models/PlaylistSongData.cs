@@ -48,11 +48,11 @@ public record PlaylistSong : KgBaseModel
     [property: JsonPropertyName("albuminfo")]
     public AlbumLite? Album { get; set; }
 
-    //封面，先写死300，酷狗官方存的封面本来就没太高清
+    //封面，先写死600，酷狗官方存的封面本来就没太高清
     [property: JsonPropertyName("cover")]
     public string? Cover
     {
-        get => field?.Replace("{size}", "300");
+        get => field?.Replace("{size}", "600");
         set;
     }
 
@@ -85,7 +85,7 @@ public record SingerLite : KgBaseModel
     [property: JsonPropertyName("avatar")]
     public string SingerPic
     {
-        get => field.Replace("{size}", "300");
+        get => field.Replace("{size}", "600");
         set;
     } = "";
 }

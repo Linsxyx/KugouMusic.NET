@@ -15,6 +15,7 @@
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Blue" />
         <labs:ControlThemes />
+        <StyleInclude Source="avares://TestMusic/Styles/Styles1.axaml" />
     </Application.Styles>
 
     <Application.Resources>

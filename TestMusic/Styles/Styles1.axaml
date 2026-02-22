@@ -1,0 +1,119 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- 定义样式类 "Modern" -->
+    <Style Selector="Slider.Player">
+        <!-- 基础属性设置 -->
+        <Setter Property="Background" Value="#ddd"/> <!-- 轨道背景色 -->
+        <Setter Property="Foreground" Value="#444450"/> <!-- 进度条颜色 (主色) -->
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="MinHeight" Value="30"/> <!-- 增加点击区域高度，对应CSS的::before扩大点击范围 -->
+        
+        <!-- 重写控件模板 -->
+        <Setter Property="Template">
+            <ControlTemplate>
+                <DataValidationErrors>
+                    <!-- 根Grid，背景透明用于接收点击 -->
+                    <Grid Name="GridRoot" Background="Transparent" RowDefinitions="Auto">
+                        
+                        <!-- 轨道容器 -->
+                        <Track Name="PART_Track" 
+                               Grid.Row="0" 
+                               IsDirectionReversed="{TemplateBinding IsDirectionReversed}" 
+                               Orientation="Horizontal"
+                               Height="30"> 
+                            
+                            <!-- 1. 已走过的进度 (左侧) -->
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton" 
+                                              Background="{TemplateBinding Foreground}" 
+                                              HorizontalAlignment="Stretch" 
+                                              VerticalAlignment="Stretch"
+                                              Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate>
+                                            <!-- 实际的视觉线条：高度6px -->
+                                            <Border Name="PART_DecreaseBorder"
+                                                    Height="6" 
+                                                    CornerRadius="3" 
+                                                    Background="{TemplateBinding Background}" 
+                                                    VerticalAlignment="Center"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseButton>
+
+                            <!-- 2. 未走过的进度 (右侧) -->
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton" 
+                                              Background="{TemplateBinding Background}" 
+                                              HorizontalAlignment="Stretch" 
+                                              VerticalAlignment="Stretch"
+                                              Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate>
+                                            <!-- 实际的视觉线条：高度6px -->
+                                            <Border Name="PART_IncreaseBorder"
+                                                    Height="6" 
+                                                    CornerRadius="3" 
+                                                    Background="{TemplateBinding Background}" 
+                                                    VerticalAlignment="Center"/>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.IncreaseButton>
+
+                            <!-- 3. 滑块 (圆点) -->
+                            <Track.Thumb>
+                                <Thumb Name="thumb" 
+                                       Width="12" Height="12" 
+                                       Background="#ffffff"
+                                       BorderBrush="{TemplateBinding Foreground}"
+                                       BorderThickness="2"
+                                       DataContext="{TemplateBinding Value}"> <!-- DataContext workaround if needed -->
+                                    <Thumb.Template>
+                                        <ControlTemplate>
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="50"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </DataValidationErrors>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- 默认 Thumb 样式：透明，设置过渡动画 -->
+    <Style Selector="Slider.Player /template/ Thumb#thumb">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="RenderTransform" Value="scale(1)"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <!-- 鼠标悬停在 Slider 上时，显示 Thumb -->
+    <Style Selector="Slider.Player:pointerover /template/ Thumb#thumb">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="RenderTransform" Value="scale(1.3)"/>
+    </Style>
+    
+    <!-- 正在拖拽 (Pressed) Thumb 时，显示 Thumb 且放大 -->
+    <Style Selector="Slider.Player:pressed /template/ Thumb#thumb">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="RenderTransform" Value="scale(1.3)"/>
+    </Style>
+    
+    <Style Selector="Slider.Player:pointerover /template/ RepeatButton#PART_DecreaseButton">
+         <Setter Property="Opacity" Value="0.8"/> 
+    </Style>
+
+</Styles>

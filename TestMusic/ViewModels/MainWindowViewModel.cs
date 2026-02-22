@@ -2,16 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
-using SimpleAudio;
 using TestMusic.Views;
 
 namespace TestMusic.ViewModels;
@@ -20,16 +17,10 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private const string DefaultCover = "avares://TestMusic/Assets/Default.png";
     private const string LikeListCover = "avares://TestMusic/Assets/LikeList.jpg";
-    private readonly AuthClient _authClient;
     private readonly DeviceClient _deviceClient;
     private readonly DiscoveryClient _discoveryClient;
 
-    // --- 子 ViewModel ---
-    private readonly LyricClient _lyricClient;
-    private readonly MusicClient _musicClient;
-    private readonly DispatcherTimer _playbackTimer;
-
-    private readonly SimpleAudioPlayer _player;
+    public PlayerViewModel Player{ get; }
     private readonly PlaylistClient _playlistClient;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
@@ -38,98 +29,71 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private PageViewModelBase _activePage;
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
-
-    private List<KrcLine> _currentLyrics = new();
-
-    // --- 歌词与显示 ---
-    [ObservableProperty] private string _currentLyricText = "---";
-    [ObservableProperty] private string _currentLyricTrans = "";
-
-    [ObservableProperty] private SongItem? _currentPlayingSong;
-    [ObservableProperty] private double _currentPositionSeconds;
-    [ObservableProperty] private bool _isDraggingProgress;
+    
     [ObservableProperty] private bool _isLoggedIn;
 
     [ObservableProperty] private bool _isNowPlayingOpen;
-
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(TogglePlayPauseCommand))]
-    private bool _isPlayingAudio;
-
     [ObservableProperty] private bool _isQueuePaneOpen; // 右侧抽屉
-    private bool _isTimerUpdatingPosition;
-    [ObservableProperty] private string _musicQuality = "high";
-    [ObservableProperty] private float _musicVolume = 1.0f;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
     private string _searchKeyword = "";
 
     [ObservableProperty] private string _statusMessage = "就绪";
-    [ObservableProperty] private double _totalDurationSeconds;
     [ObservableProperty] private string? _userAvatar;
 
-    // --- 用户信息 (用于底部显示) ---
     [ObservableProperty] private string _userName = "未登录";
-
-    // --- 构造函数 ---
+    
     public MainWindowViewModel(
+        PlayerViewModel player,
         KgSessionManager sessionManager,
         AuthClient authClient,
         DeviceClient deviceClient,
         DiscoveryClient discoveryClient,
-        MusicClient musicClient,
         PlaylistClient playlistClient,
         UserClient userClient,
-        LyricClient lyricClient,
         LoginViewModel loginViewModel,
         SearchViewModel searchViewModel,
         UserViewModel userViewModel)
     {
         _sessionManager = sessionManager;
-        _authClient = authClient;
         _deviceClient = deviceClient;
         _discoveryClient = discoveryClient;
-        _musicClient = musicClient;
+        
         _playlistClient = playlistClient;
         _userClient = userClient;
-        _lyricClient = lyricClient;
-
+        
         LoginViewModel = loginViewModel;
         _searchViewModel = searchViewModel;
         _userViewModel = userViewModel;
 
-        // 订阅登录成功事件
+        
         LoginViewModel.LoginSuccess += OnLoginSuccess;
         _userViewModel.LogoutRequested += OnLogoutRequested;
 
-        _player = new SimpleAudioPlayer();
-        _player.PlaybackEnded += () => Dispatcher.UIThread.Post(() => PlayNextCommand.Execute(null));
-
-        _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _playbackTimer.Tick += OnPlaybackTimerTick;
-
+        Player = player;
         var dailyVm = new DailyRecommendViewModel();
         var playlistVm = new MyPlaylistsViewModel();
         Pages.Add(dailyVm);
         Pages.Add(playlistVm);
         ActivePage = dailyVm;
-
-        // 启动后台任务：登录 & 加载推荐
+        
+        Player.PropertyChanged += (s, e) => 
+        {
+            if (e.PropertyName == nameof(Player.StatusMessage))
+                StatusMessage = Player.StatusMessage;
+        };
+        
         Task.Run(async () =>
         {
             await LoadLocalSessionOrLogin();
             await GetDailyRecommendations();
         });
     }
-
-    public ObservableCollection<LyricLineViewModel> LyricLines { get; } = new();
-
-    // --- 主窗口引用 (用于弹出登录窗口) ---
+    
     public Window? MainWindow { get; set; }
 
     public ObservableCollection<PageViewModelBase> Pages { get; } = new();
-    public ObservableCollection<SongItem> PlaybackQueue { get; } = new();
-
-    // --- 暴露 LoginViewModel 供 Dialog 使用 ---
+    
     public LoginViewModel LoginViewModel { get; }
 
     // --- 登录相关 ---
@@ -251,7 +215,7 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
-    [RelayCommand]
+    [RelayCommand]//先用弹窗，之后再改
     private void ShowLoginDialog()
     {
         if (MainWindow == null) return;
@@ -260,8 +224,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             DataContext = LoginViewModel
         };
-
-        // 订阅登录成功事件关闭窗口
+        
         void OnLoginSuccess()
         {
             loginWindow.Close();
@@ -285,223 +248,6 @@ public partial class MainWindowViewModel : ObservableObject
         _ = _userViewModel.LoadUserInfoAsync();
         ActivePage = _userViewModel;
     }
-
-
-    [RelayCommand]
-    private async Task PlaySong(SongItem? song)
-    {
-        if (song == null) return;
-
-        // 获取当前显示的页面
-        var currentPage = ActivePage;
-
-        // 根据当前页面类型获取歌曲列表
-        List<SongItem> songsToQueue = new();
-
-        if (currentPage is DailyRecommendViewModel dailyVm)
-            songsToQueue = dailyVm.Songs.ToList();
-        else if (currentPage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
-            songsToQueue = playlistVm.SelectedPlaylistSongs.ToList();
-        else if (currentPage is SearchViewModel searchVm)
-            songsToQueue = searchVm.Songs.ToList();
-
-        // 如果当前页面没有歌曲列表，或者列表为空，只添加当前歌曲
-        if (songsToQueue.Count == 0) songsToQueue = new List<SongItem> { song };
-
-        // 清空并重新添加队列
-        PlaybackQueue.Clear();
-        foreach (var item in songsToQueue) PlaybackQueue.Add(item);
-
-        // UI 更新
-        if (_currentPlayingSong != null) _currentPlayingSong.IsPlaying = false;
-        CurrentPlayingSong = song;
-        CurrentPlayingSong.IsPlaying = true;
-
-        StatusMessage = $"正在缓冲: {song.Name}";
-        StopAndReset(); // 停止上一首
-
-        try
-        {
-            // 1. 获取播放链接
-            var playData = await _musicClient.GetPlayInfoAsync(song.Hash, MusicQuality);
-            if (playData?.Status != 1 || playData.Urls.Count == 0)
-            {
-                StatusMessage = "无法获取播放链接，尝试下一首...";
-                await Task.Delay(1000);
-                await PlayNext();
-                return;
-            }
-
-            var url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
-            if (string.IsNullOrEmpty(url)) return;
-
-            _ = LoadLyrics(song.Hash, song.Name);
-
-            // 3. 加载音频并播放
-            if (_player.Load(url))
-            {
-                _player.SetVolume(MusicVolume);
-                _player.Play();
-
-                IsPlayingAudio = true;
-                // 优先使用 API 返回的时长，否则尝试从播放器获取
-                TotalDurationSeconds =
-                    song.DurationSeconds > 0 ? song.DurationSeconds : _player.GetDuration().TotalSeconds;
-
-                _playbackTimer.Start();
-                StatusMessage = $"正在播放: {song.Name}";
-            }
-            else
-            {
-                StatusMessage = "加载音频流失败";
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"播放出错: {ex.Message}";
-            StopAndReset();
-        }
-    }
-
-    [RelayCommand]
-    private void RemoveFromQueue(SongItem song)
-    {
-        PlaybackQueue.Remove(song);
-        if (PlaybackQueue.Count == 0) StopAndReset();
-    }
-
-    [RelayCommand]
-    private void ClearQueue()
-    {
-        PlaybackQueue.Clear();
-        StopAndReset();
-    }
-
-
-    private void StopAndReset()
-    {
-        _playbackTimer.Stop();
-        _player.Stop();
-        IsPlayingAudio = false;
-        CurrentLyricText = "---";
-        CurrentLyricTrans = "";
-        CurrentPositionSeconds = 0;
-    }
-
-
-    private async Task LoadLyrics(string hash, string name)
-    {
-        CurrentLyricTrans = "";
-        _currentLyrics.Clear();
-
-        // 1. 清空界面绑定的歌词集合
-        LyricLines.Clear();
-        CurrentLyricLine = null;
-
-        try
-        {
-            var searchJson = await _lyricClient.SearchLyricAsync(hash, null, name, "no");
-
-            if (!searchJson.TryGetProperty("candidates", out var candidatesElem) ||
-                candidatesElem.ValueKind != JsonValueKind.Array) return;
-
-            var candidates = candidatesElem.EnumerateArray().ToList();
-            if (candidates.Count == 0)
-            {
-                CurrentLyricText = "未找到歌词";
-                return;
-            }
-
-            var bestMatch = candidates.First();
-            var id = bestMatch.GetProperty("id").GetString();
-            var key = bestMatch.GetProperty("accesskey").GetString();
-            var fmt = bestMatch.TryGetProperty("fmt", out var f) ? f.GetString() ?? "krc" : "krc";
-
-            if (id != null && key != null)
-            {
-                var lyricResult = await _lyricClient.GetLyricAsync(id, key, fmt);
-                if (!string.IsNullOrEmpty(lyricResult.DecodedContent))
-                {
-                    var krc = KrcParser.Parse(lyricResult.DecodedContent);
-                    _currentLyrics = krc.Lines;
-
-                    // 2. 【关键修复】填充 LyricLines 集合供界面显示
-                    // 注意：这里假设你的 KrcLine 对象有 Content, Translation, StartTime, Duration 属性
-                    // 如果属性名不同，请根据实际 KuGou.Net 的定义调整
-                    foreach (var line in _currentLyrics)
-                        LyricLines.Add(new LyricLineViewModel
-                        {
-                            Content = line.Content,
-                            Translation = line.Translation,
-                            StartTime = line.StartTime,
-                            Duration = line.Duration,
-                            IsActive = false
-                        });
-
-                    CurrentLyricText = _currentLyrics.Count > 0 ? "" : "暂无歌词";
-                }
-            }
-        }
-        catch
-        {
-            CurrentLyricText = "歌词获取失败";
-        }
-    }
-
-    private void UpdateLyrics(double currentMs)
-    {
-        if (LyricLines.Count == 0) return;
-
-
-        var currentVm =
-            LyricLines.FirstOrDefault(x => currentMs >= x.StartTime && currentMs < x.StartTime + x.Duration);
-
-        if (currentVm == null)
-            currentVm = LyricLines.LastOrDefault(x => x.StartTime <= currentMs);
-
-        if (currentVm != null && currentVm != CurrentLyricLine)
-        {
-            if (CurrentLyricLine != null)
-                CurrentLyricLine.IsActive = false;
-
-            CurrentLyricLine = currentVm;
-            CurrentLyricLine.IsActive = true;
-
-            CurrentLyricText = currentVm.Content;
-            CurrentLyricTrans = currentVm.Translation;
-        }
-    }
-
-    private void OnPlaybackTimerTick(object? sender, EventArgs e)
-    {
-        if (_player.IsStopped) return;
-
-        if (IsDraggingProgress) return;
-
-        var pos = _player.GetPosition();
-
-        CurrentPositionSeconds = pos.TotalSeconds;
-
-        UpdateLyrics(pos.TotalMilliseconds);
-    }
-
-    partial void OnCurrentPositionSecondsChanged(double value)
-    {
-        if (_isTimerUpdatingPosition) return;
-
-        if (Math.Abs(value - _player.GetPosition().TotalSeconds) < 0.5) return;
-
-
-        _player.SetPosition(TimeSpan.FromSeconds(value));
-
-        UpdateLyrics(value * 1000);
-    }
-
-    partial void OnMusicVolumeChanged(float value)
-    {
-        _player.SetVolume(value);
-    }
-
 
     [RelayCommand]
     private async Task GetDailyRecommendations()
@@ -541,11 +287,9 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task Search()
     {
         if (string.IsNullOrWhiteSpace(SearchKeyword)) return;
-
-        // 切换到搜索页面
+        
         ActivePage = _searchViewModel;
-
-        // 执行搜索
+        
         await _searchViewModel.SearchAsync(SearchKeyword);
         StatusMessage = _searchViewModel.StatusMessage;
     }
@@ -601,7 +345,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         ActivePage = vm;
         vm.SelectedPlaylist = vm.Playlists.FirstOrDefault(x => x.Id == playlistId);
-        vm.IsShowingSongs = true; // 切换到详情模式
+        vm.IsShowingSongs = true; 
 
         StatusMessage = "正在加载歌单歌曲...";
         try
@@ -635,53 +379,6 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-
-    [RelayCommand]
-    private async Task PlayNext()
-    {
-        if (PlaybackQueue.Count == 0) return;
-        var idx = CurrentPlayingSong != null ? PlaybackQueue.IndexOf(CurrentPlayingSong) : -1;
-        var nextIdx = (idx + 1) % PlaybackQueue.Count;
-        await PlaySong(PlaybackQueue[nextIdx]);
-    }
-
-    [RelayCommand]
-    private async Task PlayPrevious()
-    {
-        if (PlaybackQueue.Count == 0) return;
-        var idx = CurrentPlayingSong != null ? PlaybackQueue.IndexOf(CurrentPlayingSong) : -1;
-        var prevIdx = idx - 1;
-        if (prevIdx < 0) prevIdx = PlaybackQueue.Count - 1;
-        await PlaySong(PlaybackQueue[prevIdx]);
-    }
-
-    [RelayCommand]
-    private void TogglePlayPause()
-    {
-        if (_player.IsPlaying)
-        {
-            _player.Pause();
-            IsPlayingAudio = false;
-            _playbackTimer.Stop();
-        }
-        else
-        {
-            _player.Play();
-            IsPlayingAudio = true;
-            _playbackTimer.Start();
-        }
-    }
-
-    [RelayCommand]
-    private void AddToNext(SongItem? song)
-    {
-        if (song == null) return;
-        var idx = CurrentPlayingSong != null ? PlaybackQueue.IndexOf(CurrentPlayingSong) : -1;
-        if (idx >= 0 && idx < PlaybackQueue.Count - 1) PlaybackQueue.Insert(idx + 1, song);
-        else PlaybackQueue.Add(song);
-        StatusMessage = "已添加到播放队列";
-    }
-
     [RelayCommand]
     private void ToggleQueuePane()
     {
@@ -698,5 +395,29 @@ public partial class MainWindowViewModel : ObservableObject
     private void CloseNowPlaying()
     {
         IsNowPlayingOpen = false;
+    }
+    
+    
+    [RelayCommand]
+    private async Task PlayFromList(SongItem? song)
+    {
+        if (song == null) return;
+
+        IList<SongItem>? currentSongList = null;
+        
+        if (ActivePage is DailyRecommendViewModel dailyVm)
+        {
+            currentSongList = dailyVm.Songs;
+        }
+        else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
+        {
+            currentSongList = playlistVm.SelectedPlaylistSongs;
+        }
+        else if (ActivePage is SearchViewModel searchVm)
+        {
+            currentSongList = searchVm.Songs;
+        }
+        
+        await Player.PlaySongAsync(song, currentSongList);
     }
 }

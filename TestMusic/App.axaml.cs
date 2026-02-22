@@ -28,6 +28,7 @@ public class App : Application
         collection.AddTransient<SearchViewModel>();
         collection.AddTransient<UserViewModel>();
         collection.AddTransient<MainWindowViewModel>();
+        collection.AddSingleton<PlayerViewModel>();
 
         var services = collection.BuildServiceProvider();
 

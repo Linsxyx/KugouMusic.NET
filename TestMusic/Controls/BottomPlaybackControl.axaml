@@ -39,12 +39,12 @@
                         Classes="Basic" Padding="0" Cursor="Hand">
                     <Grid ColumnDefinitions="Auto, Auto">
                         <Border CornerRadius="8" ClipToBounds="True" Width="56" Height="56">
-                            <controls:AsyncImage Source="{Binding CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
+                            <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" Spacing="3">
-                            <TextBlock Text="{Binding CurrentPlayingSong.Name, TargetNullValue='KuGou Music'}"
+                            <TextBlock Text="{Binding Player.CurrentPlayingSong.Name, TargetNullValue='KuGou Music'}"
                                        FontWeight="Bold" FontSize="14" MaxWidth="180" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding CurrentPlayingSong.Singer, TargetNullValue='Ready'}"
+                            <TextBlock Text="{Binding Player.CurrentPlayingSong.Singer, TargetNullValue='Ready'}"
                                        FontSize="12" Opacity="0.6" MaxWidth="180" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                     </Grid>
@@ -53,35 +53,33 @@
                 <Grid Grid.Column="1" RowDefinitions="Auto, Auto" VerticalAlignment="Center"
                       HorizontalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
-                        <Button Command="{Binding PlayPreviousCommand}" Classes="Basic" ToolTip.Tip="上一首">
+                        <Button Command="{Binding Player.PlayPreviousCommand}" Classes="Basic" ToolTip.Tip="上一首">
                             <Svg Path="/Assets/backward.svg" Width="18" Height="18" />
                         </Button>
-                        <Button Command="{Binding TogglePlayPauseCommand}" Classes="Basic" Width="36" Height="36">
+                        <Button Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic" Width="36" Height="36">
                             <Panel>
                                 <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
-                                     IsVisible="{Binding IsPlayingAudio}" />
+                                     IsVisible="{Binding Player.IsPlayingAudio}" />
                                 <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
-                                     IsVisible="{Binding !IsPlayingAudio}" />
+                                     IsVisible="{Binding !Player.IsPlayingAudio}" />
                             </Panel>
                         </Button>
-                        <Button Command="{Binding PlayNextCommand}" Classes="Basic" ToolTip.Tip="下一首">
+                        <Button Command="{Binding Player.PlayNextCommand}" Classes="Basic" ToolTip.Tip="下一首">
                             <Svg Path="/Assets/next-svgrepo-com.svg" Width="18" Height="18" />
                         </Button>
                     </StackPanel>
 
                     <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Width="400" Margin="0,4,0,0">
                         <TextBlock
-                            Text="{Binding CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                            Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                             FontSize="10" Opacity="0.5" VerticalAlignment="Center" />
-                        <Slider Grid.Column="1" Minimum="0" Maximum="{Binding TotalDurationSeconds}"
-                                Value="{Binding CurrentPositionSeconds}"
+                        <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Player.TotalDurationSeconds}"
+                                Value="{Binding Player.CurrentPositionSeconds}"
                                 Margin="8,0" IsSnapToTickEnabled="False"
-                                HorizontalAlignment="Stretch">
-                            <Slider.Resources>
-                            </Slider.Resources>
-                        </Slider>
+                                HorizontalAlignment="Stretch"
+                                Classes="Player" />
                         <TextBlock Grid.Column="2"
-                                   Text="{Binding TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                                   Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                                    FontSize="10" Opacity="0.5" VerticalAlignment="Center" />
                     </Grid>
                 </Grid>
@@ -90,10 +88,8 @@
                             Margin="0,0,10,0">
                     <Grid ColumnDefinitions="Auto, Auto">
                         <Svg Path="/Assets/volume-max-svgrepo-com.svg" Width="16" Height="16" Margin="0,0,8,0" />
-                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding MusicVolume}" Width="80">
-                            <Slider.Resources>
-                            </Slider.Resources>
-                        </Slider>
+                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding Player.MusicVolume}" Width="80" Classes="Player" />
+
                     </Grid>
                     <Button Command="{Binding ToggleQueuePaneCommand}" Classes="Basic">
                         <Svg Path="/Assets/PlayList.svg" Width="20" Height="20" />

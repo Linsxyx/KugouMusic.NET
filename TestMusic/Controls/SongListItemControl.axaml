@@ -36,14 +36,14 @@
                         HorizontalAlignment="Right" Margin="0,0,10,0">
 
                 <Button Classes="Basic" ToolTip.Tip="播放"
-                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlaySongCommand}"
+                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlayFromListCommand}"
                         CommandParameter="{Binding .}">
                     <TextBlock Text="▶" FontWeight="Bold" />
                 </Button>
 
                 <!-- 添加到下一首按钮 -->
                 <Button Classes="Basic" ToolTip.Tip="下一首播放"
-                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).AddToNextCommand}"
+                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
                         CommandParameter="{Binding .}">
                     <TextBlock Text="+" FontWeight="Bold" />
                 </Button>

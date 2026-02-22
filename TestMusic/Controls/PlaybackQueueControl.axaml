@@ -10,16 +10,16 @@
             <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,10">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="播放队列" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding PlaybackQueue.Count, StringFormat='({0})'}"
+                    <TextBlock Text="{Binding Player.PlaybackQueue.Count, StringFormat='({0})'}"
                                FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
                 <Button Grid.Column="1" Classes="Basic" Content="清空"
-                        Command="{Binding ClearQueueCommand}"
+                        Command="{Binding Player.ClearQueueCommand}"
                         FontSize="12" Foreground="{DynamicResource SukiPrimaryColor}" />
             </Grid>
 
             <ListBox Grid.Row="1"
-                     ItemsSource="{Binding PlaybackQueue}"
+                     ItemsSource="{Binding Player.PlaybackQueue}"
                      BorderThickness="0">
                 <ListBox.Styles>
                     <Style Selector="ListBoxItem">
@@ -42,12 +42,12 @@
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Button Classes="Basic"
-                                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlaySongCommand}"
+                                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
                                         CommandParameter="{Binding .}">
                                     <TextBlock Text="▶" FontSize="10" />
                                 </Button>
                                 <Button Classes="Basic"
-                                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).RemoveFromQueueCommand}"
+                                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
                                         CommandParameter="{Binding .}">
                                     <TextBlock Text="✕" FontSize="10" />
                                 </Button>
