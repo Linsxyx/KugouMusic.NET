@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
@@ -110,7 +110,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     public Window? MainWindow { get; set; }
 
-    public ObservableCollection<PageViewModelBase> Pages { get; } = new();
+    public AvaloniaList<PageViewModelBase> Pages { get; } = new();
 
     public LoginViewModel LoginViewModel { get; }
 
@@ -436,6 +436,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         IsNowPlayingOpen = false;
     }
+    
+    [RelayCommand]
+    private void CloseQueuePane()
+    {
+        IsQueuePaneOpen = false;
+    }
 
 
     [RelayCommand]
@@ -449,7 +455,11 @@ public partial class MainWindowViewModel : ObservableObject
             currentSongList = dailyVm.Songs;
         else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
             currentSongList = playlistVm.SelectedPlaylistSongs;
-        else if (ActivePage is SearchViewModel searchVm) currentSongList = searchVm.Songs;
+        else if (ActivePage is SearchViewModel searchVm)
+        {
+            // 如果在搜索详情页（歌单/专辑），使用详情列表
+            currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
+        }
         else if (ActivePage is SingerViewModel singerVm) currentSongList = singerVm.Songs;
 
         await Player.PlaySongAsync(song, currentSongList);

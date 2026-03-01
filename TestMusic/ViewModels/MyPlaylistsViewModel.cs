@@ -1,8 +1,9 @@
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Collections;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -42,11 +43,11 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     public override string DisplayName => "我的歌单";
     public override string Icon => "/Assets/music-player-svgrepo-com.svg";
 
-    public ObservableCollection<PlaylistItem> Playlists { get; } = new();
+    public AvaloniaList<PlaylistItem> Playlists { get; } = new();
 
-    public ObservableCollection<SongItem> SelectedPlaylistSongs { get; } = new();
+    public AvaloniaList<SongItem> SelectedPlaylistSongs { get; } = new();
 
-    public ObservableCollection<PlaylistItem> Items { get; } = new();
+    public AvaloniaList<PlaylistItem> Items { get; } = new();
 
     [RelayCommand]
     private void GoBack()
@@ -196,7 +197,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             {
                 var files = Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
                     .Where(f => supportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
-
+                var tempList = new List<SongItem>();
                 foreach (var file in files)
                     try
                     {
@@ -214,12 +215,18 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                             Cover = DefaultCover
                         };
 
-                        Dispatcher.UIThread.Post(() => SelectedPlaylistSongs.Add(songItem));
+                        tempList.Add(songItem);
                     }
                     catch
                     {
                         /* 忽略损坏文件 */
                     }
+
+                Dispatcher.UIThread.Post(() =>
+                {
+                    SelectedPlaylistSongs.Clear();
+                    foreach (var item in tempList) SelectedPlaylistSongs.Add(item);
+                });
             }
             catch
             {

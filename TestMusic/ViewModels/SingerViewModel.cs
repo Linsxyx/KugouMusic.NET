@@ -1,5 +1,5 @@
-using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Clients;
@@ -35,7 +35,7 @@ public partial class SingerViewModel : PageViewModelBase
     public override string DisplayName => "歌手详情";
     public override string Icon => "/Assets/user-svgrepo-com.svg";
 
-    public ObservableCollection<SongItem> Songs { get; } = new();
+    public AvaloniaList<SongItem> Songs { get; } = new();
 
     private async Task LoadSongsAsync()
     {

@@ -108,7 +108,16 @@
         </suki:SukiSideMenu>
 
         <localControls:BottomPlaybackControl />
-
+        
+        <Border Name="QueueBackdrop"
+                Grid.Row="0"
+                Classes.open="{Binding IsQueuePaneOpen}"
+                Background="#40000000"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                PointerPressed="OnBackdropPointerPressed"
+                IsVisible="False"/>
+        
         <Border Name="QueuePanel"
                 Grid.Row="0"
                 Classes.open="{Binding IsQueuePaneOpen}"

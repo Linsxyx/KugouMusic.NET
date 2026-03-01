@@ -37,7 +37,7 @@ public record UserPlaylistItem : KgBaseModel
     [JsonPropertyName("pic")]
     public string? Pic
     {
-        get => field?.Replace("{size}", "600");
+        get => field?.Replace("{size}", "400");
         set;
     }
 

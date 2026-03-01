@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -85,10 +85,10 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _playbackTimer.Tick += OnPlaybackTimerTick;
     }
 
-    public ObservableCollection<LyricLineViewModel> LyricLines { get; } = new();
+    public AvaloniaList<LyricLineViewModel> LyricLines { get; } = new();
 
     // 播放队列 (独立于页面)
-    public ObservableCollection<SongItem> PlaybackQueue { get; } = new();
+    public AvaloniaList<SongItem> PlaybackQueue { get; } = new();
 
     public void Dispose()
     {
@@ -408,17 +408,34 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     {
         if (LyricLines.Count == 0) return;
 
+        var left = 0;
+        var right = LyricLines.Count - 1;
+        var resultIndex = 0;
+        if (currentMs < LyricLines[0].StartTime)
+            resultIndex = 0;
+        else if (currentMs >= LyricLines[^1].StartTime)
+            resultIndex = LyricLines.Count - 1;
+        else
+            while (left <= right)
+            {
+                var mid = left + (right - left) / 2;
 
-        var currentVm =
-            LyricLines.FirstOrDefault(x => currentMs >= x.StartTime && currentMs < x.StartTime + x.Duration);
+                if (LyricLines[mid].StartTime <= currentMs)
+                {
+                    resultIndex = mid;
+                    left = mid + 1;
+                }
+                else
+                {
+                    right = mid - 1;
+                }
+            }
 
-        if (currentVm == null)
-            currentVm = LyricLines.LastOrDefault(x => x.StartTime <= currentMs);
+        var currentVm = LyricLines[resultIndex];
 
-        if (currentVm != null && currentVm != CurrentLyricLine)
+        if (currentVm != CurrentLyricLine)
         {
-            if (CurrentLyricLine != null)
-                CurrentLyricLine.IsActive = false;
+            if (CurrentLyricLine != null) CurrentLyricLine.IsActive = false;
 
             CurrentLyricLine = currentVm;
             CurrentLyricLine.IsActive = true;

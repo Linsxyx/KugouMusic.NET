@@ -17,7 +17,7 @@
                         Command="{Binding Player.ClearQueueCommand}"
                         FontSize="12" Foreground="{DynamicResource SukiPrimaryColor}" />
             </Grid>
-
+            
             <ListBox Grid.Row="1"
                      ItemsSource="{Binding Player.PlaybackQueue}"
                      BorderThickness="0">
@@ -30,29 +30,64 @@
                         <Setter Property="Cursor" Value="Hand" />
                     </Style>
                 </ListBox.Styles>
+                
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:SongItem">
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="{Binding Name}"
-                                           FontWeight="{Binding IsPlaying}"
-                                           Foreground="{Binding IsPlaying}" />
-                                <TextBlock Text="{Binding Singer}" FontSize="11" />
-                            </StackPanel>
+                        <Border Background="Transparent">
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
+                                        <MenuItem.Styles>
+                                            <Style Selector="MenuItem">
+                                                <Setter Property="Header"
+                                                        Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
+                                                <Setter Property="Command"
+                                                        Value="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToSingerCommand}" />
+                                                <Setter Property="CommandParameter" Value="{Binding .}" />
+                                            </Style>
+                                        </MenuItem.Styles>
+                                    </MenuItem>
+                                    
+                                    <MenuItem Header="下一首播放"
+                                              Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
+                                              CommandParameter="{Binding .}" />
+                                    
+                                    <MenuItem Header="从队列移除"
+                                              Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
+                                              CommandParameter="{Binding .}">
+                                        <MenuItem.Icon>
+                                            <PathIcon Data="{x:Static suki:Icons.Cross}" Width="12" Height="12"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Border.ContextMenu>
+                            
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontWeight="{Binding IsPlaying}"
+                                               Foreground="{Binding IsPlaying}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Singer}" FontSize="11" 
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
 
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button Classes="Basic"
-                                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
-                                        CommandParameter="{Binding .}">
-                                    <TextBlock Text="▶" FontSize="10" />
-                                </Button>
-                                <Button Classes="Basic"
-                                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
-                                        CommandParameter="{Binding .}">
-                                    <TextBlock Text="✕" FontSize="10" />
-                                </Button>
-                            </StackPanel>
-                        </Grid>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Classes="Basic"
+                                            ToolTip.Tip="播放"
+                                            Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
+                                            CommandParameter="{Binding .}">
+                                        <TextBlock Text="▶" FontSize="10" />
+                                    </Button>
+                                    <Button Classes="Basic"
+                                            ToolTip.Tip="移除"
+                                            Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
+                                            CommandParameter="{Binding .}">
+                                        <TextBlock Text="✕" FontSize="10" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

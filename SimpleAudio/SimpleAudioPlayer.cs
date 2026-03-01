@@ -180,6 +180,7 @@ public class SimpleAudioPlayer : IDisposable
 
     public void Dispose()
     {
+        Bass.Free();
         Stop();
     }
 

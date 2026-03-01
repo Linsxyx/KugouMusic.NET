@@ -1,7 +1,7 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Abstractions.Models;
@@ -17,40 +17,52 @@ public enum SearchType
     Album
 }
 
+public enum DetailType
+{
+    None,
+    Playlist,
+    Album
+}
+
 public partial class SearchViewModel(
+    PlayerViewModel player, 
     MusicClient musicClient,
     PlaylistClient playlistClient,
     AlbumClient albumClient,
     ILogger<SearchViewModel> logger) : PageViewModelBase
 {
+    private readonly PlayerViewModel _player = player;
     private const string DefaultCover = "avares://TestMusic/Assets/Default.png";
     [ObservableProperty] private SearchType _currentSearchType = SearchType.Song;
     [ObservableProperty] private string? _detailCover;
     [ObservableProperty] private string? _detailTitle;
-
+    [ObservableProperty] private string? _detailSubTitle; 
+    
     [ObservableProperty] private bool _isSearching;
-
-    // 歌单/专辑详情
+    
     [ObservableProperty] private bool _isShowingDetail;
     [ObservableProperty] private string _searchKeyword = "";
+    
+    private int _currentDetailPage = 1;
+    private bool _hasMoreDetails = true;
+    private string _currentDetailId = "";
+    private DetailType _currentDetailType = DetailType.None;
+    [ObservableProperty] private bool _isLoadingMoreDetails;
 
     public override string DisplayName => "搜索";
     public override string Icon => "/Assets/Search.svg";
-
-    // 单曲搜索结果
-    public ObservableCollection<SongItem> Songs { get; } = new();
-
-    // 歌单搜索结果
-    public ObservableCollection<SearchPlaylistItem> Playlists { get; } = new();
-
-    // 专辑搜索结果
-    public ObservableCollection<SearchAlbumItem> Albums { get; } = new();
-    public ObservableCollection<SongItem> DetailSongs { get; } = new();
+    
+    public AvaloniaList<SongItem> Songs { get; } = new();
+    public AvaloniaList<SearchPlaylistItem> Playlists { get; } = new();
+    public AvaloniaList<SearchAlbumItem> Albums { get; } = new();
+    public AvaloniaList<SongItem> DetailSongs { get; } = new();
 
     [RelayCommand]
     private async Task Search()
     {
         if (string.IsNullOrWhiteSpace(SearchKeyword)) return;
+        
+        IsShowingDetail = false;
 
         IsSearching = true;
         logger.LogInformation("正在搜索: {Keyword}, 类型: {Type}", SearchKeyword, CurrentSearchType);
@@ -93,38 +105,19 @@ public partial class SearchViewModel(
     {
         var results = await musicClient.SearchAsync(SearchKeyword);
         foreach (var item in results)
-            Songs.Add(new SongItem
-            {
-                Name = item.Name,
-                Singer = item.Singer,
-                Hash = item.Hash,
-                Singers = item.Singers,
-                Cover = string.IsNullOrWhiteSpace(item.Cover) ? DefaultCover : item.Cover,
-                DurationSeconds = item.Duration
-            });
-        logger.LogInformation("找到 {Count} 首歌曲", Songs.Count);
+            Songs.Add(ConvertSong(item));
     }
 
     private async Task SearchPlaylists()
     {
         var results = await musicClient.SearchSpecialAsync(SearchKeyword);
-        if (results != null)
-        {
-            foreach (var item in results)
-                Playlists.Add(item);
-            logger.LogInformation("找到 {Count} 个歌单", Playlists.Count);
-        }
+        if (results != null) foreach (var item in results) Playlists.Add(item);
     }
 
     private async Task SearchAlbums()
     {
         var results = await musicClient.SearchAlbumAsync(SearchKeyword);
-        if (results != null)
-        {
-            foreach (var item in results)
-                Albums.Add(item);
-            logger.LogInformation("找到 {Count} 张专辑", Albums.Count);
-        }
+        if (results != null) foreach (var item in results) Albums.Add(item);
     }
 
     [RelayCommand]
@@ -133,8 +126,9 @@ public partial class SearchViewModel(
         if (Enum.TryParse<SearchType>(type, out var searchType))
         {
             CurrentSearchType = searchType;
+            IsShowingDetail = false; 
             ClearResults();
-            IsShowingDetail = false;
+            if (!string.IsNullOrWhiteSpace(SearchKeyword)) _ = Search();
         }
     }
 
@@ -143,53 +137,61 @@ public partial class SearchViewModel(
     {
         if (item == null) return;
 
+        // 初始化状态
+        _currentDetailType = DetailType.Playlist;
+        _currentDetailId = item.GlobalId;
+        _currentDetailPage = 1;
+        _hasMoreDetails = true;
+        
         DetailTitle = item.Name;
+        DetailSubTitle = $"{item.SongCount} 首歌曲 - {item.CreatorName}";
         DetailCover = item.Cover ?? DefaultCover;
+        
         IsShowingDetail = true;
         DetailSongs.Clear();
 
-        try
-        {
-            var songs = await playlistClient.GetSongsAsync(item.GlobalId, 1, 100);
-            foreach (var s in songs)
-            {
-                var singerName = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知";
-                DetailSongs.Add(new SongItem
-                {
-                    Name = s.Name,
-                    Singer = singerName,
-                    Hash = s.Hash,
-                    AlbumId = s.AlbumId,
-                    Singers = s.Singers,
-                    Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultCover : s.Cover,
-                    DurationSeconds = s.DurationMs / 1000.0
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "加载歌单详情失败");
-        }
+        await LoadMoreDetailsInternal();
     }
 
     [RelayCommand]
     private async Task OpenAlbum(SearchAlbumItem item)
     {
-        if (item == null)
-        {
-            logger.LogError("专辑打开失败");
-            return;
-        }
+        if (item == null) return;
+
+        _currentDetailType = DetailType.Album;
+        _currentDetailId = item.AlbumId.ToString();
+        _currentDetailPage = 1;
+        _hasMoreDetails = true;
 
         DetailTitle = item.Name;
+        DetailSubTitle = $"{item.SingerName}";
         DetailCover = item.Cover ?? DefaultCover;
+
         IsShowingDetail = true;
         DetailSongs.Clear();
 
+        await LoadMoreDetailsInternal();
+    }
+    
+    [RelayCommand]
+    private async Task LoadMoreDetails()
+    {
+        if (IsLoadingMoreDetails || !_hasMoreDetails || !IsShowingDetail) return;
+        
+        _currentDetailPage++;
+        await LoadMoreDetailsInternal();
+    }
+    
+    private async Task LoadMoreDetailsInternal()
+    {
+        IsLoadingMoreDetails = true;
         try
         {
-            var songs = await albumClient.GetSongsAsync(item.AlbumId.ToString());
-            if (songs != null)
+            if (_currentDetailType == DetailType.Playlist)
+            {
+                var songs = await playlistClient.GetSongsAsync(_currentDetailId, _currentDetailPage, 100);
+                if (songs.Count < 100) _hasMoreDetails = false;
+
                 foreach (var s in songs)
                 {
                     var singerName = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知";
@@ -204,10 +206,40 @@ public partial class SearchViewModel(
                         DurationSeconds = s.DurationMs / 1000.0
                     });
                 }
+            }
+            else if (_currentDetailType == DetailType.Album)
+            {
+                var songs = await albumClient.GetSongsAsync(_currentDetailId, _currentDetailPage, 30);
+                
+                if (songs == null || songs.Count < 30) _hasMoreDetails = false;
+
+                if (songs != null)
+                {
+                    foreach (var s in songs)
+                    {
+                        var singerName = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知";
+                        DetailSongs.Add(new SongItem
+                        {
+                            Name = s.Name,
+                            Singer = singerName,
+                            Hash = s.Hash,
+                            AlbumId = s.AlbumId,
+                            Singers = s.Singers,
+                            Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultCover : s.Cover,
+                            DurationSeconds = s.DurationMs / 1000.0
+                        });
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "加载专辑详情失败");
+            logger.LogError(ex, "加载详情失败");
+            if (_currentDetailPage > 1) _currentDetailPage--;
+        }
+        finally
+        {
+            IsLoadingMoreDetails = false;
         }
     }
 
@@ -222,5 +254,18 @@ public partial class SearchViewModel(
     {
         SearchKeyword = keyword;
         await Search();
+    }
+    
+    private SongItem ConvertSong(SongInfo item)
+    {
+        return new SongItem
+        {
+            Name = item.Name,
+            Singer = item.Singer,
+            Hash = item.Hash,
+            Singers = item.Singers,
+            Cover = string.IsNullOrWhiteSpace(item.Cover) ? DefaultCover : item.Cover,
+            DurationSeconds = item.Duration
+        };
     }
 }

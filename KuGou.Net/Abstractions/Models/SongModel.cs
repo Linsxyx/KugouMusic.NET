@@ -36,7 +36,7 @@ public record SongInfo : KgBaseModel
     [property: JsonPropertyName("Image")]
     public string? Cover
     {
-        get => field?.Replace("{size}", "600");
+        get => field?.Replace("{size}", "400");
         set;
     }
 }
