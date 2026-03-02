@@ -1,0 +1,29 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="KugouAvaloniaPlayer.App"
+             xmlns:local="using:KugouAvaloniaPlayer"
+             xmlns:labs="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:converters="clr-namespace:KugouAvaloniaPlayer.Converters"
+             RequestedThemeVariant="Default">
+    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <suki:SukiTheme ThemeColor="Blue" />
+        <labs:ControlThemes />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/Styles1.axaml" />
+    </Application.Styles>
+
+    <Application.Resources>
+        <converters:SecondsToMinutesSecondsConverter x:Key="SecondsToTimeConverter" />
+        <converters:CountdownTextConverter x:Key="CountdownTextConverter" />
+        <converters:CountdownEnabledConverter x:Key="CountdownEnabledConverter" />
+        <converters:CloseBehaviorConverter x:Key="CloseBehaviorConverter" />
+        <converters:SingerNameConverter x:Key="SingerNameConverter" />
+    </Application.Resources>
+
+</Application>

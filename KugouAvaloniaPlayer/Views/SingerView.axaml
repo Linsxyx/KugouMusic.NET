@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             x:Class="KugouAvaloniaPlayer.Views.SingerView"
+             x:DataType="vm:SingerViewModel">
+
+    <suki:GlassCard Margin="15" Padding="20">
+        <Grid RowDefinitions="Auto, *">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto, *, Auto" Margin="0,0,0,20">
+                <Button
+                    Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
+                    Classes="Basic" Margin="0,0,15,0">
+                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Width="24" Height="24" />
+                </Button>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
+                    <Border Width="50" Height="50" CornerRadius="25" ClipToBounds="True" Background="#EEE">
+                        <controls:AsyncImage Source="{Binding SingerAvatar}" Stretch="UniformToFill" />
+                    </Border>
+                    <TextBlock Text="{Binding SingerName}" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <Button Grid.Column="2" Command="{Binding ToggleSortCommand}" Classes="Basic">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static suki:Icons.DebugStepOver}" Width="16" Height="16" />
+                        <TextBlock Text="{Binding CurrentSortText}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1"
+                          Name="SongsScrollViewer"
+                          ScrollChanged="OnScrollChanged"
+                          Padding="0,0,0,-50">
+                <Grid>
+                    <ItemsControl ItemsSource="{Binding Songs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <localControls:SongListItemControl />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                IsVisible="{Binding IsLoading}" Spacing="10">
+                        <suki:Loading Width="40" Height="40" />
+                        <TextBlock Text="正在加载..." Foreground="Gray" />
+                    </StackPanel>
+
+                    <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20"
+                                IsVisible="{Binding IsLoadingMore}" Spacing="10">
+                        <suki:Loading Width="30" Height="30" />
+                        <TextBlock Text="正在加载更多..." Foreground="Gray" FontSize="12" />
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </Grid>
+    </suki:GlassCard>
+</UserControl>
