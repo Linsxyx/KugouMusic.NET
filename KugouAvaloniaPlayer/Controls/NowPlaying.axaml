@@ -3,6 +3,7 @@
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:controls1="clr-namespace:KugouAvaloniaPlayer.Controls"
              x:Class="KugouAvaloniaPlayer.Controls.NowPlaying"
              x:DataType="vm:MainWindowViewModel">
 
@@ -186,42 +187,28 @@
                     </StackPanel>
                 </StackPanel>
 
-                <ListBox Grid.Column="1"
-                         Name="LyricsList"
-                         ItemsSource="{Binding Player.LyricLines}"
-                         SelectedItem="{Binding Player.CurrentLyricLine}"
-                         Background="Transparent"
-                         Margin="60,0,0,0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Hidden"
-                         SelectionChanged="OnLyricsSelectionChanged">
-                    <ListBox.OpacityMask>
-                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                            <GradientStop Color="Transparent" Offset="0" />
-                            <GradientStop Color="Black" Offset="0.1" />
-                            <GradientStop Color="Black" Offset="0.9" />
-                            <GradientStop Color="Transparent" Offset="1" />
-                        </LinearGradientBrush>
-                    </ListBox.OpacityMask>
-
-                    <ListBox.ItemTemplate>
+                <controls1:SmoothScrollView Grid.Column="1"
+                                           ItemsSource="{Binding Player.LyricLines}"
+                                           SelectedItem="{Binding Player.CurrentLyricLine}"
+                                           Margin="60,0,0,0">
+                    <controls1:SmoothScrollView.ItemTemplate>
                         <DataTemplate DataType="vm:LyricLineViewModel">
-                            <StackPanel>
+                            <StackPanel Margin="0,15"> 
                                 <TextBlock Text="{Binding Content}"
                                            Classes="LyricText"
                                            Classes.active="{Binding IsActive}"
-                                           TextWrapping="Wrap" />
-
-
+                                           TextWrapping="Wrap" 
+                                           HorizontalAlignment="Center" TextAlignment="Center"/>
                                 <TextBlock Text="{Binding Translation}"
                                            Classes="TransText"
                                            Classes.active="{Binding IsActive}"
                                            IsVisible="{Binding Translation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                           TextWrapping="Wrap" />
+                                           TextWrapping="Wrap" 
+                                           HorizontalAlignment="Center" TextAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                    </controls1:SmoothScrollView.ItemTemplate>
+                </controls1:SmoothScrollView>
 
                 <TextBlock Grid.Column="1" Text="暂无歌词"
                            IsVisible="{Binding !Player.LyricLines.Count}"

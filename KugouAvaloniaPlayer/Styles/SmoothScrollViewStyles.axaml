@@ -1,0 +1,45 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:KugouAvaloniaPlayer.Controls">
+
+    <Design.PreviewWith>
+        <controls:SmoothScrollView Width="200" Height="200" />
+    </Design.PreviewWith>
+
+    <Style Selector="controls|SmoothScrollView">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="ClipToBounds" Value="True" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                
+                    <!-- ！！！关键修复：加上 VerticalAlignment="Top" ！！！ -->
+                    <!-- 这会让它不再受外层高度限制，从而获取到包含所有歌词的真实总高度 -->
+                    <ItemsPresenter Name="PART_ItemsPresenter" VerticalAlignment="Top">
+                    
+                        <ItemsPresenter.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsPresenter.ItemsPanel>
+                    
+                        <ItemsPresenter.RenderTransform>
+                            <TranslateTransform Y="{Binding CurrentOffset, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </ItemsPresenter.RenderTransform>
+                    
+                        <ItemsPresenter.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="TranslateTransform.Y" 
+                                                  Duration="{Binding ScrollDuration, RelativeSource={RelativeSource TemplatedParent}}" 
+                                                  Easing="CubicEaseOut"/>
+                            </Transitions>
+                        </ItemsPresenter.Transitions>
+                    </ItemsPresenter>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+</Styles>
