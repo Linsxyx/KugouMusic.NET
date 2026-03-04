@@ -36,12 +36,9 @@ public partial class MainWindow : SukiWindow
 
         base.OnClosing(e);
     }
-    
+
     private void OnBackdropPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm)
-        {
-            vm.IsQueuePaneOpen = false;
-        }
+        if (DataContext is MainWindowViewModel vm) vm.IsQueuePaneOpen = false;
     }
 }

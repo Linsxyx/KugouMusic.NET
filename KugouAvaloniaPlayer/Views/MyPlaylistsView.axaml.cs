@@ -29,14 +29,15 @@ public partial class MyPlaylistsView : UserControl
 
         if (item.Type == PlaylistType.AddButton)
         {
-            // --- 点击了“添加”卡片 ---
+            // --- 点击了"添加"卡片 ---
             // 弹出菜单选择：本地还是在线
             var contextMenu = new ContextMenu();
 
             var addLocalItem = new MenuItem { Header = "导入本地文件夹..." };
             addLocalItem.Click += AddLocalFolder_Click;
 
-            var addOnlineItem = new MenuItem { Header = "新建在线歌单 (TODO)", IsEnabled = false };
+            var addOnlineItem = new MenuItem { Header = "新建网络歌单..." };
+            addOnlineItem.Click += AddOnlinePlaylist_Click;
 
             contextMenu.Items.Add(addLocalItem);
             contextMenu.Items.Add(addOnlineItem);
@@ -67,6 +68,11 @@ public partial class MyPlaylistsView : UserControl
             var path = folders[0].Path.LocalPath;
             if (DataContext is MyPlaylistsViewModel vm) vm.AddLocalPlaylist(path);
         }
+    }
+
+    private void AddOnlinePlaylist_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MyPlaylistsViewModel vm) vm.ShowCreatePlaylistDialog();
     }
 
     private void OnScrollChanged(object? sender, ScrollChangedEventArgs e)

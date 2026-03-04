@@ -10,7 +10,6 @@
              x:Class="KugouAvaloniaPlayer.Controls.SongListItemControl"
              x:DataType="vm:SongItem">
 
-
     <UserControl.Styles>
         <Style Selector="Grid#ItemRoot">
             <Setter Property="Background" Value="Transparent" />
@@ -28,7 +27,6 @@
     </UserControl.Styles>
 
     <Border CornerRadius="8" Padding="5" Margin="0,1">
-        <!-- 保持原来的右键菜单，方便电脑用户习惯 -->
         <Border.ContextMenu>
             <ContextMenu>
                 <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
@@ -45,8 +43,17 @@
                 <MenuItem Header="下一首播放"
                           Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
                           CommandParameter="{Binding .}" />
+                <MenuItem Header="添加到歌单"
+                          Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.ShowAddToPlaylistDialogCommand}"
+                          CommandParameter="{Binding .}" />
+
+                <MenuItem Header="从歌单移除"
+                          Command="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).RemoveSongFromPlaylistCommand}"
+                          CommandParameter="{Binding .}"
+                          IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsOnlinePlaylist, FallbackValue=False}" />
             </ContextMenu>
         </Border.ContextMenu>
+
         <Grid ColumnDefinitions="Auto, *, 150, 80, 150" Background="Transparent">
             <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" Width="45" Height="45" Margin="8,5">
                 <Border.Effect>
@@ -92,6 +99,14 @@
                             <MenuItem Header="下一首播放"
                                       Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
                                       CommandParameter="{Binding .}" />
+                            <MenuItem Header="添加到歌单"
+                                      Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.ShowAddToPlaylistDialogCommand}"
+                                      CommandParameter="{Binding .}" />
+
+                            <MenuItem Header="从歌单移除"
+                                      Command="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).RemoveSongFromPlaylistCommand}"
+                                      CommandParameter="{Binding .}"
+                                      IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsOnlinePlaylist, FallbackValue=False}" />
                         </MenuFlyout>
                     </Button.Flyout>
                     <Svg Path="/Assets/More.svg" Width="25" Height="25" />

@@ -188,23 +188,23 @@
                 </StackPanel>
 
                 <controls1:SmoothScrollView Grid.Column="1"
-                                           ItemsSource="{Binding Player.LyricLines}"
-                                           SelectedItem="{Binding Player.CurrentLyricLine}"
-                                           Margin="60,0,0,0">
+                                            ItemsSource="{Binding Player.LyricLines}"
+                                            SelectedItem="{Binding Player.CurrentLyricLine}"
+                                            Margin="60,0,0,0">
                     <controls1:SmoothScrollView.ItemTemplate>
                         <DataTemplate DataType="vm:LyricLineViewModel">
-                            <StackPanel Margin="0,15"> 
+                            <StackPanel Margin="0,15">
                                 <TextBlock Text="{Binding Content}"
                                            Classes="LyricText"
                                            Classes.active="{Binding IsActive}"
-                                           TextWrapping="Wrap" 
-                                           HorizontalAlignment="Center" TextAlignment="Center"/>
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center" TextAlignment="Center" />
                                 <TextBlock Text="{Binding Translation}"
                                            Classes="TransText"
                                            Classes.active="{Binding IsActive}"
                                            IsVisible="{Binding Translation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                           TextWrapping="Wrap" 
-                                           HorizontalAlignment="Center" TextAlignment="Center"/>
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center" TextAlignment="Center" />
                             </StackPanel>
                         </DataTemplate>
                     </controls1:SmoothScrollView.ItemTemplate>

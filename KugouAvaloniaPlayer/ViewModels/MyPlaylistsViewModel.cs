@@ -4,12 +4,16 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
+using Avalonia.Controls;
+using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
+using SukiUI.Dialogs;
+using SukiUI.Toasts;
 using File = TagLib.File;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -19,7 +23,9 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private const string FolderCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
+    private readonly ISukiDialogManager _dialogManager;
     private readonly PlaylistClient _playlistClient;
+    private readonly ISukiToastManager _toastManager;
     private readonly UserClient _userClient;
 
     private int _currentPage = 1;
@@ -28,17 +34,25 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
     [ObservableProperty] private bool _isShowingSongs;
 
-    [ObservableProperty] private PlaylistItem? _selectedPlaylist;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsOnlinePlaylist))]
+    private PlaylistItem? _selectedPlaylist;
 
     public MyPlaylistsViewModel(
         UserClient userClient,
-        PlaylistClient playlistClient)
+        PlaylistClient playlistClient,
+        ISukiToastManager toastManager,
+        ISukiDialogManager dialogManager)
     {
         _userClient = userClient;
         _playlistClient = playlistClient;
+        _toastManager = toastManager;
+        _dialogManager = dialogManager;
 
         _ = LoadAllPlaylists();
     }
+
+    // 标识当前选中的歌单是否为网络歌单
+    public bool IsOnlinePlaylist => SelectedPlaylist?.Type == PlaylistType.Online;
 
     public override string DisplayName => "我的歌单";
     public override string Icon => "/Assets/music-player-svgrepo-com.svg";
@@ -68,39 +82,44 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             Type = PlaylistType.AddButton
         });
 
+        var localItems = new List<PlaylistItem>();
         foreach (var path in SettingsManager.Settings.LocalMusicFolders)
             if (Directory.Exists(path))
-            {
-                var dirName = new DirectoryInfo(path).Name;
-                Items.Add(new PlaylistItem
+                localItems.Add(new PlaylistItem
                 {
-                    Name = dirName,
+                    Name = new DirectoryInfo(path).Name,
                     LocalPath = path,
                     Type = PlaylistType.Local,
-                    Cover = FolderCover, // 使用本地默认封面
-                    Count = 0 // 暂时为0，点击进去扫描后再更新，或者后台预扫
+                    Cover = FolderCover,
+                    Count = 0
                 });
-            }
 
+        if (localItems.Count > 0)
+            Items.AddRange(localItems);
         try
         {
             var onlinePlaylists = await _userClient.GetPlaylistsAsync();
+            var onlineItems = new List<PlaylistItem>();
             foreach (var item in onlinePlaylists)
-                if (!string.IsNullOrEmpty(item.GlobalId))
-                    Items.Add(new PlaylistItem
+                if (!string.IsNullOrEmpty(item.ListCreateId))
+                    onlineItems.Add(new PlaylistItem
                     {
                         Name = item.Name,
-                        Id = item.GlobalId,
+                        Id = item.ListCreateId,
+                        ListId = item.ListId, // 保存数字 ID 用于删除
                         Count = item.Count,
                         Type = PlaylistType.Online,
                         Cover = string.IsNullOrWhiteSpace(item.Pic)
                             ? item.ListId != 2 ? DefaultCover : LikeCover
                             : item.Pic
                     });
+
+            if (onlineItems.Count > 0)
+                Items.AddRange(onlineItems);
         }
         catch
         {
-            //StatusMessage = "在线歌单加载失败";
+            //_logger.LogError("加载失败");
         }
     }
 
@@ -137,10 +156,8 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     {
         if (item == null || item.Type != PlaylistType.Local) return;
 
-        // 1. 从界面集合移除
         Items.Remove(item);
 
-        // 2. 从配置中移除
         if (!string.IsNullOrEmpty(item.LocalPath))
             if (SettingsManager.Settings.LocalMusicFolders.Contains(item.LocalPath))
             {
@@ -160,21 +177,20 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
             if (songs.Count < 100) _hasMoreSongs = false;
 
-            foreach (var s in songs)
+            var songItems = songs.Select(s => new SongItem
             {
-                var singerName = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知";
+                Name = s.Name,
+                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                Hash = s.Hash,
+                AlbumId = s.AlbumId,
+                FileId = s.FileId, // 保存 FileId 用于删除
+                Singers = s.Singers,
+                Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultCover : s.Cover,
+                DurationSeconds = s.DurationMs / 1000.0
+            }).ToList();
 
-                SelectedPlaylistSongs.Add(new SongItem
-                {
-                    Name = s.Name,
-                    Singer = singerName,
-                    Hash = s.Hash,
-                    AlbumId = s.AlbumId,
-                    Singers = s.Singers,
-                    Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultCover : s.Cover,
-                    DurationSeconds = s.DurationMs / 1000.0
-                });
-            }
+            if (songItems.Count > 0)
+                SelectedPlaylistSongs.AddRange(songItems);
         }
         catch (Exception)
         {
@@ -219,18 +235,18 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                     }
                     catch
                     {
-                        /* 忽略损坏文件 */
+                        //_logger.LogError("加载本地文件失败");
                     }
 
                 Dispatcher.UIThread.Post(() =>
                 {
                     SelectedPlaylistSongs.Clear();
-                    foreach (var item in tempList) SelectedPlaylistSongs.Add(item);
+                    SelectedPlaylistSongs.AddRange(tempList);
                 });
             }
             catch
             {
-                /* 忽略权限错误 */
+                //_logger.LogError("权限错误");
             }
         });
     }
@@ -244,5 +260,127 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         }
 
         _ = LoadAllPlaylists();
+    }
+
+    [RelayCommand]
+    private async Task CreateOnlinePlaylist(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        try
+        {
+            var result = await _playlistClient.CreatePlaylistAsync(name);
+            if (result != null)
+            {
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Success)
+                    .WithTitle("创建成功")
+                    .WithContent($"已创建歌单「{name}」")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+
+                await LoadAllPlaylists();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("创建失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    public void ShowCreatePlaylistDialog()
+    {
+        var textBox = new TextBox
+        {
+            Watermark = "请输入歌单名称",
+            Width = 300
+        };
+
+        _dialogManager.CreateDialog()
+            .WithTitle("新建网络歌单")
+            .WithContent(textBox)
+            .WithActionButton("取消", _ => { }, true, "Flat")
+            .WithActionButton("创建", async _ =>
+            {
+                var name = textBox.Text;
+                if (!string.IsNullOrWhiteSpace(name)) await CreateOnlinePlaylistCommand.ExecuteAsync(name);
+            }, true, "Accent")
+            .TryShow();
+    }
+
+    [RelayCommand]
+    private async Task DeleteOnlinePlaylist(PlaylistItem item)
+    {
+        if (item == null || item.Type != PlaylistType.Online) return;
+
+        try
+        {
+            var result = await _playlistClient.DeletePlaylistAsync(item.ListId.ToString());
+            if (result != null)
+            {
+                Items.Remove(item);
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Success)
+                    .WithTitle("删除成功")
+                    .WithContent($"已删除歌单「{item.Name}」")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("删除失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    [RelayCommand]
+    private async Task RemoveSongFromPlaylist(SongItem song)
+    {
+        if (song == null || SelectedPlaylist?.Type != PlaylistType.Online) return;
+
+        try
+        {
+            var result =
+                await _playlistClient.RemoveSongsAsync(SelectedPlaylist.ListId.ToString(), new[] { song.FileId });
+            if (result != null)
+            {
+                SelectedPlaylistSongs.Remove(song);
+                // 更新歌单歌曲数量
+                if (SelectedPlaylist.Count > 0)
+                    SelectedPlaylist.Count--;
+
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Success)
+                    .WithTitle("移除成功")
+                    .WithContent($"已从歌单移除「{song.Name}」")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+            }
+        }
+        catch (Exception ex)
+        {
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("移除失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
     }
 }

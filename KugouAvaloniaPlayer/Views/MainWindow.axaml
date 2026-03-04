@@ -102,13 +102,13 @@
             <suki:SukiSideMenu.FooterContent>
                 <StackPanel HorizontalAlignment="Center" Margin="10,10,10,100" Spacing="8">
                     <localControls:UserAvatarControl />
-                    <TextBlock Text="v0.1.1" Foreground="Gray" FontSize="10" HorizontalAlignment="Center" />
+                    <TextBlock Text="v0.2.0" Foreground="Gray" FontSize="10" HorizontalAlignment="Center" />
                 </StackPanel>
             </suki:SukiSideMenu.FooterContent>
         </suki:SukiSideMenu>
 
         <localControls:BottomPlaybackControl />
-        
+
         <Border Name="QueueBackdrop"
                 Grid.Row="0"
                 Classes.open="{Binding IsQueuePaneOpen}"
@@ -116,8 +116,8 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 PointerPressed="OnBackdropPointerPressed"
-                IsVisible="False"/>
-        
+                IsVisible="False" />
+
         <Border Name="QueuePanel"
                 Grid.Row="0"
                 Classes.open="{Binding IsQueuePaneOpen}"
@@ -134,5 +134,6 @@
 
     <suki:SukiWindow.Hosts>
         <suki:SukiToastHost Manager="{Binding ToastManager}" />
+        <suki:SukiDialogHost Manager="{Binding DialogManager}" />
     </suki:SukiWindow.Hosts>
 </suki:SukiWindow>

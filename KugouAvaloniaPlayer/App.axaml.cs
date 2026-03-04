@@ -9,6 +9,7 @@ using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer;
@@ -35,6 +36,7 @@ public partial class App : Application
         collection.AddKuGouSdk();
 
         collection.AddSingleton<ISukiToastManager, SukiToastManager>();
+        collection.AddSingleton<ISukiDialogManager, SukiDialogManager>();
 
         SettingsManager.Load();
 

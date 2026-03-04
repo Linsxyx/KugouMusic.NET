@@ -13,7 +13,11 @@ using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.Logging;
+using SukiUI.Dialogs;
+using SukiUI.Enums;
 using SukiUI.Toasts;
+using Velopack;
+using Velopack.Sources;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -39,7 +43,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isLoggedIn;
 
     [ObservableProperty] private bool _isNowPlayingOpen;
-    [ObservableProperty] private bool _isQueuePaneOpen; // 右侧抽屉
+    [ObservableProperty] private bool _isQueuePaneOpen;
 
     private DesktopLyricWindow? _lyricWindow;
 
@@ -56,8 +60,9 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         ISukiToastManager toastManager,
         PlayerViewModel player,
+        ISukiDialogManager dialogManager,
         KgSessionManager sessionManager,
-        AuthClient authClient,
+        /*AuthClient authClient,*/
         DeviceClient deviceClient,
         DiscoveryClient discoveryClient,
         PlaylistClient playlistClient,
@@ -68,6 +73,7 @@ public partial class MainWindowViewModel : ObservableObject
         UserViewModel userViewModel,
         ILogger<MainWindowViewModel> logger)
     {
+        DialogManager = dialogManager;
         _sessionManager = sessionManager;
         _deviceClient = deviceClient;
         _discoveryClient = discoveryClient;
@@ -87,26 +93,22 @@ public partial class MainWindowViewModel : ObservableObject
         Player = player;
         ToastManager = toastManager;
         var dailyVm = new DailyRecommendViewModel();
-        var playlistVm = new MyPlaylistsViewModel(_userClient, _playlistClient);
+        var playlistVm = new MyPlaylistsViewModel(_userClient, _playlistClient, ToastManager, DialogManager);
         Pages.Add(dailyVm);
         Pages.Add(playlistVm);
         ActivePage = dailyVm;
-
-        /*Player.PropertyChanged += (s, e) =>
-        {
-            if (e.PropertyName == nameof(Player.StatusMessage))
-                _logger.LogInformation(Player.StatusMessage);
-        };*/
 
         Task.Run(async () =>
         {
             await LoadLocalSessionOrLogin();
             await GetDailyRecommendations();
+            await CheckForUpdatesAsync();
         });
     }
 
     public PlayerViewModel Player { get; }
     public ISukiToastManager ToastManager { get; }
+    public ISukiDialogManager DialogManager { get; }
 
     public Window? MainWindow { get; set; }
 
@@ -297,19 +299,21 @@ public partial class MainWindowViewModel : ObservableObject
             if (response?.Songs != null)
             {
                 vm.Songs.Clear();
-                foreach (var item in response.Songs)
-                    vm.Songs.Add(new SongItem
+                var songItems = response.Songs
+                    .Select(item => new SongItem
                     {
                         Name = item.Name,
                         Singer = item.SingerName,
                         Hash = item.Hash,
                         AlbumId = item.AlbumId,
                         Singers = item.Singers,
-                        Cover = string.IsNullOrWhiteSpace(item.SizableCover)
-                            ? DefaultCover
-                            : item.SizableCover,
+                        Cover = string.IsNullOrWhiteSpace(item.SizableCover) ? DefaultCover : item.SizableCover,
                         DurationSeconds = item.Duration
-                    });
+                    })
+                    .ToList();
+
+                if (songItems.Any())
+                    vm.Songs.AddRange(songItems);
             }
         }
         catch (Exception ex)
@@ -351,17 +355,21 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var playlists = await _userClient.GetPlaylistsAsync();
             vm.Playlists.Clear();
-            foreach (var item in playlists)
-                if (!string.IsNullOrEmpty(item.GlobalId))
-                    vm.Playlists.Add(new PlaylistItem
-                    {
-                        Name = item.Name,
-                        Id = item.GlobalId,
-                        Count = item.Count,
-                        Cover = string.IsNullOrWhiteSpace(item.Pic)
-                            ? item.IsDefault is 2 ? LikeListCover : DefaultCover
-                            : item.Pic
-                    });
+            var playlistItems = playlists
+                .Where(item => !string.IsNullOrEmpty(item.ListCreateId))
+                .Select(item => new PlaylistItem
+                {
+                    Name = item.Name,
+                    Id = item.ListCreateId,
+                    Count = item.Count,
+                    Cover = string.IsNullOrWhiteSpace(item.Pic)
+                        ? item.IsDefault == 2 ? LikeListCover : DefaultCover
+                        : item.Pic
+                })
+                .ToList();
+
+            if (playlistItems.Any())
+                vm.Playlists.AddRange(playlistItems);
         }
         catch (Exception ex)
         {
@@ -389,23 +397,25 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var songs = await _playlistClient.GetSongsAsync(playlistId, pageSize: 100);
             vm.SelectedPlaylistSongs.Clear();
-            foreach (var item in songs)
+            var songItems = songs.Select(item =>
             {
-                var singerName = "未知";
-                if (item.Singers.Count > 0)
-                    singerName = string.Join("、", item.Singers.Select(s => s.Name));
+                var singerName = item.Singers.Count > 0
+                    ? string.Join("、", item.Singers.Select(s => s.Name))
+                    : "未知";
 
-                vm.SelectedPlaylistSongs.Add(new SongItem
+                return new SongItem
                 {
                     Name = item.Name,
                     Singer = singerName,
                     Hash = item.Hash,
                     AlbumId = item.AlbumId,
-                    Cover =
-                        string.IsNullOrWhiteSpace(item.Cover) ? DefaultCover : item.Cover,
+                    Cover = string.IsNullOrWhiteSpace(item.Cover) ? DefaultCover : item.Cover,
                     DurationSeconds = item.DurationMs / 1000.0
-                });
-            }
+                };
+            }).ToList();
+
+            if (songItems.Any())
+                vm.SelectedPlaylistSongs.AddRange(songItems);
         }
         catch (Exception ex)
         {
@@ -436,7 +446,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         IsNowPlayingOpen = false;
     }
-    
+
     [RelayCommand]
     private void CloseQueuePane()
     {
@@ -456,10 +466,8 @@ public partial class MainWindowViewModel : ObservableObject
         else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
             currentSongList = playlistVm.SelectedPlaylistSongs;
         else if (ActivePage is SearchViewModel searchVm)
-        {
             // 如果在搜索详情页（歌单/专辑），使用详情列表
             currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
-        }
         else if (ActivePage is SingerViewModel singerVm) currentSongList = singerVm.Songs;
 
         await Player.PlaySongAsync(song, currentSongList);
@@ -523,7 +531,6 @@ public partial class MainWindowViewModel : ObservableObject
         }
         else
         {
-            // 默认回首页
             var dailyVm = Pages.OfType<DailyRecommendViewModel>().FirstOrDefault();
             if (dailyVm != null) ActivePage = dailyVm;
         }
@@ -538,5 +545,97 @@ public partial class MainWindowViewModel : ObservableObject
             _lyricWindow = null;
             IsDesktopLyricEnabled = false;
         }
+    }
+
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var repoUrl = "https://github.com/Linsxyx/KugouMusic.NET";
+            var updateManager = new UpdateManager(new GithubSource(repoUrl, null, false));
+
+
+            if (!updateManager.IsInstalled)
+            {
+                _logger.LogInformation("未通过 Velopack 安装，跳过更新检查。");
+                return;
+            }
+
+            var newVersion = await updateManager.CheckForUpdatesAsync();
+            if (newVersion == null)
+            {
+                _logger.LogInformation("当前已是最新版本。");
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() => ShowActionToast(updateManager, newVersion));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"检查更新失败: {ex.Message}");
+        }
+    }
+
+// 弹出发现更新的 Toast
+    private void ShowActionToast(UpdateManager updateManager, UpdateInfo newVersion)
+    {
+        ToastManager.CreateToast()
+            .WithTitle("发现新版本")
+            .WithContent($"版本 {newVersion.TargetFullRelease.Version} 现已发布，是否立即更新？")
+            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Basic)
+            .WithActionButton("立即更新", toast => { _ = ShowUpdatingToastAndDownloadAsync(updateManager, newVersion); },
+                true, SukiButtonStyles.Accent)
+            .Queue();
+    }
+
+    private async Task ShowUpdatingToastAndDownloadAsync(UpdateManager updateManager, UpdateInfo newVersion)
+    {
+        var progress = new ProgressBar { Value = 0, ShowProgressText = true, Minimum = 0, Maximum = 100 };
+
+        var toast = ToastManager.CreateToast()
+            .WithTitle("正在下载更新...")
+            .WithContent(progress)
+            .Queue();
+
+        try
+        {
+            await Task.Run(async () =>
+            {
+                await updateManager.DownloadUpdatesAsync(newVersion,
+                    percentage => { Dispatcher.UIThread.Post(() => { progress.Value = percentage; }); });
+            });
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                ToastManager.Dismiss(toast);
+                ShowReadyToRestartToast(updateManager, newVersion);
+            });
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                ToastManager.Dismiss(toast);
+                ToastManager.CreateToast()
+                    .OfType(NotificationType.Error)
+                    .WithTitle("更新下载失败")
+                    .WithContent(ex.Message)
+                    .Dismiss().After(TimeSpan.FromSeconds(4))
+                    .Queue();
+            });
+        }
+    }
+
+    private void ShowReadyToRestartToast(UpdateManager updateManager, UpdateInfo newVersion)
+    {
+        ToastManager.CreateToast()
+            .OfType(NotificationType.Success)
+            .WithTitle("更新就绪")
+            .WithContent("新版本已下载完毕，重启软件即可应用更新。")
+            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Basic)
+            .WithActionButton("立即重启", _ => { updateManager.ApplyUpdatesAndRestart(newVersion); }, true,
+                SukiButtonStyles.Accent)
+            .Queue();
     }
 }

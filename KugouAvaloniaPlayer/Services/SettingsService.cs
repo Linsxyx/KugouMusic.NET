@@ -24,7 +24,7 @@ public static class SettingsManager
 {
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "Kugou",
+        "kugou",
         "AvaloniaPlayerSettings.json");
 
     public static AppSettings Settings { get; private set; } = new();

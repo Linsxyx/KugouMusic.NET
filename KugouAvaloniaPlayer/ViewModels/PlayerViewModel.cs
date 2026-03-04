@@ -5,14 +5,18 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia.Collections;
+using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using Avalonia.Controls.Templates;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
 using Microsoft.Extensions.Logging;
 using SimpleAudio;
+using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -21,6 +25,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 {
     // [新增] 固定歌单ID (根据你的描述)
     private const string LikeListIdForAction = "2";
+    private readonly ISukiDialogManager _dialogManager;
 
     // Dictionary 用于删除时，通过Hash找到对应的 FileId (API要求)
     private readonly Dictionary<string, int> _hashToFileId = new();
@@ -68,11 +73,13 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private double _totalDurationSeconds;
 
     public PlayerViewModel(MusicClient musicClient, LyricClient lyricClient, ISukiToastManager toastManager,
+        ISukiDialogManager dialogManager,
         UserClient userClient, PlaylistClient playlistClient, ILogger<PlayerViewModel> logger)
     {
         _musicClient = musicClient;
         _lyricClient = lyricClient;
         _toastManager = toastManager;
+        _dialogManager = dialogManager;
         _userClient = userClient;
         _playlistClient = playlistClient;
         _logger = logger;
@@ -98,10 +105,10 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _player.PlaybackEnded -= OnPlaybackEnded;
         _player.Dispose();
 
-        _currentLyrics?.Clear();
-        LyricLines?.Clear();
-        _originalQueue?.Clear();
-        PlaybackQueue?.Clear();
+        _currentLyrics.Clear();
+        LyricLines.Clear();
+        _originalQueue.Clear();
+        PlaybackQueue.Clear();
 
         GC.SuppressFinalize(this);
     }
@@ -118,7 +125,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     public async Task PlaySongAsync(SongItem? song, IList<SongItem>? contextList = null)
     {
         if (song == null) return;
-        
+
         if (contextList != null && contextList.Any())
         {
             const int maxQueueSize = 300;
@@ -152,7 +159,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             if (IsShuffleMode)
             {
                 var shuffleList = new List<SongItem>(finalList);
-                shuffleList.Remove(song); 
+                shuffleList.Remove(song);
 
                 var n = shuffleList.Count;
                 while (n > 1)
@@ -214,7 +221,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 _ = LoadLyrics(song.Hash, song.Name);
             }
 
-            if (_player.Load(url))
+            if (url != null && _player.Load(url))
             {
                 _player.SetVolume(MusicVolume);
                 _player.Play();
@@ -482,9 +489,9 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             if (playlists.Count < 2) return;
 
             var likePlaylist = playlists[1];
-            if (string.IsNullOrEmpty(likePlaylist.GlobalId)) return;
+            if (string.IsNullOrEmpty(likePlaylist.ListCreateId)) return;
 
-            var songs = await _playlistClient.GetSongsAsync(likePlaylist.GlobalId, pageSize: 1000);
+            var songs = await _playlistClient.GetSongsAsync(likePlaylist.ListCreateId, pageSize: 1000);
 
             lock (_likedHashes)
             {
@@ -589,5 +596,111 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private void OnPlaybackEnded()
     {
         Dispatcher.UIThread.Post(() => PlayNextCommand.Execute(null));
+    }
+
+    [RelayCommand]
+    public async Task ShowAddToPlaylistDialog(SongItem song)
+    {
+        if (song == null) return;
+
+        try
+        {
+            // 获取歌单列表
+            var playlists = await _userClient.GetPlaylistsAsync();
+            var onlinePlaylists = playlists
+                .Where(p => !string.IsNullOrEmpty(p.ListCreateId))
+                .ToList();
+
+            if (onlinePlaylists.Count == 0)
+            {
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Warning)
+                    .WithTitle("没有可用的歌单")
+                    .WithContent("请先创建歌单")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+                return;
+            }
+
+            // 创建歌单选择列表
+            var listBox = new ListBox
+            {
+                Width = 300,
+                MaxHeight = 400,
+                ItemsSource = onlinePlaylists,
+                SelectionMode = SelectionMode.Single,
+                ItemTemplate = new FuncDataTemplate<UserPlaylistItem>((item, _) =>
+                {
+                    return new TextBlock
+                    {
+                        Text = item.Name
+                    };
+                })
+            };
+
+            _dialogManager.CreateDialog()
+                .WithTitle("添加到歌单")
+                .WithContent(listBox)
+                .WithActionButton("取消", _ => { }, true, "Standard")
+                .WithActionButton("添加", async _ =>
+                {
+                    if (listBox.SelectedItem is UserPlaylistItem selectedPlaylist)
+                        await AddSongToPlaylistAsync(song, selectedPlaylist.ListId.ToString(), selectedPlaylist.Name);
+                }, true, "Standard")
+                .TryShow();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "获取歌单列表失败");
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("获取歌单失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    private async Task AddSongToPlaylistAsync(SongItem song, string playlistId, string playlistName)
+    {
+        try
+        {
+            var songList = new List<(string Name, string Hash, string AlbumId, string MixSongId)>
+            {
+                (song.Name, song.Hash, song.AlbumId ?? "0", "0")
+            };
+
+            var result = await _playlistClient.AddSongsAsync(playlistId, songList);
+
+            if (result.Status == 1)
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Success)
+                    .WithTitle("添加成功")
+                    .WithContent($"已将「{song.Name}」添加到「{playlistName}」")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+            else
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Error)
+                    .WithTitle("添加失败")
+                    .WithContent($"错误代码: {result.ErrorCode}")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "添加歌曲到歌单失败");
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("添加失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
     }
 }

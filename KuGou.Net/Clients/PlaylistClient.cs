@@ -54,24 +54,32 @@ public class PlaylistClient(RawPlaylistApi rawApi, KgSessionManager sessionManag
     }
 
     /// <summary>
-    ///     收藏歌单 / 新建歌单
-    ///     <para>对应: /playlist/add</para>
+    ///     收藏歌单
     /// </summary>
     /// <param name="name">歌单名称</param>
-    /// <param name="sourceUserId">原歌单创建者ID (收藏时必填)</param>
-    /// <param name="sourceListId">原歌单ID (收藏时必填)</param>
-    /// <param name="sourceGlobalId">原歌单 GlobalID (可选)</param>
+    /// <param name="sourceGlobalId">原歌单 GlobalID</param>
     public async Task<JsonElement?> CollectPlaylistAsync(
         string name,
-        string sourceUserId,
-        string sourceListId,
-        string sourceGlobalId = "",
-        long type = 0)
+        string sourceGlobalId)
     {
         var (uid, token) = GetAuth();
 
         // 调用 RawApi
-        return await rawApi.CollectPlaylistAsync(uid, token, sourceUserId, sourceListId, sourceGlobalId, name, type);
+        return await rawApi.CollectPlaylistAsync(uid, token, uid, "1", sourceGlobalId, name, 1,0);
+    }
+    
+    /// <summary>
+    ///    新建歌单
+    /// </summary>
+    /// <param name="name">歌单名称</param>
+    /// <param name="isPri">是否设为隐私，0：公开，1：隐私，仅支持创建歌单时传入</param>
+    public async Task<JsonElement?> CreatePlaylistAsync(
+        string name,
+        long isPri =0)
+    {
+        var (uid, token) = GetAuth();
+        
+        return await rawApi.CollectPlaylistAsync(uid, token, uid, "1", "", name, 0,isPri);
     }
 
     /// <summary>

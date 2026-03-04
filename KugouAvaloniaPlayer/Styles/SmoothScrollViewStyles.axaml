@@ -15,26 +15,27 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="{TemplateBinding CornerRadius}">
-                
+
                     <!-- ！！！关键修复：加上 VerticalAlignment="Top" ！！！ -->
                     <!-- 这会让它不再受外层高度限制，从而获取到包含所有歌词的真实总高度 -->
                     <ItemsPresenter Name="PART_ItemsPresenter" VerticalAlignment="Top">
-                    
+
                         <ItemsPresenter.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel />
                             </ItemsPanelTemplate>
                         </ItemsPresenter.ItemsPanel>
-                    
+
                         <ItemsPresenter.RenderTransform>
-                            <TranslateTransform Y="{Binding CurrentOffset, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <TranslateTransform
+                                Y="{Binding CurrentOffset, RelativeSource={RelativeSource TemplatedParent}}" />
                         </ItemsPresenter.RenderTransform>
-                    
+
                         <ItemsPresenter.Transitions>
                             <Transitions>
-                                <DoubleTransition Property="TranslateTransform.Y" 
-                                                  Duration="{Binding ScrollDuration, RelativeSource={RelativeSource TemplatedParent}}" 
-                                                  Easing="CubicEaseOut"/>
+                                <DoubleTransition Property="TranslateTransform.Y"
+                                                  Duration="{Binding ScrollDuration, RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Easing="CubicEaseOut" />
                             </Transitions>
                         </ItemsPresenter.Transitions>
                     </ItemsPresenter>

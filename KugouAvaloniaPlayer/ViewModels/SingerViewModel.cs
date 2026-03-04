@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -96,17 +97,21 @@ public partial class SingerViewModel : PageViewModelBase
             if (result.Songs.Count < 30)
                 _hasMoreSongs = false;
 
-            foreach (var item in result.Songs)
-                if (!string.IsNullOrEmpty(item.Hash))
-                    Songs.Add(new SongItem
-                    {
-                        Name = item.Name,
-                        Singer = item.SingerName,
-                        Hash = item.Hash,
-                        AlbumId = item.AlbumId.ToString(),
-                        DurationSeconds = item.Duration / 1000.0,
-                        Cover = item.TransParam.UnionCover
-                    });
+            var songItems = result.Songs
+                .Where(item => !string.IsNullOrEmpty(item.Hash))
+                .Select(item => new SongItem
+                {
+                    Name = item.Name,
+                    Singer = item.SingerName,
+                    Hash = item.Hash,
+                    AlbumId = item.AlbumId.ToString(),
+                    DurationSeconds = item.Duration / 1000.0,
+                    Cover = item.TransParam.UnionCover
+                })
+                .ToList();
+
+            if (songItems.Any())
+                Songs.AddRange(songItems);
 
             return true;
         }

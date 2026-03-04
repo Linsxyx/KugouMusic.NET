@@ -81,6 +81,7 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
     /// <param name="listCreateGid">原歌单 Global ID</param>
     /// <param name="name">歌单名称</param>
     /// <param name="type">0: 创建 1：收藏</param>
+    /// <param name="pub">是否设为隐私，0：公开，1：隐私，仅支持创建歌单时传入</param>
     public async Task<JsonElement> CollectPlaylistAsync(
         string userid,
         string token,
@@ -88,7 +89,8 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
         string listCreateListId,
         string listCreateGid,
         string name,
-        long? type)
+        long? type,
+        long? pub)
     {
         var clientTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
@@ -101,7 +103,7 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
             ["name"] = name,
             ["type"] = type ?? 0,
             ["source"] = 1,
-            ["is_pri"] = 0,
+            ["is_pri"] = pub??0,
             ["list_create_userid"] = listCreateUserId,
             ["list_create_listid"] = listCreateListId,
             ["list_create_gid"] = listCreateGid ?? "",

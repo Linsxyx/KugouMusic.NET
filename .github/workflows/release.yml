@@ -1,0 +1,79 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' 
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        
+        include:
+          - os: windows-latest
+            rid: win-x64
+            name: windows
+          - os: ubuntu-latest
+            rid: linux-x64
+            name: linux
+          - os: macos-latest
+            rid: osx-arm64
+            name: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Velopack
+        run: dotnet tool install -g vpk
+
+     
+      - name: Publish App
+        run: |
+          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+          -c Release \
+          -r ${{ matrix.rid }} \
+          --self-contained \
+          -o ./publish
+
+     
+      - name: Pack with Velopack
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          EXE_NAME="KugouAvaloniaPlayer"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then EXE_NAME="KugouAvaloniaPlayer.exe"; fi
+          
+          vpk pack -u KugouAvaloniaPlayer -v $VERSION -p ./publish -e $EXE_NAME -o ./releases
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: releases-${{ matrix.name }}
+          path: ./releases/*
+
+ 
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./all_releases
+          merge-multiple: true
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./all_releases/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

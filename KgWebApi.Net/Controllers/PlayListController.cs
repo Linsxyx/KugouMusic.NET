@@ -32,20 +32,26 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     }
 
     /// <summary>
-    ///     收藏歌单 / 新建歌单
-    ///     路由: POST /PlayList/add
+    ///     收藏歌单 
     /// </summary>
     [HttpPost("add")]
     public async Task<IActionResult> AddPlaylist(
         [FromQuery] string name,
-        [FromQuery(Name = "list_create_userid")]
-        string sourceUserId,
-        [FromQuery(Name = "list_create_listid")]
-        string sourceListId,
-        [FromQuery(Name = "list_create_gid")] string? sourceGlobalId,
-        [FromQuery(Name = "type")] long type)
+        [FromQuery(Name = "list_create_gid")] string sourceGlobalId)
     {
-        var result = await playlistClient.CollectPlaylistAsync(name, sourceUserId, sourceListId, sourceGlobalId, type);
+        var result = await playlistClient.CollectPlaylistAsync(name,sourceGlobalId);
+        return Ok(result);
+    }
+    
+    /// <summary>
+    ///    新建歌单
+    /// </summary>
+    [HttpPost("Create")]
+    public async Task<IActionResult> CreatePlaylist(
+        [FromQuery] string name,
+        [FromQuery(Name = "type")] long type = 0)
+    {
+        var result = await playlistClient.CreatePlaylistAsync(name, type);
         return Ok(result);
     }
 

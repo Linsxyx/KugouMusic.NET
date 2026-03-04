@@ -42,6 +42,14 @@
                                                 <PathIcon Data="{x:Static suki:Icons.Cross}" />
                                             </MenuItem.Icon>
                                         </MenuItem>
+                                        <MenuItem Header="删除网络歌单"
+                                                  Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).DeleteOnlinePlaylistCommand}"
+                                                  CommandParameter="{Binding .}"
+                                                  IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Online}}">
+                                            <MenuItem.Icon>
+                                                <PathIcon Data="{x:Static suki:Icons.Cross}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
                                     </ContextMenu>
                                 </Button.ContextMenu>
 
