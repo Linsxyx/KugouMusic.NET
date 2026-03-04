@@ -583,9 +583,9 @@ public partial class MainWindowViewModel : ObservableObject
         ToastManager.CreateToast()
             .WithTitle("发现新版本")
             .WithContent($"版本 {newVersion.TargetFullRelease.Version} 现已发布，是否立即更新？")
-            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Basic)
+            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Standard)
             .WithActionButton("立即更新", toast => { _ = ShowUpdatingToastAndDownloadAsync(updateManager, newVersion); },
-                true, SukiButtonStyles.Accent)
+                true, SukiButtonStyles.Standard)
             .Queue();
     }
 
@@ -633,9 +633,9 @@ public partial class MainWindowViewModel : ObservableObject
             .OfType(NotificationType.Success)
             .WithTitle("更新就绪")
             .WithContent("新版本已下载完毕，重启软件即可应用更新。")
-            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Basic)
+            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Standard)
             .WithActionButton("立即重启", _ => { updateManager.ApplyUpdatesAndRestart(newVersion); }, true,
-                SukiButtonStyles.Accent)
+                SukiButtonStyles.Standard)
             .Queue();
     }
 }

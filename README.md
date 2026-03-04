@@ -8,7 +8,7 @@
 KugouMusicApi.NET/
 ├── KuGou.Net/           # 酷狗 API 核心库
 ├── SimpleAudio/         # 音频播放组件
-├── KugouAvaloniaPlayer/           # 桌面客户端
+├── KugouAvaloniaPlayer/ # 桌面客户端
 ├── KgWebApi.Net/        # Web API 服务
 └── ConsoleApp1/         # 控制台测试程序
 ```
