@@ -3,13 +3,15 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*' 
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
     strategy:
       matrix:
-        
         include:
           - os: windows-latest
             rid: win-x64
@@ -32,27 +34,35 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Install Velopack
+      - name: Install Velopack CLI
+        shell: bash
         run: dotnet tool install -g vpk
 
-     
       - name: Publish App
+        shell: bash
         run: |
           dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
-          -c Release \
-          -r ${{ matrix.rid }} \
-          --self-contained \
-          -o ./publish
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -o ./publish
 
-     
       - name: Pack with Velopack
         shell: bash
         run: |
           VERSION=${GITHUB_REF_NAME#v}
+
           EXE_NAME="KugouAvaloniaPlayer"
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then EXE_NAME="KugouAvaloniaPlayer.exe"; fi
-          
-          vpk pack -u KugouAvaloniaPlayer -v $VERSION -p ./publish -e $EXE_NAME -o ./releases
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            EXE_NAME="KugouAvaloniaPlayer.exe"
+          fi
+
+          vpk pack \
+            -u KugouAvaloniaPlayer \
+            -v $VERSION \
+            -p ./publish \
+            -e $EXE_NAME \
+            -o ./releases
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -60,10 +70,10 @@ jobs:
           name: releases-${{ matrix.name }}
           path: ./releases/*
 
- 
   release:
     needs: build
     runs-on: ubuntu-latest
+
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
