@@ -486,12 +486,17 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         try
         {
             var playlists = await _userClient.GetPlaylistsAsync();
-            if (playlists.Count < 2) return;
+            if (playlists.Count < 1) return;
 
             var likePlaylist = playlists[1];
-            if (string.IsNullOrEmpty(likePlaylist.ListCreateId)) return;
+            if (string.IsNullOrEmpty(likePlaylist.ListCreateId))
+            {
+                _logger.LogError("歌单获取失败");
+                return;
+            }
 
             var songs = await _playlistClient.GetSongsAsync(likePlaylist.ListCreateId, pageSize: 1000);
+            
 
             lock (_likedHashes)
             {

@@ -28,9 +28,4 @@ public partial class SearchView : UserControl
             if (vm.LoadMoreDetailsCommand.CanExecute(null))
                 vm.LoadMoreDetailsCommand.Execute(null);
     }
-
-    private void TextBox_KeyUp(object? sender, KeyEventArgs e)
-    {
-        throw new System.NotImplementedException();
-    }
 }

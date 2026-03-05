@@ -458,7 +458,7 @@ public partial class MainWindowViewModel : ObservableObject
         else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
             currentSongList = playlistVm.SelectedPlaylistSongs;
         else if (ActivePage is SearchViewModel searchVm)
-            // 如果在搜索详情页（歌单/专辑），使用详情列表
+            
             currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
         else if (ActivePage is SingerViewModel singerVm) currentSongList = singerVm.Songs;
 
