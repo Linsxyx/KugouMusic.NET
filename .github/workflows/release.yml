@@ -43,6 +43,7 @@ jobs:
         run: |
           dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
             -c Release \
+            /p:BUILD_VERSION=${{ github.ref_name }} \
             -r ${{ matrix.rid }} \
             --self-contained true \
             -o ./publish

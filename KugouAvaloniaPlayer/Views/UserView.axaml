@@ -35,10 +35,11 @@
                                FontSize="12"
                                Foreground="{DynamicResource SukiLiquid2}"
                                Margin="0,3,0,0" />
+                    <ToggleSwitch Classes="Gorgeous"
+                                  IsChecked="{Binding IsDarkMode, Mode=TwoWay}" HorizontalAlignment="Right" Width="80" VerticalAlignment="Center"/>
                 </StackPanel>
             </Grid>
-
-            <!-- 统计信息（可选） -->
+            
             <ScrollViewer Grid.Row="1" Margin="30,0,30,20">
                 <StackPanel Spacing="20">
 

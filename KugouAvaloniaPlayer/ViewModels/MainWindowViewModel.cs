@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -35,6 +36,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly AuthClient _authClient;
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
+    
+    public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
     [ObservableProperty] private PageViewModelBase _activePage;
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;

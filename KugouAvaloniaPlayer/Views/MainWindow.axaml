@@ -6,7 +6,6 @@
                  xmlns:suki="https://github.com/kikipoulet/SukiUI"
                  xmlns:views="clr-namespace:KugouAvaloniaPlayer.Views"
                  xmlns:localControls="clr-namespace:KugouAvaloniaPlayer.Controls"
-                 xmlns:visualBasic="clr-namespace:Microsoft.VisualBasic;assembly=Microsoft.VisualBasic.Core"
                  mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
                  x:Class="KugouAvaloniaPlayer.Views.MainWindow"
                  x:DataType="vm:MainWindowViewModel"
@@ -103,7 +102,9 @@
             <suki:SukiSideMenu.FooterContent>
                 <StackPanel HorizontalAlignment="Center" Margin="10,10,10,100" Spacing="8">
                     <localControls:UserAvatarControl />
-                    <TextBlock Text="v0.2.1" Foreground="{DynamicResource SukiLiquid2}" FontSize="10" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Version, StringFormat='v{0}'}" 
+                               HorizontalAlignment="Center" 
+                               Foreground="{DynamicResource SukiLiquid2}" FontSize="10" />
                 </StackPanel>
             </suki:SukiSideMenu.FooterContent>
         </suki:SukiSideMenu>

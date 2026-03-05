@@ -1,9 +1,11 @@
 using System;
 using System.Threading.Tasks;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Services;
+using SukiUI;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -89,5 +91,16 @@ public partial class UserViewModel : PageViewModelBase
         SettingsManager.Settings.MusicQuality = value;
         Player.MusicQuality = value;
         SettingsManager.Save();
+    }
+    
+    
+    public bool IsDarkMode
+    {
+        get => SukiTheme.GetInstance().ActiveBaseTheme == ThemeVariant.Dark;
+        set
+        {
+            SukiTheme.GetInstance().ChangeBaseTheme(value ? ThemeVariant.Dark : ThemeVariant.Light);
+            OnPropertyChanged();
+        }
     }
 }
