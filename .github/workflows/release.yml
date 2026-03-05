@@ -44,7 +44,7 @@ jobs:
           CLEAN_VERSION=${GITHUB_REF_NAME#v}
           dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
             -c Release \
-            /p:BUILD_VERSION=${{ github.ref_name }} \
+            /p:BUILD_VERSION=$CLEAN_VERSION \
             -r ${{ matrix.rid }} \
             --self-contained true \
             -o ./publish
