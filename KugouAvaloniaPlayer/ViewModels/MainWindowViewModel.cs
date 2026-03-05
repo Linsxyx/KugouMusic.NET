@@ -32,6 +32,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly PlaylistClient _playlistClient;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
+    private readonly AuthClient _authClient;
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
 
@@ -62,7 +63,7 @@ public partial class MainWindowViewModel : ObservableObject
         PlayerViewModel player,
         ISukiDialogManager dialogManager,
         KgSessionManager sessionManager,
-        /*AuthClient authClient,*/
+        AuthClient authClient,
         DeviceClient deviceClient,
         DiscoveryClient discoveryClient,
         PlaylistClient playlistClient,
@@ -75,6 +76,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         DialogManager = dialogManager;
         _sessionManager = sessionManager;
+        _authClient = authClient;
         _deviceClient = deviceClient;
         _discoveryClient = discoveryClient;
 
@@ -150,12 +152,13 @@ public partial class MainWindowViewModel : ObservableObject
             else
             {
                 _logger.LogInformation("未登录，以游客身份运行。");
+                _authClient.LogOutAsync();
             }
         }
         catch (Exception ex)
         {
             _logger.LogError($"登录初始化失败: {ex.Message}");
-            ;
+            _authClient.LogOutAsync();
         }
     }
 
