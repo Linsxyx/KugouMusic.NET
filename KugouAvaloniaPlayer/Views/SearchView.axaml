@@ -12,19 +12,19 @@
             <!-- 顶部搜索区域 (保持不变) -->
             <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="0,0,0,15">
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10" Spacing="5">
-                    <RadioButton Content="单曲"
+                    <RadioButton Content="单曲" Classes="Segmented"
                                  IsChecked="{Binding CurrentSearchType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:SearchType.Song}}"
                                  Command="{Binding SwitchSearchTypeCommand}" CommandParameter="Song" />
-                    <RadioButton Content="歌单"
+                    <RadioButton Content="歌单" Classes="Segmented"
                                  IsChecked="{Binding CurrentSearchType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:SearchType.Playlist}}"
                                  Command="{Binding SwitchSearchTypeCommand}" CommandParameter="Playlist" />
-                    <RadioButton Content="专辑"
+                    <RadioButton Content="专辑" Classes="Segmented"
                                  IsChecked="{Binding CurrentSearchType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static vm:SearchType.Album}}"
                                  Command="{Binding SwitchSearchTypeCommand}" CommandParameter="Album" />
                 </StackPanel>
 
                 <Grid Grid.Row="1" ColumnDefinitions="*, Auto">
-                    <TextBox Text="{Binding SearchKeyword}" Watermark="输入歌曲名、歌手名、歌单或专辑..." Grid.Column="0" />
+                    <TextBox Text="{Binding SearchKeyword}" Watermark="输入歌曲名、歌手名、歌单或专辑..." Grid.Column="0"/>
                     <Button Grid.Column="1" Command="{Binding SearchCommand}"
                             IsEnabled="{Binding IsSearching, Converter={x:Static BoolConverters.Not}}"
                             Margin="10,0,0,0" Padding="20,0">
@@ -39,7 +39,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
                             Spacing="10" IsVisible="{Binding IsSearching}">
                     <suki:Loading Width="24" Height="24" />
-                    <TextBlock Text="正在搜索..." VerticalAlignment="Center" Foreground="Gray" />
+                    <TextBlock Text="正在搜索..." VerticalAlignment="Center" Foreground="{DynamicResource SukiLiquid2}" />
                 </StackPanel>
 
                 <!-- 单曲搜索结果 -->
@@ -63,7 +63,7 @@
                 </ScrollViewer>
 
                 <!-- 歌单搜索结果 -->
-                <ScrollViewer>
+                <ScrollViewer Padding="0,0,0,-50">
                     <ScrollViewer.IsVisible>
                         <MultiBinding Converter="{x:Static BoolConverters.And}">
                             <Binding Path="!IsSearching" />
@@ -85,19 +85,17 @@
                                         CommandParameter="{Binding .}">
                                     <suki:GlassCard Padding="0" CornerRadius="12">
                                         <Grid RowDefinitions="*, Auto">
-                                            <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
+                                            <Border Grid.Row="0" 
                                                     CornerRadius="12,12,0,0" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" Stretch="UniformToFill" />
+                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"  />
                                             </Border>
-                                            <Border Grid.Row="1" Background="{DynamicResource SukiCardBackground}"
+                                            <Border Grid.Row="1" 
                                                     Padding="8">
-                                                <StackPanel>
+                                                <StackPanel Height="30">
                                                     <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                               TextTrimming="CharacterEllipsis" MaxLines="2" />
+                                                               TextTrimming="CharacterEllipsis" Width="144"/>
                                                     <TextBlock Text="{Binding SongCount, StringFormat='{}{0} 首'}"
-                                                               FontSize="11" Foreground="Gray" />
-                                                    <TextBlock Text="{Binding CreatorName}" FontSize="10"
-                                                               Foreground="Gray" TextTrimming="CharacterEllipsis" />
+                                                               FontSize="11" Foreground="{DynamicResource SukiLiquid2}" />
                                                 </StackPanel>
                                             </Border>
                                         </Grid>
@@ -109,7 +107,7 @@
                 </ScrollViewer>
 
                 <!-- 专辑搜索结果-->
-                <ScrollViewer>
+                <ScrollViewer Padding="0,0,0,-50">
                     <ScrollViewer.IsVisible>
                         <MultiBinding Converter="{x:Static BoolConverters.And}">
                             <Binding Path="!IsSearching" />
@@ -131,19 +129,17 @@
                                         CommandParameter="{Binding .}">
                                     <suki:GlassCard Padding="0" CornerRadius="12">
                                         <Grid RowDefinitions="*, Auto">
-                                            <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
+                                            <Border Grid.Row="0" 
                                                     CornerRadius="12,12,0,0" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" Stretch="UniformToFill" />
+                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
-                                            <Border Grid.Row="1" Background="{DynamicResource SukiCardBackground}"
+                                            <Border Grid.Row="1" 
                                                     Padding="8">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                               TextTrimming="CharacterEllipsis" MaxLines="2" />
-                                                    <TextBlock Text="{Binding SingerName}" FontSize="11"
-                                                               Foreground="Gray" TextTrimming="CharacterEllipsis" />
+                                                               TextTrimming="CharacterEllipsis" Width="144" />
                                                     <TextBlock Text="{Binding SongCount, StringFormat='{}{0} 首'}"
-                                                               FontSize="10" Foreground="Gray" />
+                                                               FontSize="10" Foreground="{DynamicResource SukiLiquid2}" />
                                                 </StackPanel>
                                             </Border>
                                         </Grid>
@@ -166,7 +162,7 @@
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0">
                             <TextBlock Text="{Binding DetailTitle}" FontSize="24" FontWeight="Bold"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding DetailSubTitle}" FontSize="14" Foreground="Gray" Margin="0,5,0,0" />
+                            <TextBlock Text="{Binding DetailSubTitle}" FontSize="14" Foreground="{DynamicResource SukiLiquid2}" Margin="0,5,0,0" />
                         </StackPanel>
 
                         <!-- 收藏歌单按钮 (仅在歌单详情页显示) -->
@@ -179,7 +175,7 @@
 
                         <Button Grid.Column="3" Command="{Binding GoBackCommand}" Classes="Basic"
                                 VerticalAlignment="Top">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="Black" Width="28"
+                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}" Width="28"
                                       Height="28" />
                         </Button>
                     </Grid>
@@ -201,7 +197,7 @@
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10" Spacing="10"
                                         IsVisible="{Binding IsLoadingMoreDetails}">
                                 <suki:Loading Width="20" Height="20" />
-                                <TextBlock Text="加载更多..." VerticalAlignment="Center" Foreground="Gray" />
+                                <TextBlock Text="加载更多..." VerticalAlignment="Center" Foreground="{DynamicResource SukiLiquid2}" />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

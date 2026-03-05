@@ -10,7 +10,7 @@
         <Button Classes="Basic"
                 Command="{Binding ShowLoginDialogCommand}"
                 IsVisible="{Binding !IsLoggedIn}">
-            <TextBlock Text="点击登录" Foreground="{DynamicResource SukiPrimaryColor}" />
+            <TextBlock Text="点击登录" Foreground="{DynamicResource SukiLowText}" />
         </Button>
 
         <!-- 已登录状态 -->
@@ -34,7 +34,8 @@
                            VerticalAlignment="Center"
                            Margin="8,0,0,0"
                            MaxWidth="80"
-                           TextTrimming="CharacterEllipsis" />
+                           TextTrimming="CharacterEllipsis" 
+                           Foreground="{DynamicResource SukiLowText}"/>
             </Grid>
         </Button>
     </Panel>

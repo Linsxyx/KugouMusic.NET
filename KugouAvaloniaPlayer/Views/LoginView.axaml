@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              xmlns:converters="clr-namespace:KugouAvaloniaPlayer.Converters"
              x:Class="KugouAvaloniaPlayer.Views.LoginView"
              x:DataType="vm:LoginViewModel"
@@ -16,8 +15,8 @@
     <StackPanel Spacing="15" Margin="20">
         <!-- 顶部切换选项 -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20" Margin="0,0,0,10">
-            <RadioButton Content="扫码登录" IsChecked="{Binding IsQrLoginSelected}" />
-            <RadioButton Content="手机号登录" IsChecked="{Binding !IsQrLoginSelected}" />
+            <RadioButton Classes="Segmented" Content="扫码登录" IsChecked="{Binding IsQrLoginSelected}" />
+            <RadioButton Classes="Segmented" Content="手机号登录" IsChecked="{Binding !IsQrLoginSelected}" />
         </StackPanel>
 
         <!-- 二维码登录面板 -->
@@ -40,7 +39,7 @@
             <TextBlock Text="{Binding QrStatusMessage}" 
                        FontSize="14" 
                        HorizontalAlignment="Center" 
-                       Foreground="Gray" />
+                       Foreground="{DynamicResource SukiLiquid2}" />
         </StackPanel>
 
         <!-- 手机号登录面板 -->
@@ -61,12 +60,13 @@
                         Content="{Binding Countdown, Converter={StaticResource CountdownTextConverter}}"
                         IsEnabled="{Binding Countdown, Converter={StaticResource CountdownEnabledConverter}}"
                         Command="{Binding SendCodeCommand}"
+                        Foreground="{DynamicResource SukiLowText}"
                         Margin="10,0,0,0"
                         Width="90" />
             </Grid>
 
             <!-- 登录按钮 -->
-            <Button Classes="Flat"
+            <Button Classes="Standard"
                     Content="登录"
                     Command="{Binding LoginCommand}"
                     HorizontalAlignment="Stretch"
@@ -75,7 +75,7 @@
             <!-- 状态信息 -->
             <TextBlock Text="{Binding StatusMessage}"
                        FontSize="12"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource SukiLiquid2}"
                        HorizontalAlignment="Center"
                        TextWrapping="Wrap" />
         </StackPanel>

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using KugouAvaloniaPlayer.ViewModels;
 
@@ -26,5 +27,10 @@ public partial class SearchView : UserControl
         if (currentBottom >= scrollViewer.Extent.Height - 50)
             if (vm.LoadMoreDetailsCommand.CanExecute(null))
                 vm.LoadMoreDetailsCommand.Execute(null);
+    }
+
+    private void TextBox_KeyUp(object? sender, KeyEventArgs e)
+    {
+        throw new System.NotImplementedException();
     }
 }

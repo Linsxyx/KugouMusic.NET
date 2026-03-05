@@ -16,7 +16,7 @@
             <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,20">
                 <TextBlock Text="我的歌单" FontSize="28" FontWeight="Bold" />
                 <Button Classes="Basic" Command="{Binding LoadAllPlaylistsCommand}">
-                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="Black" />
+                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="{DynamicResource SukiLowText}" />
                 </Button>
             </StackPanel>
 
@@ -42,7 +42,7 @@
                                                 <PathIcon Data="{x:Static suki:Icons.Cross}" />
                                             </MenuItem.Icon>
                                         </MenuItem>
-                                        <MenuItem Header="删除网络歌单"
+                                        <MenuItem Header="删除歌单"
                                                   Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).DeleteOnlinePlaylistCommand}"
                                                   CommandParameter="{Binding .}"
                                                   IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Online}}">
@@ -58,21 +58,21 @@
                                         <Grid RowDefinitions="*, Auto"
                                               IsVisible="{Binding Type, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter={x:Static models:PlaylistType.AddButton}}">
                                             <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
-                                                    CornerRadius="12,12,0,0" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" Stretch="UniformToFill" />
+                                                    CornerRadius="12" ClipToBounds="True">
+                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
 
                                             <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                    Background="#80000000" CornerRadius="0,0,0,8" Padding="6,2"
+                                                     CornerRadius="0,0,0,8" Padding="6,2"
                                                     IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Local}}">
-                                                <TextBlock Text="本地" FontSize="10" Foreground="White" />
+                                                <TextBlock Text="本地" FontSize="10" />
                                             </Border>
 
-                                            <StackPanel Grid.Row="1" Background="{DynamicResource SukiCardBackground}">
+                                            <StackPanel Grid.Row="1" >
                                                 <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                           TextTrimming="CharacterEllipsis" />
+                                                           TextTrimming="CharacterEllipsis"  Width="144"/>
                                                 <TextBlock Text="{Binding Count, StringFormat='{}{0} 首'}" FontSize="11"
-                                                           Foreground="Gray" />
+                                                           Foreground="{DynamicResource SukiLiquid2}" />
                                             </StackPanel>
                                         </Grid>
 
@@ -91,11 +91,16 @@
 
 
         <Grid IsVisible="{Binding IsShowingSongs}" RowDefinitions="Auto, *">
-            <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
-                <TextBlock Text="{Binding SelectedPlaylist.Name}" FontSize="28" FontWeight="Bold"
-                           HorizontalAlignment="Left" />
-                <Button Grid.Column="1" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right">
-                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="Black" Width="28" Height="28" />
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*">
+                <Border Width="80" Height="80" CornerRadius="8" ClipToBounds="True"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <controls:AsyncImage Source="{Binding SelectedPlaylist.Cover}" Stretch="UniformToFill" />
+                </Border>
+                
+                <TextBlock Grid.Column="1" Text="{Binding SelectedPlaylist.Name}" FontSize="28" FontWeight="Bold"
+                           HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Button Grid.Column="2" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right">
+                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}" Width="28" Height="28" />
                 </Button>
             </Grid>
 
@@ -120,7 +125,7 @@
                                 Spacing="10"
                                 IsVisible="{Binding IsLoadingMore}">
                         <suki:Loading Width="20" Height="20" />
-                        <TextBlock Text="正在加载歌曲..." VerticalAlignment="Center" Foreground="Gray" />
+                        <TextBlock Text="正在加载歌曲..." VerticalAlignment="Center" Foreground="{DynamicResource SukiLiquid2}" />
                     </StackPanel>
 
                 </StackPanel>

@@ -15,7 +15,7 @@
                 </StackPanel>
                 <Button Grid.Column="1" Classes="Basic" Content="清空"
                         Command="{Binding Player.ClearQueueCommand}"
-                        FontSize="12" Foreground="{DynamicResource SukiPrimaryColor}" />
+                        FontSize="12" Foreground="{DynamicResource SukiLowText}" />
             </Grid>
 
             <ListBox Grid.Row="1"
@@ -80,14 +80,15 @@
                                     <Button Classes="Basic"
                                             ToolTip.Tip="播放"
                                             Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
-                                            CommandParameter="{Binding .}">
-                                        <TextBlock Text="▶" FontSize="10" />
+                                            CommandParameter="{Binding .}"
+                                            Foreground="{DynamicResource SukiLowText}">
+                                        <Svg Path="/Assets/Play-2.svg" Width="15" Height="15" />
                                     </Button>
                                     <Button Classes="Basic"
                                             ToolTip.Tip="移除"
                                             Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
                                             CommandParameter="{Binding .}">
-                                        <TextBlock Text="✕" FontSize="10" />
+                                        <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource SukiLowText}"/>
                                     </Button>
                                 </StackPanel>
                             </Grid>

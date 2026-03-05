@@ -41,4 +41,15 @@ public partial class MainWindow : SukiWindow
     {
         if (DataContext is MainWindowViewModel vm) vm.IsQueuePaneOpen = false;
     }
+
+    private void TextBox_KeyUp(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            if (DataContext is MainWindowViewModel vm && vm.SearchCommand.CanExecute(null))
+            {
+                vm.SearchCommand.Execute(null);
+            }
+        }
+    }
 }

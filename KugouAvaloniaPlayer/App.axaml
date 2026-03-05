@@ -16,6 +16,7 @@
         <suki:SukiTheme ThemeColor="Blue" />
         <labs:ControlThemes />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/Styles1.axaml" />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SegmentedStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SmoothScrollViewStyles.axaml" />
     </Application.Styles>
 

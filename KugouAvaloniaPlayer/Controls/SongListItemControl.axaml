@@ -63,15 +63,15 @@
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
-                <TextBlock Text="{Binding Name}" FontWeight="DemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Name}" FontWeight="DemiBold" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource SukiLowText}"/>
             </StackPanel>
 
-            <TextBlock Grid.Column="2" Text="{Binding Singer}" VerticalAlignment="Center" Foreground="Gray"
+            <TextBlock Grid.Column="2" Text="{Binding Singer}" VerticalAlignment="Center" Foreground="{DynamicResource SukiLowText}"
                        TextTrimming="CharacterEllipsis" />
 
             <TextBlock Grid.Column="3"
                        Text="{Binding DurationSeconds,Converter={StaticResource SecondsToTimeConverter}}"
-                       VerticalAlignment="Center" Foreground="Gray" />
+                       VerticalAlignment="Center" Foreground="{DynamicResource SukiLowText}" />
 
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
                         HorizontalAlignment="Right" Margin="0,0,10,0">
@@ -79,7 +79,7 @@
                 <Button Classes="Basic" ToolTip.Tip="播放"
                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlayFromListCommand}"
                         CommandParameter="{Binding .}">
-                    <TextBlock Text="▶" FontWeight="Bold" Foreground="Black" />
+                    <Svg Path="/Assets/Play-2.svg" Width="15" Height="15" />
                 </Button>
 
                 <Button Classes="Basic" ToolTip.Tip="更多操作">

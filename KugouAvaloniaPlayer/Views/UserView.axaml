@@ -26,14 +26,14 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="20,0">
                     <TextBlock Text="{Binding UserName}"
                                FontSize="24"
-                               FontWeight="Bold" />
+                               FontWeight="Bold" Foreground="{DynamicResource SukiLowText}" />
                     <TextBlock Text="{Binding VipStatus}"
                                FontSize="14"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource SukiLiquid2}"
                                Margin="0,5,0,0" />
                     <TextBlock Text="{Binding UserId, StringFormat='ID: {0}'}"
                                FontSize="12"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource SukiLiquid2}"
                                Margin="0,3,0,0" />
                 </StackPanel>
             </Grid>
@@ -49,7 +49,7 @@
                         <Grid ColumnDefinitions="*, Auto">
                             <StackPanel>
                                 <TextBlock Text="关闭主面板时" FontWeight="DemiBold" />
-                                <TextBlock Text="选择点击关闭按钮时的行为" FontSize="12" Foreground="Gray" />
+                                <TextBlock Text="选择点击关闭按钮时的行为" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
                             </StackPanel>
 
                             <ComboBox Grid.Column="1"
@@ -70,7 +70,7 @@
                         <Grid ColumnDefinitions="*, Auto">
                             <StackPanel>
                                 <TextBlock Text="默认播放音质" FontWeight="DemiBold" />
-                                <TextBlock Text="音质从低到高" FontSize="12" Foreground="Gray" />
+                                <TextBlock Text="音质从低到高" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
                             </StackPanel>
                             <ComboBox Grid.Column="1"
                                       ItemsSource="{Binding QualityOptions}"
@@ -86,8 +86,9 @@
                     Classes="Basic"
                     Command="{Binding LogoutCommand}"
                     HorizontalAlignment="Right"
+                    Foreground="{DynamicResource SukiLowText}"
                     Padding="30,10"
-                    Margin="0,0,0,100"
+                    Margin="0,0,0,50"
                     ToolTip.Tip="退出登录">
                 <PathIcon Data="{x:Static suki:Icons.Logout}" />
             </Button>

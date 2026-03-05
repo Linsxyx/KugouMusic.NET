@@ -103,9 +103,9 @@ public class AuthClient(
             return new RefreshTokenResponse();
         }
 
-        logger.LogError($"[Auth] 正在尝试刷新 Token (User: {session.UserId})...");
+        logger.LogInformation($"[Auth] 正在尝试刷新 Token (User: {session.UserId})...");
 
-        // 调用 Raw 接口
+        
         var json = await rawApi.RefreshTokenAsync(session.UserId, session.Token, session.Dfid);
 
         var res = KgApiResponseParser.Parse<RefreshTokenResponse>(json, AppJsonContext.Default.RefreshTokenResponse);

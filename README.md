@@ -51,4 +51,8 @@ dotnet build KugouMusic.NET.slnx
 
 # 3. 运行桌面客户端
 dotnet run --project KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj
+
+# 4. 调试酷狗API
+dotnet run --project KgWebApi.Net/KgWebApi.Net.csproj
+访问http://localhost:5058/scalar/v1
 ```
