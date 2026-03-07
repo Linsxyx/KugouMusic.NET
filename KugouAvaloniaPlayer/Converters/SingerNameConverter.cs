@@ -7,7 +7,7 @@ namespace KugouAvaloniaPlayer.Converters;
 
 public class SingerNameConverter : IValueConverter
 {
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is SingerLite singer) return string.IsNullOrEmpty(singer.Name) ? "未知歌手" : singer.Name;
 

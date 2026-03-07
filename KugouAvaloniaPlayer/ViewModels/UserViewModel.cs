@@ -22,6 +22,8 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private string _userId = "";
     [ObservableProperty] private string _userName = "加载中...";
     [ObservableProperty] private string _vipStatus = "未开通";
+    [ObservableProperty] private bool _autoCheckUpdate;
+    [ObservableProperty] private bool _isCheckingUpdate;
 
     public UserViewModel(PlayerViewModel player, UserClient userClient, AuthClient authClient)
     {
@@ -30,6 +32,7 @@ public partial class UserViewModel : PageViewModelBase
         Player = player;
         SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
         SelectedQuality = SettingsManager.Settings.MusicQuality;
+        AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
     }
 
     private PlayerViewModel Player { get; }
@@ -89,7 +92,17 @@ public partial class UserViewModel : PageViewModelBase
         await Task.CompletedTask;
     }
 
+    [RelayCommand]
+    private async Task CheckForUpdate()
+    {
+        if (IsCheckingUpdate) return;
+        IsCheckingUpdate = true;
+        CheckForUpdateRequested?.Invoke();
+        await Task.CompletedTask;
+    }
+
     public event Action? LogoutRequested;
+    public event Action? CheckForUpdateRequested;
 
     partial void OnSelectedCloseBehaviorChanged(CloseBehavior value)
     {
@@ -102,5 +115,16 @@ public partial class UserViewModel : PageViewModelBase
         SettingsManager.Settings.MusicQuality = value;
         Player.MusicQuality = value;
         SettingsManager.Save();
+    }
+
+    partial void OnAutoCheckUpdateChanged(bool value)
+    {
+        SettingsManager.Settings.AutoCheckUpdate = value;
+        SettingsManager.Save();
+    }
+
+    public void SetCheckingUpdateState(bool isChecking)
+    {
+        IsCheckingUpdate = isChecking;
     }
 }

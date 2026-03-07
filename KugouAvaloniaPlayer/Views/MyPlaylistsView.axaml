@@ -30,62 +30,52 @@
 
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Width="160" Height="200" Margin="8" Padding="0"
-                                    Click="OnPlaylistCardClick">
-                                <Button.ContextMenu>
-                                    <ContextMenu>
-                                        <MenuItem Header="移除本地歌单"
-                                                  Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).DeleteLocalPlaylistCommand}"
-                                                  CommandParameter="{Binding .}"
-                                                  IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Local}}">
-                                            <MenuItem.Icon>
-                                                <PathIcon Data="{x:Static suki:Icons.Cross}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="删除歌单"
-                                                  Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).DeleteOnlinePlaylistCommand}"
-                                                  CommandParameter="{Binding .}"
-                                                  IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Online}}">
-                                            <MenuItem.Icon>
-                                                <PathIcon Data="{x:Static suki:Icons.Cross}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                    </ContextMenu>
-                                </Button.ContextMenu>
+                            <Panel>
+                                <!-- 普通歌单卡片 -->
+                                <localControls:MediaCard IsVisible="{Binding Type, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter={x:Static models:PlaylistType.AddButton}}"
+                                                          Cover="{Binding Cover}"
+                                                          Title="{Binding Name}"
+                                                          Subtitle="{Binding Count, StringFormat='{}{0} 首'}"
+                                                          Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).OpenPlaylistCommand}"
+                                                          CommandParameter="{Binding .}">
+                                    <localControls:MediaCard.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="移除本地歌单"
+                                                      Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).DeleteLocalPlaylistCommand}"
+                                                      CommandParameter="{Binding .}"
+                                                      IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Local}}">
+                                                <MenuItem.Icon>
+                                                    <PathIcon Data="{x:Static suki:Icons.Cross}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="删除歌单"
+                                                      Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).DeleteOnlinePlaylistCommand}"
+                                                      CommandParameter="{Binding .}"
+                                                      IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Online}}">
+                                                <MenuItem.Icon>
+                                                    <PathIcon Data="{x:Static suki:Icons.Cross}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </localControls:MediaCard.ContextMenu>
+                                    <localControls:MediaCard.OverlayContent>
+                                        <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                CornerRadius="0,0,0,8" Padding="6,2"
+                                                IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Local}}">
+                                            <TextBlock Text="本地" FontSize="10" />
+                                        </Border>
+                                    </localControls:MediaCard.OverlayContent>
+                                </localControls:MediaCard>
 
-                                <suki:GlassCard Padding="0" CornerRadius="12">
-                                    <Panel>
-                                        <Grid RowDefinitions="*, Auto"
-                                              IsVisible="{Binding Type, Converter={x:Static ObjectConverters.NotEqual}, ConverterParameter={x:Static models:PlaylistType.AddButton}}">
-                                            <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
-                                                    CornerRadius="12" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12"
-                                                                     Stretch="UniformToFill"
-                                                                     HorizontalAlignment="Center"
-                                                                     VerticalAlignment="Center" />
-                                            </Border>
-
-                                            <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                    CornerRadius="0,0,0,8" Padding="6,2"
-                                                    IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.Local}}">
-                                                <TextBlock Text="本地" FontSize="10" />
-                                            </Border>
-
-                                            <StackPanel Grid.Row="1">
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                           TextTrimming="CharacterEllipsis" Width="144" />
-                                                <TextBlock Text="{Binding Count, StringFormat='{}{0} 首'}" FontSize="11"
-                                                           Foreground="{DynamicResource SukiLiquid2}" />
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <Grid
-                                            IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.AddButton}}">
-                                            <Svg Path="/Assets/music-folder-8-svgrepo-com.svg" Width="100" Height="100" />
-                                        </Grid>
-                                    </Panel>
-                                </suki:GlassCard>
-                            </Button>
+                                <!-- 添加按钮卡片 -->
+                                <Button Width="160" Height="200" Margin="8" Padding="0"
+                                        Click="OnPlaylistCardClick"
+                                        IsVisible="{Binding Type, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PlaylistType.AddButton}}">
+                                    <suki:GlassCard Padding="0" CornerRadius="12">
+                                        <Svg Path="/Assets/music-folder-8-svgrepo-com.svg" Width="100" Height="100" />
+                                    </suki:GlassCard>
+                                </Button>
+                            </Panel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

@@ -80,30 +80,11 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Width="160" Height="200" Margin="8" Padding="0"
-                                        Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenPlaylistCommand}"
-                                        CommandParameter="{Binding .}">
-                                    <suki:GlassCard Padding="0" CornerRadius="12">
-                                        <Grid RowDefinitions="*, Auto">
-                                            <Border Grid.Row="0"
-                                                    CornerRadius="12,12,0,0" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12"
-                                                                     Stretch="UniformToFill"
-                                                                     HorizontalAlignment="Center"
-                                                                     VerticalAlignment="Center" />
-                                            </Border>
-                                            <Border Grid.Row="1"
-                                                    Padding="8">
-                                                <StackPanel Height="30">
-                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                               TextTrimming="CharacterEllipsis" Width="144" />
-                                                    <TextBlock Text="{Binding SongCount, StringFormat='{}{0} 首'}"
-                                                               FontSize="11" Foreground="{DynamicResource SukiLiquid2}" />
-                                                </StackPanel>
-                                            </Border>
-                                        </Grid>
-                                    </suki:GlassCard>
-                                </Button>
+                                <localControls:MediaCard Cover="{Binding Cover}"
+                                                          Title="{Binding Name}"
+                                                          Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
+                                                          Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenPlaylistCommand}"
+                                                          CommandParameter="{Binding .}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -127,30 +108,11 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Width="160" Height="200" Margin="8" Padding="0"
-                                        Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenAlbumCommand}"
-                                        CommandParameter="{Binding .}">
-                                    <suki:GlassCard Padding="0" CornerRadius="12">
-                                        <Grid RowDefinitions="*, Auto">
-                                            <Border Grid.Row="0"
-                                                    CornerRadius="12,12,0,0" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12"
-                                                                     Stretch="UniformToFill"
-                                                                     HorizontalAlignment="Center"
-                                                                     VerticalAlignment="Center" />
-                                            </Border>
-                                            <Border Grid.Row="1"
-                                                    Padding="8">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                               TextTrimming="CharacterEllipsis" Width="144" />
-                                                    <TextBlock Text="{Binding SongCount, StringFormat='{}{0} 首'}"
-                                                               FontSize="10" Foreground="{DynamicResource SukiLiquid2}" />
-                                                </StackPanel>
-                                            </Border>
-                                        </Grid>
-                                    </suki:GlassCard>
-                                </Button>
+                                <localControls:MediaCard Cover="{Binding Cover}"
+                                                          Title="{Binding Name}"
+                                                          Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
+                                                          Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenAlbumCommand}"
+                                                          CommandParameter="{Binding .}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

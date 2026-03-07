@@ -5,138 +5,309 @@
              x:Class="KugouAvaloniaPlayer.Controls.PlaybackQueueControl"
              x:DataType="vm:MainWindowViewModel">
 
+    <UserControl.Resources>
+
+        <!-- 背景层 -->
+        <SolidColorBrush x:Key="CardBg"         Color="{DynamicResource SukiStrongBackground}" />
+
+        <!-- 主色调：柔和的暖橙 -->
+        <SolidColorBrush x:Key="AccentPrimary"  Color="{DynamicResource SukiPrimaryColor5}" />
+        <SolidColorBrush x:Key="AccentLight"    Color="{DynamicResource SukiPrimaryColor5}" />
+        <SolidColorBrush x:Key="AccentMid"      Color="{DynamicResource SukiPrimaryColor5}" />
+
+        <!-- 文字 -->
+        <SolidColorBrush x:Key="TextPrimary"    Color="{DynamicResource SukiText}" />
+        <SolidColorBrush x:Key="TextSecondary"  Color="{DynamicResource SukiLowText}" />
+        <SolidColorBrush x:Key="TextMuted"      Color="#A8A29E" />
+
+        <!-- 分割线 / 边框 -->
+        <SolidColorBrush x:Key="BorderLight"    Color="#E7E5E4" />
+        <SolidColorBrush x:Key="HoverBg"        Color="{DynamicResource SukiPrimaryColor3}" />
+        <SolidColorBrush x:Key="ActiveBg"       Color="#FEF0EB" />
+
+        <!-- 删除按钮悬停 -->
+        <SolidColorBrush x:Key="DangerHover"    Color="#FEE2E2" />
+
+        <!-- 标签背景 -->
+        <SolidColorBrush x:Key="BadgeBg"        Color="{DynamicResource SukiPrimaryColor1}" />
+    </UserControl.Resources>
+
     <UserControl.Styles>
+        
+        <Style Selector="ScrollBar[Orientation=Vertical]">
+            <Setter Property="Width"   Value="4" />
+            <Setter Property="Margin"  Value="0,4" />
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="ScrollBar[Orientation=Vertical]:pointerover">
+            <Setter Property="Opacity" Value="0.8" />
+        </Style>
+        
         <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="4" />
-            <Setter Property="CornerRadius" Value="15" />
-            <Setter Property="Margin" Value="0,2" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding"          Value="0" />
+            <Setter Property="Margin"           Value="0,1" />
+            <Setter Property="CornerRadius"     Value="10" />
+            <Setter Property="Background"       Value="Transparent" />
+            <Setter Property="Cursor"           Value="Hand" />
+            <Setter Property="IsHitTestVisible" Value="True" />
             <Setter Property="Template">
                 <ControlTemplate>
                     <Panel>
-                        <Border Name="HoverBorder"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Opacity="0">
+                        <Border Name="BgLayer"
+                                CornerRadius="10"
+                                Background="Transparent">
                             <Border.Transitions>
                                 <Transitions>
-                                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+                                    <BrushTransition Property="Background" Duration="0:0:0.15" />
                                 </Transitions>
                             </Border.Transitions>
                         </Border>
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          CornerRadius="12"
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}"
                                           ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Background="Transparent"
                                           Padding="{TemplateBinding Padding}" />
                     </Panel>
                 </ControlTemplate>
             </Setter>
         </Style>
 
-        <!-- 鼠标悬停列表项时：显示背景 -->
-        <Style Selector="ListBoxItem:pointerover /template/ Border#HoverBorder">
-            <Setter Property="Opacity" Value="1" />
-            <Setter Property="Background" Value="{DynamicResource SukiPrimaryColor7}" />
+        <!-- 悬停 -->
+        <Style Selector="ListBoxItem:pointerover /template/ Border#BgLayer">
+            <Setter Property="Background" Value="{StaticResource HoverBg}" />
         </Style>
 
-        <!-- 鼠标悬停列表项时：让操作按钮浮现 -->
-        <Style Selector="ListBoxItem:pointerover Button.HoverAction">
-            <Setter Property="Opacity" Value="1" />
+        <!-- 按下 -->
+        <Style Selector="ListBoxItem:pressed /template/ Border#BgLayer">
+            <Setter Property="Background" Value="{StaticResource AccentMid}" />
         </Style>
 
-        <!-- 正在播放的状态：高亮文字颜色 -->
-        <Style Selector="TextBlock.IsPlaying">
-            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
-            <Setter Property="FontWeight" Value="Bold" />
+        <!-- 选中态：暖橙浅色，覆盖 SukiUI 蓝 -->
+        <Style Selector="ListBoxItem:selected /template/ Border#BgLayer">
+            <Setter Property="Background" Value="{StaticResource ActiveBg}" />
         </Style>
-
-        <Style Selector="ListBoxItem:selected">
+        <Style Selector="ListBoxItem:selected:pointerover /template/ Border#BgLayer">
+            <Setter Property="Background" Value="{StaticResource AccentMid}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected:focus /template/ Border#BgLayer">
+            <Setter Property="Background" Value="{StaticResource ActiveBg}" />
+        </Style>
+        
+        <Style Selector="ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
-        <Style Selector="ListBoxItem">
-            <Setter Property="IsHitTestVisible" Value="False" />
+        <!-- 悬停时让操作按钮浮现 -->
+        <Style Selector="ListBoxItem:pointerover Button.QueueAction">
+            <Setter Property="Opacity" Value="1" />
         </Style>
 
-        <Style Selector="Border.ActiveIndicator">
-            <Setter Property="Height" Value="0" />
+        <!-- 操作按钮默认隐藏 -->
+        <Style Selector="Button.QueueAction">
+            <Setter Property="Opacity"     Value="0" />
+            <Setter Property="Background"  Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding"     Value="5" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Cursor"      Value="Hand" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
         </Style>
+        <Style Selector="Button.QueueAction:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource AccentLight}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <!-- 删除按钮特殊悬停色 -->
+        <Style Selector="Button.QueueDanger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DangerHover}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+
+        <!-- 正在播放文字高亮 -->
+        <Style Selector="TextBlock.NowPlaying">
+            <Setter Property="Foreground"  Value="{StaticResource AccentPrimary}" />
+            <Setter Property="FontWeight"  Value="SemiBold" />
+        </Style>
+
+        <!-- 头部按钮 -->
+        <Style Selector="Button.HeaderAction">
+            <Setter Property="Background"      Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius"    Value="8" />
+            <Setter Property="Padding"         Value="6" />
+            <Setter Property="Cursor"          Value="Hand" />
+        </Style>
+        <Style Selector="Button.HeaderAction:pointerover /template/ ContentPresenter">
+            <Setter Property="Background"   Value="{StaticResource HoverBg}" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        
+        <Style Selector="ListBox">
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
     </UserControl.Styles>
 
-    <suki:GlassCard CornerRadius="15" Margin="10" IsOpaque="True">
-        <Grid RowDefinitions="Auto, *">
-            <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,15,15,10">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Svg Path="/Assets/FormatList.svg" Width="25" Height="25" />
+    
+    <Border CornerRadius="24"
+            Margin="12"
+            Background="{StaticResource CardBg}"
+            BoxShadow="0 0 0 1 #0F000000, 0 4 16 0 #14000000, 0 16 40 0 #0E000000">
+
+        <Grid RowDefinitions="Auto, Auto, *">
+
+            <!-- ── 头部 ── -->
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="*, Auto"
+                  Margin="16,14,12,0">
+
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                    
+                    <Border Width="30" Height="30"
+                            CornerRadius="8"
+                            Background="{StaticResource AccentLight}">
+                        <Svg Path="/Assets/FormatList.svg"
+                             Width="16" Height="16"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center" />
+                    </Border>
+
                     <TextBlock Text="播放队列"
-                               FontWeight="DemiBold"
-                               FontSize="15" />
-                    <Border Background="{DynamicResource SukiControlBorderBrush}"
-                            CornerRadius="10"
-                            Padding="6,1"
-                            Margin="5,0,0,0"
+                               FontSize="14"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource TextPrimary}" />
+
+                    <!-- 数量徽章 -->
+                    <Border Background="{StaticResource BadgeBg}"
+                            CornerRadius="20"
+                            Padding="7,2"
                             VerticalAlignment="Center">
                         <TextBlock Text="{Binding Player.PlaybackQueue.Count}"
                                    FontSize="11"
-                                   Foreground="{DynamicResource SukiLowText}" />
+                                   FontWeight="Medium"
+                                   Foreground="{StaticResource TextMuted}" />
                     </Border>
+
                 </StackPanel>
 
-                <Button Grid.Column="1" Classes="Basic"
+                <!-- 清空按钮 -->
+                <Button Grid.Column="1"
+                        Classes="HeaderAction"
                         Command="{Binding Player.ClearQueueCommand}"
-                        ToolTip.Tip="清空队列">
+                        ToolTip.Tip="清空队列"
+                        VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Svg Path="/Assets/trash-svgrepo-com.svg" Width="25" Height="25" />
+                        <Svg Path="/Assets/trash-svgrepo-com.svg" Width="15" Height="15" />
+                        <TextBlock Text="清空"
+                                   FontSize="12"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
+
             </Grid>
 
-            <!-- 列表内容 -->
-            <ListBox Grid.Row="1"
+            <!-- ── 分隔线 ── -->
+            <Border Grid.Row="1"
+                    Height="1"
+                    Margin="16,10,16,6"
+                    Background="{StaticResource BorderLight}" />
+
+            <!-- ── 列表内容 ── -->
+            <ListBox Grid.Row="2"
                      ItemsSource="{Binding Player.PlaybackQueue}"
                      Background="Transparent"
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     Padding="10,0">
+                     Padding="8,0,8,8">
 
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:SongItem">
-                        <Grid ColumnDefinitions="Auto, *, Auto" Height="46" Background="Transparent">
+
+                        <Grid ColumnDefinitions="Auto, *, Auto"
+                              Height="50"
+                              Margin="4,0">
 
                             <Grid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="下一首播放"
                                               Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
                                               CommandParameter="{Binding .}" />
+                                    <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
+                                        <MenuItem.Styles>
+                                            <Style Selector="MenuItem">
+                                                <Setter Property="Header"
+                                                        Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
+                                                <Setter Property="Command"
+                                                        Value="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToSingerCommand}" />
+                                                <Setter Property="CommandParameter" Value="{Binding .}" />
+                                            </Style>
+                                        </MenuItem.Styles>
+                                    </MenuItem>
+                                    <MenuItem Header="添加到歌单"
+                                              Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.ShowAddToPlaylistDialogCommand}"
+                                              CommandParameter="{Binding .}" />
+                                    
                                     <MenuItem Header="从队列移除"
                                               Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
                                               CommandParameter="{Binding .}" />
                                 </ContextMenu>
                             </Grid.ContextMenu>
-
-                            <Panel Grid.Column="0" Width="24" Margin="0,0,8,0">
-
-                                <Svg Path="/Assets/music-party-svgrepo-com.svg" Width="25" Height="25"
-                                     IsVisible="{Binding IsPlaying}" />
+                            
+                            <Panel Grid.Column="0"
+                                   Width="28"
+                                   VerticalAlignment="Center"
+                                   Margin="4,0,6,0">
+                                
+                                <Border Width="24" Height="24"
+                                        CornerRadius="12"
+                                        Background="{DynamicResource SukiAccentColor75}"
+                                        IsVisible="{Binding IsPlaying}">
+                                    <Svg Path="/Assets/music-party-svgrepo-com.svg"
+                                         Width="13" Height="13"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center" />
+                                </Border>
+                                
+                                <Panel IsVisible="{Binding !IsPlaying}" Width="24" Height="24" />
 
                             </Panel>
-
-
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                            
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="2">
 
                                 <TextBlock Text="{Binding Name}"
-                                           Classes.IsPlaying="{Binding IsPlaying}"
+                                           Classes.NowPlaying="{Binding IsPlaying}"
                                            FontSize="13"
+                                           FontWeight="Medium"
                                            TextTrimming="CharacterEllipsis"
-                                           Foreground="{DynamicResource SukiText}" />
+                                           Foreground="{StaticResource TextPrimary}" />
 
                                 <TextBlock Text="{Binding Singer}"
                                            FontSize="11"
-                                           Foreground="{DynamicResource SukiLowText}"
-                                           TextTrimming="CharacterEllipsis" />
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{StaticResource TextMuted}" />
+
                             </StackPanel>
 
+                            <!-- 列 2：操作按钮组（悬停浮现） -->
                             <StackPanel Grid.Column="2"
                                         Orientation="Horizontal"
                                         Spacing="5"
@@ -158,10 +329,15 @@
                                     <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource SukiText}" />
                                 </Button>
                             </StackPanel>
+
                         </Grid>
+
                     </DataTemplate>
                 </ListBox.ItemTemplate>
+
             </ListBox>
+
         </Grid>
-    </suki:GlassCard>
+    </Border>
+
 </UserControl>

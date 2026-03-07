@@ -80,6 +80,39 @@
                                       MinWidth="150" />
                         </Grid>
                     </suki:GlassCard>
+
+                    <!-- 自动检查更新 -->
+                    <suki:GlassCard IsOpaque="True" Padding="15">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel>
+                                <TextBlock Text="启动时自动检查更新" FontWeight="DemiBold" />
+                                <TextBlock Text="每次启动应用时检查是否有新版本" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}"/>
+                        </Grid>
+                    </suki:GlassCard>
+
+                    <!-- 手动检查更新 -->
+                    <suki:GlassCard IsOpaque="True" Padding="15">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <StackPanel>
+                                <TextBlock Text="检查更新" FontWeight="DemiBold" />
+                                <TextBlock Text="手动检查是否有新版本可用" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+                            </StackPanel>
+                            <Button Grid.Column="1"
+                                    Classes="Basic"
+                                    Command="{Binding CheckForUpdateCommand}"
+                                    IsEnabled="{Binding !IsCheckingUpdate}"
+                                    MinWidth="120">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="{x:Static suki:Icons.Refresh}"
+                                              Width="16" Height="16" Foreground="{DynamicResource SukiLowText}"/>
+                                    <TextBlock Text="检查更新" Foreground="{DynamicResource SukiLowText}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </suki:GlassCard>
                 </StackPanel>
             </ScrollViewer>
 

@@ -28,95 +28,175 @@
 
         <suki:GlassCard Name="MiniPlayer"
                         VerticalAlignment="Bottom"
-                        Margin="15,0,15,15" Padding="12,8"
-                        CornerRadius="16"
+                        Margin="20,0,20,16"
+                        Padding="16,0"
+                        CornerRadius="18"
                         Classes.hidden="{Binding IsNowPlayingOpen}"
-                        Height="80"
+                        Height="72"
                         IsOpaque="True">
 
-            <Grid ColumnDefinitions="* Auto, *">
-                <Button Grid.Column="0" Command="{Binding OpenNowPlayingCommand}"
-                        Classes="Basic" Padding="0" Cursor="Hand" HorizontalAlignment="Left">
+            <Grid ColumnDefinitions="*, Auto, *">
+
+                <!-- 左侧：封面 + 歌曲信息 -->
+                <Button Grid.Column="0"
+                        Command="{Binding OpenNowPlayingCommand}"
+                        Classes="Basic"
+                        Padding="0"
+                        Cursor="Hand"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center">
                     <Grid ColumnDefinitions="Auto, Auto">
-                        <Border CornerRadius="8" ClipToBounds="True" Width="56" Height="56">
+                        <Border CornerRadius="10"
+                                ClipToBounds="True"
+                                Width="48"
+                                Height="48">
                             <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}"
                                                  Stretch="UniformToFill" />
                         </Border>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" Spacing="3">
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Margin="12,0,0,0"
+                                    Spacing="4">
                             <TextBlock Text="{Binding Player.CurrentPlayingSong.Name, TargetNullValue='KuGou Music'}"
-                                       FontWeight="Bold" FontSize="14" MaxWidth="180" />
+                                       FontWeight="SemiBold"
+                                       FontSize="13"
+                                       MaxWidth="200" />
                             <TextBlock Text="{Binding Player.CurrentPlayingSong.Singer, TargetNullValue='Ready'}"
-                                       FontSize="12" Opacity="0.6" MaxWidth="180" />
+                                       FontSize="11"
+                                       Opacity="0.55"
+                                       MaxWidth="200" />
                         </StackPanel>
                     </Grid>
                 </Button>
 
-                <Grid Grid.Column="1" RowDefinitions="Auto, Auto" VerticalAlignment="Center"
+                <!-- 中间：播放控制 + 进度条 -->
+                <Grid Grid.Column="1"
+                      RowDefinitions="Auto, Auto"
+                      VerticalAlignment="Center"
                       HorizontalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
-                        <Button Cursor="Hand" Command="{Binding Player.PlayPreviousCommand}" Classes="Basic"
-                                ToolTip.Tip="上一首">
-                            <Svg Path="/Assets/backward.svg" Width="18" Height="18" />
+
+                    <!-- 播放按钮组 -->
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="20"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" 
+                                Margin="0,10,0,-15">
+                        <Button Cursor="Hand"
+                                Command="{Binding Player.PlayPreviousCommand}"
+                                Classes="Basic"
+                                ToolTip.Tip="上一首"
+                                Width="32" Height="32">
+                            <Svg Path="/Assets/backward.svg" Width="16" Height="16" />
                         </Button>
-                        <Button Cursor="Hand" Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic"
-                                Width="36"
-                                Height="36">
+                        <Button Cursor="Hand"
+                                Command="{Binding Player.TogglePlayPauseCommand}"
+                                Classes="Basic"
+                                Width="40"
+                                Height="40">
                             <Panel>
-                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
+                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg"
+                                     Width="22" Height="22"
                                      IsVisible="{Binding Player.IsPlayingAudio}" />
-                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
+                                <Svg Path="/Assets/play-1003-svgrepo-com.svg"
+                                     Width="22" Height="22"
                                      IsVisible="{Binding !Player.IsPlayingAudio}" />
                             </Panel>
                         </Button>
-                        <Button Cursor="Hand" Command="{Binding Player.PlayNextCommand}" Classes="Basic"
-                                ToolTip.Tip="下一首">
-                            <Svg Path="/Assets/next-svgrepo-com.svg" Width="18" Height="18" />
+                        <Button Cursor="Hand"
+                                Command="{Binding Player.PlayNextCommand}"
+                                Classes="Basic"
+                                ToolTip.Tip="下一首"
+                                Width="32" Height="32">
+                            <Svg Path="/Assets/next-svgrepo-com.svg" Width="16" Height="16" />
                         </Button>
                     </StackPanel>
 
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Width="400" Margin="0,4,0,0">
-                        <TextBlock
-                            Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
-                            FontSize="10" Opacity="0.5" VerticalAlignment="Center" />
-                        <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Player.TotalDurationSeconds}"
+                    <!-- 进度条 -->
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="Auto, *, Auto"
+                          Width="380"
+                          Margin="0,6,0,0">
+                        <TextBlock Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                                   FontSize="10"
+                                   Opacity="0.45"
+                                   VerticalAlignment="Center" />
+                        <Slider Grid.Column="1"
+                                Minimum="0"
+                                Maximum="{Binding Player.TotalDurationSeconds}"
                                 Value="{Binding Player.CurrentPositionSeconds}"
-                                Margin="8,0" IsSnapToTickEnabled="False"
+                                Margin="10,0"
+                                IsSnapToTickEnabled="False"
                                 HorizontalAlignment="Stretch"
                                 Classes="Player" />
                         <TextBlock Grid.Column="2"
                                    Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
-                                   FontSize="10" Opacity="0.5" VerticalAlignment="Center" />
+                                   FontSize="10"
+                                   Opacity="0.45"
+                                   VerticalAlignment="Center" />
                     </Grid>
                 </Grid>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="15" VerticalAlignment="Center"
-                            Margin="0,0,10,0" HorizontalAlignment="Right">
-                    <Grid ColumnDefinitions="Auto, Auto">
-                        <Svg Path="/Assets/volume-max-svgrepo-com.svg" Width="16" Height="16" Margin="0,0,8,0" />
-                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding Player.MusicVolume}" Width="80"
+                <!-- 右侧：音量 + 工具按钮 -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right">
+
+                    <!-- 音量控制 -->
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="6">
+                        <Svg Path="/Assets/volume-max-svgrepo-com.svg"
+                             Width="15" Height="15"
+                             Opacity="0.7" />
+                        <Slider Minimum="0"
+                                Maximum="1"
+                                Value="{Binding Player.MusicVolume}"
+                                Width="76"
                                 Classes="Player" />
+                    </StackPanel>
 
-                    </Grid>
-                    <Button Cursor="Hand" Command="{Binding ToggleQueuePaneCommand}" Classes="Basic">
-                        <Svg Path="/Assets/PlayList.svg" Width="20" Height="20" />
-                    </Button>
-                    <Button Cursor="Hand" Command="{Binding Player.ToggleShuffleModeCommand}" Classes="Basic">
-                        <StackPanel>
-                            <Svg Path="/Assets/shuffle-svgrepo-com.svg" Width="20" Height="20"
-                                 IsVisible="{Binding Player.IsShuffleMode}" />
-                            <Svg Path="/Assets/repeat-svgrepo-com.svg" Width="20" Height="20"
-                                 IsVisible="{Binding !Player.IsShuffleMode}" />
-                        </StackPanel>
-                    </Button>
+                    <!-- 分隔感 -->
+                    <Border Width="1" Height="20" Opacity="0.12" Background="Gray" Margin="4,0" />
 
-                    <Button Cursor="Hand" Command="{Binding ToggleDesktopLyricCommand}"
+                    <!-- 队列按钮 -->
+                    <Button Cursor="Hand"
+                            Command="{Binding ToggleQueuePaneCommand}"
                             Classes="Basic"
-                            ToolTip.Tip="桌面歌词">
-                        <Svg Path="/Assets/DesktopLyric2.svg" Width="24" Height="24"
+                            ToolTip.Tip="播放列表"
+                            Width="32" Height="32">
+                        <Svg Path="/Assets/PlayList.svg" Width="18" Height="18" />
+                    </Button>
+
+                    <!-- 随机/顺序播放 -->
+                    <Button Cursor="Hand"
+                            Command="{Binding Player.ToggleShuffleModeCommand}"
+                            Classes="Basic"
+                            Width="32" Height="32">
+                        <Panel>
+                            <Svg Path="/Assets/shuffle-svgrepo-com.svg"
+                                 Width="18" Height="18"
+                                 IsVisible="{Binding Player.IsShuffleMode}" />
+                            <Svg Path="/Assets/repeat-svgrepo-com.svg"
+                                 Width="18" Height="18"
+                                 IsVisible="{Binding !Player.IsShuffleMode}" />
+                        </Panel>
+                    </Button>
+
+                    <!-- 桌面歌词 -->
+                    <Button Cursor="Hand"
+                            Command="{Binding ToggleDesktopLyricCommand}"
+                            Classes="Basic"
+                            ToolTip.Tip="桌面歌词"
+                            Width="32" Height="32">
+                        <Svg Path="/Assets/DesktopLyric2.svg"
+                             Width="20" Height="20"
                              HorizontalAlignment="Center"
                              VerticalAlignment="Center" />
                     </Button>
                 </StackPanel>
+
             </Grid>
         </suki:GlassCard>
     </Grid>

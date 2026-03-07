@@ -17,6 +17,7 @@ public class AppSettings
     public CloseBehavior CloseBehavior { get; set; } = CloseBehavior.MinimizeToTray;
     public string MusicQuality { get; set; } = "128"; // 128, 320, flac, high
     public List<string> LocalMusicFolders { get; set; } = new();
+    public bool AutoCheckUpdate { get; set; } = true;
 }
 
 // 设置管理器

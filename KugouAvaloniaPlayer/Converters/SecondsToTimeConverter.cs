@@ -6,7 +6,7 @@ namespace KugouAvaloniaPlayer.Converters;
 
 public class SecondsToMinutesSecondsConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is double seconds)
         {
@@ -24,7 +24,7 @@ public class SecondsToMinutesSecondsConverter : IValueConverter
     }
 
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         return value;
     }

@@ -61,5 +61,8 @@
         <Compile Update="Views\SingerView.axaml.cs">
             <DependentUpon>SingerView.axaml</DependentUpon>
         </Compile>
+        <Compile Update="Controls\MediaCard.axaml.cs">
+          <DependentUpon>MediaCard.axaml</DependentUpon>
+        </Compile>
     </ItemGroup>
 </Project>

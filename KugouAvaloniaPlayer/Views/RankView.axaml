@@ -26,22 +26,10 @@
 
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Width="160" Height="200" Margin="8" Padding="0" Click="OnRankCardClick">
-                                <suki:GlassCard Padding="0" CornerRadius="12">
-                                    <Grid RowDefinitions="*, Auto">
-                                        <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
-                                                CornerRadius="12" ClipToBounds="True">
-                                            <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12"
-                                                                 Stretch="UniformToFill" HorizontalAlignment="Center"
-                                                                 VerticalAlignment="Center" />
-                                        </Border>
-                                        <StackPanel Grid.Row="1" Margin="8">
-                                            <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                       TextTrimming="CharacterEllipsis" Width="144" />
-                                        </StackPanel>
-                                    </Grid>
-                                </suki:GlassCard>
-                            </Button>
+                            <localControls:MediaCard Cover="{Binding Cover}"
+                                                      Title="{Binding Name}"
+                                                      Command="{Binding $parent[UserControl].((vm:RankViewModel)DataContext).OpenRankCommand}"
+                                                      CommandParameter="{Binding .}" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

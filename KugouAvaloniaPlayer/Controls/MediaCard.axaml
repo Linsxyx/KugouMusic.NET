@@ -1,0 +1,109 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             x:Class="KugouAvaloniaPlayer.Controls.MediaCard"
+             x:Name="Root">
+
+    <UserControl.Styles>
+
+        <!-- 卡片整体悬停效果 -->
+        <Style Selector="Button#CardButton">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" />
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+            <Setter Property="RenderTransform" Value="scale(1)" />
+        </Style>
+        <Style Selector="Button#CardButton:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.03)" />
+        </Style>
+        <Style Selector="Button#CardButton:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.97)" />
+        </Style>
+        
+        <Style Selector="Button#CardButton Border#HoverOverlay">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button#CardButton:pointerover Border#HoverOverlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
+    </UserControl.Styles>
+
+    <Button Name="CardButton"
+            Width="168" Height="220"
+            Margin="8"
+            Padding="0"
+            Background="Transparent"
+            BorderThickness="0"
+            Command="{Binding #Root.Command}"
+            CommandParameter="{Binding #Root.CommandParameter}"
+            ContextMenu="{Binding #Root.ContextMenu}"
+            RenderTransformOrigin="0.5,0.5"
+            Cursor="Hand">
+
+        <Border CornerRadius="14"
+                ClipToBounds="True"
+                BoxShadow="0 4 24 0 #22000000, 0 1 4 0 #18000000">
+
+            <Grid RowDefinitions="*, Auto">
+
+                <!-- ── 封面图区域 ── -->
+                <Grid Grid.Row="0" Height="168">
+
+                    <!-- 封面图 -->
+                    <Border CornerRadius="14,14,14,14" ClipToBounds="True"
+                            Background="{DynamicResource SukiPrimaryColorLow}">
+                        <controls:AsyncImage Source="{Binding #Root.Cover}"
+                                             Stretch="UniformToFill"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center" />
+                    </Border>
+
+                    <!-- 底部渐变遮罩（增加下方文字区过渡感） -->
+                    <Border CornerRadius="14,14,14,14" ClipToBounds="True" VerticalAlignment="Bottom" Height="60">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                <GradientStop Offset="0" Color="#00000000" />
+                                <GradientStop Offset="1" Color="#55000000" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    
+                    <!-- 角标/额外内容 -->
+                    <ContentPresenter Content="{Binding #Root.OverlayContent}"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Top"
+                                      Margin="0,8,8,0" />
+                </Grid>
+
+                <!-- ── 信息区域 ── -->
+                <Border Grid.Row="1"
+                        Padding="12,10,12,12"
+                        Background="{DynamicResource SukiPrimaryColor0}">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding #Root.Title}"
+                                   FontWeight="SemiBold"
+                                   FontSize="13"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="144" />
+                        <TextBlock Text="{Binding #Root.Subtitle}"
+                                   FontSize="11"
+                                   Opacity="0.55"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="144"
+                                   IsVisible="{Binding #Root.HasSubtitle}" />
+                    </StackPanel>
+                </Border>
+
+            </Grid>
+        </Border>
+    </Button>
+</UserControl>

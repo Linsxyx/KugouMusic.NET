@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
+using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.Logging;
 using SukiUI.Dialogs;
@@ -94,6 +95,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         LoginViewModel.LoginSuccess += OnLoginSuccess;
         _userViewModel.LogoutRequested += OnLogoutRequested;
+        _userViewModel.CheckForUpdateRequested += OnCheckForUpdateRequested;
 
         Player = player;
         ToastManager = toastManager;
@@ -107,7 +109,10 @@ public partial class MainWindowViewModel : ObservableObject
         {
             await LoadLocalSessionOrLogin();
             await GetDailyRecommendations();
-            await CheckForUpdatesAsync();
+            if (SettingsManager.Settings.AutoCheckUpdate)
+            {
+                await CheckForUpdatesAsync();
+            }
         });
     }
 
@@ -255,6 +260,12 @@ public partial class MainWindowViewModel : ObservableObject
             var dailyVm = Pages.OfType<DailyRecommendViewModel>().FirstOrDefault();
             if (dailyVm != null) ActivePage = dailyVm;
         });
+    }
+
+    private void OnCheckForUpdateRequested()
+    {
+        _ = Task.Run(() => CheckForUpdatesAsync(showNoUpdateToast: true))
+            .ContinueWith(_ => Dispatcher.UIThread.Post(() => _userViewModel.SetCheckingUpdateState(false)));
     }
 
     [RelayCommand]
@@ -549,7 +560,7 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
 
-    private async Task CheckForUpdatesAsync()
+    private async Task CheckForUpdatesAsync(bool showNoUpdateToast = false)
     {
         try
         {
@@ -560,6 +571,18 @@ public partial class MainWindowViewModel : ObservableObject
             if (!updateManager.IsInstalled)
             {
                 _logger.LogInformation("未通过 Velopack 安装，跳过更新检查。");
+                if (showNoUpdateToast)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        ToastManager.CreateToast()
+                            .OfType(NotificationType.Information)
+                            .WithTitle("检查更新")
+                            .WithContent("应用未通过安装包安装，无法自动更新。")
+                            .Dismiss().After(TimeSpan.FromSeconds(3))
+                            .Queue();
+                    });
+                }
                 return;
             }
 
@@ -567,6 +590,18 @@ public partial class MainWindowViewModel : ObservableObject
             if (newVersion == null)
             {
                 _logger.LogInformation("当前已是最新版本。");
+                if (showNoUpdateToast)
+                {
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        ToastManager.CreateToast()
+                            .OfType(NotificationType.Success)
+                            .WithTitle("检查更新")
+                            .WithContent("当前已是最新版本。")
+                            .Dismiss().After(TimeSpan.FromSeconds(3))
+                            .Queue();
+                    });
+                }
                 return;
             }
 
@@ -575,6 +610,18 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError($"检查更新失败: {ex.Message}");
+            if (showNoUpdateToast)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    ToastManager.CreateToast()
+                        .OfType(NotificationType.Error)
+                        .WithTitle("检查更新失败")
+                        .WithContent(ex.Message)
+                        .Dismiss().After(TimeSpan.FromSeconds(4))
+                        .Queue();
+                });
+            }
         }
     }
 
