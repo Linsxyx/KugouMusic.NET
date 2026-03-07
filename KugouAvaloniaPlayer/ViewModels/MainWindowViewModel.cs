@@ -26,6 +26,7 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private const string LikeListCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
+    private readonly AuthClient _authClient;
     private readonly DeviceClient _deviceClient;
     private readonly DiscoveryClient _discoveryClient;
     private readonly ILogger<MainWindowViewModel> _logger;
@@ -33,11 +34,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly PlaylistClient _playlistClient;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
-    private readonly AuthClient _authClient;
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
-    
-    public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
     [ObservableProperty] private PageViewModelBase _activePage;
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
@@ -56,7 +54,6 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
     private string _searchKeyword = "";
 
-    //[ObservableProperty] private string _statusMessage = "就绪";
     [ObservableProperty] private string? _userAvatar;
 
     [ObservableProperty] private string _userName = "未登录";
@@ -75,6 +72,9 @@ public partial class MainWindowViewModel : ObservableObject
         LoginViewModel loginViewModel,
         SearchViewModel searchViewModel,
         UserViewModel userViewModel,
+        RankViewModel rankViewModel,
+        DailyRecommendViewModel dailyRecommendViewModel,
+        MyPlaylistsViewModel myPlaylistsViewModel,
         ILogger<MainWindowViewModel> logger)
     {
         DialogManager = dialogManager;
@@ -97,11 +97,11 @@ public partial class MainWindowViewModel : ObservableObject
 
         Player = player;
         ToastManager = toastManager;
-        var dailyVm = new DailyRecommendViewModel();
-        var playlistVm = new MyPlaylistsViewModel(_userClient, _playlistClient, ToastManager, DialogManager);
-        Pages.Add(dailyVm);
-        Pages.Add(playlistVm);
-        ActivePage = dailyVm;
+
+        Pages.Add(dailyRecommendViewModel);
+        Pages.Add(rankViewModel);
+        Pages.Add(myPlaylistsViewModel);
+        ActivePage = dailyRecommendViewModel;
 
         Task.Run(async () =>
         {
@@ -111,11 +111,11 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
+    public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+
     public PlayerViewModel Player { get; }
     public ISukiToastManager ToastManager { get; }
     public ISukiDialogManager DialogManager { get; }
-
-    public Window? MainWindow { get; set; }
 
     public AvaloniaList<PageViewModelBase> Pages { get; } = new();
 
@@ -172,7 +172,7 @@ public partial class MainWindowViewModel : ObservableObject
             var userInfo = await _userClient.GetUserInfoAsync();
             if (userInfo != null)
             {
-                UserName = userInfo.Name ?? "未知用户";
+                UserName = userInfo.Name ;
                 UserAvatar = string.IsNullOrWhiteSpace(userInfo.Pic) ? null : userInfo.Pic;
                 _userViewModel.UserName = UserName;
                 _userViewModel.UserAvatar = UserAvatar;
@@ -216,7 +216,7 @@ public partial class MainWindowViewModel : ObservableObject
             IsLoggedIn = true;
             await LoadUserInfo();
             _logger.LogInformation("登录成功");
-            
+
             _ = Task.Run(async () =>
             {
                 if (!await _deviceClient.InitDeviceAsync())
@@ -237,7 +237,7 @@ public partial class MainWindowViewModel : ObservableObject
                     _logger.LogError($"初始化VIP或喜欢列表失败: {ex.Message}");
                 }
             });
-            
+
             await GetDailyRecommendations();
         });
     }
@@ -257,7 +257,7 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
-    [RelayCommand] 
+    [RelayCommand]
     private void ShowLoginDialog()
     {
         var loginView = new LoginView
@@ -464,9 +464,12 @@ public partial class MainWindowViewModel : ObservableObject
         else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
             currentSongList = playlistVm.SelectedPlaylistSongs;
         else if (ActivePage is SearchViewModel searchVm)
-            
+
             currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
         else if (ActivePage is SingerViewModel singerVm) currentSongList = singerVm.Songs;
+
+        else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)
+            currentSongList = rankVm.SelectedRankSongs;
 
         await Player.PlaySongAsync(song, currentSongList);
     }
@@ -482,7 +485,7 @@ public partial class MainWindowViewModel : ObservableObject
                 DataContext = new DesktopLyricViewModel(Player)
             };
 
-            _lyricWindow.Closed += (s, e) =>
+            _lyricWindow.Closed += (_, _) =>
             {
                 _lyricWindow = null;
                 IsDesktopLyricEnabled = false;

@@ -10,7 +10,7 @@
     <suki:GlassCard Margin="15" Padding="20">
         <Grid RowDefinitions="Auto, *">
             <Grid Grid.Row="0" ColumnDefinitions=" *, Auto,Auto" Margin="0,0,0,20">
-                
+
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
                     <Border Width="80" Height="80" CornerRadius="8" ClipToBounds="True"
                             Background="{DynamicResource SukiPrimaryColorLow}">
@@ -19,17 +19,18 @@
                     <TextBlock Text="{Binding SingerName}" FontSize="24" FontWeight="Bold" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <Button Grid.Column="1" Command="{Binding ToggleSortCommand}" Classes="Basic">
+                <Button Grid.Column="1" Command="{Binding ToggleSortCommand}" Classes="Basic" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <!--<PathIcon Data="{x:Static suki:Icons.DebugStepOver}" Width="16" Height="16" />-->
-                        <TextBlock Text="{Binding CurrentSortText}" VerticalAlignment="Center" Foreground="{DynamicResource SukiLowText}"/>
+                        <TextBlock Text="{Binding CurrentSortText}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SukiLowText}" />
                     </StackPanel>
                 </Button>
-                
-                <Button Grid.Column="2"
+
+                <Button Grid.Column="2" Cursor="Hand"
                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
                         Classes="Basic" Margin="0,0,15,0" HorizontalAlignment="Right">
-                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}" Width="24" Height="24" />
+                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}"
+                              Width="24" Height="24" />
                 </Button>
             </Grid>
 

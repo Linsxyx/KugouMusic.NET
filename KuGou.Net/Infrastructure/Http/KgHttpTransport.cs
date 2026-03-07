@@ -18,7 +18,7 @@ public class KgHttpTransport(HttpClient client) : IKgTransport
         var baseUrl = request.BaseUrl ?? "https://gateway.kugou.com";
         var urlBuilder = new StringBuilder($"{baseUrl.TrimEnd('/')}/{request.Path.TrimStart('/')}");
 
-        if (request.Params != null && request.Params.Count > 0)
+        if (request.Params.Count > 0)
         {
             urlBuilder.Append('?');
             var queryString = string.Join("&", request.Params.Select(kv =>

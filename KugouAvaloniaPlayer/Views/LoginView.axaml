@@ -7,7 +7,7 @@
              x:DataType="vm:LoginViewModel"
              Width="350"
              Unloaded="OnUnloaded">
-    
+
     <UserControl.Resources>
         <converters:Base64ImageConverter x:Key="Base64ImageConverter" />
     </UserControl.Resources>
@@ -21,24 +21,28 @@
 
         <!-- 二维码登录面板 -->
         <StackPanel IsVisible="{Binding IsQrLoginSelected}" Spacing="15" Margin="0,10">
-            <Border Width="180" Height="180" Background="#F0F0F0" CornerRadius="10" ClipToBounds="True" HorizontalAlignment="Center">
+            <Border Width="180" Height="180" Background="#F0F0F0" CornerRadius="10" ClipToBounds="True"
+                    HorizontalAlignment="Center">
                 <Panel>
-                    <Image Source="{Binding QrCodeImageUrl, Converter={StaticResource Base64ImageConverter}}" 
+                    <Image Source="{Binding QrCodeImageUrl, Converter={StaticResource Base64ImageConverter}}"
                            Stretch="Uniform" />
-                    
+
                     <!-- 加载圈 -->
-                    <suki:Loading Width="40" Height="40" IsVisible="{Binding QrCodeImageUrl, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
-                    
+                    <suki:Loading Width="40" Height="40"
+                                  IsVisible="{Binding QrCodeImageUrl, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+
                     <!-- 过期遮罩层 -->
                     <Border Background="#A0000000" IsVisible="{Binding IsQrExpired}">
-                        <Button Classes="Basic" Content="点击刷新" Foreground="White" Command="{Binding RefreshQrCodeCommand}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Button Classes="Basic" Content="点击刷新" Foreground="White"
+                                Command="{Binding RefreshQrCodeCommand}" HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
                     </Border>
                 </Panel>
             </Border>
-            
-            <TextBlock Text="{Binding QrStatusMessage}" 
-                       FontSize="14" 
-                       HorizontalAlignment="Center" 
+
+            <TextBlock Text="{Binding QrStatusMessage}"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
                        Foreground="{DynamicResource SukiLiquid2}" />
         </StackPanel>
 

@@ -63,10 +63,12 @@
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
-                <TextBlock Text="{Binding Name}" FontWeight="DemiBold" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource SukiLowText}"/>
+                <TextBlock Text="{Binding Name}" FontWeight="DemiBold" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>
 
-            <TextBlock Grid.Column="2" Text="{Binding Singer}" VerticalAlignment="Center" Foreground="{DynamicResource SukiLowText}"
+            <TextBlock Grid.Column="2" Text="{Binding Singer}" VerticalAlignment="Center"
+                       Foreground="{DynamicResource SukiLowText}"
                        TextTrimming="CharacterEllipsis" />
 
             <TextBlock Grid.Column="3"
@@ -76,13 +78,13 @@
             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
                         HorizontalAlignment="Right" Margin="0,0,10,0">
 
-                <Button Classes="Basic" ToolTip.Tip="播放"
+                <Button Cursor="Hand" Classes="Basic" ToolTip.Tip="播放"
                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlayFromListCommand}"
                         CommandParameter="{Binding .}">
                     <Svg Path="/Assets/Play-2.svg" Width="15" Height="15" />
                 </Button>
 
-                <Button Classes="Basic" ToolTip.Tip="更多操作">
+                <Button Cursor="Hand" Classes="Basic" ToolTip.Tip="更多操作">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
                             <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">

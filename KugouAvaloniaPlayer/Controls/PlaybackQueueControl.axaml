@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:theme="clr-namespace:SukiUI.Theme;assembly=SukiUI"
              x:Class="KugouAvaloniaPlayer.Controls.PlaybackQueueControl"
              x:DataType="vm:MainWindowViewModel">
 
@@ -16,20 +15,20 @@
             <Setter Property="Template">
                 <ControlTemplate>
                     <Panel>
-                        <Border Name="HoverBorder"  
-                                Background="{TemplateBinding Background}" 
+                        <Border Name="HoverBorder"
+                                Background="{TemplateBinding Background}"
                                 CornerRadius="{TemplateBinding CornerRadius}"
                                 Opacity="0">
                             <Border.Transitions>
                                 <Transitions>
-                                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
                                 </Transitions>
                             </Border.Transitions>
                         </Border>
                         <ContentPresenter Content="{TemplateBinding Content}"
                                           CornerRadius="12"
                                           ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          Padding="{TemplateBinding Padding}"/>
+                                          Padding="{TemplateBinding Padding}" />
                     </Panel>
                 </ControlTemplate>
             </Setter>
@@ -37,60 +36,58 @@
 
         <!-- 鼠标悬停列表项时：显示背景 -->
         <Style Selector="ListBoxItem:pointerover /template/ Border#HoverBorder">
-            <Setter Property="Opacity" Value="1"/>
-            <Setter Property="Background" Value="{DynamicResource SukiPrimaryColor7}"/> 
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource SukiPrimaryColor7}" />
         </Style>
 
         <!-- 鼠标悬停列表项时：让操作按钮浮现 -->
         <Style Selector="ListBoxItem:pointerover Button.HoverAction">
-            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Opacity" Value="1" />
         </Style>
 
         <!-- 正在播放的状态：高亮文字颜色 -->
         <Style Selector="TextBlock.IsPlaying">
-            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}"/>
-            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
+            <Setter Property="FontWeight" Value="Bold" />
         </Style>
-        
+
         <Style Selector="ListBoxItem:selected">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent" />
         </Style>
-        
+
         <Style Selector="ListBoxItem">
-            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
-        
+
         <Style Selector="Border.ActiveIndicator">
-            <Setter Property="Height" Value="0"/>
+            <Setter Property="Height" Value="0" />
         </Style>
     </UserControl.Styles>
 
-    <suki:GlassCard CornerRadius="15" Margin="10" IsOpaque="True" >
+    <suki:GlassCard CornerRadius="15" Margin="10" IsOpaque="True">
         <Grid RowDefinitions="Auto, *">
             <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="15,15,15,10">
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <PathIcon Data="{x:Static suki:Icons.Plus}" 
-                              Height="14" Width="14" 
-                              Foreground="{DynamicResource SukiLowText}"/>
-                    <TextBlock Text="播放队列" 
-                               FontWeight="DemiBold" 
+                    <Svg Path="/Assets/FormatList.svg" Width="25" Height="25" />
+                    <TextBlock Text="播放队列"
+                               FontWeight="DemiBold"
                                FontSize="15" />
-                    <Border Background="{DynamicResource SukiControlBorderBrush}" 
-                            CornerRadius="10" 
-                            Padding="6,1" 
-                            Margin="5,0,0,0" 
+                    <Border Background="{DynamicResource SukiControlBorderBrush}"
+                            CornerRadius="10"
+                            Padding="6,1"
+                            Margin="5,0,0,0"
                             VerticalAlignment="Center">
                         <TextBlock Text="{Binding Player.PlaybackQueue.Count}"
-                                   FontSize="11" 
-                                   Foreground="{DynamicResource SukiLowText}"/>
+                                   FontSize="11"
+                                   Foreground="{DynamicResource SukiLowText}" />
                     </Border>
                 </StackPanel>
-                
-                <Button Grid.Column="1" Classes="Basic" 
+
+                <Button Grid.Column="1" Classes="Basic"
                         Command="{Binding Player.ClearQueueCommand}"
                         ToolTip.Tip="清空队列">
                     <StackPanel Orientation="Horizontal" Spacing="4">
-                        <PathIcon Data="{x:Static suki:Icons.Cross}" Width="14" Height="14" Foreground="{DynamicResource SukiLowText}"/>
+                        <Svg Path="/Assets/trash-svgrepo-com.svg" Width="25" Height="25" />
                     </StackPanel>
                 </Button>
             </Grid>
@@ -102,11 +99,11 @@
                      BorderThickness="0"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      Padding="10,0">
-                
+
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:SongItem">
                         <Grid ColumnDefinitions="Auto, *, Auto" Height="46" Background="Transparent">
-                            
+
                             <Grid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="下一首播放"
@@ -114,38 +111,38 @@
                                               CommandParameter="{Binding .}" />
                                     <MenuItem Header="从队列移除"
                                               Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
-                                              CommandParameter="{Binding .}"/>
+                                              CommandParameter="{Binding .}" />
                                 </ContextMenu>
                             </Grid.ContextMenu>
-                            
+
                             <Panel Grid.Column="0" Width="24" Margin="0,0,8,0">
-                                
-                                <Svg Path="/Assets/music-party-svgrepo-com.svg" Width="15" Height="15"
-                                          IsVisible="{Binding IsPlaying}"/>
-                                
+
+                                <Svg Path="/Assets/music-party-svgrepo-com.svg" Width="25" Height="25"
+                                     IsVisible="{Binding IsPlaying}" />
+
                             </Panel>
 
-                           
+
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                                
+
                                 <TextBlock Text="{Binding Name}"
                                            Classes.IsPlaying="{Binding IsPlaying}"
                                            FontSize="13"
                                            TextTrimming="CharacterEllipsis"
-                                           Foreground="{DynamicResource SukiText}"/>
-                                
-                                <TextBlock Text="{Binding Singer}" 
+                                           Foreground="{DynamicResource SukiText}" />
+
+                                <TextBlock Text="{Binding Singer}"
                                            FontSize="11"
                                            Foreground="{DynamicResource SukiLowText}"
                                            TextTrimming="CharacterEllipsis" />
                             </StackPanel>
-                            
-                            <StackPanel Grid.Column="2" 
-                                        Orientation="Horizontal" 
-                                        Spacing="5" 
+
+                            <StackPanel Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        Spacing="5"
                                         VerticalAlignment="Center"
                                         Margin="10,0,5,0">
-                                
+
                                 <!-- 播放按钮 -->
                                 <Button Classes="Basic"
                                         ToolTip.Tip="播放"
@@ -158,7 +155,7 @@
                                         ToolTip.Tip="移除"
                                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
                                         CommandParameter="{Binding .}">
-                                    <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource SukiText}"/>
+                                    <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource SukiText}" />
                                 </Button>
                             </StackPanel>
                         </Grid>

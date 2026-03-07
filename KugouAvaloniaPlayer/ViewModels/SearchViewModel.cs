@@ -27,7 +27,6 @@ public enum DetailType
 }
 
 public partial class SearchViewModel(
-    PlayerViewModel player,
     MusicClient musicClient,
     PlaylistClient playlistClient,
     AlbumClient albumClient,
@@ -35,8 +34,6 @@ public partial class SearchViewModel(
     ILogger<SearchViewModel> logger) : PageViewModelBase
 {
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
-    private readonly PlayerViewModel _player = player;
-    private readonly ISukiToastManager _toastManager = toastManager;
     private string _currentDetailId = "";
 
     private int _currentDetailPage = 1;
@@ -145,7 +142,7 @@ public partial class SearchViewModel(
     }
 
     [RelayCommand]
-    private async Task OpenPlaylist(SearchPlaylistItem item)
+    private async Task OpenPlaylist(SearchPlaylistItem? item)
     {
         if (item == null) return;
 
@@ -170,7 +167,7 @@ public partial class SearchViewModel(
     }
 
     [RelayCommand]
-    private async Task OpenAlbum(SearchAlbumItem item)
+    private async Task OpenAlbum(SearchAlbumItem? item)
     {
         if (item == null) return;
 
@@ -304,7 +301,7 @@ public partial class SearchViewModel(
         {
             var result = await playlistClient.CollectPlaylistAsync(_currentPlaylistName, _currentPlaylistGlobalId);
             if (result != null)
-                _toastManager.CreateToast()
+                toastManager.CreateToast()
                     .OfType(NotificationType.Success)
                     .WithTitle("收藏成功")
                     .WithContent($"已将「{_currentPlaylistName}」收藏到我的歌单")
@@ -315,7 +312,7 @@ public partial class SearchViewModel(
         catch (Exception ex)
         {
             logger.LogError(ex, "收藏歌单失败");
-            _toastManager.CreateToast()
+            toastManager.CreateToast()
                 .OfType(NotificationType.Error)
                 .WithTitle("收藏失败")
                 .WithContent(ex.Message)

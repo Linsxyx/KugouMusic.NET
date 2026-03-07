@@ -44,6 +44,17 @@ public partial class UserViewModel : PageViewModelBase
 
     public string[] QualityOptions { get; } = { "128", "320", "flac", "high" };
 
+
+    public bool IsDarkMode
+    {
+        get => SukiTheme.GetInstance().ActiveBaseTheme == ThemeVariant.Dark;
+        set
+        {
+            SukiTheme.GetInstance().ChangeBaseTheme(value ? ThemeVariant.Dark : ThemeVariant.Light);
+            OnPropertyChanged();
+        }
+    }
+
     public async Task LoadUserInfoAsync()
     {
         IsLoading = true;
@@ -91,16 +102,5 @@ public partial class UserViewModel : PageViewModelBase
         SettingsManager.Settings.MusicQuality = value;
         Player.MusicQuality = value;
         SettingsManager.Save();
-    }
-    
-    
-    public bool IsDarkMode
-    {
-        get => SukiTheme.GetInstance().ActiveBaseTheme == ThemeVariant.Dark;
-        set
-        {
-            SukiTheme.GetInstance().ChangeBaseTheme(value ? ThemeVariant.Dark : ThemeVariant.Light);
-            OnPropertyChanged();
-        }
     }
 }

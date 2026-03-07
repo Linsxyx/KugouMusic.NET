@@ -24,7 +24,7 @@
                 </StackPanel>
 
                 <Grid Grid.Row="1" ColumnDefinitions="*, Auto">
-                    <TextBox Text="{Binding SearchKeyword}" Watermark="输入歌曲名、歌手名、歌单或专辑..." Grid.Column="0"/>
+                    <TextBox Text="{Binding SearchKeyword}" Watermark="输入歌曲名、歌手名、歌单或专辑..." Grid.Column="0" />
                     <Button Grid.Column="1" Command="{Binding SearchCommand}"
                             IsEnabled="{Binding IsSearching, Converter={x:Static BoolConverters.Not}}"
                             Margin="10,0,0,0" Padding="20,0">
@@ -85,15 +85,18 @@
                                         CommandParameter="{Binding .}">
                                     <suki:GlassCard Padding="0" CornerRadius="12">
                                         <Grid RowDefinitions="*, Auto">
-                                            <Border Grid.Row="0" 
+                                            <Border Grid.Row="0"
                                                     CornerRadius="12,12,0,0" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"  />
+                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12"
+                                                                     Stretch="UniformToFill"
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center" />
                                             </Border>
-                                            <Border Grid.Row="1" 
+                                            <Border Grid.Row="1"
                                                     Padding="8">
                                                 <StackPanel Height="30">
                                                     <TextBlock Text="{Binding Name}" FontWeight="Bold"
-                                                               TextTrimming="CharacterEllipsis" Width="144"/>
+                                                               TextTrimming="CharacterEllipsis" Width="144" />
                                                     <TextBlock Text="{Binding SongCount, StringFormat='{}{0} 首'}"
                                                                FontSize="11" Foreground="{DynamicResource SukiLiquid2}" />
                                                 </StackPanel>
@@ -129,11 +132,14 @@
                                         CommandParameter="{Binding .}">
                                     <suki:GlassCard Padding="0" CornerRadius="12">
                                         <Grid RowDefinitions="*, Auto">
-                                            <Border Grid.Row="0" 
+                                            <Border Grid.Row="0"
                                                     CornerRadius="12,12,0,0" ClipToBounds="True">
-                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12"
+                                                                     Stretch="UniformToFill"
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center" />
                                             </Border>
-                                            <Border Grid.Row="1" 
+                                            <Border Grid.Row="1"
                                                     Padding="8">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Name}" FontWeight="Bold"
@@ -162,7 +168,8 @@
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0">
                             <TextBlock Text="{Binding DetailTitle}" FontSize="24" FontWeight="Bold"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding DetailSubTitle}" FontSize="14" Foreground="{DynamicResource SukiLiquid2}" Margin="0,5,0,0" />
+                            <TextBlock Text="{Binding DetailSubTitle}" FontSize="14"
+                                       Foreground="{DynamicResource SukiLiquid2}" Margin="0,5,0,0" />
                         </StackPanel>
 
                         <!-- 收藏歌单按钮 (仅在歌单详情页显示) -->
@@ -175,7 +182,8 @@
 
                         <Button Grid.Column="3" Command="{Binding GoBackCommand}" Classes="Basic"
                                 VerticalAlignment="Top">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}" Width="28"
+                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}"
+                                      Foreground="{DynamicResource SukiLowText}" Width="28"
                                       Height="28" />
                         </Button>
                     </Grid>
@@ -197,7 +205,8 @@
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10" Spacing="10"
                                         IsVisible="{Binding IsLoadingMoreDetails}">
                                 <suki:Loading Width="20" Height="20" />
-                                <TextBlock Text="加载更多..." VerticalAlignment="Center" Foreground="{DynamicResource SukiLiquid2}" />
+                                <TextBlock Text="加载更多..." VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SukiLiquid2}" />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

@@ -23,8 +23,6 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(KgSession))]
 [JsonSerializable(typeof(LoginResponse))]
-[JsonSerializable(typeof(QrKeyResponse))]
-[JsonSerializable(typeof(QrStatusResponse))]
 [JsonSerializable(typeof(SendCodeResponse))]
 [JsonSerializable(typeof(RefreshTokenResponse))]
 [JsonSerializable(typeof(SearchResultData))]
@@ -52,7 +50,7 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(List<AddSongItem>))]
 [JsonSerializable(typeof(SingerAudioResponse))]
 [JsonSerializable(typeof(List<SingerSongItem>))]
-[JsonSerializable(typeof(SingerTransParam))]
+[JsonSerializable(typeof(TransParam))]
 [JsonSerializable(typeof(SingerDetailResponse))]
 [JsonSerializable(typeof(SearchPlaylistResponse))]
 [JsonSerializable(typeof(List<SearchPlaylistItem>))]
@@ -66,6 +64,12 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(AlbumSongAuthor))]
 [JsonSerializable(typeof(QRCode))]
 [JsonSerializable(typeof(QrLoginStatusResponse))]
+[JsonSerializable(typeof(RankSongResponse))]
+[JsonSerializable(typeof(List<RankSongItem>))]
+[JsonSerializable(typeof(List<RankSongAudioInfo>))]
+[JsonSerializable(typeof(List<RankSongAuthor>))]
+[JsonSerializable(typeof(RankListResponse))]
+[JsonSerializable(typeof(List<RankListItem>))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }

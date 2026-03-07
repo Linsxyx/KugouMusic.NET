@@ -29,7 +29,7 @@ public static class KgHttpClientFactory
     /// <returns>配置好的传输层对象</returns>
     public static IKgTransport Create(KgSessionManager? existingSession = null)
     {
-        var cookieContainer = new CookieContainer();
+        //var cookieContainer = new CookieContainer();
         var sessionManager = existingSession ?? new KgSessionManager(new CookieContainer());
 
         var primaryHandler = new HttpClientHandler

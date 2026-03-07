@@ -1,61 +1,61 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    
+
     <Style Selector="RadioButton.Segmented">
-        <Setter Property="Foreground" Value="Gray"/>
-        <Setter Property="Padding" Value="24,6"/>
-        <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="Gray" />
+        <Setter Property="Padding" Value="24,6" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Template">
             <ControlTemplate>
                 <Panel Background="Transparent">
-                    <Border x:Name="HoverBorder" 
-                            Background="#15888888" 
-                            CornerRadius="{TemplateBinding CornerRadius}" 
+                    <Border x:Name="HoverBorder"
+                            Background="#15888888"
+                            CornerRadius="{TemplateBinding CornerRadius}"
                             Opacity="0">
                         <Border.Transitions>
                             <Transitions>
-                                <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
                             </Transitions>
                         </Border.Transitions>
                     </Border>
-                    
-                    <Border x:Name="CheckedBorder" 
-                            Background="{DynamicResource SukiCardBackground}" 
-                            CornerRadius="{TemplateBinding CornerRadius}" 
+
+                    <Border x:Name="CheckedBorder"
+                            Background="{DynamicResource SukiCardBackground}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
                             BoxShadow="0 1 4 0 #20000000"
                             Opacity="0">
                         <Border.Transitions>
                             <Transitions>
-                                <DoubleTransition Property="Opacity" Duration="0:0:0.25"/>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
                             </Transitions>
                         </Border.Transitions>
                     </Border>
-                    
+
                     <ContentPresenter x:Name="PART_ContentPresenter"
                                       Content="{TemplateBinding Content}"
                                       Margin="{TemplateBinding Padding}"
                                       Foreground="{DynamicResource SukiLowText}"
                                       HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
                 </Panel>
             </ControlTemplate>
         </Setter>
     </Style>
-    
+
     <Style Selector="RadioButton.Segmented:pointerover:not(:checked) /template/ Border#HoverBorder">
-        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Opacity" Value="1" />
     </Style>
-    
+
     <Style Selector="RadioButton.Segmented:checked /template/ Border#CheckedBorder">
-        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Opacity" Value="1" />
     </Style>
-    
+
     <Style Selector="RadioButton.Segmented:checked">
-        <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}"/>
-        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
+        <Setter Property="FontWeight" Value="Bold" />
     </Style>
 
 </Styles>

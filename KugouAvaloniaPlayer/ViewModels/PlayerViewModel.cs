@@ -217,7 +217,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
-                url = playData?.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
+                url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
                 _ = LoadLyrics(song.Hash, song.Name);
             }
 
@@ -496,7 +496,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             }
 
             var songs = await _playlistClient.GetSongsAsync(likePlaylist.ListCreateId, pageSize: 1000);
-            
+
 
             lock (_likedHashes)
             {
@@ -547,7 +547,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                     var idList = new List<long> { fileId };
                     var result = await _playlistClient.RemoveSongsAsync(LikeListIdForAction, idList);
 
-                    if (result.Status == 1)
+                    if (result?.Status == 1)
                     {
                         IsLiked = false;
                         _likedHashes.Remove(hash);
@@ -556,7 +556,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                     }
                     else
                     {
-                        _logger.LogError($"取消失败: {result.ErrorCode}");
+                        _logger.LogError($"取消失败: {result?.ErrorCode}");
                     }
                 }
                 else
@@ -569,12 +569,12 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             {
                 var songList = new List<(string Name, string Hash, string AlbumId, string MixSongId)>
                 {
-                    (song.Name, song.Hash, song.AlbumId ?? "0", "0")
+                    (song.Name, song.Hash, song.AlbumId, "0")
                 };
 
                 var result = await _playlistClient.AddSongsAsync(LikeListIdForAction, songList);
 
-                if (result.Status == 1)
+                if (result?.Status == 1)
                 {
                     IsLiked = true;
                     _likedHashes.Add(hash);
@@ -588,7 +588,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 }
                 else
                 {
-                    _logger.LogError($"收藏失败: {result.ErrorCode}");
+                    _logger.LogError($"收藏失败: {result?.ErrorCode}");
                 }
             }
         }
@@ -604,7 +604,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    public async Task ShowAddToPlaylistDialog(SongItem song)
+    public async Task ShowAddToPlaylistDialog(SongItem? song)
     {
         if (song == null) return;
 
@@ -674,12 +674,12 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         {
             var songList = new List<(string Name, string Hash, string AlbumId, string MixSongId)>
             {
-                (song.Name, song.Hash, song.AlbumId ?? "0", "0")
+                (song.Name, song.Hash, song.AlbumId, "0")
             };
 
             var result = await _playlistClient.AddSongsAsync(playlistId, songList);
 
-            if (result.Status == 1)
+            if (result?.Status == 1)
                 _toastManager.CreateToast()
                     .OfType(NotificationType.Success)
                     .WithTitle("添加成功")
@@ -691,7 +691,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 _toastManager.CreateToast()
                     .OfType(NotificationType.Error)
                     .WithTitle("添加失败")
-                    .WithContent($"错误代码: {result.ErrorCode}")
+                    .WithContent($"错误代码: {result?.ErrorCode}")
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .Dismiss().ByClicking()
                     .Queue();

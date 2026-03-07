@@ -10,12 +10,9 @@ public partial class LoginView : UserControl
     {
         InitializeComponent();
     }
-    
+
     private void OnUnloaded(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is LoginViewModel vm)
-        {
-            vm.StopQrPolling();
-        }
+        if (DataContext is LoginViewModel vm) vm.StopQrPolling();
     }
 }

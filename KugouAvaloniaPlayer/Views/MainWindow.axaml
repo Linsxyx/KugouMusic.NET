@@ -32,6 +32,10 @@
             <views:SingerView />
         </DataTemplate>
 
+        <DataTemplate DataType="vm:RankViewModel">
+            <views:RankView />
+        </DataTemplate>
+
         <DataTemplate DataType="vm:UserViewModel">
             <views:UserView />
         </DataTemplate>
@@ -81,7 +85,8 @@
 
             <suki:SukiSideMenu.HeaderContent>
                 <Grid ColumnDefinitions="Auto, *" Margin="20,10,20,30">
-                    <TextBox Text="{Binding SearchKeyword}" Watermark="搜索歌曲..." Grid.ColumnSpan="2" KeyUp="TextBox_KeyUp"/>
+                    <TextBox Text="{Binding SearchKeyword}" Watermark="搜索歌曲..." Grid.ColumnSpan="2"
+                             KeyUp="TextBox_KeyUp" />
                     <Button Grid.Column="1" Classes="Basic" Command="{Binding SearchCommand}"
                             HorizontalAlignment="Right">
                         <PathIcon Data="{x:Static suki:Icons.Search}" Margin="0,0,5,0" />
@@ -102,8 +107,8 @@
             <suki:SukiSideMenu.FooterContent>
                 <StackPanel HorizontalAlignment="Center" Margin="10,10,10,100" Spacing="8">
                     <localControls:UserAvatarControl />
-                    <TextBlock Text="{Binding Version, StringFormat='v{0}'}" 
-                               HorizontalAlignment="Center" 
+                    <TextBlock Text="{Binding Version, StringFormat='v{0}'}"
+                               HorizontalAlignment="Center"
                                Foreground="{DynamicResource SukiLiquid2}" FontSize="10" />
                 </StackPanel>
             </suki:SukiSideMenu.FooterContent>

@@ -32,19 +32,19 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     }
 
     /// <summary>
-    ///     收藏歌单 
+    ///     收藏歌单
     /// </summary>
     [HttpPost("add")]
     public async Task<IActionResult> AddPlaylist(
         [FromQuery] string name,
         [FromQuery(Name = "list_create_gid")] string sourceGlobalId)
     {
-        var result = await playlistClient.CollectPlaylistAsync(name,sourceGlobalId);
+        var result = await playlistClient.CollectPlaylistAsync(name, sourceGlobalId);
         return Ok(result);
     }
-    
+
     /// <summary>
-    ///    新建歌单
+    ///     新建歌单
     /// </summary>
     [HttpPost("Create")]
     public async Task<IActionResult> CreatePlaylist(

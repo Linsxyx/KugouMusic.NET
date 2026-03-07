@@ -5,9 +5,9 @@ namespace KuGou.Net.Abstractions.Models;
 public record UserDetailModel : KgBaseModel
 {
     [property: JsonPropertyName("nickname")]
-    public string Name { get; set; }
+    public string Name { get; set; }=string.Empty;
 
-    [property: JsonPropertyName("pic")] public string Pic { get; set; }
+    [property: JsonPropertyName("pic")] public string Pic { get; set; }=string.Empty;
 }
 
 public record OneDayVipModel : KgBaseModel

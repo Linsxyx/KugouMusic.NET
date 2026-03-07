@@ -116,13 +116,13 @@ public static class KrcParser
             if (translationList != null && lineIndex < translationList.Count)
             {
                 var tLines = translationList[lineIndex];
-                if (tLines != null && tLines.Count > 0) krcLine.Translation = tLines[0];
+                if (tLines.Count > 0) krcLine.Translation = tLines[0];
             }
 
             if (romanizationList != null && lineIndex < romanizationList.Count)
             {
                 var rLines = romanizationList[lineIndex];
-                if (rLines != null) krcLine.Romanization = string.Join("", rLines);
+                krcLine.Romanization = string.Join("", rLines);
             }
 
             result.Lines.Add(krcLine);

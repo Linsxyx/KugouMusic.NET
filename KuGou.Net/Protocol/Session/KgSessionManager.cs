@@ -83,6 +83,7 @@ public class KgSessionManager
             }
             catch
             {
+                // 
             }
     }
 

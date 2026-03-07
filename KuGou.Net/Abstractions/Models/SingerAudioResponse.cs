@@ -35,10 +35,10 @@ public record SingerSongItem : KgBaseModel
     public long Duration { get; set; }
 
     [property: JsonPropertyName("trans_param")]
-    public SingerTransParam? TransParam { get; set; }
+    public TransParam? TransParam { get; set; }
 }
 
-public record SingerTransParam
+public record TransParam
 {
     [property: JsonPropertyName("union_cover")]
     public string? UnionCover

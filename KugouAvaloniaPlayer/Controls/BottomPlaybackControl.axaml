@@ -54,10 +54,12 @@
                 <Grid Grid.Column="1" RowDefinitions="Auto, Auto" VerticalAlignment="Center"
                       HorizontalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
-                        <Button Cursor="Hand" Command="{Binding Player.PlayPreviousCommand}" Classes="Basic" ToolTip.Tip="上一首">
+                        <Button Cursor="Hand" Command="{Binding Player.PlayPreviousCommand}" Classes="Basic"
+                                ToolTip.Tip="上一首">
                             <Svg Path="/Assets/backward.svg" Width="18" Height="18" />
                         </Button>
-                        <Button Cursor="Hand" Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic" Width="36"
+                        <Button Cursor="Hand" Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic"
+                                Width="36"
                                 Height="36">
                             <Panel>
                                 <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
@@ -66,7 +68,8 @@
                                      IsVisible="{Binding !Player.IsPlayingAudio}" />
                             </Panel>
                         </Button>
-                        <Button Cursor="Hand" Command="{Binding Player.PlayNextCommand}" Classes="Basic" ToolTip.Tip="下一首">
+                        <Button Cursor="Hand" Command="{Binding Player.PlayNextCommand}" Classes="Basic"
+                                ToolTip.Tip="下一首">
                             <Svg Path="/Assets/next-svgrepo-com.svg" Width="18" Height="18" />
                         </Button>
                     </StackPanel>

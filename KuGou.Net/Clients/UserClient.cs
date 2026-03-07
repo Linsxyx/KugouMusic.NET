@@ -80,7 +80,7 @@ public class UserClient(RawUserApi rawApi, KgSessionManager sessionManager)
     }
 
     /// <summary>
-    ///     获取听歌排行 (type=0 通常是全部时间)
+    ///     获取听歌排行
     /// </summary>
     public async Task<JsonElement?> GetListenRankAsync(int type = 0)
     {

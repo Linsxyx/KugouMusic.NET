@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Logging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,29 +10,30 @@ using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceClient,ILogger<LoginViewModel> logger) : ObservableObject
+public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceClient, ILogger<LoginViewModel> logger)
+    : ObservableObject
 {
     [ObservableProperty] private string _code = "";
     [ObservableProperty] private int _countdown;
     [ObservableProperty] private bool _isLoggingIn;
+    [ObservableProperty] private bool _isQrExpired;
+
+    [ObservableProperty] private bool _isQrLoginSelected;
     [ObservableProperty] private bool _isSendingCode;
     [ObservableProperty] private string _mobile = "";
-    [ObservableProperty] private string _statusMessage = "";
-    
-    [ObservableProperty] private bool _isQrLoginSelected ; 
     [ObservableProperty] private string? _qrCodeImageUrl;
-    [ObservableProperty] private string _qrStatusMessage = "请使用酷狗音乐概念版App扫码";
-    [ObservableProperty] private bool _isQrExpired;
 
     private string? _qrCodeKey;
     private CancellationTokenSource? _qrPollingCts;
-    
+    [ObservableProperty] private string _qrStatusMessage = "请使用酷狗音乐概念版App扫码";
+    [ObservableProperty] private string _statusMessage = "";
+
     partial void OnIsQrLoginSelectedChanged(bool value)
     {
         if (value)
             _ = RefreshQrCode();
         else
-            StopQrPolling(); 
+            StopQrPolling();
     }
 
     [RelayCommand]
@@ -43,7 +43,7 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
         QrStatusMessage = "正在获取二维码...";
         QrCodeImageUrl = null;
         IsQrExpired = false;
-        
+
         try
         {
             var qr = await authClient.GetQrCodeAsync();
@@ -76,7 +76,7 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
         {
             while (!token.IsCancellationRequested)
             {
-                await Task.Delay(2000, token); 
+                await Task.Delay(2000, token);
                 if (token.IsCancellationRequested) break;
 
                 if (string.IsNullOrEmpty(_qrCodeKey)) continue;
@@ -84,23 +84,23 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
                 try
                 {
                     var status = await authClient.CheckQrStatusAsync(_qrCodeKey);
-                    
-                    if (status.QrStatus == QrLoginStatus.WaitingForScan)
+
+                    if (status?.QrStatus == QrLoginStatus.WaitingForScan)
                     {
                         Dispatcher.UIThread.Post(() => QrStatusMessage = "请使用酷狗音乐App扫码");
                     }
-                    else if (status.QrStatus == QrLoginStatus.WaitingForConfirm)
+                    else if (status?.QrStatus == QrLoginStatus.WaitingForConfirm)
                     {
                         Dispatcher.UIThread.Post(() => QrStatusMessage = "扫码成功，请在手机上确认");
                     }
-                    else if (status.QrStatus == QrLoginStatus.Success)
+                    else if (status?.QrStatus == QrLoginStatus.Success)
                     {
-                        Dispatcher.UIThread.Post(() => 
+                        Dispatcher.UIThread.Post(() =>
                         {
                             QrStatusMessage = "登录成功";
                             StopQrPolling();
-                            
-                            
+
+
                             _ = Task.Run(async () =>
                             {
                                 try
@@ -110,7 +110,7 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
                                 }
                                 catch
                                 {
-                                    
+                                    logger.LogError("设备验证失败");
                                 }
                             });
 
@@ -118,9 +118,9 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
                         });
                         break;
                     }
-                    else if (status.QrStatus == QrLoginStatus.Expired)
+                    else if (status?.QrStatus == QrLoginStatus.Expired)
                     {
-                        Dispatcher.UIThread.Post(() => 
+                        Dispatcher.UIThread.Post(() =>
                         {
                             QrStatusMessage = "二维码已过期，请点击刷新";
                             IsQrExpired = true;
@@ -162,14 +162,14 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
         try
         {
             var result = await authClient.SendCodeAsync(Mobile);
-            if (result.TryGetProperty("status", out var statusEl) && statusEl.GetInt32() == 1)
+            if (result is not null && result.Status == 1)
             {
                 StatusMessage = "验证码已发送";
                 StartCountdown();
             }
             else
             {
-                var msg = result.TryGetProperty("msg", out var msgEl) ? msgEl.GetString() : "发送失败";
+                var msg = result?.ErrorCode;
                 StatusMessage = $"发送失败: {msg}";
             }
         }
@@ -204,11 +204,10 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
         try
         {
             var result = await authClient.LoginByMobileAsync(Mobile, Code);
-            if (result.TryGetProperty("status", out var statusEl) && statusEl.GetInt32() == 1)
+            if (result is not null && result.Status == 1)
             {
                 StatusMessage = "登录成功";
 
-                // 后台初始化设备
                 _ = Task.Run(async () =>
                 {
                     try
@@ -225,7 +224,7 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
             }
             else
             {
-                var msg = result.TryGetProperty("msg", out var msgEl) ? msgEl.GetString() : "登录失败";
+                var msg = result?.ErrorCode;
                 StatusMessage = $"登录失败: {msg}";
             }
         }

@@ -38,7 +38,7 @@ public record AlbumSongItem : KgBaseModel
 
     [JsonIgnore] public int DurationMs => AudioInfo.Duration;
 
-    [JsonIgnore] public string? Cover => AlbumInfo.Cover?.Replace("{size}", "400");
+    [JsonIgnore] public string Cover => AlbumInfo.Cover.Replace("{size}", "400");
 
     /// <summary>
     ///     转换为兼容 UI 的 SingerLite 列表

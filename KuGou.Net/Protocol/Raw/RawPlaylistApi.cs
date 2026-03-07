@@ -103,7 +103,7 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
             ["name"] = name,
             ["type"] = type ?? 0,
             ["source"] = 1,
-            ["is_pri"] = pub??0,
+            ["is_pri"] = pub ?? 0,
             ["list_create_userid"] = listCreateUserId,
             ["list_create_listid"] = listCreateListId,
             ["list_create_gid"] = listCreateGid ?? "",

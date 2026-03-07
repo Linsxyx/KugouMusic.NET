@@ -33,19 +33,12 @@ public static class KgUtils
     /// </summary>
     public static string Md5(string input)
     {
-        if (string.IsNullOrEmpty(input)) return "";
-        var bytes = Encoding.UTF8.GetBytes(input);
-        var hash = MD5.HashData(bytes);
-        return Convert.ToHexStringLower(hash); 
-    }
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
 
-    /// <summary>
-    ///     MD5 加密，输入为 bytes (辅助方法)
-    /// </summary>
-    public static string Md5(byte[] input)
-    {
-        var hash = MD5.HashData(input);
-        return Convert.ToHexStringLower(hash); 
+        return Convert.ToHexStringLower(
+            MD5.HashData(Encoding.UTF8.GetBytes(input))
+        );
     }
 
     public static string CalcNewMid(string guid)

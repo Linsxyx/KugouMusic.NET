@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             x:Class="KugouAvaloniaPlayer.Views.RankView"
+             x:DataType="vm:RankViewModel">
+
+    <Grid Margin="15">
+        <Grid IsVisible="{Binding !IsShowingSongs}" RowDefinitions="Auto, *">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,20">
+                <TextBlock Text="排行榜" FontSize="28" FontWeight="Bold" />
+                <Button Classes="Basic" Command="{Binding LoadAllRanksCommand}" Cursor="Hand">
+                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="{DynamicResource SukiLowText}" />
+                </Button>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl ItemsSource="{Binding Ranks}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Width="160" Height="200" Margin="8" Padding="0" Click="OnRankCardClick">
+                                <suki:GlassCard Padding="0" CornerRadius="12">
+                                    <Grid RowDefinitions="*, Auto">
+                                        <Border Grid.Row="0" Background="{DynamicResource SukiPrimaryColorLow}"
+                                                CornerRadius="12" ClipToBounds="True">
+                                            <controls:AsyncImage Source="{Binding Cover}" CornerRadius="12"
+                                                                 Stretch="UniformToFill" HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Row="1" Margin="8">
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold"
+                                                       TextTrimming="CharacterEllipsis" Width="144" />
+                                        </StackPanel>
+                                    </Grid>
+                                </suki:GlassCard>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <Grid IsVisible="{Binding IsShowingSongs}" RowDefinitions="Auto, *">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,*">
+                <Border Width="80" Height="80" CornerRadius="8" ClipToBounds="True"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <controls:AsyncImage Source="{Binding SelectedRank.Cover}" Stretch="UniformToFill" />
+                </Border>
+
+                <TextBlock Grid.Column="1" Text="{Binding SelectedRank.Name}" FontSize="28" FontWeight="Bold"
+                           HorizontalAlignment="Left" VerticalAlignment="Center" Margin="15,0,0,0" />
+                <Button Grid.Column="2" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right" Cursor="Hand">
+                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}"
+                              Width="28" Height="28" />
+                </Button>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1"
+                          Name="SongsScrollViewer"
+                          ScrollChanged="OnScrollChanged"
+                          Padding="0,0,0,-80"
+                          Margin="0,15,0,0">
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding SelectedRankSongs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <localControls:SongListItemControl />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="10"
+                                Spacing="10"
+                                IsVisible="{Binding IsLoadingMore}">
+                        <suki:Loading Width="20" Height="20" />
+                        <TextBlock Text="正在加载歌曲..." VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SukiLiquid2}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

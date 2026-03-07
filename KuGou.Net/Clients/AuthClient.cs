@@ -1,4 +1,3 @@
-using System.Text.Json;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Adapters.Common;
 using KuGou.Net.Protocol.Raw;
@@ -20,24 +19,24 @@ public class AuthClient(
     /// <summary>
     ///     发送验证码
     /// </summary>
-    public async Task<JsonElement> SendCodeAsync(string mobile)
+    public async Task<SendCodeResponse?> SendCodeAsync(string mobile)
     {
         var json = await rawApi.SendSmsCodeAsync(mobile);
-        return json;
+        return KgApiResponseParser.Parse<SendCodeResponse>(json, AppJsonContext.Default.SendCodeResponse);
     }
 
     /// <summary>
     ///     手机验证码登录并保存 Token
     /// </summary>
-    public async Task<JsonElement> LoginByMobileAsync(string mobile, string code)
+    public async Task<LoginResponse?> LoginByMobileAsync(string mobile, string code)
     {
         var json = await rawApi.LoginByMobileAsync(mobile, code);
-        if (json.TryGetProperty("data", out var data))
+        var data = KgApiResponseParser.Parse<LoginResponse>(json, AppJsonContext.Default.LoginResponse);
+        if (data is not null && data.Status == 1)
         {
-            var newToken = data.GetProperty("token").GetString();
-            var newUserId = data.GetProperty("userid").ToString();
-            //var vipType = data.GetProperty("is_vip").ToString();
-            var t1 = data.GetProperty("t1").GetString();
+            var newToken = data.Token;
+            var newUserId = data.UserId.ToString() ?? "";
+            var t1 = data.T1;
 
             if (!string.IsNullOrEmpty(newToken))
             {
@@ -46,9 +45,12 @@ public class AuthClient(
                 logger.LogInformation($"Token 登录成功! UserID: {newUserId}");
             }
         }
+        else
+        {
+            logger.LogWarning("[Auth] 登录 失败，返回数据中未找到 data 节点。");
+        }
 
-        logger.LogWarning("[Auth] 登录 失败，返回数据中未找到 data 节点。");
-        return json;
+        return data;
     }
 
     /// <summary>
@@ -68,9 +70,9 @@ public class AuthClient(
     public async Task<QrLoginStatusResponse?> CheckQrStatusAsync(string key)
     {
         var json = await rawApi.CheckQrStatusAsync(key);
-        
+
         var res = KgApiResponseParser.Parse<QrLoginStatusResponse>(json, AppJsonContext.Default.QrLoginStatusResponse);
-        
+
         if (res != null && res.IsSuccess)
         {
             var newUserId = res.UserId.ToString();
@@ -78,15 +80,15 @@ public class AuthClient(
 
             sessionManager.UpdateAuth(newUserId!, newToken!, "0", "", "");
             KgSessionStore.Save(sessionManager.Session);
-        
+
             logger.LogInformation($"二维码登录成功! UserID: {newUserId}, Nickname: {res.Nickname}");
         }
         else if (res != null && res.QrStatus == QrLoginStatus.Expired)
         {
             logger.LogWarning("[Auth] 二维码已过期，请重新获取。");
         }
-        
-        return res ;
+
+        return res;
     }
 
     /// <summary>
@@ -105,7 +107,7 @@ public class AuthClient(
 
         logger.LogInformation($"[Auth] 正在尝试刷新 Token (User: {session.UserId})...");
 
-        
+
         var json = await rawApi.RefreshTokenAsync(session.UserId, session.Token, session.Dfid);
 
         var res = KgApiResponseParser.Parse<RefreshTokenResponse>(json, AppJsonContext.Default.RefreshTokenResponse);

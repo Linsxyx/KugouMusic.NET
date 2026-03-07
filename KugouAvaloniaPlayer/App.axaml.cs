@@ -46,7 +46,11 @@ public partial class App : Application
         collection.AddTransient<SingerViewModel>();
         collection.AddTransient<UserViewModel>();
         collection.AddTransient<MainWindowViewModel>();
+        collection.AddTransient<DailyRecommendViewModel>();
+        collection.AddTransient<MyPlaylistsViewModel>();
         collection.AddSingleton<PlayerViewModel>();
+
+        collection.AddTransient<RankViewModel>();
 
         var services = collection.BuildServiceProvider();
 

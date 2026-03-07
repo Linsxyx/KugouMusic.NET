@@ -14,7 +14,7 @@ public static class KgCrypto
     ///     AES 加密
     /// </summary>
     /// <returns>返回 (HexStr, Key)</returns>
-    public static (string str, string key) AesEncrypt(string data, string key = null, string iv = null)
+    public static (string, string? tempKey) AesEncrypt(string data, string? key = null, string? iv = null)
     {
         var tempKey = key;
         string actualKeyStr;

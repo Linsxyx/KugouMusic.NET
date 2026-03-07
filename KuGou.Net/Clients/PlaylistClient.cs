@@ -65,21 +65,21 @@ public class PlaylistClient(RawPlaylistApi rawApi, KgSessionManager sessionManag
         var (uid, token) = GetAuth();
 
         // 调用 RawApi
-        return await rawApi.CollectPlaylistAsync(uid, token, uid, "1", sourceGlobalId, name, 1,0);
+        return await rawApi.CollectPlaylistAsync(uid, token, uid, "1", sourceGlobalId, name, 1, 0);
     }
-    
+
     /// <summary>
-    ///    新建歌单
+    ///     新建歌单
     /// </summary>
     /// <param name="name">歌单名称</param>
     /// <param name="isPri">是否设为隐私，0：公开，1：隐私，仅支持创建歌单时传入</param>
     public async Task<JsonElement?> CreatePlaylistAsync(
         string name,
-        long isPri =0)
+        long isPri = 0)
     {
         var (uid, token) = GetAuth();
-        
-        return await rawApi.CollectPlaylistAsync(uid, token, uid, "1", "", name, 0,isPri);
+
+        return await rawApi.CollectPlaylistAsync(uid, token, uid, "1", "", name, 0, isPri);
     }
 
     /// <summary>

@@ -107,7 +107,7 @@
             </Border>
         </Panel>
         <Grid RowDefinitions="Auto, *" Margin="40">
-            <Button Grid.Row="0"
+            <Button Grid.Row="0" Cursor="Hand"
                     Command="{Binding CloseNowPlayingCommand}"
                     Classes="Basic" HorizontalAlignment="Left" Margin="0,10,0,0">
                 <Border Background="#30FFFFFF" CornerRadius="20" Padding="15,8">
@@ -132,7 +132,8 @@
                         <Grid RowDefinitions="Auto, Auto" VerticalAlignment="Center"
                               HorizontalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
-                                <Button Cursor="Hand" Command="{Binding Player.ToggleShuffleModeCommand}" Classes="Basic">
+                                <Button Cursor="Hand" Command="{Binding Player.ToggleShuffleModeCommand}"
+                                        Classes="Basic">
                                     <StackPanel>
                                         <Svg Path="/Assets/shuffle-svgrepo-com.svg" Css="path { fill: white; }"
                                              Width="20" Height="20" IsVisible="{Binding Player.IsShuffleMode}" />
@@ -144,7 +145,8 @@
                                         ToolTip.Tip="上一首">
                                     <Svg Path="/Assets/backward.svg" Css="path { fill: white; }" Width="18" Height="18" />
                                 </Button>
-                                <Button Cursor="Hand" Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic" Width="36"
+                                <Button Cursor="Hand" Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic"
+                                        Width="36"
                                         Height="36">
                                     <Panel>
                                         <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
@@ -155,7 +157,8 @@
                                              IsVisible="{Binding !Player.IsPlayingAudio}" />
                                     </Panel>
                                 </Button>
-                                <Button Cursor="Hand" Command="{Binding Player.PlayNextCommand}" Classes="Basic" ToolTip.Tip="下一首">
+                                <Button Cursor="Hand" Command="{Binding Player.PlayNextCommand}" Classes="Basic"
+                                        ToolTip.Tip="下一首">
                                     <Svg Path="/Assets/next-svgrepo-com.svg" Css="path { fill: white; }" Width="18"
                                          Height="18" />
                                 </Button>

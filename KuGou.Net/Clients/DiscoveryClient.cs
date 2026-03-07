@@ -23,6 +23,8 @@ public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     ///     获取推荐歌单
     /// </summary>
     /// <param name="categoryId">分类ID，0=推荐，11292=Hi-Res</param>
+    /// <param name="page">页数</param>
+    /// <param name="pageSize">每页多少首歌</param>
     public async Task<JsonElement> GetRecommendedPlaylistsAsync(int categoryId = 0, int page = 1, int pageSize = 30)
     {
         var uid = GetUserId();
@@ -34,6 +36,8 @@ public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     ///     获取新歌速递
     /// </summary>
     /// <param name="type">榜单类型，默认 21608</param>
+    /// <param name="page">页数</param>
+    /// <param name="pageSize">每页多少首歌</param>
     public async Task<JsonElement> GetNewSongsAsync(int type = 21608, int page = 1, int pageSize = 30)
     {
         var uid = GetUserId();
@@ -54,7 +58,9 @@ public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
         );
     }
 
-
+    /// <summary>
+    ///     获取风格推荐歌曲
+    /// </summary>
     public async Task<JsonElement> GetRecommendedStyleSongsAsync()
     {
         return await rawApi.GetRecommendStyleSongAsync();

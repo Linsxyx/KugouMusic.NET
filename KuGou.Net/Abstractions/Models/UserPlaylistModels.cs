@@ -26,12 +26,11 @@ public record UserPlaylistItem : KgBaseModel
     // 内部 ID (数字)
     [JsonPropertyName("listid")] public long ListId { get; set; }
 
-    
+
     [JsonPropertyName("global_collection_id")]
     public string GlobalId { get; set; } = "";
-    
-    [JsonPropertyName("list_create_gid")]
-    public string ListCreateId { get; set; } = "";
+
+    [JsonPropertyName("list_create_gid")] public string ListCreateId { get; set; } = "";
 
     // 歌曲数量
     [JsonPropertyName("count")] public int Count { get; set; }

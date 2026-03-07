@@ -94,7 +94,7 @@ public record SingerLite : KgBaseModel
 
 public record AlbumLite : KgBaseModel
 {
-    [property: JsonPropertyName("id")] public long Id { get; set; } 
+    [property: JsonPropertyName("id")] public long Id { get; set; }
 
     [property: JsonPropertyName("name")] public string Name { get; set; } = "";
 }

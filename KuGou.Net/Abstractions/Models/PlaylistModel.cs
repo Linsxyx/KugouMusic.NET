@@ -36,6 +36,4 @@ public record PlaylistInfo : KgBaseModel
     // 创建时间 (时间戳)
     [property: JsonPropertyName("create_time")]
     public long CreateTime { get; set; }
-
-    // 其他如 tags, is_publish, status 等会自动进入 Extras
 }

@@ -11,15 +11,11 @@ public class Base64ImageConverter : IValueConverter
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is string base64String && !string.IsNullOrWhiteSpace(base64String))
-        {
             try
             {
                 var commaIndex = base64String.IndexOf(',');
-                if (commaIndex >= 0)
-                {
-                    base64String = base64String.Substring(commaIndex + 1);
-                }
-                
+                if (commaIndex >= 0) base64String = base64String.Substring(commaIndex + 1);
+
                 var imageBytes = System.Convert.FromBase64String(base64String);
                 using var stream = new MemoryStream(imageBytes);
                 return new Bitmap(stream);
@@ -28,7 +24,7 @@ public class Base64ImageConverter : IValueConverter
             {
                 return null;
             }
-        }
+
         return null;
     }
 

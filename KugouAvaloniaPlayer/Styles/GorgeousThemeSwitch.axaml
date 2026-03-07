@@ -8,22 +8,22 @@
     </Style>
 
     <Style Selector="Path.star">
-        <Setter Property="Fill" Value="White"/>
-        <Setter Property="Data" Value="{StaticResource StarGeometry}"/>
-        <Setter Property="Stretch" Value="UniformToFill"/>
+        <Setter Property="Fill" Value="White" />
+        <Setter Property="Data" Value="{StaticResource StarGeometry}" />
+        <Setter Property="Stretch" Value="UniformToFill" />
     </Style>
 
     <Style Selector="ToggleSwitch.Gorgeous">
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="OnContent" Value="{x:Null}"/>
-        <Setter Property="OffContent" Value="{x:Null}"/>
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="OnContent" Value="{x:Null}" />
+        <Setter Property="OffContent" Value="{x:Null}" />
 
         <Setter Property="Template">
             <ControlTemplate>
                 <Grid Background="{TemplateBinding Background}" VerticalAlignment="Center" HorizontalAlignment="Left">
-                    
+
                     <!-- ReSharper disable once InconsistentNaming -->
                     <Grid x:Name="PART_MovingKnobs" Width="0" Height="0" Opacity="0" IsHitTestVisible="False" />
 
@@ -35,7 +35,8 @@
                                     <Border x:Name="BackBorder" Background="#4685C0" CornerRadius="20">
                                         <Border.Transitions>
                                             <Transitions>
-                                                <BrushTransition Property="Background" Duration="0:0:0.6" Easing="CubicEaseOut"/>
+                                                <BrushTransition Property="Background" Duration="0:0:0.6"
+                                                                 Easing="CubicEaseOut" />
                                             </Transitions>
                                         </Border.Transitions>
                                     </Border>
@@ -43,7 +44,9 @@
                                     <Canvas x:Name="StarsCanvas" RenderTransform="translate(0px, -40px)">
                                         <Canvas.Transitions>
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.8" Easing="CubicEaseInOut"/>
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.8"
+                                                                               Easing="CubicEaseInOut" />
                                             </Transitions>
                                         </Canvas.Transitions>
                                         <Path Classes="star" Canvas.Left="11.5" Canvas.Top="26.5" Width="5" Height="5" />
@@ -60,17 +63,22 @@
                                           Data="M158.99,453.55 C169.78,423.31 203.15,392.41 241.59,404.12 C261.99,383.72 299.3,391.57 305.3,392.77 C330.15,362.39 353.16,370.00 368.58,378.91 C370.80,377.87 376.53,377.01 381.06,376.82 C387.43,354.90 410.63,354.27 420.43,355.75 C432.85,341.48 440.27,342.83 451.87,342.32 C457.75,307.27 472.82,288.94 509.06,292.16 C512.31,292.45 525.93,292.61 525.93,292.61 C525.90,295.34 526.73,460.86 526.80,465.68 L154.99,465.65 z">
                                         <Path.Transitions>
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseInOut"/>
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.6"
+                                                                               Easing="CubicEaseInOut" />
                                             </Transitions>
                                         </Path.Transitions>
                                     </Path>
 
-                                    <Path x:Name="Cloud2" Fill="White" Stretch="UniformToFill" Width="100" Height="40" Margin="2,8,-2,-8"
+                                    <Path x:Name="Cloud2" Fill="White" Stretch="UniformToFill" Width="100" Height="40"
+                                          Margin="2,8,-2,-8"
                                           RenderTransform="translate(0px, 0px)"
                                           Data="M158.99,453.55 C169.78,423.31 203.15,392.41 241.59,404.12 C261.99,383.72 299.3,391.57 305.3,392.77 C337.22,353.75 390.50,373.43 398.90,384.97 C412.50,378.21 430.04,381.41 430.04,381.41 C436.82,362.13 456.18,352.96 465.00,351.59 C460.57,304.02 510.55,292.35 521.33,292.25 C530.92,292.17 525.93,292.61 525.93,292.61 C525.90,295.34 526.73,460.86 526.80,465.68 L154.99,465.65 z">
                                         <Path.Transitions>
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseInOut"/>
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.6"
+                                                                               Easing="CubicEaseInOut" />
                                             </Transitions>
                                         </Path.Transitions>
                                     </Path>
@@ -81,51 +89,63 @@
                                             RenderTransform="translate(2px, 0px)">
                                         <Border.Transitions>
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseInOut"/>
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.6"
+                                                                               Easing="CubicEaseInOut" />
                                             </Transitions>
                                         </Border.Transitions>
                                         <Border.Effect>
-                                            <DropShadowEffect BlurRadius="4" Color="#33000000" OffsetX="0" OffsetY="2"/>
+                                            <DropShadowEffect BlurRadius="4" Color="#33000000" OffsetX="0" OffsetY="2" />
                                         </Border.Effect>
 
                                         <Grid>
-                                            <Grid x:Name="Sun" Width="36" Height="36" Background="#F3C62B" RenderTransformOrigin="50%,50%">
+                                            <Grid x:Name="Sun" Width="36" Height="36" Background="#F3C62B"
+                                                  RenderTransformOrigin="50%,50%">
                                                 <Grid.RenderTransform>
-                                                    <RotateTransform Angle="0"/>
+                                                    <RotateTransform Angle="0" />
                                                 </Grid.RenderTransform>
                                                 <Grid.Transitions>
                                                     <Transitions>
-                                                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseOut"/>
+                                                        <TransformOperationsTransition Property="RenderTransform"
+                                                                Duration="0:0:0.6" Easing="CubicEaseOut" />
                                                     </Transitions>
                                                 </Grid.Transitions>
-                                                <Path Data="M195.79,256.36 C128.27,194.80 208.69,103.20 276.96,155.20 220.40,129.80 148.71,171.59 195.79,256.36 z"
-                                                      Fill="White" Stretch="Uniform" Width="29" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-2,-2,0,0" Opacity="0.4"/>
+                                                <Path
+                                                    Data="M195.79,256.36 C128.27,194.80 208.69,103.20 276.96,155.20 220.40,129.80 148.71,171.59 195.79,256.36 z"
+                                                    Fill="White" Stretch="Uniform" Width="29"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                    Margin="-2,-2,0,0" Opacity="0.4" />
                                             </Grid>
 
-                                            <Border x:Name="Moon" Background="#C4C9D4" Width="36" Height="36" CornerRadius="18"
+                                            <Border x:Name="Moon" Background="#C4C9D4" Width="36" Height="36"
+                                                    CornerRadius="18"
                                                     RenderTransform="translate(36px, 0px)">
                                                 <Border.Transitions>
                                                     <Transitions>
-                                                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="BackEaseOut"/>
+                                                        <TransformOperationsTransition Property="RenderTransform"
+                                                                Duration="0:0:0.6" Easing="BackEaseOut" />
                                                     </Transitions>
                                                 </Border.Transitions>
                                                 <Canvas>
-                                                    <Ellipse Width="10" Height="10" Fill="#9A9FB2" Canvas.Left="8" Canvas.Top="14" Opacity="0.6"/>
-                                                    <Ellipse Width="6" Height="6" Fill="#9A9FB2" Canvas.Left="15" Canvas.Top="5" Opacity="0.6"/>
-                                                    <Ellipse Width="7" Height="7" Fill="#9A9FB2" Canvas.Left="22" Canvas.Top="18" Opacity="0.6"/>
+                                                    <Ellipse Width="10" Height="10" Fill="#9A9FB2" Canvas.Left="8"
+                                                             Canvas.Top="14" Opacity="0.6" />
+                                                    <Ellipse Width="6" Height="6" Fill="#9A9FB2" Canvas.Left="15"
+                                                             Canvas.Top="5" Opacity="0.6" />
+                                                    <Ellipse Width="7" Height="7" Fill="#9A9FB2" Canvas.Left="22"
+                                                             Canvas.Top="18" Opacity="0.6" />
                                                 </Canvas>
                                             </Border>
 
                                             <Ellipse x:Name="HighlightMask" Opacity="0" IsHitTestVisible="False">
                                                 <Ellipse.Fill>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                        <GradientStop Color="#55FFFFFF" Offset="0"/>
-                                                        <GradientStop Color="Transparent" Offset="1"/>
+                                                        <GradientStop Color="#55FFFFFF" Offset="0" />
+                                                        <GradientStop Color="Transparent" Offset="1" />
                                                     </LinearGradientBrush>
                                                 </Ellipse.Fill>
                                                 <Ellipse.Transitions>
                                                     <Transitions>
-                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" />
                                                     </Transitions>
                                                 </Ellipse.Transitions>
                                             </Ellipse>
@@ -142,34 +162,34 @@
         <!-- 动画状态选择器  -->
         <Style Selector="^:checked">
             <Style Selector="^ /template/ Border#BackBorder">
-                <Setter Property="Background" Value="#171E33"/>
+                <Setter Property="Background" Value="#171E33" />
             </Style>
             <Style Selector="^ /template/ Canvas#StarsCanvas">
-                <Setter Property="RenderTransform" Value="translate(0px, 3px)"/>
+                <Setter Property="RenderTransform" Value="translate(0px, 3px)" />
             </Style>
             <Style Selector="^ /template/ Path#Cloud1">
-                <Setter Property="RenderTransform" Value="translate(0px, 34px)"/>
+                <Setter Property="RenderTransform" Value="translate(0px, 34px)" />
             </Style>
             <Style Selector="^ /template/ Path#Cloud2">
-                <Setter Property="RenderTransform" Value="translate(0px, 26px)"/>
+                <Setter Property="RenderTransform" Value="translate(0px, 26px)" />
             </Style>
             <Style Selector="^ /template/ Border#Knob">
-                <Setter Property="RenderTransform" Value="translate(62px, 0px)"/>
+                <Setter Property="RenderTransform" Value="translate(62px, 0px)" />
             </Style>
             <Style Selector="^ /template/ Border#Moon">
-                <Setter Property="RenderTransform" Value="translate(0px, 0px)"/>
+                <Setter Property="RenderTransform" Value="translate(0px, 0px)" />
             </Style>
         </Style>
 
         <Style Selector="^:pointerover /template/ Ellipse#HighlightMask">
-            <Setter Property="Opacity" Value="1"/>
+            <Setter Property="Opacity" Value="1" />
         </Style>
         <Style Selector="^:pointerover /template/ Grid#Sun">
-            <Setter Property="RenderTransform" Value="rotate(30deg)"/>
+            <Setter Property="RenderTransform" Value="rotate(30deg)" />
         </Style>
-        
+
         <Style Selector="^:disabled">
-            <Setter Property="Opacity" Value="0.5"/>
+            <Setter Property="Opacity" Value="0.5" />
         </Style>
     </Style>
 </Styles>

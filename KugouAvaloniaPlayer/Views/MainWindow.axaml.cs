@@ -19,7 +19,9 @@ public partial class MainWindow : SukiWindow
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is MainWindowViewModel vm) vm.MainWindow = this;
+        if (DataContext is MainWindowViewModel vm)
+        {
+        }
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -45,11 +47,7 @@ public partial class MainWindow : SukiWindow
     private void TextBox_KeyUp(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
-        {
             if (DataContext is MainWindowViewModel vm && vm.SearchCommand.CanExecute(null))
-            {
                 vm.SearchCommand.Execute(null);
-            }
-        }
     }
 }

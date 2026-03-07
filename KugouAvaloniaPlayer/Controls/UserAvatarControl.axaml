@@ -7,14 +7,14 @@
 
     <Panel>
         <!-- 未登录状态 -->
-        <Button Classes="Basic"
+        <Button Classes="Basic" Cursor="Hand"
                 Command="{Binding ShowLoginDialogCommand}"
                 IsVisible="{Binding !IsLoggedIn}">
             <TextBlock Text="点击登录" Foreground="{DynamicResource SukiLowText}" />
         </Button>
 
         <!-- 已登录状态 -->
-        <Button Classes="Basic"
+        <Button Classes="Basic" Cursor="Hand"
                 Command="{Binding NavigateToUserCommand}"
                 IsVisible="{Binding IsLoggedIn}"
                 Padding="5">
@@ -34,8 +34,8 @@
                            VerticalAlignment="Center"
                            Margin="8,0,0,0"
                            MaxWidth="80"
-                           TextTrimming="CharacterEllipsis" 
-                           Foreground="{DynamicResource SukiLowText}"/>
+                           TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource SukiLowText}" />
             </Grid>
         </Button>
     </Panel>

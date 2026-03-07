@@ -152,7 +152,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     }
 
     [RelayCommand]
-    private void DeleteLocalPlaylist(PlaylistItem item)
+    private void DeleteLocalPlaylist(PlaylistItem? item)
     {
         if (item == null || item.Type != PlaylistType.Local) return;
 
@@ -316,7 +316,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     }
 
     [RelayCommand]
-    private async Task DeleteOnlinePlaylist(PlaylistItem item)
+    private async Task DeleteOnlinePlaylist(PlaylistItem? item)
     {
         if (item == null || item.Type != PlaylistType.Online) return;
 
@@ -348,7 +348,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     }
 
     [RelayCommand]
-    private async Task RemoveSongFromPlaylist(SongItem song)
+    private async Task RemoveSongFromPlaylist(SongItem? song)
     {
         if (song == null || SelectedPlaylist?.Type != PlaylistType.Online) return;
 
