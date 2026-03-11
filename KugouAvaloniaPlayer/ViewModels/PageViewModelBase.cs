@@ -2,7 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-// 1. 基类：添加 SukiSideMenu 需要的 DisplayName 和 Icon
 public abstract class PageViewModelBase : ObservableObject
 {
     public abstract string DisplayName { get; }

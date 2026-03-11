@@ -9,6 +9,7 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
@@ -53,6 +54,16 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         _logger = logger;
 
         _ = LoadAllPlaylists();
+        
+        WeakReferenceMessenger.Default.Register<RemoveFromPlaylistMessage>(this, async void (r, m) =>
+        {
+            await RemoveSongFromPlaylist(m.Song);
+        });
+        
+        WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (r, m) =>
+        {
+            _ = LoadAllPlaylists();
+        });
     }
 
     // 标识当前选中的歌单是否为网络歌单

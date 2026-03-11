@@ -4,8 +4,10 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Models;
 using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -100,7 +102,6 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
                             QrStatusMessage = "登录成功";
                             StopQrPolling();
 
-
                             _ = Task.Run(async () =>
                             {
                                 try
@@ -108,13 +109,16 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
                                     await deviceClient.InitDeviceAsync();
                                     await authClient.RefreshSessionAsync();
                                 }
-                                catch
+                                catch (Exception ex)
                                 {
-                                    logger.LogError("设备验证失败");
+                                    logger.LogError($"设备验证失败: {ex.Message}");
                                 }
+                                
+                                Dispatcher.UIThread.Post(() =>
+                                {
+                                    WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
+                                });
                             });
-
-                            LoginSuccess?.Invoke();
                         });
                         break;
                     }
@@ -208,24 +212,16 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
             {
                 StatusMessage = "登录成功";
 
-                _ = Task.Run(async () =>
+                try
                 {
-                    try
-                    {
-                        await deviceClient.InitDeviceAsync();
-                    }
-                    catch
-                    {
-                        // 忽略设备初始化错误
-                    }
-                });
-
-                LoginSuccess?.Invoke();
-            }
-            else
-            {
-                var msg = result?.ErrorCode;
-                StatusMessage = $"登录失败: {msg}";
+                    await deviceClient.InitDeviceAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError($"设备初始化失败: {ex.Message}");
+                }
+                
+                WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
             }
         }
         catch (Exception ex)
@@ -251,5 +247,5 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
         });
     }
 
-    public event Action? LoginSuccess;
+    
 }

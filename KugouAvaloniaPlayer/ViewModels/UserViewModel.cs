@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using SukiUI;
 
@@ -88,7 +90,7 @@ public partial class UserViewModel : PageViewModelBase
     private async Task Logout()
     {
         _authClient.LogOutAsync();
-        LogoutRequested?.Invoke();
+        WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(false));
         await Task.CompletedTask;
     }
 
@@ -100,8 +102,7 @@ public partial class UserViewModel : PageViewModelBase
         CheckForUpdateRequested?.Invoke();
         await Task.CompletedTask;
     }
-
-    public event Action? LogoutRequested;
+    
     public event Action? CheckForUpdateRequested;
 
     partial void OnSelectedCloseBehaviorChanged(CloseBehavior value)
