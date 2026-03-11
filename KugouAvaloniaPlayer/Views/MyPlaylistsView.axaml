@@ -33,13 +33,14 @@
                         <DataTemplate>
                             <Panel>
                                 <!-- 普通歌单卡片 -->
-                                <localControls:MediaCard IsVisible="{Binding Type, Converter={x:Static converters:EnumEqualityConverter.NotEqual},
+                                <localControls:MediaCard
+                                    IsVisible="{Binding Type, Converter={x:Static converters:EnumEqualityConverter.NotEqual},
                                  ConverterParameter={x:Static models:PlaylistType.AddButton}}"
-                                                         Cover="{Binding Cover}"
-                                                         Title="{Binding Name}"
-                                                         Subtitle="{Binding Count, StringFormat='{}{0} 首'}"
-                                                         Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).OpenPlaylistCommand}"
-                                                         CommandParameter="{Binding .}">
+                                    Cover="{Binding Cover}"
+                                    Title="{Binding Name}"
+                                    Subtitle="{Binding Count, StringFormat='{}{0} 首'}"
+                                    Command="{Binding $parent[UserControl].((vm:MyPlaylistsViewModel)DataContext).OpenPlaylistCommand}"
+                                    CommandParameter="{Binding .}">
                                     <localControls:MediaCard.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="移除本地歌单"
@@ -90,10 +91,11 @@
                     <controls:AsyncImage Source="{Binding SelectedPlaylist.Cover}" Stretch="UniformToFill" />
                 </Border>
 
-                <TextBlock Grid.Column="1" Text="{Binding SelectedPlaylist.Name}" FontSize="28" FontWeight="Bold"  TextTrimming="CharacterEllipsis"
+                <TextBlock Grid.Column="1" Text="{Binding SelectedPlaylist.Name}" FontSize="28" FontWeight="Bold"
+                           TextTrimming="CharacterEllipsis"
                            MaxWidth="600"
                            HorizontalAlignment="Left" VerticalAlignment="Center" />
-                <Button Grid.Column="2" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right" 
+                <Button Grid.Column="2" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right"
                         MaxWidth="150"
                         Cursor="Hand">
                     <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}"

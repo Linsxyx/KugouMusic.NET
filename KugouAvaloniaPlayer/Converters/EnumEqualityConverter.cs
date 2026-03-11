@@ -6,8 +6,8 @@ namespace KugouAvaloniaPlayer.Converters;
 
 public class EnumEqualityConverter : IValueConverter
 {
-    public static readonly EnumEqualityConverter Equal = new EnumEqualityConverter(false);
-    public static readonly EnumEqualityConverter NotEqual = new EnumEqualityConverter(true);
+    public static readonly EnumEqualityConverter Equal = new(false);
+    public static readonly EnumEqualityConverter NotEqual = new(true);
 
     private readonly bool _invert;
 
@@ -23,7 +23,7 @@ public class EnumEqualityConverter : IValueConverter
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value == null || parameter == null) return _invert;
-        bool result = value.ToString() == parameter.ToString();
+        var result = value.ToString() == parameter.ToString();
         return _invert ? !result : result;
     }
 

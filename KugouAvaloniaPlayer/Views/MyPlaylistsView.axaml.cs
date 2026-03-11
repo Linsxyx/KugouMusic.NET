@@ -69,34 +69,26 @@ public partial class MyPlaylistsView : UserControl
     {
         if (sender is not ScrollViewer scrollViewer) return;
         if (DataContext is not MyPlaylistsViewModel vm) return;
-        
+
         var currentBottom = scrollViewer.Offset.Y + scrollViewer.Viewport.Height;
-        
+
         if (currentBottom >= scrollViewer.Extent.Height - 50)
             if (vm.LoadMoreCommand.CanExecute(null))
                 vm.LoadMoreCommand.Execute(null);
     }
-    
+
     private void OnDeleteLocalPlaylistClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem menuItem && menuItem.DataContext is PlaylistItem item)
-        {
             if (DataContext is MyPlaylistsViewModel vm)
-            {
                 vm.DeleteLocalPlaylistCommand.Execute(item);
-            }
-        }
     }
 
     // [新增]：安全响应“删除网络歌单”
     private void OnDeleteOnlinePlaylistClick(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem menuItem && menuItem.DataContext is PlaylistItem item)
-        {
             if (DataContext is MyPlaylistsViewModel vm)
-            {
                 vm.DeleteOnlinePlaylistCommand.Execute(item);
-            }
-        }
     }
 }

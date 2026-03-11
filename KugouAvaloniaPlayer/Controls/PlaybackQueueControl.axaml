@@ -8,47 +8,47 @@
     <UserControl.Resources>
 
         <!-- 背景层 -->
-        <SolidColorBrush x:Key="CardBg"         Color="{DynamicResource SukiStrongBackground}" />
+        <SolidColorBrush x:Key="CardBg" Color="{DynamicResource SukiStrongBackground}" />
 
         <!-- 主色调：柔和的暖橙 -->
-        <SolidColorBrush x:Key="AccentPrimary"  Color="{DynamicResource SukiPrimaryColor5}" />
-        <SolidColorBrush x:Key="AccentLight"    Color="{DynamicResource SukiPrimaryColor5}" />
-        <SolidColorBrush x:Key="AccentMid"      Color="{DynamicResource SukiPrimaryColor5}" />
+        <SolidColorBrush x:Key="AccentPrimary" Color="{DynamicResource SukiPrimaryColor5}" />
+        <SolidColorBrush x:Key="AccentLight" Color="{DynamicResource SukiPrimaryColor5}" />
+        <SolidColorBrush x:Key="AccentMid" Color="{DynamicResource SukiPrimaryColor5}" />
 
         <!-- 文字 -->
-        <SolidColorBrush x:Key="TextPrimary"    Color="{DynamicResource SukiText}" />
-        <SolidColorBrush x:Key="TextSecondary"  Color="{DynamicResource SukiLowText}" />
-        <SolidColorBrush x:Key="TextMuted"      Color="#A8A29E" />
+        <SolidColorBrush x:Key="TextPrimary" Color="{DynamicResource SukiText}" />
+        <SolidColorBrush x:Key="TextSecondary" Color="{DynamicResource SukiLowText}" />
+        <SolidColorBrush x:Key="TextMuted" Color="#A8A29E" />
 
         <!-- 分割线 / 边框 -->
-        <SolidColorBrush x:Key="BorderLight"    Color="#E7E5E4" />
-        <SolidColorBrush x:Key="HoverBg"        Color="{DynamicResource SukiPrimaryColor3}" />
-        <SolidColorBrush x:Key="ActiveBg"       Color="#FEF0EB" />
+        <SolidColorBrush x:Key="BorderLight" Color="#E7E5E4" />
+        <SolidColorBrush x:Key="HoverBg" Color="{DynamicResource SukiPrimaryColor3}" />
+        <SolidColorBrush x:Key="ActiveBg" Color="#FEF0EB" />
 
         <!-- 删除按钮悬停 -->
-        <SolidColorBrush x:Key="DangerHover"    Color="#FEE2E2" />
+        <SolidColorBrush x:Key="DangerHover" Color="#FEE2E2" />
 
         <!-- 标签背景 -->
-        <SolidColorBrush x:Key="BadgeBg"        Color="{DynamicResource SukiPrimaryColor1}" />
+        <SolidColorBrush x:Key="BadgeBg" Color="{DynamicResource SukiPrimaryColor1}" />
     </UserControl.Resources>
 
     <UserControl.Styles>
-        
+
         <Style Selector="ScrollBar[Orientation=Vertical]">
-            <Setter Property="Width"   Value="4" />
-            <Setter Property="Margin"  Value="0,4" />
+            <Setter Property="Width" Value="4" />
+            <Setter Property="Margin" Value="0,4" />
             <Setter Property="Opacity" Value="0.4" />
         </Style>
         <Style Selector="ScrollBar[Orientation=Vertical]:pointerover">
             <Setter Property="Opacity" Value="0.8" />
         </Style>
-        
+
         <Style Selector="ListBoxItem">
-            <Setter Property="Padding"          Value="0" />
-            <Setter Property="Margin"           Value="0,1" />
-            <Setter Property="CornerRadius"     Value="10" />
-            <Setter Property="Background"       Value="Transparent" />
-            <Setter Property="Cursor"           Value="Hand" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="IsHitTestVisible" Value="True" />
             <Setter Property="Template">
                 <ControlTemplate>
@@ -92,7 +92,7 @@
         <Style Selector="ListBoxItem:selected:focus /template/ Border#BgLayer">
             <Setter Property="Background" Value="{StaticResource ActiveBg}" />
         </Style>
-        
+
         <Style Selector="ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
         </Style>
@@ -113,12 +113,12 @@
 
         <!-- 操作按钮默认隐藏 -->
         <Style Selector="Button.QueueAction">
-            <Setter Property="Opacity"     Value="0" />
-            <Setter Property="Background"  Value="Transparent" />
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding"     Value="5" />
+            <Setter Property="Padding" Value="5" />
             <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Cursor"      Value="Hand" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
@@ -138,30 +138,30 @@
 
         <!-- 正在播放文字高亮 -->
         <Style Selector="TextBlock.NowPlaying">
-            <Setter Property="Foreground"  Value="{StaticResource AccentPrimary}" />
-            <Setter Property="FontWeight"  Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource AccentPrimary}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
         <!-- 头部按钮 -->
         <Style Selector="Button.HeaderAction">
-            <Setter Property="Background"      Value="Transparent" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius"    Value="8" />
-            <Setter Property="Padding"         Value="6" />
-            <Setter Property="Cursor"          Value="Hand" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Button.HeaderAction:pointerover /template/ ContentPresenter">
-            <Setter Property="Background"   Value="{StaticResource HoverBg}" />
+            <Setter Property="Background" Value="{StaticResource HoverBg}" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>
-        
+
         <Style Selector="ListBox">
             <Setter Property="BorderThickness" Value="0" />
         </Style>
 
     </UserControl.Styles>
 
-    
+
     <Border CornerRadius="24"
             Margin="12"
             Background="{StaticResource CardBg}"
@@ -177,7 +177,7 @@
                 <StackPanel Orientation="Horizontal"
                             Spacing="8"
                             VerticalAlignment="Center">
-                    
+
                     <Border Width="30" Height="30"
                             CornerRadius="8"
                             Background="{StaticResource AccentLight}">
@@ -247,7 +247,7 @@
                             <Grid.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="下一首播放"
-                                              Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
+                                              Command="{Binding AddToNextCommand}"
                                               CommandParameter="{Binding .}" />
                                     <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
                                         <MenuItem.Styles>
@@ -261,20 +261,20 @@
                                         </MenuItem.Styles>
                                     </MenuItem>
                                     <MenuItem Header="添加到歌单"
-                                              Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.ShowAddToPlaylistDialogCommand}"
+                                              Command="{Binding ShowPlaylistDialogCommand}"
                                               CommandParameter="{Binding .}" />
-                                    
+
                                     <MenuItem Header="从队列移除"
                                               Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
                                               CommandParameter="{Binding .}" />
                                 </ContextMenu>
                             </Grid.ContextMenu>
-                            
+
                             <Panel Grid.Column="0"
                                    Width="28"
                                    VerticalAlignment="Center"
                                    Margin="4,0,6,0">
-                                
+
                                 <Border Width="24" Height="24"
                                         CornerRadius="12"
                                         Background="{DynamicResource SukiAccentColor75}"
@@ -284,11 +284,11 @@
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
                                 </Border>
-                                
+
                                 <Panel IsVisible="{Binding !IsPlaying}" Width="24" Height="24" />
 
                             </Panel>
-                            
+
                             <StackPanel Grid.Column="1"
                                         VerticalAlignment="Center"
                                         Spacing="2">

@@ -22,7 +22,7 @@
         <Style Selector="Button#CardButton:pressed">
             <Setter Property="RenderTransform" Value="scale(0.97)" />
         </Style>
-        
+
         <Style Selector="Button#CardButton Border#HoverOverlay">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="Transitions">
@@ -76,7 +76,7 @@
                             </LinearGradientBrush>
                         </Border.Background>
                     </Border>
-                    
+
                     <!-- 角标/额外内容 -->
                     <ContentPresenter Content="{Binding #Root.OverlayContent}"
                                       HorizontalAlignment="Right"

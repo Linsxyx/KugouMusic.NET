@@ -19,11 +19,14 @@ public class SimpleAudioPlayer : IDisposable
         if (Bass.CurrentDevice == -1)
             if (!Bass.Init(-1, 44100, DeviceInitFlags.Default, IntPtr.Zero))
                 Console.WriteLine($"[BASS Init Error] {Bass.LastError}");
-
-
+        
         try
         {
             Bass.PluginLoad(GetBassPluginName("bassflac"));
+            if (!OperatingSystem.IsMacOS())
+            {
+                Bass.PluginLoad(GetBassPluginName("bass_aac"));
+            }
         }
         catch
         {

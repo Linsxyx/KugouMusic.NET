@@ -79,7 +79,7 @@
                     <StackPanel Orientation="Horizontal"
                                 Spacing="20"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center" 
+                                VerticalAlignment="Center"
                                 Margin="0,10,0,-15">
                         <Button Cursor="Hand"
                                 Command="{Binding Player.PlayPreviousCommand}"
@@ -116,10 +116,11 @@
                           ColumnDefinitions="Auto, *, Auto"
                           Width="380"
                           Margin="0,6,0,0">
-                        <TextBlock Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
-                                   FontSize="10"
-                                   Opacity="0.45"
-                                   VerticalAlignment="Center" />
+                        <TextBlock
+                            Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                            FontSize="10"
+                            Opacity="0.45"
+                            VerticalAlignment="Center" />
                         <Slider Grid.Column="1"
                                 Minimum="0"
                                 Maximum="{Binding Player.TotalDurationSeconds}"

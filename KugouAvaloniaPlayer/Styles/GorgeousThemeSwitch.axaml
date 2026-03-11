@@ -19,16 +19,28 @@
     <Style Selector="ToggleSwitch:checked /template/ Path.twinkle1">
         <Style.Animations>
             <Animation Duration="0:0:1.3" IterationCount="Infinite" PlaybackDirection="Alternate">
-                <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/></KeyFrame>
-                <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="0"/><Setter Property="ScaleTransform.ScaleY" Value="0"/></KeyFrame>
+                <KeyFrame Cue="0%">
+                    <Setter Property="ScaleTransform.ScaleX" Value="1" />
+                    <Setter Property="ScaleTransform.ScaleY" Value="1" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="ScaleTransform.ScaleX" Value="0" />
+                    <Setter Property="ScaleTransform.ScaleY" Value="0" />
+                </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
     <Style Selector="ToggleSwitch:checked /template/ Path.twinkle2">
         <Style.Animations>
             <Animation Duration="0:0:1.6" IterationCount="Infinite" PlaybackDirection="Alternate" Delay="0:0:0.3">
-                <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/></KeyFrame>
-                <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="0"/><Setter Property="ScaleTransform.ScaleY" Value="0"/></KeyFrame>
+                <KeyFrame Cue="0%">
+                    <Setter Property="ScaleTransform.ScaleX" Value="1" />
+                    <Setter Property="ScaleTransform.ScaleY" Value="1" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="ScaleTransform.ScaleX" Value="0" />
+                    <Setter Property="ScaleTransform.ScaleY" Value="0" />
+                </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
@@ -43,7 +55,7 @@
         <Setter Property="Template">
             <ControlTemplate>
                 <Grid Background="{TemplateBinding Background}" VerticalAlignment="Center" HorizontalAlignment="Left">
-                    
+
                     <!-- 隐藏原生 Avalonia ToggleSwitch 的控件结构 -->
                     <Grid x:Name="PART_MovingKnobs" Width="0" Height="0" Opacity="0" IsHitTestVisible="False" />
 
@@ -56,7 +68,8 @@
                                     <Border x:Name="BackBorder" Background="#4685C0" CornerRadius="20">
                                         <Border.Transitions>
                                             <Transitions>
-                                                <BrushTransition Property="Background" Duration="0:0:0.6" Easing="CubicEaseOut" />
+                                                <BrushTransition Property="Background" Duration="0:0:0.6"
+                                                                 Easing="CubicEaseOut" />
                                             </Transitions>
                                         </Border.Transitions>
                                     </Border>
@@ -65,19 +78,25 @@
                                     <Canvas x:Name="StarsCanvas" RenderTransform="translateY(-36px)">
                                         <Canvas.Transitions>
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.8" Easing="CubicEaseOut" />
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.8" Easing="CubicEaseOut" />
                                             </Transitions>
                                         </Canvas.Transitions>
-                                        <Path Classes="star twinkle1" Canvas.Left="11.5" Canvas.Top="26.5" Width="5" Height="5" />
-                                        <Path Classes="star twinkle2" Canvas.Left="24.6" Canvas.Top="26.5" Width="5" Height="5" />
-                                        <Path Classes="star twinkle1" Canvas.Left="44.5" Canvas.Top="29.5" Width="5" Height="5" />
+                                        <Path Classes="star twinkle1" Canvas.Left="11.5" Canvas.Top="26.5" Width="5"
+                                              Height="5" />
+                                        <Path Classes="star twinkle2" Canvas.Left="24.6" Canvas.Top="26.5" Width="5"
+                                              Height="5" />
+                                        <Path Classes="star twinkle1" Canvas.Left="44.5" Canvas.Top="29.5" Width="5"
+                                              Height="5" />
                                         <Path Classes="star" Canvas.Left="20.6" Canvas.Top="5.5" Width="7" Height="7" />
-                                        <Path Classes="star twinkle2" Canvas.Left="48.5" Canvas.Top="10" Width="7" Height="7" />
+                                        <Path Classes="star twinkle2" Canvas.Left="48.5" Canvas.Top="10" Width="7"
+                                              Height="7" />
                                         <Path Classes="star" Canvas.Left="32.3" Canvas.Top="12.5" Width="3" Height="3" />
                                         <Path Classes="star" Canvas.Left="23.6" Canvas.Top="18" Width="3" Height="3" />
                                         <Path Classes="star" Canvas.Left="34.0" Canvas.Top="24" Width="3" Height="3" />
                                         <Path Classes="star" Canvas.Left="47.0" Canvas.Top="22.5" Width="3" Height="3" />
-                                        <Path Classes="star twinkle1" Canvas.Left="10" Canvas.Top="11" Width="3" Height="3" />
+                                        <Path Classes="star twinkle1" Canvas.Left="10" Canvas.Top="11" Width="3"
+                                              Height="3" />
                                     </Canvas>
 
                                     <!-- 3. 云层叠加 -->
@@ -86,57 +105,87 @@
                                           Data="M158.99,453.55 C169.78,423.31 203.15,392.41 241.59,404.12 C261.99,383.72 299.3,391.57 305.3,392.77 C330.15,362.39 353.16,370.00 368.58,378.91 C370.80,377.87 376.53,377.01 381.06,376.82 C387.43,354.90 410.63,354.27 420.43,355.75 C432.85,341.48 440.27,342.83 451.87,342.32 C457.75,307.27 472.82,288.94 509.06,292.16 C512.31,292.45 525.93,292.61 525.93,292.61 C525.90,295.34 526.73,460.86 526.80,465.68 L154.99,465.65 z">
                                         <Path.Transitions>
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseInOut" />
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.6"
+                                                                               Easing="CubicEaseInOut" />
                                             </Transitions>
                                         </Path.Transitions>
                                     </Path>
 
-                                    <Path x:Name="Cloud2" Fill="White" Stretch="UniformToFill" Width="100" Height="40" Margin="2,8,-2,-8"
+                                    <Path x:Name="Cloud2" Fill="White" Stretch="UniformToFill" Width="100" Height="40"
+                                          Margin="2,8,-2,-8"
                                           RenderTransform="translateY(0px)"
                                           Data="M158.99,453.55 C169.78,423.31 203.15,392.41 241.59,404.12 C261.99,383.72 299.3,391.57 305.3,392.77 C337.22,353.75 390.50,373.43 398.90,384.97 C412.50,378.21 430.04,381.41 430.04,381.41 C436.82,362.13 456.18,352.96 465.00,351.59 C460.57,304.02 510.55,292.35 521.33,292.25 C530.92,292.17 525.93,292.61 525.93,292.61 C525.90,295.34 526.73,460.86 526.80,465.68 L154.99,465.65 z">
                                         <Path.Transitions>
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseInOut" />
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.6"
+                                                                               Easing="CubicEaseInOut" />
                                             </Transitions>
                                         </Path.Transitions>
                                     </Path>
 
                                     <!-- 4. 三层跟随滑块的发光圈 (Glow1, Glow2, Glow3) -->
-                                    <Ellipse x:Name="Glow1" Width="79" Height="79" HorizontalAlignment="Left" Fill="#11FFFFFF" RenderTransform="translateX(-2px)">
-                                        <Ellipse.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.8" Easing="CubicEaseOut" /></Transitions></Ellipse.Transitions>
+                                    <Ellipse x:Name="Glow1" Width="79" Height="79" HorizontalAlignment="Left"
+                                             Fill="#11FFFFFF" RenderTransform="translateX(-2px)">
+                                        <Ellipse.Transitions>
+                                            <Transitions>
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.8" Easing="CubicEaseOut" />
+                                            </Transitions>
+                                        </Ellipse.Transitions>
                                     </Ellipse>
-                                    <Ellipse x:Name="Glow2" Width="67" Height="67" HorizontalAlignment="Left" Fill="#22FFFFFF" RenderTransform="translateX(-2px)">
-                                        <Ellipse.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.7" Easing="CubicEaseOut" /></Transitions></Ellipse.Transitions>
+                                    <Ellipse x:Name="Glow2" Width="67" Height="67" HorizontalAlignment="Left"
+                                             Fill="#22FFFFFF" RenderTransform="translateX(-2px)">
+                                        <Ellipse.Transitions>
+                                            <Transitions>
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.7" Easing="CubicEaseOut" />
+                                            </Transitions>
+                                        </Ellipse.Transitions>
                                     </Ellipse>
-                                    <Ellipse x:Name="Glow3" Width="55" Height="55" HorizontalAlignment="Left" Fill="#22FFFFFF" RenderTransform="translateX(-2px)">
-                                        <Ellipse.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseOut" /></Transitions></Ellipse.Transitions>
+                                    <Ellipse x:Name="Glow3" Width="55" Height="55" HorizontalAlignment="Left"
+                                             Fill="#22FFFFFF" RenderTransform="translateX(-2px)">
+                                        <Ellipse.Transitions>
+                                            <Transitions>
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.6" Easing="CubicEaseOut" />
+                                            </Transitions>
+                                        </Ellipse.Transitions>
                                     </Ellipse>
 
                                     <!-- 5. 自定义的滑块主体 -->
-                                    <Border x:Name="Knob" Width="36" Height="36" HorizontalAlignment="Left" CornerRadius="18" ClipToBounds="True" RenderTransform="translateX(4px)">
+                                    <Border x:Name="Knob" Width="36" Height="36" HorizontalAlignment="Left"
+                                            CornerRadius="18" ClipToBounds="True" RenderTransform="translateX(4px)">
                                         <Border.Transitions>
                                             <!-- 使用 BackEaseOut 实现带有轻微回弹的平滑过渡效果 -->
                                             <Transitions>
-                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.7" Easing="BackEaseOut" />
+                                                <TransformOperationsTransition Property="RenderTransform"
+                                                                               Duration="0:0:0.7" Easing="BackEaseOut" />
                                             </Transitions>
                                         </Border.Transitions>
 
                                         <Grid>
                                             <!-- 太阳 -->
-                                            <Grid x:Name="Sun" Width="36" Height="36" Background="#F3C62B" RenderTransformOrigin="50%,50%">
+                                            <Grid x:Name="Sun" Width="36" Height="36" Background="#F3C62B"
+                                                  RenderTransformOrigin="50%,50%">
                                                 <Grid.RenderTransform>
                                                     <RotateTransform Angle="0" />
                                                 </Grid.RenderTransform>
                                                 <Grid.Transitions>
                                                     <Transitions>
-                                                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.6" Easing="CubicEaseOut" />
+                                                        <TransformOperationsTransition Property="RenderTransform"
+                                                                Duration="0:0:0.6" Easing="CubicEaseOut" />
                                                     </Transitions>
                                                 </Grid.Transitions>
                                                 <!-- 太阳上的光泽/纹理渐变 -->
-                                                <Path Data="M195.79,256.36 C128.27,194.80 208.69,103.20 276.96,155.20 220.40,129.80 148.71,171.59 195.79,256.36 z" 
-                                                      Stretch="Uniform" Width="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-2,-2,0,0">
+                                                <Path
+                                                    Data="M195.79,256.36 C128.27,194.80 208.69,103.20 276.96,155.20 220.40,129.80 148.71,171.59 195.79,256.36 z"
+                                                    Stretch="Uniform" Width="30" HorizontalAlignment="Left"
+                                                    VerticalAlignment="Top" Margin="-2,-2,0,0">
                                                     <Path.Fill>
-                                                        <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.3,1" Opacity="0.5">
+                                                        <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.3,1"
+                                                                             Opacity="0.5">
                                                             <GradientStop Offset="0" Color="Transparent" />
                                                             <GradientStop Offset="0.1" Color="White" />
                                                             <GradientStop Offset="1" Color="Transparent" />
@@ -161,21 +210,33 @@
                                             </Ellipse>
 
                                             <!-- 月亮 (包含陨石坑) -->
-                                            <Border x:Name="Moon" Background="#C4C9D4" Width="36" Height="36" CornerRadius="18" RenderTransform="translateX(36px)">
+                                            <Border x:Name="Moon" Background="#C4C9D4" Width="36" Height="36"
+                                                    CornerRadius="18" RenderTransform="translateX(36px)">
                                                 <Border.Transitions>
                                                     <Transitions>
-                                                        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.7" Easing="CubicEaseOut" />
+                                                        <TransformOperationsTransition Property="RenderTransform"
+                                                                Duration="0:0:0.7" Easing="CubicEaseOut" />
                                                     </Transitions>
                                                 </Border.Transitions>
                                                 <Canvas>
                                                     <!-- 复刻原版的陨石坑细节设计 -->
-                                                    <Border Width="10" Height="10" Canvas.Left="6" Canvas.Top="14" Background="#9A9FB2" BorderBrush="#66000000" BorderThickness="0.6" CornerRadius="5" />
-                                                    <Border Width="6" Height="6" Canvas.Left="13" Canvas.Top="5" Background="#9A9FB2" BorderBrush="#66000000" BorderThickness="0.6" CornerRadius="3" />
-                                                    <Border Width="7" Height="7" Canvas.Left="20" Canvas.Top="18" Background="#9A9FB2" BorderBrush="#66000000" BorderThickness="0.6" CornerRadius="3.5" />
+                                                    <Border Width="10" Height="10" Canvas.Left="6" Canvas.Top="14"
+                                                            Background="#9A9FB2" BorderBrush="#66000000"
+                                                            BorderThickness="0.6" CornerRadius="5" />
+                                                    <Border Width="6" Height="6" Canvas.Left="13" Canvas.Top="5"
+                                                            Background="#9A9FB2" BorderBrush="#66000000"
+                                                            BorderThickness="0.6" CornerRadius="3" />
+                                                    <Border Width="7" Height="7" Canvas.Left="20" Canvas.Top="18"
+                                                            Background="#9A9FB2" BorderBrush="#66000000"
+                                                            BorderThickness="0.6" CornerRadius="3.5" />
                                                     <!-- 月亮左侧亮光阴影 -->
-                                                    <Path Data="M195.79,256.36 C128.27,194.80 208.69,103.20 276.96,155.20 220.40,129.80 148.71,171.59 195.79,256.36 z" 
-                                                          Stretch="Uniform" Width="30" Canvas.Left="-1.5" Canvas.Top="-1.5" RenderTransformOrigin="50%,50%">
-                                                        <Path.RenderTransform><RotateTransform Angle="2"/></Path.RenderTransform>
+                                                    <Path
+                                                        Data="M195.79,256.36 C128.27,194.80 208.69,103.20 276.96,155.20 220.40,129.80 148.71,171.59 195.79,256.36 z"
+                                                        Stretch="Uniform" Width="30" Canvas.Left="-1.5"
+                                                        Canvas.Top="-1.5" RenderTransformOrigin="50%,50%">
+                                                        <Path.RenderTransform>
+                                                            <RotateTransform Angle="2" />
+                                                        </Path.RenderTransform>
                                                         <Path.Fill>
                                                             <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
                                                                 <GradientStop Offset="0" Color="Transparent" />
@@ -188,9 +249,10 @@
                                             </Border>
                                         </Grid>
                                     </Border>
-                                    
+
                                     <!-- 整体内阴影层（如果需要，模拟原版边框立体感） -->
-                                    <Border BorderBrush="#30000000" BorderThickness="1" CornerRadius="20" IsHitTestVisible="False" />
+                                    <Border BorderBrush="#30000000" BorderThickness="1" CornerRadius="20"
+                                            IsHitTestVisible="False" />
                                 </Grid>
                             </Border>
                         </Grid>

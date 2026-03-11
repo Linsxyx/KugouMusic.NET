@@ -2,271 +2,147 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
-using Avalonia.Controls.Templates;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KuGou.Net.Abstractions.Models;
-using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SimpleAudio;
-using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class PlayerViewModel : ViewModelBase, IDisposable
 {
-    // [新增] 固定歌单ID (根据你的描述)
-    private const string LikeListIdForAction = "2";
-    private readonly ISukiDialogManager _dialogManager;
-
-    // Dictionary 用于删除时，通过Hash找到对应的 FileId (API要求)
-    private readonly Dictionary<string, int> _hashToFileId = new();
-
-
-    private readonly HashSet<string> _likedHashes = new();
+    private const int MaxConsecutiveFailures = 5;
+    private readonly FavoritePlaylistService _favoriteService;
     private readonly ILogger<PlayerViewModel> _logger;
-    private readonly LyricClient _lyricClient;
+    private readonly LyricsService _lyricsService;
     private readonly MusicClient _musicClient;
     private readonly DispatcherTimer _playbackTimer;
+
     private readonly SimpleAudioPlayer _player;
-    private readonly PlaylistClient _playlistClient;
-    private readonly Random _random = new();
+
+    private readonly PlaybackQueueManager _queueManager;
     private readonly ISukiToastManager _toastManager;
 
-    private readonly UserClient _userClient;
+    private int _consecutiveFailures;
 
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
-
-    private List<KrcLine> _currentLyrics = new();
-
     [ObservableProperty] private string _currentLyricText = "---";
     [ObservableProperty] private string _currentLyricTrans = "";
-
     [ObservableProperty] private SongItem? _currentPlayingSong;
     [ObservableProperty] private double _currentPositionSeconds;
-
-    //private Dictionary<string, int> _favoriteCache = new(StringComparer.OrdinalIgnoreCase);
-    [ObservableProperty] private bool _isCurrentSongLiked;
     [ObservableProperty] private bool _isDraggingProgress;
-
     [ObservableProperty] private bool _isLiked;
     [ObservableProperty] private bool _isPlayingAudio;
-
-    [ObservableProperty] private bool _isShuffleMode;
-
-    [ObservableProperty] private bool _isTogglingLike;
-    [ObservableProperty] private string _musicQuality = "high";
-
+    [ObservableProperty] private string _musicQuality = "128";
     [ObservableProperty] private float _musicVolume = 1.0f;
-
-    private List<SongItem> _originalQueue = new();
-
-    // 连续播放失败计数器（熔断机制）
-    private int _consecutiveFailures;
-    private const int MaxConsecutiveFailures = 5;
-
-    //[ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private double _totalDurationSeconds;
 
-    public PlayerViewModel(MusicClient musicClient, LyricClient lyricClient, ISukiToastManager toastManager,
-        ISukiDialogManager dialogManager,
-        UserClient userClient, PlaylistClient playlistClient, ILogger<PlayerViewModel> logger)
+    public PlayerViewModel(
+        MusicClient musicClient, ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
+        PlaybackQueueManager queueManager, LyricsService lyricsService, FavoritePlaylistService favoriteService)
     {
         _musicClient = musicClient;
-        _lyricClient = lyricClient;
         _toastManager = toastManager;
-        _dialogManager = dialogManager;
-        _userClient = userClient;
-        _playlistClient = playlistClient;
         _logger = logger;
+        _queueManager = queueManager;
+        _lyricsService = lyricsService;
+        _favoriteService = favoriteService;
 
         _player = new SimpleAudioPlayer();
-
         _player.PlaybackEnded += OnPlaybackEnded;
 
-        _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _playbackTimer.Tick += OnPlaybackTimerTick;
-        
-        WeakReferenceMessenger.Default.Register<AddToNextMessage>(this, (r, m) =>
-        {
-            AddToNext(m.Song);
-        });
 
-        WeakReferenceMessenger.Default.Register<ShowPlaylistDialogMessage>(this, async void (r, m) =>
-        {
-            await ShowAddToPlaylistDialog(m.Song);
-        });
+        WeakReferenceMessenger.Default.Register<AddToNextMessage>(this,
+            (r, m) => { _queueManager.AddToNext(m.Song, CurrentPlayingSong); });
+        WeakReferenceMessenger.Default.Register<ShowPlaylistDialogMessage>(this,
+            async (r, m) => { await _favoriteService.ShowAddToPlaylistDialogAsync(m.Song); });
     }
 
-    public AvaloniaList<LyricLineViewModel> LyricLines { get; } = new();
+    public AvaloniaList<SongItem> PlaybackQueue => _queueManager.PlaybackQueue;
+    public AvaloniaList<LyricLineViewModel> LyricLines => _lyricsService.LyricLines;
 
-    // 播放队列 (独立于页面)
-    public AvaloniaList<SongItem> PlaybackQueue { get; } = new();
+    public bool IsShuffleMode => _queueManager.IsShuffleMode;
 
     public void Dispose()
     {
         _playbackTimer.Stop();
         _playbackTimer.Tick -= OnPlaybackTimerTick;
-
         _player.PlaybackEnded -= OnPlaybackEnded;
         _player.Dispose();
-
-        _currentLyrics.Clear();
-        LyricLines.Clear();
-        _originalQueue.Clear();
-        PlaybackQueue.Clear();
-
+        _queueManager.Clear();
+        _lyricsService.Clear();
         GC.SuppressFinalize(this);
     }
-    
-    
+
     public async Task PlaySongAsync(SongItem? song, IList<SongItem>? contextList = null)
     {
         if (song == null) return;
 
-        // 检查熔断状态
         if (_consecutiveFailures >= MaxConsecutiveFailures)
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("播放已停止")
-                .WithContent($"连续 {MaxConsecutiveFailures} 首歌曲获取失败，请检查网络或稍后重试")
-                .Dismiss().After(TimeSpan.FromSeconds(5))
+            _toastManager.CreateToast().OfType(NotificationType.Error).WithTitle("熔断保护").WithContent("连续多次失败，停止播放")
                 .Queue();
-            _logger.LogWarning($"熔断触发：连续 {MaxConsecutiveFailures} 次播放失败，停止自动播放");
             return;
         }
 
-        if (contextList != null && contextList.Any())
-        {
-            const int maxQueueSize = 300;
-
-            _originalQueue.Clear();
-            PlaybackQueue.Clear();
-
-            IEnumerable<SongItem> targetList = contextList;
-
-            if (contextList.Count > maxQueueSize)
-            {
-                var currentIndex = contextList.IndexOf(song);
-                if (currentIndex >= 0)
-                {
-                    var start = Math.Max(0, currentIndex - maxQueueSize / 2);
-                    var count = Math.Min(contextList.Count - start, maxQueueSize);
-                    targetList = contextList.Skip(start).Take(count);
-
-                    _logger.LogInformation($"列表过大，已截取 {start} 到 {start + count} 范围的歌曲进入队列");
-                }
-                else
-                {
-                    targetList = contextList.Take(maxQueueSize);
-                }
-            }
-
-            var finalList = targetList.ToList();
-
-            _originalQueue.AddRange(finalList);
-
-            if (IsShuffleMode)
-            {
-                var shuffleList = new List<SongItem>(finalList);
-                shuffleList.Remove(song);
-
-                var n = shuffleList.Count;
-                while (n > 1)
-                {
-                    n--;
-                    var k = _random.Next(n + 1);
-                    (shuffleList[k], shuffleList[n]) = (shuffleList[n], shuffleList[k]);
-                }
-
-                var finalQueue = new List<SongItem> { song };
-                finalQueue.AddRange(shuffleList);
-
-                PlaybackQueue.AddRange(finalQueue);
-            }
-            else
-            {
-                PlaybackQueue.AddRange(finalList);
-            }
-        }
-        else if (PlaybackQueue.Count == 0)
-        {
-            _originalQueue.Add(song);
-            PlaybackQueue.Add(song);
-        }
+        // 交给队列管理器处理
+        _queueManager.SetupQueue(song, contextList);
 
         if (CurrentPlayingSong != null) CurrentPlayingSong.IsPlaying = false;
         CurrentPlayingSong = song;
         CurrentPlayingSong.IsPlaying = true;
-        CheckCurrentSongLikeStatus();
-        _logger.LogInformation($"正在缓冲: {song.Name}");
+
+        // 检查喜欢状态
+        IsLiked = _favoriteService.IsLiked(song.Hash);
 
         StopAndReset();
+
         try
         {
             string? url;
             if (File.Exists(song.LocalFilePath))
             {
                 url = song.LocalFilePath;
-                _logger.LogInformation($"正在播放本地文件: {song.Name}");
-                _ = LoadLocalLyricsAsync(song.LocalFilePath);
+                _ = _lyricsService.LoadLocalLyricsAsync(song.LocalFilePath);
             }
             else
             {
                 var playData = await _musicClient.GetPlayInfoAsync(song.Hash, MusicQuality);
                 if (playData == null || playData.Status != 1)
                 {
-                    _consecutiveFailures++;
-                    _logger.LogWarning($"播放失败 ({_consecutiveFailures}/{MaxConsecutiveFailures}): {song.Name}");
-
-                    _toastManager.CreateToast()
-                        .OfType(NotificationType.Warning)
-                        .WithTitle("无法获取播放链接")
-                        .WithContent($"错误代码: {playData?.ErrCode}, 正在尝试下一首...")
-                        .Dismiss().After(TimeSpan.FromSeconds(3))
-                        .Queue();
-
-                    await Task.Delay(1000);
-                    await PlayNext();
+                    HandlePlayError(song);
                     return;
                 }
 
                 url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
-                _ = LoadLyrics(song.Hash, song.Name);
+                _ = _lyricsService.LoadOnlineLyricsAsync(song.Hash, song.Name);
             }
 
             if (url != null && _player.Load(url))
             {
                 _consecutiveFailures = 0;
-
                 _player.SetVolume(MusicVolume);
                 _player.Play();
                 IsPlayingAudio = true;
                 TotalDurationSeconds =
                     song.DurationSeconds > 0 ? song.DurationSeconds : _player.GetDuration().TotalSeconds;
                 _playbackTimer.Start();
-                _logger.LogInformation($"正在播放: {song.Name}");
+                CurrentLyricText = "歌词加载中...";
             }
             else
             {
-                _consecutiveFailures++;
-                _logger.LogWarning($"音频流加载失败 ({_consecutiveFailures}/{MaxConsecutiveFailures}): {song.Name}");
-
-                // 尝试下一首
-                await Task.Delay(500);
-                await PlayNext();
+                HandlePlayError(song);
             }
         }
         catch (Exception ex)
@@ -276,6 +152,18 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private void HandlePlayError(SongItem song)
+    {
+        _consecutiveFailures++;
+        _logger.LogWarning($"加载失败 ({_consecutiveFailures}/{MaxConsecutiveFailures}): {song.Name}");
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1000);
+            Dispatcher.UIThread.Post(() => PlayNextCommand.Execute(null));
+        });
+    }
+
+    // ================= 播放控制命令 =================
     [RelayCommand]
     private async Task PlaySong(SongItem? song)
     {
@@ -302,99 +190,44 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task PlayNext()
     {
-        if (PlaybackQueue.Count == 0) return;
-        var idx = CurrentPlayingSong != null ? PlaybackQueue.IndexOf(CurrentPlayingSong) : -1;
-        var nextIdx = (idx + 1) % PlaybackQueue.Count;
-        await PlaySongAsync(PlaybackQueue[nextIdx]);
+        await PlaySongAsync(_queueManager.GetNext(CurrentPlayingSong));
     }
 
     [RelayCommand]
     private async Task PlayPrevious()
     {
-        if (PlaybackQueue.Count == 0) return;
-        var idx = CurrentPlayingSong != null ? PlaybackQueue.IndexOf(CurrentPlayingSong) : -1;
-        var prevIdx = idx - 1;
-        if (prevIdx < 0) prevIdx = PlaybackQueue.Count - 1;
-        await PlaySongAsync(PlaybackQueue[prevIdx]);
+        await PlaySongAsync(_queueManager.GetPrevious(CurrentPlayingSong));
+    }
+
+    [RelayCommand]
+    private void ToggleShuffleMode()
+    {
+        _queueManager.ToggleShuffle(CurrentPlayingSong);
+        OnPropertyChanged(nameof(IsShuffleMode)); // 通知 UI 更新随机图标
     }
 
     [RelayCommand]
     private void ClearQueue()
     {
-        PlaybackQueue.Clear();
-        _originalQueue.Clear();
+        _queueManager.Clear();
         StopAndReset();
     }
 
     [RelayCommand]
     private void RemoveFromQueue(SongItem song)
     {
-        PlaybackQueue.Remove(song);
-        _originalQueue.Remove(song);
-        if (PlaybackQueue.Count == 0) StopAndReset();
+        _queueManager.Remove(song);
+        if (_queueManager.PlaybackQueue.Count == 0) StopAndReset();
     }
 
     [RelayCommand]
-    private void AddToNext(SongItem? song)
+    private async Task ToggleLike()
     {
-        if (song == null) return;
-        
-        var existingInPlayback = PlaybackQueue.IndexOf(song);
-        var existingInOriginal = _originalQueue.IndexOf(song);
-
-        if (existingInPlayback >= 0)
-            PlaybackQueue.RemoveAt(existingInPlayback);
-        if (existingInOriginal >= 0)
-            _originalQueue.RemoveAt(existingInOriginal);
-        
-        var originalIdx = CurrentPlayingSong != null ? _originalQueue.IndexOf(CurrentPlayingSong) : -1;
-        if (originalIdx >= 0 && originalIdx < _originalQueue.Count)
-            _originalQueue.Insert(originalIdx + 1, song);
-        else
-            _originalQueue.Add(song);
-
-        var playIdx = CurrentPlayingSong != null ? PlaybackQueue.IndexOf(CurrentPlayingSong) : -1;
-        if (playIdx >= 0 && playIdx < PlaybackQueue.Count)
-            PlaybackQueue.Insert(playIdx + 1, song);
-        else
-            PlaybackQueue.Add(song);
-
-        _logger.LogInformation("已添加到播放队列");
+        if (CurrentPlayingSong == null) return;
+        IsLiked = await _favoriteService.ToggleLikeAsync(CurrentPlayingSong, IsLiked);
     }
 
-    [RelayCommand]
-    private void ToggleShuffleMode()
-    {
-        IsShuffleMode = !IsShuffleMode;
-
-        if (PlaybackQueue.Count == 0) return;
-
-        var currentSong = CurrentPlayingSong;
-
-        if (IsShuffleMode)
-        {
-            var songsToShuffle = PlaybackQueue.Where(x => x != currentSong).ToList();
-            var n = songsToShuffle.Count;
-            while (n > 1)
-            {
-                n--;
-                var k = _random.Next(n + 1);
-                (songsToShuffle[k], songsToShuffle[n]) = (songsToShuffle[n], songsToShuffle[k]);
-            }
-
-            PlaybackQueue.Clear();
-            if (currentSong != null) PlaybackQueue.Add(currentSong);
-            foreach (var song in songsToShuffle) PlaybackQueue.Add(song);
-        }
-        else
-        {
-            if (_originalQueue.Count != PlaybackQueue.Count) _originalQueue = PlaybackQueue.ToList();
-
-            PlaybackQueue.Clear();
-            foreach (var song in _originalQueue) PlaybackQueue.Add(song);
-        }
-    }
-
+    // ================= 内部状态联动 =================
     private void StopAndReset()
     {
         _playbackTimer.Stop();
@@ -403,460 +236,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         CurrentLyricText = "---";
         CurrentLyricTrans = "";
         CurrentPositionSeconds = 0;
-        LyricLines.Clear();
-    }
-
-    private void OnPlaybackTimerTick(object? sender, EventArgs e)
-    {
-        if (_player.IsStopped || IsDraggingProgress) return;
-        var pos = _player.GetPosition();
-        CurrentPositionSeconds = pos.TotalSeconds;
-        UpdateLyrics(pos.TotalMilliseconds);
-    }
-
-    // 拖动进度条逻辑
-    partial void OnCurrentPositionSecondsChanged(double value)
-    {
-        if (Math.Abs(value - _player.GetPosition().TotalSeconds) < 0.5) return;
-        _player.SetPosition(TimeSpan.FromSeconds(value));
-        UpdateLyrics(value * 1000);
-    }
-
-    partial void OnMusicVolumeChanged(float value)
-    {
-        _player.SetVolume(value);
-    }
-
-    private async Task LoadLyrics(string hash, string name)
-    {
-        CurrentLyricTrans = "";
-        _currentLyrics.Clear();
-
-        LyricLines.Clear();
-        CurrentLyricLine = null;
-
-        try
-        {
-            var searchJson = await _lyricClient.SearchLyricAsync(hash, null, name, "no");
-
-            if (!searchJson.TryGetProperty("candidates", out var candidatesElem) ||
-                candidatesElem.ValueKind != JsonValueKind.Array) return;
-
-            var candidates = candidatesElem.EnumerateArray().ToList();
-            if (candidates.Count == 0)
-            {
-                CurrentLyricText = "未找到歌词";
-                return;
-            }
-
-            var bestMatch = candidates.First();
-            var id = bestMatch.GetProperty("id").GetString();
-            var key = bestMatch.GetProperty("accesskey").GetString();
-            var fmt = bestMatch.TryGetProperty("fmt", out var f) ? f.GetString() ?? "krc" : "krc";
-
-            if (id != null && key != null)
-            {
-                var lyricResult = await _lyricClient.GetLyricAsync(id, key, fmt);
-                if (!string.IsNullOrEmpty(lyricResult.DecodedContent))
-                {
-                    var krc = KrcParser.Parse(lyricResult.DecodedContent);
-                    _currentLyrics = krc.Lines;
-
-                    foreach (var line in _currentLyrics)
-                        LyricLines.Add(new LyricLineViewModel
-                        {
-                            Content = line.Content,
-                            Translation = line.Translation,
-                            StartTime = line.StartTime,
-                            Duration = line.Duration,
-                            IsActive = false
-                        });
-
-                    CurrentLyricText = _currentLyrics.Count > 0 ? "" : "暂无歌词";
-                }
-            }
-        }
-        catch
-        {
-            CurrentLyricText = "歌词获取失败";
-        }
-    }
-    
-    private async Task LoadLocalLyricsAsync(string audioFilePath)
-{
-    try
-    {
-        var directory = Path.GetDirectoryName(audioFilePath);
-        var audioFileName = Path.GetFileName(audioFilePath);
-        var audioFileNameWithoutExt = Path.GetFileNameWithoutExtension(audioFilePath);
-
-        if (directory == null)
-        {
-            CurrentLyricText = "未找到歌词";
-            return;
-        }
-
-        var lyricFilePath = FindLyricFile(directory, audioFileName, audioFileNameWithoutExt);
-
-        if (lyricFilePath == null)
-        {
-            CurrentLyricText = "未找到歌词";
-            return;
-        }
-
-        var lines = await ParseLyricFileAsync(lyricFilePath, Path.GetExtension(lyricFilePath).ToLowerInvariant());
-
-        if (lines.Count > 0)
-        {
-            LyricLines.Clear();
-            foreach (var line in lines)
-            {
-                LyricLines.Add(line);
-            }
-            CurrentLyricText = "";
-        }
-        else
-        {
-            CurrentLyricText = "暂无歌词";
-        }
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError($"加载本地歌词失败: {ex.Message}");
-        CurrentLyricText = "歌词解析失败";
-    }
-}
-
-private string? FindLyricFile(string directory, string audioFileName, string audioFileNameWithoutExt)
-{
-    var extensions = new[] { ".krc", ".lrc", ".vtt" };
-    
-    var searchPatterns = new List<Func<string?>>
-    {
-        () => extensions.Select(ext => Path.Combine(directory, audioFileName + ext))
-                       .FirstOrDefault(File.Exists),
-        
-        () => extensions.Select(ext => Path.Combine(directory, audioFileNameWithoutExt + ext))
-                       .FirstOrDefault(File.Exists),
-        
-        () => {
-            var allLyricFiles = Directory.GetFiles(directory, "*.*")
-                .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                .ToList();
-
-            var fileNameWithoutExtLower = audioFileNameWithoutExt.ToLowerInvariant();
-            return allLyricFiles.FirstOrDefault(f => 
-                Path.GetFileNameWithoutExtension(f).ToLowerInvariant().Contains(fileNameWithoutExtLower));
-        }
-    };
-
-    foreach (var strategy in searchPatterns)
-    {
-        var result = strategy();
-        if (result != null)
-        {
-            _logger.LogInformation($"通过策略 {searchPatterns.IndexOf(strategy) + 1} 找到歌词: {result}");
-            return result;
-        }
-    }
-
-    return null;
-}
-
-    private async Task<List<LyricLineViewModel>> ParseLyricFileAsync(string filePath, string ext)
-    {
-        var result = new List<LyricLineViewModel>();
-        var content = await File.ReadAllTextAsync(filePath);
-        
-        bool IsNumericLine(string line)
-        {
-            return !string.IsNullOrWhiteSpace(line) && 
-                   line.Trim().All(c => char.IsDigit(c) || char.IsWhiteSpace(c));
-        }
-        
-
-        if (ext == ".krc")
-        {
-            var krc = KrcParser.Parse(content);
-            foreach (var line in krc.Lines)
-            {
-                result.Add(new LyricLineViewModel
-                {
-                    Content = line.Content,
-                    Translation = line.Translation,
-                    StartTime = line.StartTime,
-                    Duration = line.Duration,
-                    IsActive = false
-                });
-            }
-        }
-        else if (ext == ".lrc")
-        {
-            var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            var regex = new Regex(@"\[(\d{2,3}):(\d{2})\.(\d{1,4})\]");
-            var lrcLines = new List<LyricLineViewModel>();
-            
-            foreach (var line in lines)
-            {
-                var matches = regex.Matches(line);
-                if (matches.Count > 0)
-                {
-                    var text = line.Substring(matches[matches.Count - 1].Index + matches[matches.Count - 1].Length).Trim();
-                    
-                    foreach (Match match in matches)
-                    {
-                        var m = int.Parse(match.Groups[1].Value);
-                        var s = int.Parse(match.Groups[2].Value);
-                        var msStr = match.Groups[3].Value;
-                        var ms = int.Parse(msStr);
-                        if (msStr.Length == 1) ms *= 100;
-                        else if (msStr.Length == 2) ms *= 10;
-                        else if (msStr.Length == 4) ms /= 10;
-                        
-                        var time = m * 60000 + s * 1000 + ms;
-                        
-                        lrcLines.Add(new LyricLineViewModel
-                        {
-                            Content = text,
-                            StartTime = time,
-                            Translation = "",
-                            IsActive = false
-                        });
-                    }
-                }
-            }
-            
-            lrcLines = lrcLines.OrderBy(x => x.StartTime).ToList();
-            
-            for (int i = 0; i < lrcLines.Count; i++)
-            {
-                if (i < lrcLines.Count - 1)
-                {
-                    lrcLines[i].Duration = lrcLines[i + 1].StartTime - lrcLines[i].StartTime;
-                }
-                else
-                {
-                    lrcLines[i].Duration = 5000;
-                }
-            }
-            result.AddRange(lrcLines);
-        }
-        else if (ext == ".vtt")
-{
-    var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-    var regex = new Regex(@"(\d{2}:)?(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2}:)?(\d{2}):(\d{2})\.(\d{3})");
-    
-    for (int i = 0; i < lines.Length; i++)
-    {
-        var match = regex.Match(lines[i]);
-        if (match.Success)
-        {
-            var startH = string.IsNullOrEmpty(match.Groups[1].Value) ? 0 : int.Parse(match.Groups[1].Value.TrimEnd(':'));
-            var startM = int.Parse(match.Groups[2].Value);
-            var startS = int.Parse(match.Groups[3].Value);
-            var startMs = int.Parse(match.Groups[4].Value);
-            
-            var endH = string.IsNullOrEmpty(match.Groups[5].Value) ? 0 : int.Parse(match.Groups[5].Value.TrimEnd(':'));
-            var endM = int.Parse(match.Groups[6].Value);
-            var endS = int.Parse(match.Groups[7].Value);
-            var endMs = int.Parse(match.Groups[8].Value);
-            
-            var startTime = startH * 3600000 + startM * 60000 + startS * 1000 + startMs;
-            var endTime = endH * 3600000 + endM * 60000 + endS * 1000 + endMs;
-            
-            var textLines = new List<string>();
-            i++;
-            
-            while (i < lines.Length && !regex.IsMatch(lines[i]))
-            {
-                var currentLine = lines[i].Trim();
-                
-                if (!string.IsNullOrEmpty(currentLine) && 
-                    !currentLine.Contains("WEBVTT") && 
-                    !currentLine.StartsWith("NOTE") &&
-                    !IsNumericLine(currentLine)) 
-                {
-                    textLines.Add(currentLine);
-                }
-                i++;
-            }
-            i--; 
-            
-            var text = string.Join("\n", textLines).Trim();
-            if (!string.IsNullOrEmpty(text))
-            {
-                result.Add(new LyricLineViewModel
-                {
-                    Content = text,
-                    StartTime = startTime,
-                    Duration = endTime - startTime,
-                    Translation = "",
-                    IsActive = false
-                });
-            }
-        }
-    }
-}
-
-        return result.OrderBy(x => x.StartTime).ToList();
-    }
-
-    private void UpdateLyrics(double currentMs)
-    {
-        if (LyricLines.Count == 0) return;
-
-        var left = 0;
-        var right = LyricLines.Count - 1;
-        var resultIndex = 0;
-        if (currentMs < LyricLines[0].StartTime)
-            resultIndex = 0;
-        else if (currentMs >= LyricLines[^1].StartTime)
-            resultIndex = LyricLines.Count - 1;
-        else
-            while (left <= right)
-            {
-                var mid = left + (right - left) / 2;
-
-                if (LyricLines[mid].StartTime <= currentMs)
-                {
-                    resultIndex = mid;
-                    left = mid + 1;
-                }
-                else
-                {
-                    right = mid - 1;
-                }
-            }
-
-        var currentVm = LyricLines[resultIndex];
-
-        if (currentVm != CurrentLyricLine)
-        {
-            if (CurrentLyricLine != null) CurrentLyricLine.IsActive = false;
-
-            CurrentLyricLine = currentVm;
-            CurrentLyricLine.IsActive = true;
-
-            CurrentLyricText = currentVm.Content;
-            CurrentLyricTrans = currentVm.Translation;
-        }
-    }
-
-    public async Task LoadLikeListAsync()
-    {
-        try
-        {
-            var playlists = await _userClient.GetPlaylistsAsync();
-            if (playlists.Count < 1) return;
-
-            var likePlaylist = playlists[1];
-            if (string.IsNullOrEmpty(likePlaylist.ListCreateId))
-            {
-                _logger.LogError("歌单获取失败");
-                return;
-            }
-
-            var songs = await _playlistClient.GetSongsAsync(likePlaylist.ListCreateId, pageSize: 1000);
-
-
-            lock (_likedHashes)
-            {
-                _likedHashes.Clear();
-                _hashToFileId.Clear();
-                foreach (var song in songs)
-                    if (!string.IsNullOrEmpty(song.Hash))
-                    {
-                        _likedHashes.Add(song.Hash.ToLowerInvariant());
-                        if (song.FileId != 0) _hashToFileId[song.Hash.ToLowerInvariant()] = song.FileId;
-                    }
-            }
-
-            CheckCurrentSongLikeStatus();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"加载收藏列表失败: {ex.Message}");
-        }
-    }
-
-    private void CheckCurrentSongLikeStatus()
-    {
-        if (CurrentPlayingSong != null && !string.IsNullOrEmpty(CurrentPlayingSong.Hash))
-        {
-            var hash = CurrentPlayingSong.Hash.ToLowerInvariant();
-            IsLiked = _likedHashes.Contains(hash);
-        }
-        else
-        {
-            IsLiked = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task ToggleLike()
-    {
-        if (CurrentPlayingSong == null) return;
-        var song = CurrentPlayingSong;
-        var hash = song.Hash.ToLowerInvariant();
-
-        try
-        {
-            if (IsLiked)
-            {
-                if (_hashToFileId.TryGetValue(hash, out var fileId))
-                {
-                    var idList = new List<long> { fileId };
-                    var result = await _playlistClient.RemoveSongsAsync(LikeListIdForAction, idList);
-
-                    if (result?.Status == 1)
-                    {
-                        IsLiked = false;
-                        _likedHashes.Remove(hash);
-                        _hashToFileId.Remove(hash);
-                        _logger.LogInformation("已取消收藏");
-                    }
-                    else
-                    {
-                        _logger.LogError($"取消失败: {result?.ErrorCode}");
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation("正在同步列表，请稍后再试...");
-                    await LoadLikeListAsync();
-                }
-            }
-            else
-            {
-                var songList = new List<(string Name, string Hash, string AlbumId, string MixSongId)>
-                {
-                    (song.Name, song.Hash, song.AlbumId, "0")
-                };
-
-                var result = await _playlistClient.AddSongsAsync(LikeListIdForAction, songList);
-
-                if (result?.Status == 1)
-                {
-                    IsLiked = true;
-                    _likedHashes.Add(hash);
-                    _logger.LogInformation("已添加到我喜欢");
-
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(3000); 
-                        await LoadLikeListAsync();
-                    });
-                }
-                else
-                {
-                    _logger.LogError($"收藏失败: {result?.ErrorCode}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"操作失败: {ex.Message}");
-        }
+        _lyricsService.Clear();
     }
 
     private void OnPlaybackEnded()
@@ -864,129 +244,37 @@ private string? FindLyricFile(string directory, string audioFileName, string aud
         Dispatcher.UIThread.Post(() => PlayNextCommand.Execute(null));
     }
 
-    [RelayCommand]
-    private async Task ShowAddToPlaylistDialog(SongItem? song)
+    private void OnPlaybackTimerTick(object? sender, EventArgs e)
     {
-        if (song == null) return;
+        if (_player.IsStopped || IsDraggingProgress) return;
+        var pos = _player.GetPosition();
+        CurrentPositionSeconds = pos.TotalSeconds;
 
-        try
+        // 让歌词服务处理高亮，返回当前行
+        var activeLine = _lyricsService.SyncLyrics(pos.TotalMilliseconds);
+        if (activeLine != CurrentLyricLine)
         {
-            // 获取歌单列表
-            var playlists = await _userClient.GetPlaylistsAsync();
-            var onlinePlaylists = playlists
-                .Where(p => !string.IsNullOrEmpty(p.ListCreateId))
-                .ToList();
-
-            if (onlinePlaylists.Count == 0)
-            {
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Warning)
-                    .WithTitle("没有可用的歌单")
-                    .WithContent("请先创建歌单")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
-                return;
-            }
-
-            // 创建歌单选择列表
-            var listBox = new ListBox
-            {
-                Width = 300,
-                MaxHeight = 400,
-                ItemsSource = onlinePlaylists,
-                SelectionMode = SelectionMode.Single,
-                ItemTemplate = new FuncDataTemplate<UserPlaylistItem>((item, _) => new TextBlock
-                {
-                    Text = item.Name
-                })
-            };
-
-            await _dialogManager.CreateDialog()
-                .WithTitle("添加到歌单")
-                .WithContent(listBox)
-                .WithActionButton("取消", _ => { }, true, "Standard")
-                .WithActionButton("添加", async void (_) =>
-                {
-                    try
-                    {
-                        if (listBox.SelectedItem is UserPlaylistItem selectedPlaylist)
-                            await AddSongToPlaylistAsync(song, selectedPlaylist.ListId.ToString(), selectedPlaylist.Name);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"{e}");
-                    }
-                }, true, "Standard")
-                .TryShowAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "获取歌单列表失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("获取歌单失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            CurrentLyricLine = activeLine;
+            CurrentLyricText = activeLine?.Content ?? "暂无歌词";
+            CurrentLyricTrans = activeLine?.Translation ?? "";
         }
     }
 
-    private async Task AddSongToPlaylistAsync(SongItem song, string playlistId, string playlistName)
+    partial void OnCurrentPositionSecondsChanged(double value)
     {
-        try
-        {
-            var songList = new List<(string Name, string Hash, string AlbumId, string MixSongId)>
-            {
-                (song.Name, song.Hash, song.AlbumId, "0")
-            };
+        if (Math.Abs(value - _player.GetPosition().TotalSeconds) < 0.5) return;
+        _player.SetPosition(TimeSpan.FromSeconds(value));
+        _lyricsService.SyncLyrics(value * 1000);
+    }
 
-            var result = await _playlistClient.AddSongsAsync(playlistId, songList);
-            if (result?.Status == 1&& playlistId == "2")
-            {
-                IsLiked = true;
-                _likedHashes.Add(song.Hash);
-                _logger.LogInformation("已添加到我喜欢");
+    partial void OnMusicVolumeChanged(float value)
+    {
+        _player.SetVolume(value);
+    }
 
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(3000); 
-                    await LoadLikeListAsync();
-                });
-            }
-            else
-            {
-                _logger.LogError($"收藏失败: {result?.ErrorCode}");
-            }
-
-            if (result?.Status == 1)
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Success)
-                    .WithTitle("添加成功")
-                    .WithContent($"已将「{song.Name}」添加到「{playlistName}」")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
-            else
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Error)
-                    .WithTitle("添加失败")
-                    .WithContent($"错误代码: {result?.ErrorCode}")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "添加歌曲到歌单失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("添加失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
-        }
+    // 暴露给 MainWindow 初始化时调用
+    public async Task LoadLikeListAsync()
+    {
+        await _favoriteService.LoadLikeListAsync();
     }
 }

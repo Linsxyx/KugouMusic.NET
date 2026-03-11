@@ -113,7 +113,7 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
                                 {
                                     logger.LogError($"设备验证失败: {ex.Message}");
                                 }
-                                
+
                                 Dispatcher.UIThread.Post(() =>
                                 {
                                     WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
@@ -220,7 +220,7 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
                 {
                     logger.LogError($"设备初始化失败: {ex.Message}");
                 }
-                
+
                 WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
             }
         }
@@ -246,6 +246,4 @@ public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceCl
             }
         });
     }
-
-    
 }

@@ -1,6 +1,6 @@
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
-using System.Windows.Input;
 using Avalonia.Markup.Xaml;
 
 namespace KugouAvaloniaPlayer.Controls;
@@ -30,6 +30,11 @@ public partial class MediaCard : UserControl
 
     public static readonly StyledProperty<ContextMenu?> ContextMenuProperty =
         AvaloniaProperty.Register<MediaCard, ContextMenu?>(nameof(ContextMenu));
+
+    public MediaCard()
+    {
+        InitializeComponent();
+    }
 
     public string Cover
     {
@@ -79,11 +84,6 @@ public partial class MediaCard : UserControl
         set => SetValue(ContextMenuProperty, value);
     }
 
-    public MediaCard()
-    {
-        InitializeComponent();
-    }
-
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
@@ -93,9 +93,6 @@ public partial class MediaCard : UserControl
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == SubtitleProperty)
-        {
-            HasSubtitle = !string.IsNullOrEmpty(change.NewValue as string);
-        }
+        if (change.Property == SubtitleProperty) HasSubtitle = !string.IsNullOrEmpty(change.NewValue as string);
     }
 }

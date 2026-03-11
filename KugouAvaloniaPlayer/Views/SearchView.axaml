@@ -81,10 +81,10 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <localControls:MediaCard Cover="{Binding Cover}"
-                                                          Title="{Binding Name}"
-                                                          Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
-                                                          Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenPlaylistCommand}"
-                                                          CommandParameter="{Binding .}" />
+                                                         Title="{Binding Name}"
+                                                         Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
+                                                         Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenPlaylistCommand}"
+                                                         CommandParameter="{Binding .}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -109,10 +109,10 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <localControls:MediaCard Cover="{Binding Cover}"
-                                                          Title="{Binding Name}"
-                                                          Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
-                                                          Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenAlbumCommand}"
-                                                          CommandParameter="{Binding .}" />
+                                                         Title="{Binding Name}"
+                                                         Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
+                                                         Command="{Binding $parent[UserControl].((vm:SearchViewModel)DataContext).OpenAlbumCommand}"
+                                                         CommandParameter="{Binding .}" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

@@ -15,7 +15,7 @@
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
-        <TrimmerRootAssembly Include="TagLibSharp" />
+        <TrimmerRootAssembly Include="TagLibSharp"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -63,7 +63,7 @@
             <DependentUpon>SingerView.axaml</DependentUpon>
         </Compile>
         <Compile Update="Controls\MediaCard.axaml.cs">
-          <DependentUpon>MediaCard.axaml</DependentUpon>
+            <DependentUpon>MediaCard.axaml</DependentUpon>
         </Compile>
     </ItemGroup>
 </Project>

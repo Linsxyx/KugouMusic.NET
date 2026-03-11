@@ -17,7 +17,7 @@ public enum CloseBehavior
 public class AppSettings
 {
     public CloseBehavior CloseBehavior { get; set; } = CloseBehavior.MinimizeToTray;
-    public string MusicQuality { get; set; } = "128"; 
+    public string MusicQuality { get; set; } = "128";
     public List<string> LocalMusicFolders { get; set; } = new();
     public bool AutoCheckUpdate { get; set; } = true;
 }
@@ -35,14 +35,14 @@ public static class SettingsManager
         "kugou",
         "AvaloniaPlayerSettings.json");
 
-    public static AppSettings Settings { get; private set; } = new();
-    
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        TypeInfoResolver = AppSettingsJsonContext.Default 
+        TypeInfoResolver = AppSettingsJsonContext.Default
     };
+
+    public static AppSettings Settings { get; private set; } = new();
 
     public static void Load()
     {
@@ -66,14 +66,10 @@ public static class SettingsManager
         try
         {
             var dir = Path.GetDirectoryName(SettingsPath);
-            if (!Directory.Exists(dir)) 
-            {
-                Directory.CreateDirectory(dir!);
-            }
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir!);
 
             var json = JsonSerializer.Serialize(Settings, JsonOptions);
             File.WriteAllText(SettingsPath, json);
-            
         }
         catch (Exception ex)
         {

@@ -27,9 +27,9 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <localControls:MediaCard Cover="{Binding Cover}"
-                                                      Title="{Binding Name}"
-                                                      Command="{Binding $parent[UserControl].((vm:RankViewModel)DataContext).OpenRankCommand}"
-                                                      CommandParameter="{Binding .}" />
+                                                     Title="{Binding Name}"
+                                                     Command="{Binding $parent[UserControl].((vm:RankViewModel)DataContext).OpenRankCommand}"
+                                                     CommandParameter="{Binding .}" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -45,7 +45,8 @@
 
                 <TextBlock Grid.Column="1" Text="{Binding SelectedRank.Name}" FontSize="28" FontWeight="Bold"
                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="15,0,0,0" />
-                <Button Grid.Column="2" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right" Cursor="Hand">
+                <Button Grid.Column="2" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right"
+                        Cursor="Hand">
                     <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}"
                               Width="28" Height="28" />
                 </Button>

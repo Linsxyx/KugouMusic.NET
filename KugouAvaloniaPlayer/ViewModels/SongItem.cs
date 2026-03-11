@@ -22,15 +22,24 @@ public partial class SongItem : ObservableObject
     [ObservableProperty] private string _singer = "";
 
     public List<SingerLite> Singers { get; set; } = new();
-    
-    [RelayCommand]
-    private void Play() => WeakReferenceMessenger.Default.Send(new PlaySongMessage(this));
 
     [RelayCommand]
-    private void AddToNext() => WeakReferenceMessenger.Default.Send(new AddToNextMessage(this));
+    private void Play()
+    {
+        WeakReferenceMessenger.Default.Send(new PlaySongMessage(this));
+    }
 
     [RelayCommand]
-    private void ShowPlaylistDialog() => WeakReferenceMessenger.Default.Send(new ShowPlaylistDialogMessage(this));
+    private void AddToNext()
+    {
+        WeakReferenceMessenger.Default.Send(new AddToNextMessage(this));
+    }
+
+    [RelayCommand]
+    private void ShowPlaylistDialog()
+    {
+        WeakReferenceMessenger.Default.Send(new ShowPlaylistDialogMessage(this));
+    }
 
     [RelayCommand]
     private void ViewSinger(SingerLite? singer)
@@ -40,7 +49,10 @@ public partial class SongItem : ObservableObject
     }
 
     [RelayCommand]
-    private void RemoveFromPlaylist() => WeakReferenceMessenger.Default.Send(new RemoveFromPlaylistMessage(this));
+    private void RemoveFromPlaylist()
+    {
+        WeakReferenceMessenger.Default.Send(new RemoveFromPlaylistMessage(this));
+    }
 }
 
 public partial class PlaylistItem : ObservableObject

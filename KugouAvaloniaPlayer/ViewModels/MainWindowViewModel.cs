@@ -10,7 +10,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Models;
@@ -30,10 +29,8 @@ public partial class MainWindowViewModel : ObservableObject
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private const string LikeListCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
     private readonly AuthClient _authClient;
-    private readonly DeviceClient _deviceClient;
     private readonly DiscoveryClient _discoveryClient;
     private readonly ILogger<MainWindowViewModel> _logger;
-    private readonly MusicClient _musicClient;
     private readonly PlaylistClient _playlistClient;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
@@ -67,7 +64,6 @@ public partial class MainWindowViewModel : ObservableObject
         ISukiDialogManager dialogManager,
         KgSessionManager sessionManager,
         AuthClient authClient,
-        DeviceClient deviceClient,
         DiscoveryClient discoveryClient,
         PlaylistClient playlistClient,
         UserClient userClient,
@@ -83,7 +79,6 @@ public partial class MainWindowViewModel : ObservableObject
         DialogManager = dialogManager;
         _sessionManager = sessionManager;
         _authClient = authClient;
-        _deviceClient = deviceClient;
         _discoveryClient = discoveryClient;
 
         _playlistClient = playlistClient;
@@ -93,8 +88,8 @@ public partial class MainWindowViewModel : ObservableObject
         _searchViewModel = searchViewModel;
         _userViewModel = userViewModel;
         _logger = logger;
-        _musicClient = musicClient;
-        
+        var musicClient1 = musicClient;
+
         _userViewModel.CheckForUpdateRequested += OnCheckForUpdateRequested;
 
         Player = player;
@@ -104,15 +99,21 @@ public partial class MainWindowViewModel : ObservableObject
         Pages.Add(rankViewModel);
         Pages.Add(myPlaylistsViewModel);
         ActivePage = dailyRecommendViewModel;
-        
-        WeakReferenceMessenger.Default.Register<PlaySongMessage>(this, async void (_, m) =>
+
+        WeakReferenceMessenger.Default.Register<PlaySongMessage>(this, async void (r, m) =>
         {
             IList<SongItem>? currentSongList = null;
-            if (ActivePage is DailyRecommendViewModel dailyVm) currentSongList = dailyVm.Songs;
-            else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs) currentSongList = playlistVm.SelectedPlaylistSongs;
-            else if (ActivePage is SearchViewModel searchVm) currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
-            else if (ActivePage is SingerViewModel singerVm) currentSongList = singerVm.Songs;
-            else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs) currentSongList = rankVm.SelectedRankSongs;
+
+            if (ActivePage is DailyRecommendViewModel dailyVm)
+                currentSongList = dailyVm.Songs;
+            else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
+                currentSongList = playlistVm.SelectedPlaylistSongs;
+            else if (ActivePage is SearchViewModel searchVm)
+                currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
+            else if (ActivePage is SingerViewModel singerVm)
+                currentSongList = singerVm.Songs;
+            else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)
+                currentSongList = rankVm.SelectedRankSongs;
 
             await Player.PlaySongAsync(m.Song, currentSongList);
         });
@@ -120,10 +121,10 @@ public partial class MainWindowViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<NavigateToSingerMessage>(this, (r, m) =>
         {
             _previousPage = ActivePage;
-            var singerVm = new SingerViewModel(_musicClient, m.Singer.Id.ToString(), m.Singer.Name);
+            var singerVm = new SingerViewModel(musicClient1, m.Singer.Id.ToString(), m.Singer.Name);
             ActivePage = singerVm;
         });
-        
+
         WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (r, m) =>
         {
             if (m.IsLoggedIn)
@@ -131,7 +132,7 @@ public partial class MainWindowViewModel : ObservableObject
             else
                 OnLogoutRequested();
         });
-        
+
         WeakReferenceMessenger.Default.Register<NavigatePageMessage>(this, (r, m) =>
         {
             _previousPage = ActivePage;
@@ -142,10 +143,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             await LoadLocalSessionOrLogin();
             await GetDailyRecommendations();
-            if (SettingsManager.Settings.AutoCheckUpdate)
-            {
-                await CheckForUpdatesAsync();
-            }
+            if (SettingsManager.Settings.AutoCheckUpdate) await CheckForUpdatesAsync();
         });
     }
 
@@ -210,7 +208,7 @@ public partial class MainWindowViewModel : ObservableObject
             var userInfo = await _userClient.GetUserInfoAsync();
             if (userInfo != null)
             {
-                UserName = userInfo.Name ;
+                UserName = userInfo.Name;
                 UserAvatar = string.IsNullOrWhiteSpace(userInfo.Pic) ? null : userInfo.Pic;
                 _userViewModel.UserName = UserName;
                 _userViewModel.UserAvatar = UserAvatar;
@@ -254,7 +252,7 @@ public partial class MainWindowViewModel : ObservableObject
             IsLoggedIn = true;
             await LoadUserInfo();
             _logger.LogInformation("登录成功");
-            
+
             _ = Task.Run(async () =>
             {
                 try
@@ -289,7 +287,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OnCheckForUpdateRequested()
     {
-        _ = Task.Run(() => CheckForUpdatesAsync(showNoUpdateToast: true))
+        _ = Task.Run(() => CheckForUpdatesAsync(true))
             .ContinueWith(_ => Dispatcher.UIThread.Post(() => _userViewModel.SetCheckingUpdateState(false)));
     }
 
@@ -514,7 +512,6 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    
 
     [RelayCommand]
     public void NavigateBack()
@@ -555,7 +552,6 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 _logger.LogInformation("未通过 Velopack 安装，跳过更新检查。");
                 if (showNoUpdateToast)
-                {
                     Dispatcher.UIThread.Post(() =>
                     {
                         ToastManager.CreateToast()
@@ -565,7 +561,6 @@ public partial class MainWindowViewModel : ObservableObject
                             .Dismiss().After(TimeSpan.FromSeconds(3))
                             .Queue();
                     });
-                }
                 return;
             }
 
@@ -574,7 +569,6 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 _logger.LogInformation("当前已是最新版本。");
                 if (showNoUpdateToast)
-                {
                     Dispatcher.UIThread.Post(() =>
                     {
                         ToastManager.CreateToast()
@@ -584,7 +578,6 @@ public partial class MainWindowViewModel : ObservableObject
                             .Dismiss().After(TimeSpan.FromSeconds(3))
                             .Queue();
                     });
-                }
                 return;
             }
 
@@ -594,7 +587,6 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _logger.LogError($"检查更新失败: {ex.Message}");
             if (showNoUpdateToast)
-            {
                 Dispatcher.UIThread.Post(() =>
                 {
                     ToastManager.CreateToast()
@@ -604,7 +596,6 @@ public partial class MainWindowViewModel : ObservableObject
                         .Dismiss().After(TimeSpan.FromSeconds(4))
                         .Queue();
                 });
-            }
         }
     }
 

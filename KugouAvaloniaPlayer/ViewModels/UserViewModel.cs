@@ -15,6 +15,8 @@ public partial class UserViewModel : PageViewModelBase
 {
     private readonly AuthClient _authClient;
     private readonly UserClient _userClient;
+    [ObservableProperty] private bool _autoCheckUpdate;
+    [ObservableProperty] private bool _isCheckingUpdate;
     [ObservableProperty] private bool _isLoading = true;
 
     [ObservableProperty] private CloseBehavior _selectedCloseBehavior;
@@ -24,8 +26,6 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private string _userId = "";
     [ObservableProperty] private string _userName = "加载中...";
     [ObservableProperty] private string _vipStatus = "未开通";
-    [ObservableProperty] private bool _autoCheckUpdate;
-    [ObservableProperty] private bool _isCheckingUpdate;
 
     public UserViewModel(PlayerViewModel player, UserClient userClient, AuthClient authClient)
     {
@@ -102,7 +102,7 @@ public partial class UserViewModel : PageViewModelBase
         CheckForUpdateRequested?.Invoke();
         await Task.CompletedTask;
     }
-    
+
     public event Action? CheckForUpdateRequested;
 
     partial void OnSelectedCloseBehaviorChanged(CloseBehavior value)
