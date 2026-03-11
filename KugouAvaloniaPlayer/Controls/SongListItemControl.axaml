@@ -31,24 +31,24 @@
             <ContextMenu>
                 <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
                     <MenuItem.Styles>
-                        <Style Selector="MenuItem">
+                        <Style Selector="MenuItem > MenuItem">
                             <Setter Property="Header"
                                     Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
                             <Setter Property="Command"
-                                    Value="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToSingerCommand}" />
+                                    Value="{Binding #RootWindow.((vm:SongItem)DataContext).ViewSingerCommand}" />
                             <Setter Property="CommandParameter" Value="{Binding .}" />
                         </Style>
                     </MenuItem.Styles>
                 </MenuItem>
                 <MenuItem Header="下一首播放"
-                          Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
+                          Command="{Binding AddToNextCommand}"
                           CommandParameter="{Binding .}" />
                 <MenuItem Header="添加到歌单"
-                          Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.ShowAddToPlaylistDialogCommand}"
+                          Command="{Binding ShowPlaylistDialogCommand}"
                           CommandParameter="{Binding .}" />
 
                 <MenuItem Header="从歌单移除"
-                          Command="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).RemoveSongFromPlaylistCommand}"
+                          Command="{Binding RemoveFromPlaylistCommand}"
                           CommandParameter="{Binding .}"
                           IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsOnlinePlaylist, FallbackValue=False}" />
             </ContextMenu>
@@ -79,7 +79,7 @@
                         HorizontalAlignment="Right" Margin="0,0,10,0">
 
                 <Button Cursor="Hand" Classes="Basic" ToolTip.Tip="播放"
-                        Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).PlayFromListCommand}"
+                        Command="{Binding PlayCommand}"
                         CommandParameter="{Binding .}">
                     <Svg Path="/Assets/Play-2.svg" Width="15" Height="15" />
                 </Button>
@@ -89,24 +89,24 @@
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
                             <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
                                 <MenuItem.Styles>
-                                    <Style Selector="MenuItem">
+                                    <Style Selector="MenuItem> MenuItem">
                                         <Setter Property="Header"
                                                 Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
                                         <Setter Property="Command"
-                                                Value="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToSingerCommand}" />
+                                                Value="{Binding $parent[MenuItem].((vm:SongItem)DataContext).ViewSingerCommand}" />
                                         <Setter Property="CommandParameter" Value="{Binding .}" />
                                     </Style>
                                 </MenuItem.Styles>
                             </MenuItem>
                             <MenuItem Header="下一首播放"
-                                      Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.AddToNextCommand}"
+                                      Command="{Binding AddToNextCommand}"
                                       CommandParameter="{Binding .}" />
                             <MenuItem Header="添加到歌单"
-                                      Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Player.ShowAddToPlaylistDialogCommand}"
+                                      Command="{Binding ShowPlaylistDialogCommand}"
                                       CommandParameter="{Binding .}" />
 
                             <MenuItem Header="从歌单移除"
-                                      Command="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).RemoveSongFromPlaylistCommand}"
+                                      Command="{Binding RemoveFromPlaylistCommand}"
                                       CommandParameter="{Binding .}"
                                       IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsOnlinePlaylist, FallbackValue=False}" />
                         </MenuFlyout>

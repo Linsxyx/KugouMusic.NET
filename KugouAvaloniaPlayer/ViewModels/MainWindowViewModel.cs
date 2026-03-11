@@ -9,9 +9,11 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.Logging;
@@ -92,9 +94,7 @@ public partial class MainWindowViewModel : ObservableObject
         _userViewModel = userViewModel;
         _logger = logger;
         _musicClient = musicClient;
-
-        LoginViewModel.LoginSuccess += OnLoginSuccess;
-        _userViewModel.LogoutRequested += OnLogoutRequested;
+        
         _userViewModel.CheckForUpdateRequested += OnCheckForUpdateRequested;
 
         Player = player;
@@ -104,6 +104,39 @@ public partial class MainWindowViewModel : ObservableObject
         Pages.Add(rankViewModel);
         Pages.Add(myPlaylistsViewModel);
         ActivePage = dailyRecommendViewModel;
+        
+        WeakReferenceMessenger.Default.Register<PlaySongMessage>(this, async void (_, m) =>
+        {
+            IList<SongItem>? currentSongList = null;
+            if (ActivePage is DailyRecommendViewModel dailyVm) currentSongList = dailyVm.Songs;
+            else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs) currentSongList = playlistVm.SelectedPlaylistSongs;
+            else if (ActivePage is SearchViewModel searchVm) currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
+            else if (ActivePage is SingerViewModel singerVm) currentSongList = singerVm.Songs;
+            else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs) currentSongList = rankVm.SelectedRankSongs;
+
+            await Player.PlaySongAsync(m.Song, currentSongList);
+        });
+
+        WeakReferenceMessenger.Default.Register<NavigateToSingerMessage>(this, (r, m) =>
+        {
+            _previousPage = ActivePage;
+            var singerVm = new SingerViewModel(_musicClient, m.Singer.Id.ToString(), m.Singer.Name);
+            ActivePage = singerVm;
+        });
+        
+        WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (r, m) =>
+        {
+            if (m.IsLoggedIn)
+                OnLoginSuccess();
+            else
+                OnLogoutRequested();
+        });
+        
+        WeakReferenceMessenger.Default.Register<NavigatePageMessage>(this, (r, m) =>
+        {
+            _previousPage = ActivePage;
+            ActivePage = m.TargetPage;
+        });
 
         Task.Run(async () =>
         {
@@ -221,17 +254,9 @@ public partial class MainWindowViewModel : ObservableObject
             IsLoggedIn = true;
             await LoadUserInfo();
             _logger.LogInformation("登录成功");
-
+            
             _ = Task.Run(async () =>
             {
-                if (!await _deviceClient.InitDeviceAsync())
-                    ToastManager.CreateToast()
-                        .OfType(NotificationType.Error)
-                        .WithTitle("获取Dfid失败")
-                        .Dismiss().After(TimeSpan.FromSeconds(3))
-                        .Dismiss().ByClicking()
-                        .Queue();
-
                 try
                 {
                     await TryGetVip();
@@ -242,10 +267,6 @@ public partial class MainWindowViewModel : ObservableObject
                     _logger.LogError($"初始化VIP或喜欢列表失败: {ex.Message}");
                 }
             });
-            
-            var myPlaylistsVm = Pages.OfType<MyPlaylistsViewModel>().FirstOrDefault();
-            if (myPlaylistsVm != null)
-                _ = myPlaylistsVm.LoadAllPlaylistsCommand.ExecuteAsync(null);
 
             await GetDailyRecommendations();
         });
@@ -253,7 +274,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OnLogoutRequested()
     {
-        Dispatcher.UIThread.Post(async () =>
+        Dispatcher.UIThread.Post(() =>
         {
             IsLoggedIn = false;
             UserName = "未登录";
@@ -466,30 +487,6 @@ public partial class MainWindowViewModel : ObservableObject
         IsQueuePaneOpen = false;
     }
 
-
-    [RelayCommand]
-    private async Task PlayFromList(SongItem? song)
-    {
-        if (song == null) return;
-
-        IList<SongItem>? currentSongList = null;
-
-        if (ActivePage is DailyRecommendViewModel dailyVm)
-            currentSongList = dailyVm.Songs;
-        else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
-            currentSongList = playlistVm.SelectedPlaylistSongs;
-        else if (ActivePage is SearchViewModel searchVm)
-
-            currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
-        else if (ActivePage is SingerViewModel singerVm) currentSongList = singerVm.Songs;
-
-        else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)
-            currentSongList = rankVm.SelectedRankSongs;
-
-        await Player.PlaySongAsync(song, currentSongList);
-    }
-
-
     [RelayCommand]
     private void ToggleDesktopLyric()
     {
@@ -517,25 +514,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-
-    [RelayCommand]
-    public void NavigateToSinger(object? parameter)
-    {
-        if (parameter is SingerLite singer)
-        {
-            // 记录上一页
-            _previousPage = ActivePage;
-
-            // 创建新的 SingerViewModel
-            var singerVm = new SingerViewModel(
-                _musicClient,
-                singer.Id.ToString(),
-                singer.Name
-            );
-
-            ActivePage = singerVm;
-        }
-    }
+    
 
     [RelayCommand]
     public void NavigateBack()

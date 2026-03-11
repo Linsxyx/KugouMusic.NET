@@ -4,18 +4,20 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
+using TagLib;
 using File = TagLib.File;
+using TextBox = Avalonia.Controls.TextBox;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -53,6 +55,11 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         _logger = logger;
 
         _ = LoadAllPlaylists();
+
+        WeakReferenceMessenger.Default.Register<RemoveFromPlaylistMessage>(this,
+            async void (r, m) => { await RemoveSongFromPlaylist(m.Song); });
+
+        WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (r, m) => { _ = LoadAllPlaylists(); });
     }
 
     // 标识当前选中的歌单是否为网络歌单
@@ -189,7 +196,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                 AlbumId = s.AlbumId,
                 FileId = s.FileId, // 保存 FileId 用于删除
                 Singers = s.Singers,
-                Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover: s.Cover,
+                Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
                 DurationSeconds = s.DurationMs / 1000.0
             }).ToList();
 
@@ -216,46 +223,73 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             try
             {
                 var files = Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
-                    .Where(f => supportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()));
-                var tempList = files
-                    .AsParallel()
-                    .Select(file =>
-                    {
-                        try
-                        {
-                            using var tfile = File.Create(file);
-
-                            var title = tfile.Tag.Title ?? Path.GetFileNameWithoutExtension(file);
-                            var artists = tfile.Tag.Performers;
-                            var singer = artists.Length > 0 ? string.Join(", ", artists) : "未知艺术家";
-
-                            return new SongItem
-                            {
-                                Name = title,
-                                Singer = singer,
-                                DurationSeconds = tfile.Properties.Duration.TotalSeconds,
-                                LocalFilePath = file,
-                                Cover = DefaultSongCover
-                            };
-                        }
-                        catch
-                        {
-                            _logger.LogError("加载本地文件失败");
-                            return null;
-                        }
-                    })
-                    .Where(x => x != null)
+                    .Where(f => supportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
                     .ToList();
+
+                var tempList = new List<SongItem>();
+
+                foreach (var file in files)
+                {
+                    var title = Path.GetFileNameWithoutExtension(file);
+                    var singer = "未知艺术家";
+                    double duration = 0;
+
+                    try
+                    {
+                        using var tfile = File.Create(file);
+
+                        title = !string.IsNullOrWhiteSpace(tfile.Tag.Title) ? tfile.Tag.Title : title;
+
+                        var artists = tfile.Tag.Performers;
+                        if (artists != null && artists.Length > 0) singer = string.Join(", ", artists);
+
+                        duration = tfile.Properties?.Duration.TotalSeconds ?? 0;
+                    }
+                    catch (UnsupportedFormatException)
+                    {
+                        _logger.LogWarning($"文件格式不支持，已降级为文件名加载 [{file}]");
+                    }
+                    catch (CorruptFileException ex)
+                    {
+                        _logger.LogWarning($"文件头伪装或损坏，已降级为文件名加载 [{file}]: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning($"读取标签失败，已降级为文件名加载 [{file}]: {ex.Message}");
+                    }
+
+                    tempList.Add(new SongItem
+                    {
+                        Name = title,
+                        Singer = singer,
+                        DurationSeconds = duration,
+                        LocalFilePath = file,
+                        Cover = DefaultSongCover
+                    });
+                }
 
                 Dispatcher.UIThread.Post(() =>
                 {
                     SelectedPlaylistSongs.Clear();
-                    SelectedPlaylistSongs.AddRange(tempList!);
+                    SelectedPlaylistSongs.AddRange(tempList);
                 });
             }
-            catch
+            catch (UnauthorizedAccessException)
             {
-                _logger.LogError("权限错误");
+                _logger.LogError($"权限错误: 无法访问文件夹 {path}");
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _toastManager.CreateToast()
+                        .OfType(NotificationType.Error)
+                        .WithTitle("无权访问")
+                        .WithContent("无法读取某些文件夹，请检查权限。")
+                        .Dismiss().After(TimeSpan.FromSeconds(3))
+                        .Queue();
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"扫描文件夹出错: {ex.Message}");
             }
         });
     }

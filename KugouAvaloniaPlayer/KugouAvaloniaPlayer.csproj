@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
+        <TrimmerRootAssembly Include="TagLibSharp" />
     </ItemGroup>
 
     <ItemGroup>

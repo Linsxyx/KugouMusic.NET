@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KugouAvaloniaPlayer.Models;
 
@@ -20,6 +22,25 @@ public partial class SongItem : ObservableObject
     [ObservableProperty] private string _singer = "";
 
     public List<SingerLite> Singers { get; set; } = new();
+    
+    [RelayCommand]
+    private void Play() => WeakReferenceMessenger.Default.Send(new PlaySongMessage(this));
+
+    [RelayCommand]
+    private void AddToNext() => WeakReferenceMessenger.Default.Send(new AddToNextMessage(this));
+
+    [RelayCommand]
+    private void ShowPlaylistDialog() => WeakReferenceMessenger.Default.Send(new ShowPlaylistDialogMessage(this));
+
+    [RelayCommand]
+    private void ViewSinger(SingerLite? singer)
+    {
+        if (singer != null)
+            WeakReferenceMessenger.Default.Send(new NavigateToSingerMessage(singer));
+    }
+
+    [RelayCommand]
+    private void RemoveFromPlaylist() => WeakReferenceMessenger.Default.Send(new RemoveFromPlaylistMessage(this));
 }
 
 public partial class PlaylistItem : ObservableObject

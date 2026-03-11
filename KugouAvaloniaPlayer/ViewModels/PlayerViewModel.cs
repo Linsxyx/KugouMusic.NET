@@ -12,9 +12,11 @@ using Avalonia.Controls.Templates;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Models;
 using Microsoft.Extensions.Logging;
 using SimpleAudio;
 using SukiUI.Dialogs;
@@ -95,6 +97,16 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
         _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         _playbackTimer.Tick += OnPlaybackTimerTick;
+        
+        WeakReferenceMessenger.Default.Register<AddToNextMessage>(this, (r, m) =>
+        {
+            AddToNext(m.Song);
+        });
+
+        WeakReferenceMessenger.Default.Register<ShowPlaylistDialogMessage>(this, async void (r, m) =>
+        {
+            await ShowAddToPlaylistDialog(m.Song);
+        });
     }
 
     public AvaloniaList<LyricLineViewModel> LyricLines { get; } = new();
@@ -117,16 +129,8 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
         GC.SuppressFinalize(this);
     }
-
-    /// <summary>
-    ///     核心播放逻辑
-    /// </summary>
-    /// <param name="song">要播放的歌曲</param>
-    /// <param name="contextList">
-    ///     歌曲所在的上下文列表。
-    ///     如果不为空，说明用户在列表中点击了播放，需要替换队列。
-    ///     如果为空，说明用户在点击"上一首/下一首"，保持队列不变。
-    /// </param>
+    
+    
     public async Task PlaySongAsync(SongItem? song, IList<SongItem>? contextList = null)
     {
         if (song == null) return;

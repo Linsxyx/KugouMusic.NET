@@ -251,11 +251,11 @@
                                               CommandParameter="{Binding .}" />
                                     <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
                                         <MenuItem.Styles>
-                                            <Style Selector="MenuItem">
+                                            <Style Selector="MenuItem> MenuItem">
                                                 <Setter Property="Header"
                                                         Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
                                                 <Setter Property="Command"
-                                                        Value="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateToSingerCommand}" />
+                                                        Value="{Binding $parent[MenuItem].((vm:SongItem)DataContext).ViewSingerCommand}" />
                                                 <Setter Property="CommandParameter" Value="{Binding .}" />
                                             </Style>
                                         </MenuItem.Styles>
