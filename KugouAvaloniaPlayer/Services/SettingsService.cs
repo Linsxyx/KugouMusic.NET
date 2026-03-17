@@ -20,10 +20,12 @@ public class AppSettings
     public string MusicQuality { get; set; } = "128";
     public List<string> LocalMusicFolders { get; set; } = new();
     public bool AutoCheckUpdate { get; set; } = true;
-    
-    public string EQPreset { get; set; } = "Normal (原声)";
-    
-    public bool EnableSurround { get; set; } = false;
+
+    public string EQPreset { get; set; } = "原声";
+
+    public bool EnableSurround { get; set; }
+
+    public float[] CustomEqGains { get; set; } = new float[10];
 }
 
 [JsonSerializable(typeof(AppSettings))]

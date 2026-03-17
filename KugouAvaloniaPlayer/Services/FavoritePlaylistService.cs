@@ -147,13 +147,13 @@ public class FavoritePlaylistService(
             dialogManager.CreateDialog()
                 .WithTitle("添加到歌单")
                 .WithContent(listBox)
-                .WithActionButton("取消", _ => { }, true,"Standard")
+                .WithActionButton("取消", _ => { }, true, "Standard")
                 .WithActionButton("添加", async void (_) =>
                 {
                     if (listBox.SelectedItem is UserPlaylistItem selectedPlaylist)
                         await AddSongToPlaylistInnerAsync(song, selectedPlaylist.ListId.ToString(),
                             selectedPlaylist.Name);
-                }, true,"Standard")
+                }, true, "Standard")
                 .TryShow();
         }
         else

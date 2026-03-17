@@ -5,48 +5,57 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
+using KugouAvaloniaPlayer.Views;
 using SukiUI;
+using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class UserViewModel : PageViewModelBase
 {
     private readonly AuthClient _authClient;
+    private readonly ISukiDialogManager _dialogManager;
+    private readonly EqSettingsViewModel _eqSettingsViewModel;
     private readonly UserClient _userClient;
     [ObservableProperty] private bool _autoCheckUpdate;
+
+    [ObservableProperty] private bool _enableSurround;
     [ObservableProperty] private bool _isCheckingUpdate;
     [ObservableProperty] private bool _isLoading = true;
 
     [ObservableProperty] private CloseBehavior _selectedCloseBehavior;
+    [ObservableProperty] private string _selectedEQPreset;
 
     [ObservableProperty] private string _selectedQuality;
     [ObservableProperty] private string? _userAvatar;
     [ObservableProperty] private string _userId = "";
     [ObservableProperty] private string _userName = "加载中...";
     [ObservableProperty] private string _vipStatus = "未开通";
-    
-    public string[] EQPresetOptions { get; } = { "Normal (原声)", "Pop (流行)", "Rock (摇滚)", "Bass Boost (重低音)", "Classical (古典)", "Vocal (人声增强)", "Dance (舞曲)" ,"Electronic (电子)","Acoustic (木吉他)"};
-    [ObservableProperty] private string _selectedEQPreset;
-    
-    [ObservableProperty] private bool _enableSurround;
 
-    public UserViewModel(PlayerViewModel player, UserClient userClient, AuthClient authClient)
+    public UserViewModel(PlayerViewModel player, UserClient userClient, AuthClient authClient,
+        ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel)
     {
         _userClient = userClient;
         _authClient = authClient;
+        _dialogManager = dialogManager;
+        _eqSettingsViewModel = eqSettingsViewModel;
+
         Player = player;
         SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
         SelectedQuality = SettingsManager.Settings.MusicQuality;
         AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
-    
-        
+        EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
+
         var preset = SettingsManager.Settings.EQPreset;
-        SelectedEQPreset = System.Array.Exists(EQPresetOptions, x => x == preset) ? preset : "Normal (原声)";
-    
+        SelectedEQPreset = Array.Exists(EQPresetOptions, x => x == preset) ? preset : "原声";
+
         EnableSurround = SettingsManager.Settings.EnableSurround;
     }
+
+    public string[] EQPresetOptions { get; }
 
     private PlayerViewModel Player { get; }
 
@@ -139,7 +148,7 @@ public partial class UserViewModel : PageViewModelBase
     {
         IsCheckingUpdate = isChecking;
     }
-    
+
     partial void OnSelectedEQPresetChanged(string value)
     {
         SettingsManager.Settings.EQPreset = value;
@@ -152,5 +161,19 @@ public partial class UserViewModel : PageViewModelBase
         SettingsManager.Settings.EnableSurround = value;
         SettingsManager.Save();
         Player.UpdateAudioEffects(SelectedEQPreset, value);
+    }
+
+    [RelayCommand]
+    private void OpenEqSettings()
+    {
+        var EqSettings = new EqSettingsControl
+        {
+            DataContext = _eqSettingsViewModel
+        };
+
+        _dialogManager.CreateDialog()
+            .WithContent(EqSettings)
+            .WithActionButton("确定", _ => { }, true)
+            .TryShow();
     }
 }

@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             x:Class="KugouAvaloniaPlayer.Controls.EqSettingsControl"
+             x:DataType="vm:EqSettingsViewModel">
+    <StackPanel Spacing="20" Margin="10" Width="550">
+        <Grid ColumnDefinitions="*, Auto">
+            <StackPanel>
+                <TextBlock Text="均衡器设置" FontSize="18" FontWeight="Bold" />
+                <TextBlock Text="调节各频段增益 (±15dB)" FontSize="12" Opacity="0.6" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="Basic" Content="重置"
+                    Command="{Binding ResetCommand}" VerticalAlignment="Center" />
+        </Grid>
+
+        <Border Background="{DynamicResource SukiPrimaryColor1}"
+                CornerRadius="12" Padding="15,25">
+            <ItemsControl ItemsSource="{Binding Bands}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="10" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:EqBandViewModel">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="{Binding Value, StringFormat=\{0:F1\}}"
+                                       FontSize="10" HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource SukiPrimaryColor}" />
+
+                            <Slider Orientation="Vertical" Height="160"
+                                    Minimum="-15" Maximum="15"
+                                    Value="{Binding Value}"
+                                    HorizontalAlignment="Center" />
+
+                            <TextBlock Text="{Binding Frequency}" FontSize="10"
+                                       HorizontalAlignment="Center" Opacity="0.8" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+
+        <TextBlock Text="注意：调整将自动切换至“自定义”预设模式"
+                   FontSize="11" HorizontalAlignment="Center" Opacity="0.5" />
+    </StackPanel>
+</UserControl>

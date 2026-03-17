@@ -17,11 +17,8 @@
                     <Color x:Key="ACGGradEnd">#3D8BFF</Color>
                     <Color x:Key="ACGTextShadow">#40003366</Color>
                 </ResourceDictionary>
-                
+
                 <ResourceDictionary x:Key="Dark">
-                    <Color x:Key="ACGGradStart">#2A4365</Color>
-                    <Color x:Key="ACGGradEnd">#111D2C</Color>
-                    <Color x:Key="ACGTextShadow">#80000000</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
@@ -34,7 +31,7 @@
                     Height="220"
                     CornerRadius="16,16,0,0"
                     ClipToBounds="True">
-                
+
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                         <GradientStop Color="{DynamicResource ACGGradStart}" Offset="0" />
@@ -60,17 +57,17 @@
                              Stroke="#15FFFFFF" StrokeThickness="2"
                              HorizontalAlignment="Right" VerticalAlignment="Bottom"
                              Margin="0,0,80,-60" />
-                    
+
                     <StackPanel VerticalAlignment="Center" Spacing="2" Margin="35,0,0,0">
-                        <Border Background="#30FFFFFF" 
-                                CornerRadius="4" 
-                                HorizontalAlignment="Left" 
-                                Padding="8,3" 
+                        <Border Background="#30FFFFFF"
+                                CornerRadius="4"
+                                HorizontalAlignment="Left"
+                                Padding="8,3"
                                 Margin="0,0,0,6">
-                            <TextBlock Text="DAILY RECOMMENDATION" 
-                                       FontSize="10" 
-                                       FontWeight="Heavy" 
-                                       Foreground="White" 
+                            <TextBlock Text="DAILY RECOMMENDATION"
+                                       FontSize="10"
+                                       FontWeight="Heavy"
+                                       Foreground="White"
                                        LetterSpacing="1" />
                         </Border>
 
@@ -79,15 +76,15 @@
                                    FontWeight="Black"
                                    Foreground="White"
                                    LetterSpacing="2">
-                            
+
                             <TextBlock.Effect>
-                                <DropShadowEffect BlurRadius="8" 
-                                                  Opacity="0.8" 
-                                                  OffsetX="0" OffsetY="3" 
+                                <DropShadowEffect BlurRadius="8"
+                                                  Opacity="0.8"
+                                                  OffsetX="0" OffsetY="3"
                                                   Color="{DynamicResource ACGTextShadow}" />
                             </TextBlock.Effect>
                         </TextBlock>
-                        
+
                     </StackPanel>
                 </Panel>
             </Border>

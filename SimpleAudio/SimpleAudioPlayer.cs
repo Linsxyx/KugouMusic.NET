@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using ManagedBass;
 using ManagedBass.DirectX8;
 using ManagedBass.Fx;
@@ -10,19 +11,26 @@ public class SimpleAudioPlayer : IDisposable
     private int _stream;
 
     
-    private int _eqHandle = 0;      
-    private int _reverbHandle = 0;  
-    private int _chorusHandle = 0;  
+    private readonly int[] _eqHandles = new int[10]; 
+    
+    private readonly DSPProcedure _stereoDspProc;
+    private int _stereoDspHandle = 0;
+    
+    private int _reverbHandle = 0;
+    private int _chorusHandle = 0;
+    
+    private float[] _dspBuffer = Array.Empty<float>();
     
     private float[] _currentEQ = new float[10];
     private bool _surroundEnabled = false;
     private float _userVolume = 1.0f; 
 
-    // ISO 标准的 10 段均衡器中心频率
-    private static readonly float[] EQFreqs = { 31.5f, 63f, 125f, 250f, 500f, 1000f, 2000f, 4000f, 8000f, 16000f };
+    
+    private static readonly float[] EQFreqs = [141f, 234f, 469f, 844f, 1300f, 2200f, 3700f, 5800f, 9000f, 13800f];
 
     public SimpleAudioPlayer()
     {
+        _stereoDspProc = StereoEnhancerDSP;
     }
 
     public event Action PlaybackEnded;
@@ -72,10 +80,7 @@ public class SimpleAudioPlayer : IDisposable
     public bool Load(string url)
     {
         Stop();
-
-        // 【超级重点】：必须加上 BassFlags.Float！
-        // 浮点解码意味着内部音频管道的上限无限大。
-        // 即便你 EQ 拉到顶了，内部波形也不会削顶（不炸音），只有在最后输出给声卡时才会结算！
+        
         var flags = BassFlags.Default | BassFlags.Float;
 
         if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
@@ -87,11 +92,13 @@ public class SimpleAudioPlayer : IDisposable
         {
             _endSyncProc = EndSync;
             Bass.ChannelSetSync(_stream, SyncFlags.End, 0, _endSyncProc, IntPtr.Zero);
-            
+    
             // 每次流刷新，必须重新挂载音效
-            _eqHandle = 0;
-            _reverbHandle = 0;
-            _chorusHandle = 0;
+            Array.Clear(_eqHandles, 0, _eqHandles.Length); // 清空 EQ 句柄数组
+            _stereoDspHandle = 0;
+            _reverbHandle = 0; 
+            _chorusHandle = 0; 
+    
             ApplyEQ();
             ApplySurround();
             UpdateActualVolume();
@@ -106,12 +113,9 @@ public class SimpleAudioPlayer : IDisposable
     {
         if (_stream != 0)
         {
-            // 防炸音黑科技2 (Headroom)：
-            // 如果开了空间音效，或者 EQ 里有高增益(>3dB)，音频总能量必定会膨胀。
-            // 此时我们主动把整体输出音量压低 20% (乘以 0.8f)，给音效留出动态空间，配合 Float 直接杜绝炸音。
             float headroom = (_surroundEnabled || _currentEQ.Any(g => g > 3f)) ? 0.8f : 1.0f;
             
-            // 对数听觉曲线
+            
             float actualVolume = (float)Math.Pow(_userVolume, 2) * headroom;
             Bass.ChannelSetAttribute(_stream, ChannelAttribute.Volume, Math.Clamp(actualVolume, 0f, 1f));
         }
@@ -266,41 +270,22 @@ public class SimpleAudioPlayer : IDisposable
     {
         if (_stream == 0) return;
 
-        if (_eqHandle == 0)
+        for (int i = 0; i < 10; i++)
         {
-            _eqHandle = Bass.ChannelSetFX(_stream, EffectType.PeakEQ, 0);
-
-            if (_eqHandle != 0)
+            if (_eqHandles[i] == 0)
             {
-                for (int i = 0; i < 10; i++)
-                {
-                    var eq = new PeakEQParameters
-                    {
-                        lBand = -1, 
-                        fCenter = EQFreqs[i],
-                        fGain = _currentEQ[i],
-                        fBandwidth = 1.0f,     
-                        fQ = 0f,
-                        lChannel = FXChannelFlags.All
-                    };
-                    Bass.FXSetParameters(_eqHandle, eq);
-                }
+                _eqHandles[i] = Bass.ChannelSetFX(_stream, EffectType.DXParamEQ, 0);
             }
-        }
-        else
-        {
-            for (int i = 0; i < 10; i++)
+
+            if (_eqHandles[i] != 0)
             {
-                var eq = new PeakEQParameters
+                var eq = new DXParamEQParameters
                 {
-                    lBand = i, 
                     fCenter = EQFreqs[i],
-                    fGain = _currentEQ[i],
-                    fBandwidth = 1.0f,     
-                    fQ = 0f,
-                    lChannel = FXChannelFlags.All
+                    fBandwidth = 12f, 
+                    fGain = _currentEQ[i]
                 };
-                Bass.FXSetParameters(_eqHandle, eq);
+                Bass.FXSetParameters(_eqHandles[i], eq);
             }
         }
     }
@@ -309,41 +294,80 @@ public class SimpleAudioPlayer : IDisposable
     {
         if (_stream == 0) return;
 
-        if (_reverbHandle != 0) { Bass.ChannelRemoveFX(_stream, _reverbHandle); _reverbHandle = 0; }
-        if (_chorusHandle != 0) { Bass.ChannelRemoveFX(_stream, _chorusHandle); _chorusHandle = 0; }
+        
+        if (_stereoDspHandle != 0) 
+        { 
+            Bass.ChannelRemoveDSP(_stream, _stereoDspHandle); 
+            _stereoDspHandle = 0; 
+        }
+        if (_reverbHandle != 0)
+        {
+            Bass.ChannelRemoveFX(_stream, _reverbHandle);
+            _reverbHandle = 0;
+        }
+        if (_chorusHandle != 0)
+        {
+            Bass.ChannelRemoveFX(_stream, _chorusHandle);
+            _chorusHandle = 0;
+        }
 
         if (_surroundEnabled)
         {
-            _reverbHandle = Bass.ChannelSetFX(_stream, EffectType.Freeverb, 1);
-            if (_reverbHandle != 0)
+            Bass.ChannelGetInfo(_stream, out var info);
+            if (info.Channels == 2)
             {
-                var reverb = new ReverbParameters
+                _stereoDspHandle = Bass.ChannelSetDSP(_stream, _stereoDspProc, IntPtr.Zero, 0);
+
+                
+                _reverbHandle = Bass.ChannelSetFX(_stream, EffectType.DXReverb, 1);
+                var reverb = new DXReverbParameters
                 {
-                    fDryMix = 1.0f,
-                    fWetMix = 0.05f,
-                    fRoomSize = 0.55f,
-                    fDamp = 0.6f,
-                    fWidth = 1.0f
+                    fInGain = 0f,
+                    fReverbMix = -12f,     
+                    fReverbTime = 1200f,   
+                    fHighFreqRTRatio = 0.1f
                 };
                 Bass.FXSetParameters(_reverbHandle, reverb);
-            }
-            
-            _chorusHandle = Bass.ChannelSetFX(_stream, EffectType.Chorus, 2);
-            if (_chorusHandle != 0)
-            {
-                var chorus = new ChorusParameters
+                
+                _chorusHandle = Bass.ChannelSetFX(_stream, EffectType.DXChorus, 2);
+                var chorus = new DXChorusParameters
                 {
-                    fDryMix = 1.0f,
-                    fWetMix = 0.12f,
-                    fFeedback = 0.0f,
-                    fMinSweep = 8f,
-                    fMaxSweep = 8f,
-                    fRate = 0f,
-                    lChannel = FXChannelFlags.All
+                    fDelay = 15f,          
+                    fDepth = 5f,           
+                    fFeedback = 0f,        
+                    fFrequency = 0.5f,     
+                    lWaveform = DXWaveform.Sine,         
+                    fWetDryMix = 15f,      
+                    lPhase = DXPhase.Positive180 
                 };
                 Bass.FXSetParameters(_chorusHandle, chorus);
             }
         }
+    }
+    
+    
+    private void StereoEnhancerDSP(int handle, int channel, IntPtr buffer, int length, IntPtr user)
+    {
+        if (length == 0 || buffer == IntPtr.Zero) return;
+        
+        int floatCount = length / 4; 
+        
+        if (_dspBuffer.Length < floatCount) _dspBuffer = new float[floatCount];
+        
+        Marshal.Copy(buffer, _dspBuffer, 0, floatCount);
+        
+        float width = 0.20f; 
+        
+        for (int i = 0; i < floatCount - 1; i += 2)
+        {
+            float l = _dspBuffer[i];
+            float r = _dspBuffer[i + 1];
+            
+            _dspBuffer[i]     = l + (l - r) * width;
+            _dspBuffer[i + 1] = r + (r - l) * width;
+        }
+        
+        Marshal.Copy(_dspBuffer, 0, buffer, floatCount);
     }
     #endregion
 

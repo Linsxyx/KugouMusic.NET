@@ -65,5 +65,9 @@
         <Compile Update="Controls\MediaCard.axaml.cs">
             <DependentUpon>MediaCard.axaml</DependentUpon>
         </Compile>
+        <Compile Update="Controls\EqSettingsControl.axaml.cs">
+          <DependentUpon>EqSettingsControl.axaml</DependentUpon>
+          <SubType>Code</SubType>
+        </Compile>
     </ItemGroup>
 </Project>

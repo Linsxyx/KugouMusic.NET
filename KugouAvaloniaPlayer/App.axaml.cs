@@ -50,6 +50,7 @@ public partial class App : Application
         collection.AddTransient<MainWindowViewModel>();
         collection.AddTransient<DailyRecommendViewModel>();
         collection.AddTransient<MyPlaylistsViewModel>();
+        collection.AddTransient<EqSettingsViewModel>();
 
         collection.AddSingleton<PlaybackQueueManager>();
         collection.AddSingleton<LyricsService>();

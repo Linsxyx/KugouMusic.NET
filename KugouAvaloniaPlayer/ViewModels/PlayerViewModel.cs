@@ -164,7 +164,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             Dispatcher.UIThread.Post(() => PlayNextCommand.Execute(null));
         });
     }
-    
+
     [RelayCommand]
     private async Task PlaySong(SongItem? song)
     {
@@ -227,7 +227,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         if (CurrentPlayingSong == null) return;
         IsLiked = await _favoriteService.ToggleLikeAsync(CurrentPlayingSong, IsLiked);
     }
-    
+
     private void StopAndReset()
     {
         _playbackTimer.Stop();
@@ -279,25 +279,42 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     {
         await _favoriteService.LoadLikeListAsync();
     }
-    
-    public void UpdateAudioEffects(string preset, bool surround)
+
+    /*public void UpdateAudioEffects(string preset, bool surround)
     {
         _player.SetEQ(GetEqPreset(preset));
         _player.SetSurround(surround);
+    }*/
+
+    public void ApplyCustomEQ(float[] gains)
+    {
+        _player.SetEQ(gains);
+        // 强制 UI 更新预设名称（如果有绑定）
+        OnPropertyChanged(nameof(MusicQuality));
     }
-    
-    public static float[] GetEqPreset(string preset)
+
+    // 修改原有的 UpdateAudioEffects 逻辑
+    public void UpdateAudioEffects(string preset, bool surround)
+    {
+        if (preset == "自定义")
+            _player.SetEQ(SettingsManager.Settings.CustomEqGains);
+        else
+            _player.SetEQ(GetEqPreset(preset));
+        _player.SetSurround(surround);
+    }
+
+    public float[] GetEqPreset(string preset)
     {
         return preset switch
         {
-            "Pop (流行)"         => [-1.5f, 3.0f, 5.0f, 6.0f, 4.0f, 0.0f, -2.0f, -2.0f, -1.0f, -1.0f],
-            "Rock (摇滚)"        => [6.0f, 4.0f, -3.0f, -6.0f, -2.0f, 3.0f, 6.0f, 8.0f, 8.0f, 8.0f],
-            "Bass Boost (重低音)" => [7.0f, 5.0f, 3.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f],
-            "Classical (古典)"   => [0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -5.0f, -5.0f, -5.0f, -7.0f],
-            "Vocal (人声增强)"    => [-2.0f, -2.0f, 0.0f, 3.0f, 5.0f, 5.0f, 3.0f, 0.0f, -2.0f, -2.0f],
-            "Dance (舞曲)"       => [7.0f, 5.0f, 2.0f, 0.0f, 0.0f, -4.0f, -5.0f, -5.0f, 0.0f, 0.0f],
-            "Electronic (电子)"  => [6.0f, 5.0f, 1.0f, -2.0f, -3.0f, 1.0f, 3.0f, 6.0f, 7.0f, 8.0f],
-            "Acoustic (木吉他)"   => [4.0f, 4.0f, 3.0f, 1.0f, 1.0f, 1.0f, 3.0f, 4.0f, 3.0f, 2.0f],
+            "流行" => [-2f, 0f, -5.0f, -1.0f, 0f, 0.0f, 0f, -3.0f, 0f, 0f],
+            "摇滚" => [4.0f, 1.0f, -2.0f, 0f, 0f, -2.0f, 0f, -2.0f, 1.0f, 4.0f],
+            "爵士" => [0f, 0f, 0f, -1.0f, -1.0f, -3.0f, 0f, 0f, 0f, 0f],
+            "古典" => [0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 3.0f, 1.0f, 6.0f, 2.0f, 6.0f],
+            "嘻哈" => [3.0f, 0f, -3.0f, 0f, 0f, -3.0f, 0f, 0.0f, 0f, 2.0f],
+            "布鲁斯" => [2.0f, 2.0f, -6.0f, -2.0f, 3.0f, 1.0f, 0f, 1.0f, 0.0f, 2.0f],
+            "电子音乐" => [3.0f, 1.0f, -1.0f, 0f, 0f, -3.0f, 0f, 0f, 0f, 0f],
+            "金属" => [2.0f, 0f, 0f, -1.0f, -1.0f, -4.0f, 0f, 0f, 0f, 0f],
             _ => [0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f]
         };
     }
