@@ -11,13 +11,14 @@ public class SimpleAudioPlayer : IDisposable
     private int _stream;
 
     
-    private readonly int[] _eqHandles = new int[10]; 
+    private int _peakEqHandle = 0; 
     
     private readonly DSPProcedure _stereoDspProc;
     private int _stereoDspHandle = 0;
     
     private int _reverbHandle = 0;
     private int _chorusHandle = 0;
+    private int _echoHandle = 0;
     
     private float[] _dspBuffer = Array.Empty<float>();
     
@@ -93,11 +94,11 @@ public class SimpleAudioPlayer : IDisposable
             _endSyncProc = EndSync;
             Bass.ChannelSetSync(_stream, SyncFlags.End, 0, _endSyncProc, IntPtr.Zero);
     
-            // 每次流刷新，必须重新挂载音效
-            Array.Clear(_eqHandles, 0, _eqHandles.Length); // 清空 EQ 句柄数组
+            _peakEqHandle = 0;
             _stereoDspHandle = 0;
             _reverbHandle = 0; 
             _chorusHandle = 0; 
+            _echoHandle = 0; 
     
             ApplyEQ();
             ApplySurround();
@@ -269,23 +270,25 @@ public class SimpleAudioPlayer : IDisposable
     private void ApplyEQ()
     {
         if (_stream == 0) return;
-
-        for (int i = 0; i < 10; i++)
+        
+        if (_peakEqHandle == 0)
         {
-            if (_eqHandles[i] == 0)
-            {
-                _eqHandles[i] = Bass.ChannelSetFX(_stream, EffectType.DXParamEQ, 0);
-            }
+            _peakEqHandle = Bass.ChannelSetFX(_stream, EffectType.PeakEQ, 0);
+        }
 
-            if (_eqHandles[i] != 0)
+        if (_peakEqHandle != 0)
+        {
+            for (int i = 0; i < 10; i++)
             {
-                var eq = new DXParamEQParameters
+                var eq = new PeakEQParameters
                 {
-                    fCenter = EQFreqs[i],
-                    fBandwidth = 12f, 
-                    fGain = _currentEQ[i]
+                    lBand = i,             
+                    fCenter = EQFreqs[i],  
+                    fGain = _currentEQ[i], 
+                    fBandwidth = 1f,       
+                    fQ = 0f                
                 };
-                Bass.FXSetParameters(_eqHandles[i], eq);
+                Bass.FXSetParameters(_peakEqHandle, eq);
             }
         }
     }
@@ -310,6 +313,11 @@ public class SimpleAudioPlayer : IDisposable
             Bass.ChannelRemoveFX(_stream, _chorusHandle);
             _chorusHandle = 0;
         }
+        if (_echoHandle != 0)
+        {
+            Bass.ChannelRemoveFX(_stream, _echoHandle);
+            _echoHandle = 0;
+        }
 
         if (_surroundEnabled)
         {
@@ -317,31 +325,40 @@ public class SimpleAudioPlayer : IDisposable
             if (info.Channels == 2)
             {
                 _stereoDspHandle = Bass.ChannelSetDSP(_stream, _stereoDspProc, IntPtr.Zero, 0);
-
                 
                 _reverbHandle = Bass.ChannelSetFX(_stream, EffectType.DXReverb, 1);
                 var reverb = new DXReverbParameters
                 {
                     fInGain = 0f,
-                    fReverbMix = -12f,     
-                    fReverbTime = 1200f,   
-                    fHighFreqRTRatio = 0.1f
+                    fReverbMix = -6f,     
+                    fReverbTime = 1500f,   
+                    fHighFreqRTRatio = 0.25f
                 };
                 Bass.FXSetParameters(_reverbHandle, reverb);
                 
                 _chorusHandle = Bass.ChannelSetFX(_stream, EffectType.DXChorus, 2);
                 var chorus = new DXChorusParameters
                 {
-                    fDelay = 15f,          
-                    fDepth = 5f,           
-                    fFeedback = 0f,        
-                    fFrequency = 0.5f,     
+                    fDelay = 10f,          
+                    fDepth = 8f,           
+                    fFeedback = 10f,        
+                    fFrequency = 0.3f,     
                     lWaveform = DXWaveform.Sine,         
-                    fWetDryMix = 15f,      
+                    fWetDryMix = 20f,      
                     lPhase = DXPhase.Positive180 
                 };
                 Bass.FXSetParameters(_chorusHandle, chorus);
             }
+            
+            _echoHandle = Bass.ChannelSetFX(_stream, EffectType.Echo, 3);
+            Bass.FXSetParameters(_echoHandle, new EchoParameters
+            {
+                fDryMix = 0.9f,    
+                fWetMix = 0.15f,   
+                fFeedback = 0.2f,  
+                fDelay = 0.25f,    
+                bStereo = 0
+            });
         }
     }
     

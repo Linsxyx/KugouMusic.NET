@@ -6,15 +6,9 @@ using KugouAvaloniaPlayer.Services;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class EqBandViewModel : ObservableObject
+public partial class EqBandViewModel(EqSettingsViewModel owner) : ObservableObject
 {
-    private readonly EqSettingsViewModel _owner;
     [ObservableProperty] private float _value;
-
-    public EqBandViewModel(EqSettingsViewModel owner)
-    {
-        _owner = owner;
-    }
 
     public string Frequency { get; init; } = "";
     public int Index { get; init; }
@@ -22,17 +16,16 @@ public partial class EqBandViewModel : ObservableObject
     // 当值改变时通知父级更新
     partial void OnValueChanged(float value)
     {
-        _owner.OnBandChanged();
+        owner.OnBandChanged();
     }
 }
 
 public partial class EqSettingsViewModel : ObservableObject
 {
-    private static readonly string[] FreqLabels =
-        { "141", "234", "469", "844", "1.3k", "2.2k", "3.7k", "5.8k", "9k", "13k" };
+    private static readonly string[] FreqLabels = ["141", "234", "469", "844", "1.3k", "2.2k", "3.7k", "5.8k", "9k", "13.8k"];
 
     private readonly PlayerViewModel _player;
-    private bool _isInitializing = true;
+    private bool _isInitializing;
 
     public EqSettingsViewModel(PlayerViewModel player)
     {
