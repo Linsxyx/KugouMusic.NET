@@ -32,7 +32,7 @@ public partial class NowPlaying : UserControl
         {
             try
             {
-                ScrollToCenter(listBox, listBox.SelectedItem);
+                _ = ScrollToCenter(listBox, listBox.SelectedItem);
             }
             finally
             {

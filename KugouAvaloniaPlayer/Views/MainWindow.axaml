@@ -24,6 +24,10 @@
             <views:MyPlaylistsView />
         </DataTemplate>
 
+        <DataTemplate DataType="vm:DiscoverViewModel">
+            <views:DiscoverView />
+        </DataTemplate>
+
         <DataTemplate DataType="vm:SearchViewModel">
             <views:SearchView />
         </DataTemplate>

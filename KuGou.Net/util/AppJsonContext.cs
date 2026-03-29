@@ -70,6 +70,12 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(List<RankSongAuthor>))]
 [JsonSerializable(typeof(RankListResponse))]
 [JsonSerializable(typeof(List<RankListItem>))]
+[JsonSerializable(typeof(PlaylistTagCategory))]
+[JsonSerializable(typeof(PlaylistTagItem))]
+[JsonSerializable(typeof(List<PlaylistTagCategory>))]
+[JsonSerializable(typeof(List<PlaylistTagItem>))]
+[JsonSerializable(typeof(RecommendPlaylistResponse))]
+[JsonSerializable(typeof(List<RecommendPlaylistItem>))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }

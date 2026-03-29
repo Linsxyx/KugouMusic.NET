@@ -3,7 +3,7 @@ using Avalonia.Markup.Xaml;
 
 namespace KugouAvaloniaPlayer.Controls;
 
-public partial class  EqSettingsControl : UserControl
+public partial class EqSettingsControl : UserControl
 {
     public EqSettingsControl()
     {

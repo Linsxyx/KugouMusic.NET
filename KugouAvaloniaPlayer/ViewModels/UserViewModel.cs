@@ -8,7 +8,6 @@ using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
-using KugouAvaloniaPlayer.Views;
 using SukiUI;
 using SukiUI.Dialogs;
 

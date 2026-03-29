@@ -1,34 +1,44 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using KugouAvaloniaPlayer.ViewModels;
+using KugouAvaloniaPlayer.Views;
 
 namespace KugouAvaloniaPlayer;
 
 /// <summary>
 ///     Given a view model, returns the corresponding view if possible.
 /// </summary>
-[RequiresUnreferencedCode(
-    "Default implementation of ViewLocator involves reflection which may be trimmed away.",
-    Url = "https://docs.avaloniaui.net/docs/concepts/view-locator")]
 public class ViewLocator : IDataTemplate
 {
+    private static readonly IReadOnlyDictionary<Type, Func<Control>> ViewFactories =
+        new Dictionary<Type, Func<Control>>
+        {
+            [typeof(LoginViewModel)] = static () => new LoginView(),
+            [typeof(SearchViewModel)] = static () => new SearchView(),
+            [typeof(SingerViewModel)] = static () => new SingerView(),
+            [typeof(UserViewModel)] = static () => new UserView(),
+            [typeof(RankViewModel)] = static () => new RankView(),
+            [typeof(DailyRecommendViewModel)] = static () => new DailyRecommendView(),
+            [typeof(MyPlaylistsViewModel)] = static () => new MyPlaylistsView(),
+            [typeof(DiscoverViewModel)] = static () => new DiscoverView()
+        };
+
     public Control? Build(object? param)
     {
         if (param is null)
             return null;
 
-        var name = param.GetType().FullName!.Replace("ViewModel", "View", StringComparison.Ordinal);
-        var type = Type.GetType(name);
+        var vmType = param.GetType();
+        if (ViewFactories.TryGetValue(vmType, out var factory))
+            return factory();
 
-        if (type != null) return (Control)Activator.CreateInstance(type)!;
-
-        return new TextBlock { Text = "Not Found: " + name };
+        return new TextBlock { Text = $"Not Found: {vmType.FullName}" };
     }
 
     public bool Match(object? data)
     {
-        return data is ViewModelBase;
+        return data is ViewModelBase or PageViewModelBase;
     }
 }

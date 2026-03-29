@@ -7,8 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="ManagedBass" Version="4.0.2" />
-        <PackageReference Include="ManagedBass.Fx" Version="4.0.2" />
+        <PackageReference Include="ManagedBass" Version="4.0.2"/>
+        <PackageReference Include="ManagedBass.Fx" Version="4.0.2"/>
     </ItemGroup>
 
     <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">

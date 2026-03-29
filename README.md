@@ -23,6 +23,7 @@
 ![主界面](docs/images/main.png)
 ![搜索页面](docs/images/search.png)
 ![排行榜页面](docs/images/rank.png)
+![发现页面](docs/images/tag.png)
 ---
 
 ## 🚀 下载与安装
@@ -36,7 +37,9 @@
 
 安装后**每次启动程序会自动检查更新**，发现新版本会提示一键更新，可设置是否自动更新。
 
----
+## 👍 灵感来自
+
+### [MakcRe/KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)
 
 ## 🛠️ 本地构建（开发者）
 

@@ -53,7 +53,7 @@ internal class Program
         // 1. 初始化 SDK (替代 DI 容器)
         var (transport, sessionMgr) = KgHttpClientFactory.CreateWithSession();
         _sessionManager = sessionMgr;
-        
+
         // 组装各层 (Raw -> Client)
         var rawLogin = new RawLoginApi(transport, _sessionManager, NullLogger<RawLoginApi>.Instance);
         var rawSearch = new RawSearchApi(transport);

@@ -60,7 +60,7 @@ public static class SettingsManager
                 Settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             Settings = new AppSettings();
             //Console.WriteLine(ex.Message);
@@ -77,7 +77,7 @@ public static class SettingsManager
             var json = JsonSerializer.Serialize(Settings, JsonOptions);
             File.WriteAllText(SettingsPath, json);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             //Console.WriteLine($"[SettingsManager] 保存配置文件失败: {ex.Message}");
         }

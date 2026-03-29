@@ -15,9 +15,12 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     }
 
     [HttpGet("Tags")]
-    public async Task<IActionResult> GetDetail()
+    public async Task<IActionResult> GetTags()
     {
         var result = await playlistClient.GetTagsAsync();
+
+        if (result == null) return NotFound(new { status = 0, msg = "未获取到标签数据" });
+
         return Ok(result);
     }
 

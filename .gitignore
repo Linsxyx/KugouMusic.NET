@@ -5,8 +5,11 @@
 
 
 .vscode/
+.codex/
 .idea/
 .claude
+CLAUDE.md
 *.user
 *.suo
 *.userprefs
+*.DotSettings

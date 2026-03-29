@@ -17,6 +17,8 @@ namespace KugouAvaloniaPlayer;
 
 public partial class App : Application
 {
+    private ServiceProvider? _serviceProvider;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -49,8 +51,11 @@ public partial class App : Application
         collection.AddTransient<UserViewModel>();
         collection.AddTransient<MainWindowViewModel>();
         collection.AddTransient<DailyRecommendViewModel>();
+        collection.AddTransient<DiscoverViewModel>();
         collection.AddTransient<MyPlaylistsViewModel>();
         collection.AddTransient<EqSettingsViewModel>();
+        collection.AddTransient<ISingerViewModelFactory, SingerViewModelFactory>();
+        collection.AddSingleton<IDesktopLyricViewModelFactory, DesktopLyricViewModelFactory>();
 
         collection.AddSingleton<PlaybackQueueManager>();
         collection.AddSingleton<LyricsService>();
@@ -59,7 +64,8 @@ public partial class App : Application
 
         collection.AddTransient<RankViewModel>();
 
-        var services = collection.BuildServiceProvider();
+        _serviceProvider = collection.BuildServiceProvider();
+        var services = _serviceProvider;
 
         var vm = services.GetRequiredService<MainWindowViewModel>();
         var playerVm = services.GetRequiredService<PlayerViewModel>();
@@ -77,6 +83,7 @@ public partial class App : Application
                 ShutdownTrayIcon();
                 playerVm.Dispose();
                 SimpleAudioPlayer.Free();
+                _serviceProvider?.Dispose();
             };
         }
 

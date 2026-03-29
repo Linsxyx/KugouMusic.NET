@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Adapters.Lyrics;
@@ -6,9 +5,12 @@ using KuGou.Net.Adapters.Lyrics;
 namespace KuGou.Net.Native;
 
 public record NativeErrorResult(string Error);
+
 public record NativeBoolResult(bool Result);
 
-public record NativeAddSongItemDto(string Name, string Hash, string AlbumId, string MixSongId);[JsonSourceGenerationOptions(
+public record NativeAddSongItemDto(string Name, string Hash, string AlbumId, string MixSongId);
+
+[JsonSourceGenerationOptions(
     WriteIndented = false,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     PropertyNameCaseInsensitive = true)]
@@ -38,8 +40,8 @@ public record NativeAddSongItemDto(string Name, string Hash, string AlbumId, str
 [JsonSerializable(typeof(PlaylistInfo))]
 [JsonSerializable(typeof(AddSongResponse))]
 [JsonSerializable(typeof(RemoveSongResponse))]
-[JsonSerializable(typeof(NativeAddSongItemDto[]))] 
-[JsonSerializable(typeof(long[]))]                 
+[JsonSerializable(typeof(NativeAddSongItemDto[]))]
+[JsonSerializable(typeof(long[]))]
 // Rank
 [JsonSerializable(typeof(RankListResponse))]
 [JsonSerializable(typeof(RankSongResponse))]

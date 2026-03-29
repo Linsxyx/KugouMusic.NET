@@ -25,21 +25,19 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private const int MaxConsecutiveFailures = 5;
     private static readonly TimeSpan AudioLoadTimeout = TimeSpan.FromSeconds(12);
     private readonly FavoritePlaylistService _favoriteService;
-    private readonly KgSessionManager _sessionManager;
     private readonly ILogger<PlayerViewModel> _logger;
     private readonly LyricsService _lyricsService;
     private readonly MusicClient _musicClient;
     private readonly DispatcherTimer _playbackTimer;
 
     private readonly SimpleAudioPlayer _player;
-
-    private readonly PlaybackQueueManager _queueManager;
-    private readonly ISukiToastManager _toastManager;
     private readonly SemaphoreSlim _playSongLock = new(1, 1);
 
+    private readonly PlaybackQueueManager _queueManager;
+    private readonly KgSessionManager _sessionManager;
+    private readonly ISukiToastManager _toastManager;
+
     private int _consecutiveFailures;
-    private int _playRequestVersion;
-    private CancellationTokenSource? _loadCancellation;
 
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
     [ObservableProperty] private string _currentLyricText = "---";
@@ -50,8 +48,10 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isDraggingProgress;
     [ObservableProperty] private bool _isLiked;
     [ObservableProperty] private bool _isPlayingAudio;
+    private CancellationTokenSource? _loadCancellation;
     [ObservableProperty] private string _musicQuality = "128";
     [ObservableProperty] private float _musicVolume = 1.0f;
+    private int _playRequestVersion;
     [ObservableProperty] private double _totalDurationSeconds;
 
     public PlayerViewModel(
@@ -132,13 +132,13 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             _loadCancellation?.Dispose();
             var currentLoadCts = new CancellationTokenSource();
             _loadCancellation = currentLoadCts;
-            
+
             _queueManager.SetupQueue(song, contextList);
 
             if (CurrentPlayingSong != null) CurrentPlayingSong.IsPlaying = false;
             CurrentPlayingSong = song;
             CurrentPlayingSong.IsPlaying = true;
-            
+
             IsLiked = _favoriteService.IsLiked(song.Hash);
 
             StopAndReset();
@@ -158,7 +158,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
-                url = playData.Urls.FirstOrDefault(x => !string.IsNullOrEmpty(x));
+                url = playData.Urls?.FirstOrDefault(x => !string.IsNullOrEmpty(x));
                 _ = _lyricsService.LoadOnlineLyricsAsync(song.Hash, song.Name);
             }
 
@@ -350,14 +350,14 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     {
         await _favoriteService.LoadLikeListAsync();
     }
-    
+
 
     public void ApplyCustomEQ(float[] gains)
     {
         _player.SetEQ(gains);
         OnPropertyChanged(nameof(MusicQuality));
     }
-    
+
     public void UpdateAudioEffects(string preset, bool surround)
     {
         if (preset == "自定义")

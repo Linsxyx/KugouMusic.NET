@@ -21,19 +21,16 @@ public class RawDiscoveryApi(IKgTransport transport)
     {
         var clientTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-        // 1. 计算特殊 Key (JS: signParamsKey)
-        // 逻辑通常是: md5(appid + salt + clientver + time)
-        // 这里复用 KgSigner.CalcLoginKey 的逻辑，因为算法一致
         var key = KgSigner.CalcLoginKey(clientTime);
 
-        // 2. 计算 mid (JS: cryptoMd5(dfid))
+        // 2. 计算 mid 
         var mid = KgUtils.Md5(string.IsNullOrEmpty(dfid) ? "-" : dfid);
 
         // 3. 构建内部对象 special_recommend
         var specialRecommend = new JsonObject
         {
             ["withtag"] = 1,
-            ["withsong"] = 1,
+            ["withsong"] = 0,
             ["sort"] = 1,
             ["ugc"] = 1,
             ["is_selected"] = 0,

@@ -7,15 +7,15 @@
 
         <OutputType>Library</OutputType>
         <PublishAot>true</PublishAot>
-        
+
         <StripSymbols>true</StripSymbols>
 
-        
+
         <IsAotCompatible>true</IsAotCompatible>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\KuGou.Net\KuGou.Net.csproj" />
+        <ProjectReference Include="..\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>
 
 </Project>

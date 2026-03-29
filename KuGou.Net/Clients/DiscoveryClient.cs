@@ -22,14 +22,18 @@ public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     /// <summary>
     ///     获取推荐歌单
     /// </summary>
-    /// <param name="categoryId">分类ID，0=推荐，11292=Hi-Res</param>
+    /// <param name="categoryId">tag，0：推荐，11292：HI-RES，其他可以从 playlist/tags 接口中获取（接口下的 tag_id 为 category_id的值）</param>
     /// <param name="page">页数</param>
     /// <param name="pageSize">每页多少首歌</param>
-    public async Task<JsonElement> GetRecommendedPlaylistsAsync(int categoryId = 0, int page = 1, int pageSize = 30)
+    public async Task<RecommendPlaylistResponse?> GetRecommendedPlaylistsAsync(int categoryId = 0, int page = 1,
+        int pageSize = 30)
     {
         var uid = GetUserId();
         var dfid = GetDfid();
-        return await rawApi.GetRecommendedPlaylistsAsync(uid, dfid, categoryId, page, pageSize);
+        var json = await rawApi.GetRecommendedPlaylistsAsync(uid, dfid, categoryId, page, pageSize);
+
+        return KgApiResponseParser.Parse<RecommendPlaylistResponse>(json,
+            AppJsonContext.Default.RecommendPlaylistResponse);
     }
 
     /// <summary>

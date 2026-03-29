@@ -85,7 +85,8 @@
                         <Grid ColumnDefinitions="*, Auto, Auto">
                             <StackPanel>
                                 <TextBlock Text="音效预设" FontWeight="DemiBold" />
-                                <TextBlock Text="选择预设风格或手动调节(预设来自澎湃OS)" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+                                <TextBlock Text="选择预设风格或手动调节(预设来自澎湃OS)" FontSize="12"
+                                           Foreground="{DynamicResource SukiLiquid2}" />
                             </StackPanel>
 
                             <ComboBox Grid.Column="1"
@@ -96,7 +97,7 @@
                             <Button Grid.Column="2" Classes="Basic"
                                     Command="{Binding OpenEqSettingsCommand}"
                                     ToolTip.Tip="自定义调节">
-                                <Svg Path="/Assets/gear-svgrepo-com.svg" Width="25" Height="18"/>
+                                <Svg Path="/Assets/gear-svgrepo-com.svg" Width="25" Height="18" />
                             </Button>
                         </Grid>
                     </suki:GlassCard>

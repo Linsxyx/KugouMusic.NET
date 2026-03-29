@@ -29,11 +29,13 @@ public partial class MainWindowViewModel : ObservableObject
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private const string LikeListCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
     private readonly AuthClient _authClient;
+    private readonly IDesktopLyricViewModelFactory _desktopLyricViewModelFactory;
     private readonly DiscoveryClient _discoveryClient;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly PlaylistClient _playlistClient;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
+    private readonly ISingerViewModelFactory _singerViewModelFactory;
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
 
@@ -67,12 +69,14 @@ public partial class MainWindowViewModel : ObservableObject
         DiscoveryClient discoveryClient,
         PlaylistClient playlistClient,
         UserClient userClient,
-        MusicClient musicClient,
+        ISingerViewModelFactory singerViewModelFactory,
+        IDesktopLyricViewModelFactory desktopLyricViewModelFactory,
         LoginViewModel loginViewModel,
         SearchViewModel searchViewModel,
         UserViewModel userViewModel,
         RankViewModel rankViewModel,
         DailyRecommendViewModel dailyRecommendViewModel,
+        DiscoverViewModel discoverViewModel,
         MyPlaylistsViewModel myPlaylistsViewModel,
         ILogger<MainWindowViewModel> logger)
     {
@@ -83,12 +87,13 @@ public partial class MainWindowViewModel : ObservableObject
 
         _playlistClient = playlistClient;
         _userClient = userClient;
+        _singerViewModelFactory = singerViewModelFactory;
+        _desktopLyricViewModelFactory = desktopLyricViewModelFactory;
 
         LoginViewModel = loginViewModel;
         _searchViewModel = searchViewModel;
         _userViewModel = userViewModel;
         _logger = logger;
-        var musicClient1 = musicClient;
 
         _userViewModel.CheckForUpdateRequested += OnCheckForUpdateRequested;
 
@@ -96,6 +101,7 @@ public partial class MainWindowViewModel : ObservableObject
         ToastManager = toastManager;
 
         Pages.Add(dailyRecommendViewModel);
+        Pages.Add(discoverViewModel);
         Pages.Add(rankViewModel);
         Pages.Add(myPlaylistsViewModel);
         ActivePage = dailyRecommendViewModel;
@@ -108,6 +114,8 @@ public partial class MainWindowViewModel : ObservableObject
                 currentSongList = dailyVm.Songs;
             else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
                 currentSongList = playlistVm.SelectedPlaylistSongs;
+            else if (ActivePage is DiscoverViewModel discoverVm && discoverVm.IsShowingSongs)
+                currentSongList = discoverVm.SelectedPlaylistSongs;
             else if (ActivePage is SearchViewModel searchVm)
                 currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
             else if (ActivePage is SingerViewModel singerVm)
@@ -121,7 +129,7 @@ public partial class MainWindowViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<NavigateToSingerMessage>(this, (_, m) =>
         {
             _previousPage = ActivePage;
-            var singerVm = new SingerViewModel(musicClient1, m.Singer.Id.ToString(), m.Singer.Name);
+            var singerVm = _singerViewModelFactory.Create(m.Singer.Id.ToString(), m.Singer.Name);
             ActivePage = singerVm;
         });
 
@@ -501,7 +509,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _lyricWindow = new DesktopLyricWindow
             {
-                DataContext = new DesktopLyricViewModel(Player)
+                DataContext = _desktopLyricViewModelFactory.Create()
             };
 
             _lyricWindow.Closed += (_, _) =>

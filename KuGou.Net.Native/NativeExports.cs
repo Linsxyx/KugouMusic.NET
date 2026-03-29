@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using KuGou.Net.Clients;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Protocol.Raw;
@@ -26,14 +24,17 @@ public static class NativeExports
 
     #region 工具方法 (处理指针与序列化)
 
-    private static string GetStr(IntPtr ptr) => ptr == IntPtr.Zero ? string.Empty : Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
+    private static string GetStr(IntPtr ptr)
+    {
+        return ptr == IntPtr.Zero ? string.Empty : Marshal.PtrToStringUTF8(ptr) ?? string.Empty;
+    }
 
-    private static IntPtr ToJsonPtr<T>(T? obj, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo)
+    private static IntPtr ToJsonPtr<T>(T? obj, JsonTypeInfo<T> typeInfo)
     {
         try
         {
             if (obj == null) return Marshal.StringToCoTaskMemUTF8("null");
-            string json = JsonSerializer.Serialize(obj, typeInfo);
+            var json = JsonSerializer.Serialize(obj, typeInfo);
             return Marshal.StringToCoTaskMemUTF8(json);
         }
         catch (Exception ex)
@@ -44,7 +45,7 @@ public static class NativeExports
 
     private static IntPtr ReturnError(string msg)
     {
-        string json = JsonSerializer.Serialize(new NativeErrorResult(msg), NativeJsonContext.Default.NativeErrorResult);
+        var json = JsonSerializer.Serialize(new NativeErrorResult(msg), NativeJsonContext.Default.NativeErrorResult);
         return Marshal.StringToCoTaskMemUTF8(json);
     }
 
@@ -89,14 +90,12 @@ public static class NativeExports
             // 恢复本地 Session
             var saved = KgSessionStore.Load();
             if (saved != null && !string.IsNullOrEmpty(saved.Token))
-            {
                 if (!string.IsNullOrEmpty(saved.Dfid))
                 {
                     _sessionManager.Session.Dfid = saved.Dfid;
                     _sessionManager.Session.Mid = saved.Mid;
                     _sessionManager.Session.Uuid = saved.Uuid;
                 }
-            }
 
             return ReturnBool(true);
         }
@@ -104,7 +103,9 @@ public static class NativeExports
         {
             return ReturnError(ex.Message);
         }
-    }[UnmanagedCallersOnly(EntryPoint = "KgFreeMemory")]
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgFreeMemory")]
     public static void KgFreeMemory(IntPtr ptr)
     {
         if (ptr != IntPtr.Zero) Marshal.FreeCoTaskMem(ptr);
@@ -113,14 +114,42 @@ public static class NativeExports
     #endregion
 
     #region 1. Auth & Device
+
     [UnmanagedCallersOnly(EntryPoint = "KgAuth_SendCode")]
-    public static IntPtr KgAuth_SendCode(IntPtr mobilePtr) => ToJsonPtr(_authClient!.SendCodeAsync(GetStr(mobilePtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.SendCodeResponse);[UnmanagedCallersOnly(EntryPoint = "KgAuth_LoginByMobile")]
-    public static IntPtr KgAuth_LoginByMobile(IntPtr mobilePtr, IntPtr codePtr) => ToJsonPtr(_authClient!.LoginByMobileAsync(GetStr(mobilePtr), GetStr(codePtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.LoginResponse);
+    public static IntPtr KgAuth_SendCode(IntPtr mobilePtr)
+    {
+        return ToJsonPtr(_authClient!.SendCodeAsync(GetStr(mobilePtr)).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.SendCodeResponse);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgAuth_LoginByMobile")]
+    public static IntPtr KgAuth_LoginByMobile(IntPtr mobilePtr, IntPtr codePtr)
+    {
+        return ToJsonPtr(_authClient!.LoginByMobileAsync(GetStr(mobilePtr), GetStr(codePtr)).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.LoginResponse);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgAuth_GetQrCode")]
-    public static IntPtr KgAuth_GetQrCode() => ToJsonPtr(_authClient!.GetQrCodeAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.QRCode);[UnmanagedCallersOnly(EntryPoint = "KgAuth_CheckQrStatus")]
-    public static IntPtr KgAuth_CheckQrStatus(IntPtr keyPtr) => ToJsonPtr(_authClient!.CheckQrStatusAsync(GetStr(keyPtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.QrLoginStatusResponse);[UnmanagedCallersOnly(EntryPoint = "KgAuth_RefreshSession")]
-    public static IntPtr KgAuth_RefreshSession() => ToJsonPtr(_authClient!.RefreshSessionAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.RefreshTokenResponse);[UnmanagedCallersOnly(EntryPoint = "KgAuth_LogOut")]
+    public static IntPtr KgAuth_GetQrCode()
+    {
+        return ToJsonPtr(_authClient!.GetQrCodeAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.QRCode);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgAuth_CheckQrStatus")]
+    public static IntPtr KgAuth_CheckQrStatus(IntPtr keyPtr)
+    {
+        return ToJsonPtr(_authClient!.CheckQrStatusAsync(GetStr(keyPtr)).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.QrLoginStatusResponse);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgAuth_RefreshSession")]
+    public static IntPtr KgAuth_RefreshSession()
+    {
+        return ToJsonPtr(_authClient!.RefreshSessionAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.RefreshTokenResponse);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgAuth_LogOut")]
     public static IntPtr KgAuth_LogOut()
     {
         _authClient!.LogOutAsync();
@@ -128,95 +157,203 @@ public static class NativeExports
     }
 
     [UnmanagedCallersOnly(EntryPoint = "KgDevice_InitDevice")]
-    public static IntPtr KgDevice_InitDevice() => ReturnBool(_deviceClient!.InitDeviceAsync().GetAwaiter().GetResult());
+    public static IntPtr KgDevice_InitDevice()
+    {
+        return ReturnBool(_deviceClient!.InitDeviceAsync().GetAwaiter().GetResult());
+    }
 
     #endregion
 
     #region 2. Discovery & Lyric
+
     [UnmanagedCallersOnly(EntryPoint = "KgDiscovery_GetRecommendedSongs")]
-    public static IntPtr KgDiscovery_GetRecommendedSongs() => ToJsonPtr(_discoveryClient!.GetRecommendedSongsAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.DailyRecommendResponse);
+    public static IntPtr KgDiscovery_GetRecommendedSongs()
+    {
+        return ToJsonPtr(_discoveryClient!.GetRecommendedSongsAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.DailyRecommendResponse);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgLyric_GetLyric")]
-    public static IntPtr KgLyric_GetLyric(IntPtr idPtr, IntPtr accessKeyPtr, IntPtr fmtPtr, int decode) => 
-        ToJsonPtr(_lyricClient!.GetLyricAsync(GetStr(idPtr), GetStr(accessKeyPtr), GetStr(fmtPtr), decode == 1).GetAwaiter().GetResult(), NativeJsonContext.Default.LyricResult);
+    public static IntPtr KgLyric_GetLyric(IntPtr idPtr, IntPtr accessKeyPtr, IntPtr fmtPtr, int decode)
+    {
+        return ToJsonPtr(
+            _lyricClient!.GetLyricAsync(GetStr(idPtr), GetStr(accessKeyPtr), GetStr(fmtPtr), decode == 1).GetAwaiter()
+                .GetResult(), NativeJsonContext.Default.LyricResult);
+    }
 
     #endregion
 
     #region 3. Music (Search)
+
     [UnmanagedCallersOnly(EntryPoint = "KgMusic_Search")]
-    public static IntPtr KgMusic_Search(IntPtr keywordPtr, int page, IntPtr typePtr) => ToJsonPtr(_musicClient!.SearchAsync(GetStr(keywordPtr), page, GetStr(typePtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.ListSongInfo);
+    public static IntPtr KgMusic_Search(IntPtr keywordPtr, int page, IntPtr typePtr)
+    {
+        return ToJsonPtr(_musicClient!.SearchAsync(GetStr(keywordPtr), page, GetStr(typePtr)).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.ListSongInfo);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgMusic_GetPlayInfo")]
-    public static IntPtr KgMusic_GetPlayInfo(IntPtr hashPtr, IntPtr qualityPtr) => ToJsonPtr(_musicClient!.GetPlayInfoAsync(GetStr(hashPtr), GetStr(qualityPtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.PlayUrlData);[UnmanagedCallersOnly(EntryPoint = "KgMusic_GetSearchHot")]
-    public static IntPtr KgMusic_GetSearchHot() => ToJsonPtr(_musicClient!.GetSearchHotAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.SearchHotResponse);
+    public static IntPtr KgMusic_GetPlayInfo(IntPtr hashPtr, IntPtr qualityPtr)
+    {
+        return ToJsonPtr(_musicClient!.GetPlayInfoAsync(GetStr(hashPtr), GetStr(qualityPtr)).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.PlayUrlData);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgMusic_GetSearchHot")]
+    public static IntPtr KgMusic_GetSearchHot()
+    {
+        return ToJsonPtr(_musicClient!.GetSearchHotAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.SearchHotResponse);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgMusic_GetSingerSongs")]
-    public static IntPtr KgMusic_GetSingerSongs(IntPtr authorIdPtr, int page, int pageSize, IntPtr sortPtr) => ToJsonPtr(_musicClient!.GetSingerSongsAsync(GetStr(authorIdPtr), page, pageSize, GetStr(sortPtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.SingerAudioResponse);
+    public static IntPtr KgMusic_GetSingerSongs(IntPtr authorIdPtr, int page, int pageSize, IntPtr sortPtr)
+    {
+        return ToJsonPtr(
+            _musicClient!.GetSingerSongsAsync(GetStr(authorIdPtr), page, pageSize, GetStr(sortPtr)).GetAwaiter()
+                .GetResult(), NativeJsonContext.Default.SingerAudioResponse);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgMusic_GetSingerDetail")]
-    public static IntPtr KgMusic_GetSingerDetail(IntPtr authorIdPtr) => ToJsonPtr(_musicClient!.GetSingerDetailAsync(GetStr(authorIdPtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.SingerDetailResponse);
+    public static IntPtr KgMusic_GetSingerDetail(IntPtr authorIdPtr)
+    {
+        return ToJsonPtr(_musicClient!.GetSingerDetailAsync(GetStr(authorIdPtr)).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.SingerDetailResponse);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgMusic_SearchPlaylists")]
-    public static IntPtr KgMusic_SearchPlaylists(IntPtr keywordPtr, int page) => ToJsonPtr(_musicClient!.SearchSpecialAsync(GetStr(keywordPtr), page).GetAwaiter().GetResult(), NativeJsonContext.Default.ListSearchPlaylistItem);
+    public static IntPtr KgMusic_SearchPlaylists(IntPtr keywordPtr, int page)
+    {
+        return ToJsonPtr(_musicClient!.SearchSpecialAsync(GetStr(keywordPtr), page).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.ListSearchPlaylistItem);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgMusic_SearchAlbums")]
-    public static IntPtr KgMusic_SearchAlbums(IntPtr keywordPtr, int page) => ToJsonPtr(_musicClient!.SearchAlbumAsync(GetStr(keywordPtr), page).GetAwaiter().GetResult(), NativeJsonContext.Default.ListSearchAlbumItem);
+    public static IntPtr KgMusic_SearchAlbums(IntPtr keywordPtr, int page)
+    {
+        return ToJsonPtr(_musicClient!.SearchAlbumAsync(GetStr(keywordPtr), page).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.ListSearchAlbumItem);
+    }
 
     #endregion
 
     #region 4. Playlist & Album & Rank
+
     [UnmanagedCallersOnly(EntryPoint = "KgPlaylist_GetSongs")]
-    public static IntPtr KgPlaylist_GetSongs(IntPtr playlistIdPtr, int page, int pageSize) => ToJsonPtr(_playlistClient!.GetSongsAsync(GetStr(playlistIdPtr), page, pageSize).GetAwaiter().GetResult(), NativeJsonContext.Default.ListPlaylistSong);
+    public static IntPtr KgPlaylist_GetSongs(IntPtr playlistIdPtr, int page, int pageSize)
+    {
+        return ToJsonPtr(_playlistClient!.GetSongsAsync(GetStr(playlistIdPtr), page, pageSize).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.ListPlaylistSong);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgPlaylist_GetInfo")]
-    public static IntPtr KgPlaylist_GetInfo(IntPtr playlistIdPtr) => ToJsonPtr(_playlistClient!.GetInfoAsync(GetStr(playlistIdPtr)).GetAwaiter().GetResult(), NativeJsonContext.Default.PlaylistInfo);
+    public static IntPtr KgPlaylist_GetInfo(IntPtr playlistIdPtr)
+    {
+        return ToJsonPtr(_playlistClient!.GetInfoAsync(GetStr(playlistIdPtr)).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.PlaylistInfo);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgPlaylist_AddSongs")]
     public static IntPtr KgPlaylist_AddSongs(IntPtr playlistIdPtr, IntPtr jsonSongsPtr)
     {
         try
         {
-            var dtoList = JsonSerializer.Deserialize(GetStr(jsonSongsPtr), NativeJsonContext.Default.NativeAddSongItemDtoArray);
+            var dtoList = JsonSerializer.Deserialize(GetStr(jsonSongsPtr),
+                NativeJsonContext.Default.NativeAddSongItemDtoArray);
             var tupleList = dtoList?.Select(x => (x.Name, x.Hash, x.AlbumId, x.MixSongId)).ToList();
-            var res = _playlistClient!.AddSongsAsync(GetStr(playlistIdPtr), tupleList ?? new()).GetAwaiter().GetResult();
+            var res = _playlistClient!.AddSongsAsync(GetStr(playlistIdPtr),
+                    tupleList ?? new List<(string Name, string Hash, string AlbumId, string MixSongId)>()).GetAwaiter()
+                .GetResult();
             return ToJsonPtr(res, NativeJsonContext.Default.AddSongResponse);
         }
         catch (Exception ex)
         {
             return ReturnError(ex.Message);
         }
-    }[UnmanagedCallersOnly(EntryPoint = "KgPlaylist_RemoveSongs")]
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgPlaylist_RemoveSongs")]
     public static IntPtr KgPlaylist_RemoveSongs(IntPtr playlistIdPtr, IntPtr jsonFileIdsPtr)
     {
         try
         {
             var ids = JsonSerializer.Deserialize(GetStr(jsonFileIdsPtr), NativeJsonContext.Default.Int64Array);
-            var res = _playlistClient!.RemoveSongsAsync(GetStr(playlistIdPtr), ids ?? Array.Empty<long>()).GetAwaiter().GetResult();
+            var res = _playlistClient!.RemoveSongsAsync(GetStr(playlistIdPtr), ids ?? Array.Empty<long>()).GetAwaiter()
+                .GetResult();
             return ToJsonPtr(res, NativeJsonContext.Default.RemoveSongResponse);
         }
         catch (Exception ex)
         {
             return ReturnError(ex.Message);
         }
-    }[UnmanagedCallersOnly(EntryPoint = "KgAlbum_GetSongs")]
-    public static IntPtr KgAlbum_GetSongs(IntPtr albumIdPtr, int page, int pageSize) => ToJsonPtr(_albumClient!.GetSongsAsync(GetStr(albumIdPtr), page, pageSize).GetAwaiter().GetResult(), NativeJsonContext.Default.ListAlbumSongItem);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgAlbum_GetSongs")]
+    public static IntPtr KgAlbum_GetSongs(IntPtr albumIdPtr, int page, int pageSize)
+    {
+        return ToJsonPtr(_albumClient!.GetSongsAsync(GetStr(albumIdPtr), page, pageSize).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.ListAlbumSongItem);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgRank_GetAllRanks")]
-    public static IntPtr KgRank_GetAllRanks(int withSong) => ToJsonPtr(_rankClient!.GetAllRanksAsync(withSong).GetAwaiter().GetResult(), NativeJsonContext.Default.RankListResponse);[UnmanagedCallersOnly(EntryPoint = "KgRank_GetRankSongs")]
-    public static IntPtr KgRank_GetRankSongs(int rankId, int page, int pageSize) => ToJsonPtr(_rankClient!.GetRankSongsAsync(rankId, page, pageSize).GetAwaiter().GetResult(), NativeJsonContext.Default.RankSongResponse);
+    public static IntPtr KgRank_GetAllRanks(int withSong)
+    {
+        return ToJsonPtr(_rankClient!.GetAllRanksAsync(withSong).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.RankListResponse);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgRank_GetRankSongs")]
+    public static IntPtr KgRank_GetRankSongs(int rankId, int page, int pageSize)
+    {
+        return ToJsonPtr(_rankClient!.GetRankSongsAsync(rankId, page, pageSize).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.RankSongResponse);
+    }
 
     #endregion
 
     #region 5. User & VIP
+
     [UnmanagedCallersOnly(EntryPoint = "KgUser_GetUserInfo")]
-    public static IntPtr KgUser_GetUserInfo() => ToJsonPtr(_userClient!.GetUserInfoAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.UserDetailModel);
+    public static IntPtr KgUser_GetUserInfo()
+    {
+        return ToJsonPtr(_userClient!.GetUserInfoAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.UserDetailModel);
+    }
 
     [UnmanagedCallersOnly(EntryPoint = "KgUser_GetVipInfo")]
-    public static IntPtr KgUser_GetVipInfo() => ToJsonPtr(_userClient!.GetVipInfoAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.UserVipResponse);[UnmanagedCallersOnly(EntryPoint = "KgUser_GetVipRecord")]
-    public static IntPtr KgUser_GetVipRecord() => ToJsonPtr(_userClient!.GetVipRecordAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.VipReceiveHistoryResponse);[UnmanagedCallersOnly(EntryPoint = "KgUser_GetPlaylists")]
-    public static IntPtr KgUser_GetPlaylists(int page, int pageSize) => ToJsonPtr(_userClient!.GetPlaylistsAsync(page, pageSize).GetAwaiter().GetResult(), NativeJsonContext.Default.UserPlaylistResponse);[UnmanagedCallersOnly(EntryPoint = "KgUser_ReceiveOneDayVip")]
-    public static IntPtr KgUser_ReceiveOneDayVip() => ToJsonPtr(_userClient!.ReceiveOneDayVipAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.OneDayVipModel);[UnmanagedCallersOnly(EntryPoint = "KgUser_UpgradeVipReward")]
-    public static IntPtr KgUser_UpgradeVipReward() => ToJsonPtr(_userClient!.UpgradeVipRewardAsync().GetAwaiter().GetResult(), NativeJsonContext.Default.UpgradeVipModel);
+    public static IntPtr KgUser_GetVipInfo()
+    {
+        return ToJsonPtr(_userClient!.GetVipInfoAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.UserVipResponse);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgUser_GetVipRecord")]
+    public static IntPtr KgUser_GetVipRecord()
+    {
+        return ToJsonPtr(_userClient!.GetVipRecordAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.VipReceiveHistoryResponse);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgUser_GetPlaylists")]
+    public static IntPtr KgUser_GetPlaylists(int page, int pageSize)
+    {
+        return ToJsonPtr(_userClient!.GetPlaylistsAsync(page, pageSize).GetAwaiter().GetResult(),
+            NativeJsonContext.Default.UserPlaylistResponse);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgUser_ReceiveOneDayVip")]
+    public static IntPtr KgUser_ReceiveOneDayVip()
+    {
+        return ToJsonPtr(_userClient!.ReceiveOneDayVipAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.OneDayVipModel);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "KgUser_UpgradeVipReward")]
+    public static IntPtr KgUser_UpgradeVipReward()
+    {
+        return ToJsonPtr(_userClient!.UpgradeVipRewardAsync().GetAwaiter().GetResult(),
+            NativeJsonContext.Default.UpgradeVipModel);
+    }
 
     #endregion
 }

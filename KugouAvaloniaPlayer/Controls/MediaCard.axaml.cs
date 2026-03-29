@@ -28,7 +28,7 @@ public partial class MediaCard : UserControl
     public static readonly StyledProperty<object?> OverlayContentProperty =
         AvaloniaProperty.Register<MediaCard, object?>(nameof(OverlayContent));
 
-    public static readonly StyledProperty<ContextMenu?> ContextMenuProperty =
+    public new static readonly StyledProperty<ContextMenu?> ContextMenuProperty =
         AvaloniaProperty.Register<MediaCard, ContextMenu?>(nameof(ContextMenu));
 
     public MediaCard()
@@ -78,7 +78,7 @@ public partial class MediaCard : UserControl
         set => SetValue(OverlayContentProperty, value);
     }
 
-    public ContextMenu? ContextMenu
+    public new ContextMenu? ContextMenu
     {
         get => GetValue(ContextMenuProperty);
         set => SetValue(ContextMenuProperty, value);

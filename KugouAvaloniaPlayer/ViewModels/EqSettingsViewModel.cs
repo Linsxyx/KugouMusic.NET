@@ -22,7 +22,8 @@ public partial class EqBandViewModel(EqSettingsViewModel owner) : ObservableObje
 
 public partial class EqSettingsViewModel : ObservableObject
 {
-    private static readonly string[] FreqLabels = ["141", "234", "469", "844", "1.3k", "2.2k", "3.7k", "5.8k", "9k", "13.8k"];
+    private static readonly string[] FreqLabels =
+        ["141", "234", "469", "844", "1.3k", "2.2k", "3.7k", "5.8k", "9k", "13.8k"];
 
     private readonly PlayerViewModel _player;
     private bool _isInitializing;

@@ -1,0 +1,170 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             x:Class="KugouAvaloniaPlayer.Views.DiscoverView"
+             x:DataType="vm:DiscoverViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ItemsControl.MainTagList ContentPresenter">
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+        <Style Selector="ItemsControl.MainTagList TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style Selector="ItemsControl.SubTagList ContentPresenter">
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+        <Style Selector="ItemsControl.SubTagList TextBlock">
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="15">
+        <Grid IsVisible="{Binding !IsShowingSongs}" RowDefinitions="Auto,Auto,*">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,12">
+                <TextBlock Text="发现歌单" FontSize="28" FontWeight="Bold" />
+                <Button Classes="Basic" Command="{Binding LoadTagsCommand}" Cursor="Hand">
+                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="{DynamicResource SukiLowText}" />
+                </Button>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Spacing="15" Margin="0,0,0,12">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <ItemsControl Classes="MainTagList"
+                                  ItemsSource="{Binding Categories}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Classes="Segmented"
+                                             GroupName="MainTags"
+                                             IsChecked="{Binding $parent[UserControl].((vm:DiscoverViewModel)DataContext).SelectedMainIndex, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding Index}}"
+                                             Command="{Binding $parent[UserControl].((vm:DiscoverViewModel)DataContext).SelectMainCategoryCommand}"
+                                             CommandParameter="{Binding Index}">
+                                    <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
+                                </RadioButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <ItemsControl Classes="SubTagList"
+                                  ItemsSource="{Binding CurrentSubCategories}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <RadioButton Classes="Segmented"
+                                             GroupName="SubTags"
+                                             IsChecked="{Binding $parent[UserControl].((vm:DiscoverViewModel)DataContext).SelectedSubIndex, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding Index}}"
+                                             Command="{Binding $parent[UserControl].((vm:DiscoverViewModel)DataContext).SelectSubCategoryCommand}"
+                                             CommandParameter="{Binding Index}">
+                                    <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
+                                </RadioButton>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+
+            <Grid Grid.Row="2">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="10"
+                            IsVisible="{Binding IsLoading}">
+                    <suki:Loading Width="24" Height="24" />
+                    <TextBlock Text="正在加载歌单..." VerticalAlignment="Center"
+                               Foreground="{DynamicResource SukiLiquid2}" />
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding !IsLoading}" Padding="0,0,0,-50">
+                    <ItemsControl ItemsSource="{Binding Playlists}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <localControls:MediaCard Cover="{Binding Cover}"
+                                                         Title="{Binding Name}"
+                                                         Subtitle="{Binding PlayCount, StringFormat='播放 {0}'}"
+                                                         Command="{Binding $parent[UserControl].((vm:DiscoverViewModel)DataContext).OpenPlaylistCommand}"
+                                                         CommandParameter="{Binding .}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <Grid IsVisible="{Binding IsShowingSongs}" RowDefinitions="Auto,*">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*">
+                <Border Width="80" Height="80" CornerRadius="8" ClipToBounds="True"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <controls:AsyncImage Source="{Binding SelectedPlaylist.Cover}" Stretch="UniformToFill" />
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0">
+                    <TextBlock Text="{Binding SelectedPlaylist.Name}" FontSize="28" FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis" MaxWidth="560" />
+                    <TextBlock Text="{Binding SelectedPlaylist.CreatorName, StringFormat='by {0}'}"
+                               Foreground="{DynamicResource SukiLiquid2}" />
+                </StackPanel>
+
+                <Button Grid.Column="2" Command="{Binding CollectPlaylistCommand}"
+                        Classes="Standard Icon" HorizontalAlignment="Right" Margin="10,0" ToolTip.Tip="收藏">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <PathIcon Data="{x:Static suki:Icons.Star}" />
+                    </StackPanel>
+                </Button>
+
+                <Button Grid.Column="3" Command="{Binding GoBackCommand}" Classes="Basic" HorizontalAlignment="Right"
+                        Cursor="Hand">
+                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}"
+                              Width="28" Height="28" />
+                </Button>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1"
+                          Padding="0,0,0,-80"
+                          Margin="0,15,0,0"
+                          ScrollChanged="OnScrollChanged">
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding SelectedPlaylistSongs}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <localControls:SongListItemControl />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Margin="10"
+                                Spacing="10"
+                                IsVisible="{Binding IsLoadingMoreSongs}">
+                        <suki:Loading Width="20" Height="20" />
+                        <TextBlock Text="正在加载歌曲..." VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SukiLiquid2}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

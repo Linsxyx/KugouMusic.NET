@@ -39,9 +39,11 @@ public class PlaylistClient(RawPlaylistApi rawApi, KgSessionManager sessionManag
     }
 
 
-    public async Task<JsonElement?> GetTagsAsync()
+    public async Task<List<PlaylistTagCategory>?> GetTagsAsync()
     {
-        return await rawApi.GetPlaylistTagsAsync();
+        var json = await rawApi.GetPlaylistTagsAsync();
+        return KgApiResponseParser.Parse<List<PlaylistTagCategory>>(json,
+            AppJsonContext.Default.ListPlaylistTagCategory);
     }
 
 

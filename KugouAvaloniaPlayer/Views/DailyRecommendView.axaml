@@ -18,8 +18,7 @@
                     <Color x:Key="ACGTextShadow">#40003366</Color>
                 </ResourceDictionary>
 
-                <ResourceDictionary x:Key="Dark">
-                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark" />
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
