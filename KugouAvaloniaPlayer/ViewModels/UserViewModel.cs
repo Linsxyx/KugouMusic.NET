@@ -60,7 +60,7 @@ public partial class UserViewModel : PageViewModelBase
 
 
     public override string DisplayName => "用户中心";
-    public override string Icon => "/Assets/user-svgrepo-com.svg";
+    public override string Icon => "avares://KugouAvaloniaPlayer/Assets/default_singer.png";
 
 
     public CloseBehavior[] AvailableCloseBehaviors { get; } = Enum.GetValues<CloseBehavior>();

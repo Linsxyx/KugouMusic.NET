@@ -34,7 +34,7 @@ public partial class SingerViewModel : PageViewModelBase
     }
 
     public override string DisplayName => "歌手详情";
-    public override string Icon => "/Assets/user-svgrepo-com.svg";
+    public override string Icon => "avares://KugouAvaloniaPlayer/Assets/default_singer.png";
 
     public AvaloniaList<SongItem> Songs { get; } = new();
 
