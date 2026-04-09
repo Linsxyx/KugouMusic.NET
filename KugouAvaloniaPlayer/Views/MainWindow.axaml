@@ -13,38 +13,7 @@
                  Icon="/Assets/Test.ico"
                  Title="KuGou Avalonia Player"
                  BackgroundStyle="Bubble">
-
-    <suki:SukiWindow.DataTemplates>
-
-        <DataTemplate DataType="vm:DailyRecommendViewModel">
-            <views:DailyRecommendView />
-        </DataTemplate>
-
-        <DataTemplate DataType="vm:MyPlaylistsViewModel">
-            <views:MyPlaylistsView />
-        </DataTemplate>
-
-        <DataTemplate DataType="vm:DiscoverViewModel">
-            <views:DiscoverView />
-        </DataTemplate>
-
-        <DataTemplate DataType="vm:SearchViewModel">
-            <views:SearchView />
-        </DataTemplate>
-
-        <DataTemplate DataType="vm:SingerViewModel">
-            <views:SingerView />
-        </DataTemplate>
-
-        <DataTemplate DataType="vm:RankViewModel">
-            <views:RankView />
-        </DataTemplate>
-
-        <DataTemplate DataType="vm:UserViewModel">
-            <views:UserView />
-        </DataTemplate>
-    </suki:SukiWindow.DataTemplates>
-
+    
     <suki:SukiWindow.Styles>
         <!-- 遮罩层动画 -->
         <Style Selector="Border#QueueBackdrop">
