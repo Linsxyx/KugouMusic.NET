@@ -18,6 +18,7 @@
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SegmentedStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/GorgeousThemeSwitch.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SmoothScrollViewStyles.axaml" />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/MeasuredLyricScrollViewStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SongListStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/LyricKaraokeStyles.axaml" />
     </Application.Styles>

@@ -215,11 +215,12 @@
                     </StackPanel>
                 </StackPanel>
 
-                <controls1:SmoothScrollView Grid.Column="1"
-                                            ItemsSource="{Binding Player.LyricLines}"
-                                            SelectedItem="{Binding Player.CurrentLyricLine}"
-                                            Margin="60,0,0,0">
-                    <controls1:SmoothScrollView.ItemTemplate>
+                <controls1:MeasuredLyricScrollView Grid.Column="1"
+                                                   ItemsSource="{Binding Player.LyricLines}"
+                                                   ActiveItem="{Binding Player.CurrentLyricLine}"
+                                                   LineSpacing="22"
+                                                   Margin="60,0,0,0">
+                    <controls1:MeasuredLyricScrollView.ItemTemplate>
                         <DataTemplate DataType="vm:LyricLineViewModel">
                             <StackPanel Margin="0,15">
                                 <TextBlock Text="{Binding Content}"
@@ -280,8 +281,8 @@
                                 </ItemsControl>
                             </StackPanel>
                         </DataTemplate>
-                    </controls1:SmoothScrollView.ItemTemplate>
-                </controls1:SmoothScrollView>
+                    </controls1:MeasuredLyricScrollView.ItemTemplate>
+                </controls1:MeasuredLyricScrollView>
 
                 <TextBlock Grid.Column="1" Text="暂无歌词"
                            IsVisible="{Binding !Player.LyricLines.Count}"
