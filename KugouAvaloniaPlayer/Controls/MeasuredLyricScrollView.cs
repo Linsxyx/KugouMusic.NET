@@ -3,15 +3,18 @@ using System.Collections;
 using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Media;
 using Avalonia.Threading;
 
 namespace KugouAvaloniaPlayer.Controls;
 
 public class MeasuredLyricScrollView : ItemsControl
 {
+    private const int StaggerRange = 3;
+    private const int StaggerStepMs = 60;
+
     public static readonly StyledProperty<object?> ActiveItemProperty =
         AvaloniaProperty.Register<MeasuredLyricScrollView, object?>(nameof(ActiveItem));
 
@@ -26,6 +29,9 @@ public class MeasuredLyricScrollView : ItemsControl
 
     private readonly DispatcherTimer _userScrollResetTimer;
     private INotifyCollectionChanged? _collectionChangedSource;
+    private bool _deferredActiveItemUpdate;
+    private bool _isUserScrolling;
+    private int? _lockedActiveIndex;
     private bool _layoutUpdateQueued;
     private double _manualOffset;
 
@@ -73,8 +79,19 @@ public class MeasuredLyricScrollView : ItemsControl
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == ActiveItemProperty ||
-            change.Property == BoundsProperty ||
+        if (change.Property == ActiveItemProperty)
+        {
+            if (_isUserScrolling)
+            {
+                _deferredActiveItemUpdate = true;
+                return;
+            }
+
+            QueueLayoutUpdate();
+            return;
+        }
+
+        if (change.Property == BoundsProperty ||
             change.Property == LineSpacingProperty ||
             change.Property == ScrollDurationProperty)
         {
@@ -95,6 +112,10 @@ public class MeasuredLyricScrollView : ItemsControl
 
         if (ItemCount == 0) return;
 
+        if (!_isUserScrolling)
+            _lockedActiveIndex = GetActiveIndex();
+
+        _isUserScrolling = true;
         _manualOffset += e.Delta.Y * WheelStep;
 
         _userScrollResetTimer.Stop();
@@ -107,7 +128,13 @@ public class MeasuredLyricScrollView : ItemsControl
     private void OnUserScrollTimeout(object? sender, EventArgs e)
     {
         _userScrollResetTimer.Stop();
+        _isUserScrolling = false;
+        _lockedActiveIndex = null;
         _manualOffset = 0;
+
+        if (_deferredActiveItemUpdate)
+            _deferredActiveItemUpdate = false;
+
         QueueLayoutUpdate();
     }
 
@@ -137,6 +164,7 @@ public class MeasuredLyricScrollView : ItemsControl
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
+        if (_isUserScrolling) return;
         QueueLayoutUpdate();
     }
 
@@ -156,9 +184,12 @@ public class MeasuredLyricScrollView : ItemsControl
     {
         if (ItemCount == 0 || Bounds.Height <= 0 || Bounds.Width <= 0) return;
 
-        var activeIndex = GetActiveIndex();
+        var activeIndex = _isUserScrolling
+            ? _lockedActiveIndex ?? GetActiveIndex()
+            : GetActiveIndex();
         if (activeIndex < 0 || activeIndex >= ItemCount)
             activeIndex = 0;
+        var staggerAnchorIndex = Math.Clamp(activeIndex + 1, 0, ItemCount - 1);
 
         var heights = new double[ItemCount];
         for (var i = 0; i < ItemCount; i++)
@@ -180,7 +211,9 @@ public class MeasuredLyricScrollView : ItemsControl
         {
             if (ContainerFromIndex(i) is not Control container) continue;
 
-            EnsureTransitions(container);
+            var topDelay = _isUserScrolling ? TimeSpan.Zero : GetTopTransitionDelay(i, staggerAnchorIndex);
+            var topDuration = _isUserScrolling ? TimeSpan.Zero : ScrollDuration;
+            EnsureTransitions(container, topDelay, topDuration);
 
             var targetCenterY = centerY;
 
@@ -217,22 +250,54 @@ public class MeasuredLyricScrollView : ItemsControl
         return -1;
     }
 
-    private void EnsureTransitions(Control container)
+    private static TimeSpan GetTopTransitionDelay(int index, int activeIndex)
     {
-        if (container.Transitions?.Count > 0) return;
+        var delta = index - activeIndex;
+        if (Math.Abs(delta) > StaggerRange)
+            return TimeSpan.Zero;
+        var delayMs = (StaggerRange + delta) * StaggerStepMs;
+        return TimeSpan.FromMilliseconds(Math.Max(0, delayMs));
+    }
 
-        container.Transitions = new Transitions
+    private void EnsureTransitions(Control container, TimeSpan topDelay, TimeSpan topDuration)
+    {
+        if (container.Transitions is not Transitions transitions || transitions.Count < 2)
         {
-            new DoubleTransition
+            transitions = new Transitions
             {
-                Property = Canvas.TopProperty,
-                Duration = ScrollDuration
-            },
-            new DoubleTransition
-            {
-                Property = Visual.OpacityProperty,
-                Duration = TimeSpan.FromMilliseconds(320)
-            }
-        };
+                new DoubleTransition
+                {
+                    Property = Canvas.TopProperty,
+                    Duration = topDuration,
+                    Delay = topDelay,
+                    Easing = new CubicEaseOut()
+                },
+                new DoubleTransition
+                {
+                    Property = OpacityProperty,
+                    Duration = TimeSpan.FromMilliseconds(320),
+                    Delay = TimeSpan.Zero,
+                    Easing = new CubicEaseOut()
+                }
+            };
+            container.Transitions = transitions;
+            return;
+        }
+
+        if (transitions[0] is DoubleTransition topTransition)
+        {
+            topTransition.Property = Canvas.TopProperty;
+            topTransition.Duration = topDuration;
+            topTransition.Delay = topDelay;
+            topTransition.Easing = new CubicEaseOut();
+        }
+
+        if (transitions[1] is DoubleTransition opacityTransition)
+        {
+            opacityTransition.Property = OpacityProperty;
+            opacityTransition.Duration = TimeSpan.FromMilliseconds(320);
+            opacityTransition.Delay = TimeSpan.Zero;
+            opacityTransition.Easing = new CubicEaseOut();
+        }
     }
 }
