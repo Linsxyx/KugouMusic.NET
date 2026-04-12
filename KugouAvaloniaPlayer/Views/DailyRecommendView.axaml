@@ -94,7 +94,7 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      Padding="0,0,0,80">
                 <ListBox.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate DataType="vm:SongItem">
                         <localControls:SongListItemControl />
                     </DataTemplate>
                 </ListBox.ItemTemplate>

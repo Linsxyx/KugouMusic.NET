@@ -45,45 +45,27 @@
             </Setter>
         </Style>
 
-        <Style Selector="TextBlock.LyricText">
-            <Setter Property="FontSize" Value="24" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="Opacity" Value="0.4" />
-            <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut" />
-                    <DoubleTransition Property="FontSize" Duration="0:0:0.4" Easing="CubicEaseOut" />
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.4" Easing="CubicEaseOut" />
-                    <EffectTransition Property="Effect" Duration="0:0:0.4" Easing="CubicEaseOut" />
-                </Transitions>
-            </Setter>
-            <Setter Property="RenderTransform" Value="scale(0.9)" />
-            <Setter Property="Effect" Value="blur(1)" />
+        <Style Selector="TextBlock.NowPlayingLine">
+            <Setter Property="FontSize" Value="26" />
         </Style>
 
-        <Style Selector="TextBlock.LyricText.active">
-            <Setter Property="Opacity" Value="1.0" />
-            <Setter Property="FontSize" Value="32" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="RenderTransform" Value="scale(1.0)" />
-            <Setter Property="Effect" Value="blur(0)" />
+        <Style Selector="TextBlock.NowPlayingWord">
+            <Setter Property="FontSize" Value="26" />
         </Style>
 
-        <!-- 翻译行样式 -->
-        <Style Selector="TextBlock.TransText">
+        <Style Selector="TextBlock.NowPlayingTrans">
             <Setter Property="FontSize" Value="16" />
-            <Setter Property="Foreground" Value="#CCFFFFFF" />
-            <Setter Property="Opacity" Value="0.6" />
             <Setter Property="Margin" Value="0,5,0,0" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" />
-                </Transitions>
-            </Setter>
         </Style>
-        <Style Selector="TextBlock.TransText.active">
-            <Setter Property="Opacity" Value="1.0" />
+
+        <Style Selector="Slider.NowPlayingVolume">
+            <Setter Property="Background" Value="#40FFFFFF" />
+            <Setter Property="Foreground" Value="#F2FFFFFF" />
+            <Setter Property="MinHeight" Value="24" />
+        </Style>
+
+        <Style Selector="Slider.NowPlayingVolume:pointerover /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Opacity" Value="1" />
         </Style>
 
     </UserControl.Styles>
@@ -136,9 +118,18 @@
                         <TextBlock Text="{Binding Player.CurrentPlayingSong.Singer}"
                                    FontSize="18" Foreground="#DDFFFFFF"
                                    TextTrimming="CharacterEllipsis" />
-                        <Grid RowDefinitions="Auto, Auto" VerticalAlignment="Center"
+                        <Grid RowDefinitions="Auto, Auto, Auto" VerticalAlignment="Center"
                               HorizontalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
+                                <Button Cursor="Hand"
+                                        Command="{Binding ToggleNowPlayingVolumeCommand}"
+                                        Classes="Basic">
+                                    <Svg Path="/Assets/VolumeUp.svg"
+                                         Css="path { fill: white; }"
+                                         Width="20"
+                                         Height="20"
+                                         Opacity="0.85" />
+                                </Button>
                                 <Button Cursor="Hand" Command="{Binding Player.ToggleShuffleModeCommand}"
                                         Classes="Basic">
                                     <StackPanel>
@@ -185,12 +176,40 @@
                                 </Button>
                             </StackPanel>
 
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto" Width="400" Margin="0,4,0,0">
+                            <Grid Grid.Row="1" ColumnDefinitions="Auto, *" Width="400" Margin="0,4,0,0">
                                 <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Player.TotalDurationSeconds}"
                                         Value="{Binding Player.CurrentPositionSeconds}"
                                         Margin="8,0" IsSnapToTickEnabled="False"
                                         HorizontalAlignment="Stretch"
                                         Classes="Player" />
+                            </Grid>
+
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="Auto, *, Auto"
+                                  Width="240"
+                                  Margin="0,10,0,0"
+                                  HorizontalAlignment="Center"
+                                  IsVisible="{Binding IsNowPlayingVolumeVisible}">
+                                <Svg Path="/Assets/VolumeOff.svg"
+                                     Css="path { fill: white; }"
+                                     Width="25"
+                                     Height="25"
+                                     Opacity="0.78"
+                                     VerticalAlignment="Center" />
+                                <Slider Grid.Column="1"
+                                        Minimum="0"
+                                        Maximum="1"
+                                        Value="{Binding Player.MusicVolume}"
+                                        Margin="10,0"
+                                        Classes="Player NowPlayingVolume"
+                                        HorizontalAlignment="Stretch"/>
+                                <Svg Grid.Column="2"
+                                     Path="/Assets/VolumeUp.svg"
+                                     Css="path { fill: white; }"
+                                     Width="25"
+                                     Height="25"
+                                     Opacity="0.9"
+                                     VerticalAlignment="Center" />
                             </Grid>
                         </Grid>
                     </StackPanel>
@@ -204,16 +223,61 @@
                         <DataTemplate DataType="vm:LyricLineViewModel">
                             <StackPanel Margin="0,15">
                                 <TextBlock Text="{Binding Content}"
-                                           Classes="LyricText"
+                                           Classes="KaraokeLine NowPlayingLine"
                                            Classes.active="{Binding IsActive}"
+                                           IsVisible="{Binding IsKrcWordLevel, Converter={x:Static BoolConverters.Not}}"
                                            TextWrapping="Wrap"
                                            HorizontalAlignment="Center" TextAlignment="Center" />
+                                <ItemsControl ItemsSource="{Binding Words}"
+                                              IsVisible="{Binding IsKrcWordLevel}"
+                                              HorizontalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:LyricWordViewModel">
+                                            <TextBlock Text="{Binding Text}"
+                                                       Classes="KaraokeWord NowPlayingWord"
+                                                       Classes.played="{Binding IsPlayed}"
+                                                       Classes.current="{Binding IsCurrent}"
+                                                       RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                                 <TextBlock Text="{Binding Translation}"
-                                           Classes="TransText"
+                                           Classes="KaraokeTrans NowPlayingTrans"
                                            Classes.active="{Binding IsActive}"
-                                           IsVisible="{Binding Translation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                            TextWrapping="Wrap"
-                                           HorizontalAlignment="Center" TextAlignment="Center" />
+                                           HorizontalAlignment="Center" TextAlignment="Center">
+                                    <TextBlock.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="Translation"
+                                                     Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                                            <Binding Path="HasWordLevelTranslation"
+                                                     Converter="{x:Static BoolConverters.Not}" />
+                                        </MultiBinding>
+                                    </TextBlock.IsVisible>
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding TranslationWords}"
+                                              IsVisible="{Binding HasWordLevelTranslation}"
+                                              HorizontalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:LyricWordViewModel">
+                                            <TextBlock Text="{Binding Text}"
+                                                       Classes="KaraokeTransWord NowPlayingTrans"
+                                                       Classes.played="{Binding IsPlayed}"
+                                                       Classes.current="{Binding IsCurrent}"
+                                                       RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </DataTemplate>
                     </controls1:SmoothScrollView.ItemTemplate>

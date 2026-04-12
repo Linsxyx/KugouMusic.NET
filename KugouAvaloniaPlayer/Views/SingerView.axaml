@@ -46,7 +46,7 @@
                         </ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="vm:SongItem">
                             <localControls:SongListItemControl />
                         </DataTemplate>
                     </ListBox.ItemTemplate>

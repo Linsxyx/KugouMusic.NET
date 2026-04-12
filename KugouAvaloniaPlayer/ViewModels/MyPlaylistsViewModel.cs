@@ -28,6 +28,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
     private readonly ISukiDialogManager _dialogManager;
+    private readonly IFolderPickerService _folderPickerService;
     private readonly ILogger<MyPlaylistsViewModel> _logger;
     private readonly PlaylistClient _playlistClient;
     private readonly ISukiToastManager _toastManager;
@@ -48,12 +49,14 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         PlaylistClient playlistClient,
         ISukiToastManager toastManager,
         ISukiDialogManager dialogManager,
+        IFolderPickerService folderPickerService,
         ILogger<MyPlaylistsViewModel> logger)
     {
         _userClient = userClient;
         _playlistClient = playlistClient;
         _toastManager = toastManager;
         _dialogManager = dialogManager;
+        _folderPickerService = folderPickerService;
         _logger = logger;
 
         _ = LoadAllPlaylists();
@@ -314,6 +317,14 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     }
 
     [RelayCommand]
+    private async Task ImportLocalFolder()
+    {
+        var path = await _folderPickerService.PickSingleFolderAsync("选择本地音乐文件夹");
+        if (!string.IsNullOrWhiteSpace(path))
+            AddLocalPlaylist(path);
+    }
+
+    [RelayCommand]
     private async Task CreateOnlinePlaylist(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
@@ -345,7 +356,8 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         }
     }
 
-    public void ShowCreatePlaylistDialog()
+    [RelayCommand]
+    private void ShowCreatePlaylistDialog()
     {
         var textBox = new TextBox
         {
@@ -357,10 +369,11 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             .WithTitle("新建歌单")
             .WithContent(textBox)
             .WithActionButton("取消", _ => { }, true, "Flat")
-            .WithActionButton("创建", async void (_) =>
+            .WithActionButton("创建", async _ =>
             {
                 var name = textBox.Text;
-                if (!string.IsNullOrWhiteSpace(name)) await CreateOnlinePlaylistCommand.ExecuteAsync(name);
+                if (!string.IsNullOrWhiteSpace(name))
+                    await CreateOnlinePlaylistCommand.ExecuteAsync(name);
             }, true, "Accent")
             .TryShow();
     }

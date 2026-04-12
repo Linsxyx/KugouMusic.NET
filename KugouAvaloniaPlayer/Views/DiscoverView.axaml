@@ -44,7 +44,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate DataType="vm:PlaylistTagGroup">
                                 <RadioButton Classes="Segmented"
                                              GroupName="MainTags"
                                              IsChecked="{Binding $parent[UserControl].((vm:DiscoverViewModel)DataContext).SelectedMainIndex, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding Index}}"
@@ -67,7 +67,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate DataType="vm:PlaylistTag">
                                 <RadioButton Classes="Segmented"
                                              GroupName="SubTags"
                                              IsChecked="{Binding $parent[UserControl].((vm:DiscoverViewModel)DataContext).SelectedSubIndex, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding Index}}"
@@ -100,7 +100,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate DataType="vm:DiscoverPlaylist">
                                 <localControls:MediaCard Cover="{Binding Cover}"
                                                          Title="{Binding Name}"
                                                          Subtitle="{Binding PlayCount, StringFormat='播放 {0}'}"
@@ -149,7 +149,7 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          Padding="0,0,0,80">
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="vm:SongItem">
                             <localControls:SongListItemControl />
                         </DataTemplate>
                     </ListBox.ItemTemplate>

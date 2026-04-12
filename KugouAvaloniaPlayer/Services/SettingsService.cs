@@ -41,12 +41,11 @@ public static class SettingsManager
         "kugou",
         "AvaloniaPlayerSettings.json");
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly AppSettingsJsonContext JsonContext = new(new JsonSerializerOptions
     {
         WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        TypeInfoResolver = AppSettingsJsonContext.Default
-    };
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    });
 
     public static AppSettings Settings { get; private set; } = new();
 
@@ -57,7 +56,7 @@ public static class SettingsManager
             if (File.Exists(SettingsPath))
             {
                 var json = File.ReadAllText(SettingsPath);
-                Settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+                Settings = JsonSerializer.Deserialize(json, JsonContext.AppSettings) ?? new AppSettings();
             }
         }
         catch (Exception)
@@ -74,7 +73,7 @@ public static class SettingsManager
             var dir = Path.GetDirectoryName(SettingsPath);
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir!);
 
-            var json = JsonSerializer.Serialize(Settings, JsonOptions);
+            var json = JsonSerializer.Serialize(Settings, JsonContext.AppSettings);
             File.WriteAllText(SettingsPath, json);
         }
         catch (Exception)

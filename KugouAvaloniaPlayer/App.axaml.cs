@@ -38,6 +38,9 @@ public partial class App : Application
 
         collection.AddSingleton<ISukiToastManager, SukiToastManager>();
         collection.AddSingleton<ISukiDialogManager, SukiDialogManager>();
+        collection.AddSingleton<ILoginDialogService, LoginDialogService>();
+        collection.AddSingleton<IDesktopLyricWindowService, DesktopLyricWindowService>();
+        collection.AddSingleton<IFolderPickerService, FolderPickerService>();
 
         SettingsManager.Load();
 

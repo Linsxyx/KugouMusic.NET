@@ -53,7 +53,8 @@
             </ContextMenu>
         </Border.ContextMenu>
 
-        <Grid ColumnDefinitions="Auto, *, 150, 80, 150" Background="Transparent">
+        <Grid ColumnDefinitions="Auto, *, 150, 80, 150" Background="Transparent"
+              DoubleTapped="OnItemDoubleTapped">
             <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" Width="45" Height="45" Margin="8,5">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="5" Opacity="0.3" OffsetX="1" OffsetY="1" />

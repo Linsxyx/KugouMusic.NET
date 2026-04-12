@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -15,7 +16,6 @@ using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
-using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.Logging;
 using SukiUI.Dialogs;
 using SukiUI.Enums;
@@ -29,8 +29,9 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private readonly AuthClient _authClient;
-    private readonly IDesktopLyricViewModelFactory _desktopLyricViewModelFactory;
+    private readonly IDesktopLyricWindowService _desktopLyricWindowService;
     private readonly DiscoveryClient _discoveryClient;
+    private readonly ILoginDialogService _loginDialogService;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
@@ -45,9 +46,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isLoggedIn;
 
     [ObservableProperty] private bool _isNowPlayingOpen;
+    [ObservableProperty] private bool _isNowPlayingVolumeVisible;
     [ObservableProperty] private bool _isQueuePaneOpen;
-
-    private DesktopLyricWindow? _lyricWindow;
 
     private PageViewModelBase? _previousPage;
 
@@ -67,7 +67,8 @@ public partial class MainWindowViewModel : ObservableObject
         DiscoveryClient discoveryClient,
         UserClient userClient,
         ISingerViewModelFactory singerViewModelFactory,
-        IDesktopLyricViewModelFactory desktopLyricViewModelFactory,
+        IDesktopLyricWindowService desktopLyricWindowService,
+        ILoginDialogService loginDialogService,
         LoginViewModel loginViewModel,
         SearchViewModel searchViewModel,
         UserViewModel userViewModel,
@@ -84,7 +85,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         _userClient = userClient;
         var singerViewModelFactory1 = singerViewModelFactory;
-        _desktopLyricViewModelFactory = desktopLyricViewModelFactory;
+        _desktopLyricWindowService = desktopLyricWindowService;
+        _loginDialogService = loginDialogService;
 
         LoginViewModel = loginViewModel;
         _searchViewModel = searchViewModel;
@@ -93,6 +95,7 @@ public partial class MainWindowViewModel : ObservableObject
         _logger = logger;
 
         _userViewModel.CheckForUpdateRequested += OnCheckForUpdateRequested;
+        _desktopLyricWindowService.IsOpenChanged += OnDesktopLyricWindowStateChanged;
 
         Player = player;
         ToastManager = toastManager;
@@ -101,29 +104,13 @@ public partial class MainWindowViewModel : ObservableObject
         Pages.Add(discoverViewModel);
         Pages.Add(rankViewModel);
         ActivePage = dailyRecommendViewModel;
+        IsDesktopLyricEnabled = _desktopLyricWindowService.IsOpen;
 
         PlaylistsViewModel.Items.CollectionChanged += OnPlaylistItemsChanged;
         RefreshSidebarPlaylists();
 
-        WeakReferenceMessenger.Default.Register<PlaySongMessage>(this, async void (_, m) =>
-        {
-            IList<SongItem>? currentSongList = null;
-
-            if (ActivePage is DailyRecommendViewModel dailyVm)
-                currentSongList = dailyVm.Songs;
-            else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
-                currentSongList = playlistVm.SelectedPlaylistSongs;
-            else if (ActivePage is DiscoverViewModel discoverVm && discoverVm.IsShowingSongs)
-                currentSongList = discoverVm.SelectedPlaylistSongs;
-            else if (ActivePage is SearchViewModel searchVm)
-                currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
-            else if (ActivePage is SingerViewModel singerVm)
-                currentSongList = singerVm.Songs;
-            else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)
-                currentSongList = rankVm.SelectedRankSongs;
-
-            await Player.PlaySongAsync(m.Song, currentSongList);
-        });
+        WeakReferenceMessenger.Default.Register<PlaySongMessage>(this,
+            (_, m) => _ = HandlePlaySongMessageAsync(m.Song));
 
         WeakReferenceMessenger.Default.Register<NavigateToSingerMessage>(this, (_, m) =>
         {
@@ -135,7 +122,7 @@ public partial class MainWindowViewModel : ObservableObject
         WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (_, m) =>
         {
             if (m.IsLoggedIn)
-                OnLoginSuccess();
+                _ = OnLoginSuccessAsync();
             else
                 OnLogoutRequested();
         });
@@ -152,6 +139,17 @@ public partial class MainWindowViewModel : ObservableObject
             await GetDailyRecommendations();
             if (SettingsManager.Settings.AutoCheckUpdate) await CheckForUpdatesAsync();
         });
+    }
+
+    private void OnDesktopLyricWindowStateChanged(bool isOpen)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            IsDesktopLyricEnabled = isOpen;
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => IsDesktopLyricEnabled = isOpen);
     }
 
     public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
@@ -270,31 +268,31 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void OnLoginSuccess()
+    private async Task OnLoginSuccessAsync()
     {
-        Dispatcher.UIThread.Post(async void () =>
+        await Dispatcher.UIThread.InvokeAsync(() =>
         {
             DialogManager.DismissDialog();
-
             IsLoggedIn = true;
-            await LoadUserInfo();
-            _logger.LogInformation("登录成功");
-
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await TryGetVip();
-                    await Player.LoadLikeListAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"初始化VIP或喜欢列表失败: {ex.Message}");
-                }
-            });
-
-            await GetDailyRecommendations();
         });
+
+        await LoadUserInfo();
+        _logger.LogInformation("登录成功");
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await TryGetVip();
+                await Player.LoadLikeListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"初始化VIP或喜欢列表失败: {ex.Message}");
+            }
+        });
+
+        await GetDailyRecommendations();
     }
 
     private void OnLogoutRequested()
@@ -321,15 +319,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ShowLoginDialog()
     {
-        var loginView = new LoginView
-        {
-            DataContext = LoginViewModel
-        };
-
-        DialogManager.CreateDialog()
-            .WithContent(loginView)
-            .WithActionButton("关闭", _ => { }, true, "Basic")
-            .TryShow();
+        _loginDialogService.ShowLoginDialog(LoginViewModel);
     }
 
     [RelayCommand]
@@ -436,6 +426,13 @@ public partial class MainWindowViewModel : ObservableObject
     private void CloseNowPlaying()
     {
         IsNowPlayingOpen = false;
+        IsNowPlayingVolumeVisible = false;
+    }
+
+    [RelayCommand]
+    private void ToggleNowPlayingVolume()
+    {
+        IsNowPlayingVolumeVisible = !IsNowPlayingVolumeVisible;
     }
 
     [RelayCommand]
@@ -447,28 +444,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ToggleDesktopLyric()
     {
-        if (_lyricWindow == null)
-        {
-            _lyricWindow = new DesktopLyricWindow
-            {
-                DataContext = _desktopLyricViewModelFactory.Create()
-            };
-
-            _lyricWindow.Closed += (_, _) =>
-            {
-                _lyricWindow = null;
-                IsDesktopLyricEnabled = false;
-            };
-
-            _lyricWindow.Show();
-            IsDesktopLyricEnabled = true;
-        }
-        else
-        {
-            _lyricWindow.Close();
-            _lyricWindow = null;
-            IsDesktopLyricEnabled = false;
-        }
+        _desktopLyricWindowService.Toggle();
     }
 
 
@@ -490,11 +466,37 @@ public partial class MainWindowViewModel : ObservableObject
 
     public void ForceCloseDesktopLyric()
     {
-        if (_lyricWindow != null)
+        _desktopLyricWindowService.Close();
+    }
+
+    private async Task HandlePlaySongMessageAsync(SongItem song)
+    {
+        try
         {
-            _lyricWindow.Close();
-            _lyricWindow = null;
-            IsDesktopLyricEnabled = false;
+            IList<SongItem>? currentSongList = null;
+
+            if (ActivePage is DailyRecommendViewModel dailyVm)
+                currentSongList = dailyVm.Songs;
+            else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
+                currentSongList = playlistVm.SelectedPlaylistSongs;
+            else if (ActivePage is DiscoverViewModel discoverVm && discoverVm.IsShowingSongs)
+                currentSongList = discoverVm.SelectedPlaylistSongs;
+            else if (ActivePage is SearchViewModel searchVm)
+                currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
+            else if (ActivePage is SingerViewModel singerVm)
+                currentSongList = singerVm.Songs;
+            else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)
+                currentSongList = rankVm.SelectedRankSongs;
+
+            await Player.PlaySongAsync(song, currentSongList);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellations from rapid song switching.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "处理播放歌曲消息失败");
         }
     }
 

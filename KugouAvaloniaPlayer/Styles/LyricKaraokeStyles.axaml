@@ -1,0 +1,77 @@
+<Styles xmlns="https://github.com/avaloniaui">
+
+    <Style Selector="TextBlock.KaraokeLine">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Opacity" Value="0.48" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeLine.active">
+        <Setter Property="Opacity" Value="1.0" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeWord">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Opacity" Value="0.34" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeWord.played">
+        <Setter Property="Opacity" Value="0.96" />
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeWord.current">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeTrans">
+        <Setter Property="Foreground" Value="#CCFFFFFF" />
+        <Setter Property="Opacity" Value="0.6" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.4" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeTrans.active">
+        <Setter Property="Opacity" Value="1.0" />
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeTransWord">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Opacity" Value="0.4" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeTransWord.played">
+        <Setter Property="Opacity" Value="0.9" />
+    </Style>
+
+    <Style Selector="TextBlock.KaraokeTransWord.current">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+</Styles>

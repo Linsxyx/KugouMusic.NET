@@ -50,7 +50,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isPlayingAudio;
     private CancellationTokenSource? _loadCancellation;
     [ObservableProperty] private string _musicQuality = "128";
-    [ObservableProperty] private float _musicVolume = 1.0f;
+    [ObservableProperty] private float _musicVolume = 0.8f;
     private int _playRequestVersion;
     [ObservableProperty] private double _totalDurationSeconds;
 
@@ -122,7 +122,11 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
             if (_consecutiveFailures >= MaxConsecutiveFailures)
             {
-                _toastManager.CreateToast().OfType(NotificationType.Error).WithTitle("熔断保护").WithContent("连续多次失败，停止播放")
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Error)
+                    .WithTitle("熔断保护")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .WithContent("连续多次失败，停止播放")
                     .Queue();
                 _consecutiveFailures = 0;
                 return;

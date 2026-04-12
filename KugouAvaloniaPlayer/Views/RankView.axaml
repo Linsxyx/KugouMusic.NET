@@ -25,7 +25,7 @@
                     </ItemsControl.ItemsPanel>
 
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="vm:RankItem">
                             <localControls:MediaCard Cover="{Binding Cover}"
                                                      Title="{Binding Name}"
                                                      Command="{Binding $parent[UserControl].((vm:RankViewModel)DataContext).OpenRankCommand}"
@@ -60,7 +60,7 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          Padding="0,0,0,80">
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="vm:SongItem">
                             <localControls:SongListItemControl />
                         </DataTemplate>
                     </ListBox.ItemTemplate>

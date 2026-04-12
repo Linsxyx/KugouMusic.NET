@@ -242,7 +242,8 @@
 
                         <Grid ColumnDefinitions="Auto, *, Auto"
                               Height="50"
-                              Margin="4,0">
+                              Margin="4,0"
+                              DoubleTapped="OnQueueItemDoubleTapped">
 
                             <Grid.ContextMenu>
                                 <ContextMenu>

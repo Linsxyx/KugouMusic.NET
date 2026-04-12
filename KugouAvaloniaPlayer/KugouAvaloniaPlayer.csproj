@@ -36,6 +36,7 @@
         <PackageReference Include="SukiUI" Version="6.0.4-nightly20260124"/>
         <PackageReference Include="Svg.Controls.Avalonia" Version="11.3.9.2"/>
         <PackageReference Include="TagLibSharp" Version="2.3.0"/>
+        <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0" />
         <PackageReference Include="Velopack" Version="0.0.1298"/>
     </ItemGroup>
 

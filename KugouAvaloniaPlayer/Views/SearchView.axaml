@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:models="using:KuGou.Net.Abstractions.Models"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
@@ -55,7 +56,7 @@
                         </MultiBinding>
                     </ListBox.IsVisible>
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate DataType="vm:SongItem">
                             <localControls:SongListItemControl />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -78,7 +79,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate DataType="models:SearchPlaylistItem">
                                 <localControls:MediaCard Cover="{Binding Cover}"
                                                          Title="{Binding Name}"
                                                          Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
@@ -106,7 +107,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                            <DataTemplate DataType="models:SearchAlbumItem">
                                 <localControls:MediaCard Cover="{Binding Cover}"
                                                          Title="{Binding Name}"
                                                          Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
@@ -164,7 +165,7 @@
                                 </ItemsPanelTemplate>
                             </ListBox.ItemsPanel>
                             <ListBox.ItemTemplate>
-                                <DataTemplate>
+                                <DataTemplate DataType="vm:SongItem">
                                     <localControls:SongListItemControl />
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

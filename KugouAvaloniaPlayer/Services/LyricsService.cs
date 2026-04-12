@@ -16,11 +16,14 @@ namespace KugouAvaloniaPlayer.Services;
 public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logger)
 {
     private LyricLineViewModel? _currentActiveLine;
+    private LyricLineViewModel? _currentWordProgressLine;
     public AvaloniaList<LyricLineViewModel> LyricLines { get; } = new();
 
     public void Clear()
     {
         LyricLines.Clear();
+        _currentActiveLine = null;
+        _currentWordProgressLine = null;
     }
 
     public LyricLineViewModel? SyncLyrics(double currentMs)
@@ -55,6 +58,8 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             _currentActiveLine = activeLine;
         }
 
+        UpdateKrcWordProgress(activeLine, currentMs);
+
         return activeLine;
     }
 
@@ -82,14 +87,18 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
                 {
                     var krc = KrcParser.Parse(lyricResult.DecodedContent);
                     foreach (var line in krc.Lines)
-                        LyricLines.Add(new LyricLineViewModel
+                    {
+                        var lyricLine = new LyricLineViewModel
                         {
                             Content = line.Content,
                             Translation = line.Translation,
                             StartTime = line.StartTime,
                             Duration = line.Duration,
                             IsActive = false
-                        });
+                        };
+                        MapKrcWords(lyricLine, line.Words);
+                        LyricLines.Add(lyricLine);
+                    }
                 }
             }
         }
@@ -165,14 +174,18 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         {
             var krc = KrcParser.Parse(content);
             foreach (var line in krc.Lines)
-                result.Add(new LyricLineViewModel
+            {
+                var lyricLine = new LyricLineViewModel
                 {
                     Content = line.Content,
                     Translation = line.Translation,
                     StartTime = line.StartTime,
                     Duration = line.Duration,
                     IsActive = false
-                });
+                };
+                MapKrcWords(lyricLine, line.Words);
+                result.Add(lyricLine);
+            }
         }
         else if (ext == ".lrc")
         {
@@ -280,5 +293,93 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         }
 
         return result.OrderBy(x => x.StartTime).ToList();
+    }
+
+    private static void MapKrcWords(LyricLineViewModel line, IReadOnlyList<KrcWord> words)
+    {
+        if (words.Count == 0) return;
+
+        line.IsKrcWordLevel = true;
+        foreach (var word in words)
+            line.Words.Add(new LyricWordViewModel
+            {
+                Text = word.Text,
+                StartTime = word.StartTime,
+                Duration = word.Duration
+            });
+
+        MapKrcTranslationWords(line);
+    }
+
+    private void UpdateKrcWordProgress(LyricLineViewModel activeLine, double currentMs)
+    {
+        if (_currentWordProgressLine != null && !ReferenceEquals(_currentWordProgressLine, activeLine))
+            ResetWordStates(_currentWordProgressLine);
+
+        _currentWordProgressLine = activeLine;
+
+        if (!activeLine.IsKrcWordLevel || activeLine.Words.Count == 0) return;
+
+        UpdateWordStates(activeLine.Words, currentMs);
+
+        if (activeLine.HasWordLevelTranslation && activeLine.TranslationWords.Count > 0)
+            UpdateWordStates(activeLine.TranslationWords, currentMs);
+    }
+
+    private static void UpdateWordStates(IEnumerable<LyricWordViewModel> words, double currentMs)
+    {
+        foreach (var word in words)
+        {
+            var duration = Math.Max(word.Duration, 1);
+            var elapsed = currentMs - word.StartTime;
+            var progress = Math.Clamp(elapsed / duration, 0, 1);
+
+            word.IsCurrent = progress > 0 && progress < 1;
+            word.IsPlayed = progress >= 1;
+            word.LiftOffset = word.IsCurrent ? -Math.Sin(progress * Math.PI) * 8 : 0;
+        }
+    }
+
+    private static void ResetWordStates(LyricLineViewModel line)
+    {
+        if (!line.IsKrcWordLevel || line.Words.Count == 0) return;
+
+        foreach (var word in line.Words)
+        {
+            word.IsCurrent = false;
+            word.IsPlayed = false;
+            word.LiftOffset = 0;
+        }
+
+        foreach (var word in line.TranslationWords)
+        {
+            word.IsCurrent = false;
+            word.IsPlayed = false;
+            word.LiftOffset = 0;
+        }
+    }
+
+    private static void MapKrcTranslationWords(LyricLineViewModel line)
+    {
+        if (string.IsNullOrWhiteSpace(line.Translation) || line.Duration <= 0) return;
+
+        var chars = line.Translation.ToCharArray();
+        if (chars.Length == 0) return;
+
+        line.HasWordLevelTranslation = true;
+
+        var perCharDuration = Math.Max(40, line.Duration / chars.Length);
+        for (var i = 0; i < chars.Length; i++)
+        {
+            var startTime = line.StartTime + i * perCharDuration;
+            if (startTime > line.StartTime + line.Duration) startTime = line.StartTime + line.Duration;
+
+            line.TranslationWords.Add(new LyricWordViewModel
+            {
+                Text = chars[i].ToString(),
+                StartTime = startTime,
+                Duration = perCharDuration
+            });
+        }
     }
 }

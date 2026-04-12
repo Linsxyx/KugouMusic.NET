@@ -1,8 +1,10 @@
 using System;
+using Avalonia.Animation;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
+using Avalonia.Media;
 using Avalonia.Input;
 using Avalonia.Threading;
 
@@ -21,6 +23,7 @@ public class SmoothScrollView : ItemsControl
 
     private readonly DispatcherTimer _userScrollResetTimer;
     private bool _isUserScrolling;
+    private bool _waveUpdateQueued;
 
 
     private ItemsPresenter? _itemsPresenter;
@@ -69,10 +72,17 @@ public class SmoothScrollView : ItemsControl
                 SetCurrentValue(ScrollDurationProperty, TimeSpan.FromMilliseconds(600));
                 UpdateScrollPosition();
             }
+
+            QueueUpdateWaveTransforms();
         }
         else if (change.Property == BoundsProperty)
         {
             if (!_isUserScrolling) UpdateScrollPosition();
+            QueueUpdateWaveTransforms();
+        }
+        else if (change.Property == CurrentOffsetProperty)
+        {
+            QueueUpdateWaveTransforms();
         }
     }
 
@@ -112,6 +122,7 @@ public class SmoothScrollView : ItemsControl
 
         SetCurrentValue(ScrollDurationProperty, TimeSpan.FromMilliseconds(600));
         UpdateScrollPosition();
+        QueueUpdateWaveTransforms();
     }
 
     private void UpdateScrollPosition()
@@ -128,6 +139,86 @@ public class SmoothScrollView : ItemsControl
         var targetOffset = viewportHeight / 2 - itemCenterY;
 
         CurrentOffset = targetOffset;
+    }
+
+    private void QueueUpdateWaveTransforms()
+    {
+        if (_waveUpdateQueued) return;
+
+        _waveUpdateQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _waveUpdateQueued = false;
+            UpdateWaveTransforms();
+        }, DispatcherPriority.Render);
+    }
+
+    private void UpdateWaveTransforms()
+    {
+        if (ItemCount <= 0) return;
+
+        var selectedIndex = GetSelectedIndex();
+        for (var i = 0; i < ItemCount; i++)
+        {
+            if (ContainerFromIndex(i) is not Control container) continue;
+
+            EnsureItemTransitions(container);
+
+            var distance = selectedIndex >= 0 ? i - selectedIndex : 0;
+            var absDistance = Math.Abs(distance);
+
+            // 通过衰减正弦让临近行产生自然上下波动，避免突兀跳变。
+            var wave = Math.Sin(distance * 0.9) * 11 * Math.Exp(-absDistance * 0.35);
+            var centerLift = -4 * Math.Exp(-absDistance * 0.55);
+            var targetY = wave + centerLift;
+            var targetOpacity = selectedIndex >= 0
+                ? Math.Clamp(1 - absDistance * 0.16, 0.24, 1)
+                : 1;
+
+            if (container.RenderTransform is not TranslateTransform translate)
+            {
+                translate = new TranslateTransform();
+                container.RenderTransform = translate;
+            }
+
+            translate.Y = targetY;
+            container.Opacity = targetOpacity;
+        }
+    }
+
+    private static void EnsureItemTransitions(Control container)
+    {
+        if (container.Transitions?.Count > 0) return;
+
+        container.Transitions = new Transitions
+        {
+            new DoubleTransition
+            {
+                Property = Visual.OpacityProperty,
+                Duration = TimeSpan.FromMilliseconds(380)
+            },
+            new DoubleTransition
+            {
+                Property = TranslateTransform.YProperty,
+                Duration = TimeSpan.FromMilliseconds(420)
+            }
+        };
+    }
+
+    private int GetSelectedIndex()
+    {
+        if (SelectedItem == null) return -1;
+
+        var selectedContainer = ContainerFromItem(SelectedItem);
+        if (selectedContainer == null) return -1;
+
+        for (var i = 0; i < ItemCount; i++)
+        {
+            if (ReferenceEquals(ContainerFromIndex(i), selectedContainer))
+                return i;
+        }
+
+        return -1;
     }
 
     private double GetTrueContentHeight()

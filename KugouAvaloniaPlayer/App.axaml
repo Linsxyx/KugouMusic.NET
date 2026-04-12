@@ -19,6 +19,7 @@
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/GorgeousThemeSwitch.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SmoothScrollViewStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SongListStyles.axaml" />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/LyricKaraokeStyles.axaml" />
     </Application.Styles>
 
     <Application.Resources>
@@ -28,6 +29,7 @@
         <converters:CloseBehaviorConverter x:Key="CloseBehaviorConverter" />
         <converters:SingerNameConverter x:Key="SingerNameConverter" />
         <converters:EnumEqualityConverter x:Key="EnumEqualityConverter" />
+        <converters:WordLiftTransformConverter x:Key="WordLiftTransformConverter" />
     </Application.Resources>
 
 </Application>

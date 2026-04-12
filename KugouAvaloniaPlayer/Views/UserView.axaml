@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:services="using:KugouAvaloniaPlayer.Services"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="KugouAvaloniaPlayer.Views.UserView"
@@ -59,7 +60,7 @@
                                       SelectedItem="{Binding SelectedCloseBehavior}"
                                       MinWidth="150">
                                 <ComboBox.ItemTemplate>
-                                    <DataTemplate>
+                                    <DataTemplate DataType="services:CloseBehavior">
                                         <TextBlock Text="{Binding Converter={StaticResource CloseBehaviorConverter}}" />
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
