@@ -1,4 +1,5 @@
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -22,10 +23,13 @@ public interface IDesktopLyricViewModelFactory
     DesktopLyricViewModel Create();
 }
 
-public sealed class DesktopLyricViewModelFactory(PlayerViewModel playerViewModel) : IDesktopLyricViewModelFactory
+public sealed class DesktopLyricViewModelFactory(
+    PlayerViewModel playerViewModel,
+    IDesktopLyricMousePassthroughService desktopLyricMousePassthroughService)
+    : IDesktopLyricViewModelFactory
 {
     public DesktopLyricViewModel Create()
     {
-        return new DesktopLyricViewModel(playerViewModel);
+        return new DesktopLyricViewModel(playerViewModel, desktopLyricMousePassthroughService.IsSupported);
     }
 }

@@ -40,6 +40,7 @@ public partial class App : Application
         collection.AddSingleton<ISukiDialogManager, SukiDialogManager>();
         collection.AddSingleton<ICreatePlaylistDialogService, CreatePlaylistDialogService>();
         collection.AddSingleton<ILoginDialogService, LoginDialogService>();
+        collection.AddSingleton<IDesktopLyricMousePassthroughService, DesktopLyricMousePassthroughService>();
         collection.AddSingleton<IDesktopLyricWindowService, DesktopLyricWindowService>();
         collection.AddSingleton<IFolderPickerService, FolderPickerService>();
 

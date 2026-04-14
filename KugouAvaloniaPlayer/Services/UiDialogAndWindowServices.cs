@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Avalonia.Threading;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
@@ -43,7 +44,9 @@ public sealed class LoginDialogService(ISukiDialogManager dialogManager) : ILogi
     }
 }
 
-public sealed class DesktopLyricWindowService(IDesktopLyricViewModelFactory desktopLyricViewModelFactory)
+public sealed class DesktopLyricWindowService(
+    IDesktopLyricViewModelFactory desktopLyricViewModelFactory,
+    IDesktopLyricMousePassthroughService desktopLyricMousePassthroughService)
     : IDesktopLyricWindowService
 {
     private DesktopLyricWindow? _lyricWindow;
@@ -77,18 +80,31 @@ public sealed class DesktopLyricWindowService(IDesktopLyricViewModelFactory desk
 
     private void ShowCore()
     {
-        _lyricWindow = new DesktopLyricWindow
+        var lyricViewModel = desktopLyricViewModelFactory.Create();
+        var lyricWindow = new DesktopLyricWindow
         {
-            DataContext = desktopLyricViewModelFactory.Create()
+            DataContext = lyricViewModel
         };
 
-        _lyricWindow.Closed += (_, _) =>
+        PropertyChangedEventHandler onLyricViewModelPropertyChanged = (_, e) =>
         {
-            _lyricWindow = null;
+            if (e.PropertyName != nameof(DesktopLyricViewModel.IsLocked)) return;
+            desktopLyricMousePassthroughService.Apply(lyricWindow, lyricViewModel.IsLocked);
+        };
+
+        lyricViewModel.PropertyChanged += onLyricViewModelPropertyChanged;
+
+        lyricWindow.Closed += (_, _) =>
+        {
+            desktopLyricMousePassthroughService.Apply(lyricWindow, false);
+            lyricViewModel.PropertyChanged -= onLyricViewModelPropertyChanged;
+            if (ReferenceEquals(_lyricWindow, lyricWindow))
+                _lyricWindow = null;
             IsOpenChanged?.Invoke(false);
         };
 
-        _lyricWindow.Show();
+        _lyricWindow = lyricWindow;
+        lyricWindow.Show();
         IsOpenChanged?.Invoke(true);
     }
 
@@ -96,8 +112,7 @@ public sealed class DesktopLyricWindowService(IDesktopLyricViewModelFactory desk
     {
         if (_lyricWindow == null) return;
 
+        desktopLyricMousePassthroughService.Apply(_lyricWindow, false);
         _lyricWindow.Close();
-        _lyricWindow = null;
-        IsOpenChanged?.Invoke(false);
     }
 }

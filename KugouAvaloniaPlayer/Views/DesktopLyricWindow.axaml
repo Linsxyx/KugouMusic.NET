@@ -139,18 +139,19 @@
         </StackPanel>
 
         <Grid Name="ControlPanel" ColumnDefinitions="Auto, *, Auto" VerticalAlignment="Top" Margin="10">
-            <!--wayland上没法实现鼠标穿透，所以这个功能砍了-->
-            <!--<Button Grid.Column="0" Command="{Binding ToggleLockCommand}"
-                    ToolTip.Tip="锁定歌词 (锁定后鼠标穿透，需在主界面关闭重开解锁)">
+            <Button Grid.Column="0"
+                    Command="{Binding ToggleLockCommand}"
+                    IsVisible="{Binding CanMousePassthrough}"
+                    ToolTip.Tip="锁定后需在主界面关闭重开解锁">
                 <Panel>
-                    <PathIcon Data="{x:Static suki:Icons.WindowPin}" 
+                    <PathIcon Data="{x:Static suki:Icons.WindowPin}"
                               Foreground="White" Width="12"
                               IsVisible="{Binding !IsLocked}"/>
-                    <PathIcon Data="{x:Static suki:Icons.WindowPinOff}" 
+                    <PathIcon Data="{x:Static suki:Icons.WindowPinOff}"
                               Foreground="Red" Width="12"
                               IsVisible="{Binding IsLocked}"/>
                 </Panel>
-            </Button>-->
+            </Button>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="15">
                 <Button Command="{Binding Player.PlayPreviousCommand}" Classes="Basic">

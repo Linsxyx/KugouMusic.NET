@@ -12,6 +12,18 @@
 
         <PublishTrimmed>true</PublishTrimmed>
     </PropertyGroup>
+    
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <DefineConstants>$(DefineConstants);KUGOU_WINDOWS</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+        <DefineConstants>$(DefineConstants);KUGOU_MACOS</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform('Windows')) and !$([MSBuild]::IsOSPlatform('OSX'))">
+        <DefineConstants>$(DefineConstants);KUGOU_NON_WINDOWS</DefineConstants>
+    </PropertyGroup>
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>

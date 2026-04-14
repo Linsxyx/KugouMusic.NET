@@ -8,7 +8,7 @@
 .codex/
 .idea/
 .claude
-CLAUDE.md
+AGENTS.md
 *.user
 *.suo
 *.userprefs
