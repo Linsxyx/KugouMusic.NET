@@ -18,3 +18,9 @@ public record AuthStateChangedMessage(bool IsLoggedIn);
 public record NavigatePageMessage(PageViewModelBase TargetPage);
 
 public record RefreshPlaylistsMessage;
+
+public record DesktopLyricColorSettingsChangedMessage(
+    bool UseCustomMainColor,
+    string MainColorHex,
+    bool UseCustomTranslationColor,
+    string TranslationColorHex);

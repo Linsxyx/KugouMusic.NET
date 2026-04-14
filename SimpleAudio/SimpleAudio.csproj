@@ -31,9 +31,4 @@
             <TargetPath>%(Filename)%(Extension)</TargetPath>
         </Content>
     </ItemGroup>
-    <ItemGroup>
-        <None Update="runtimes\**">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </None>
-    </ItemGroup>
 </Project>

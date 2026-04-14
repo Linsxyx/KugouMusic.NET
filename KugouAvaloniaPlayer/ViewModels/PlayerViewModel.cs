@@ -36,6 +36,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private readonly PlaybackQueueManager _queueManager;
     private readonly KgSessionManager _sessionManager;
     private readonly ISukiToastManager _toastManager;
+    private int _disposeState;
 
     private int _consecutiveFailures;
 
@@ -99,8 +100,9 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
-        _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
+        if (Interlocked.Exchange(ref _disposeState, 1) == 1) return;
+
+        CancelAndDisposeLoadCancellation();
         _playSongLock.Dispose();
         _playbackTimer.Stop();
         _playbackTimer.Tick -= OnPlaybackTimerTick;
@@ -144,8 +146,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            _loadCancellation?.Cancel();
-            _loadCancellation?.Dispose();
+            CancelAndDisposeLoadCancellation();
             var currentLoadCts = new CancellationTokenSource();
             _loadCancellation = currentLoadCts;
 
@@ -239,6 +240,23 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         {
             return false;
         }
+    }
+
+    private void CancelAndDisposeLoadCancellation()
+    {
+        var cts = Interlocked.Exchange(ref _loadCancellation, null);
+        if (cts == null) return;
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 已被其他路径释放时忽略，保证退出流程稳定
+        }
+
+        cts.Dispose();
     }
 
     private void HandlePlayError(SongItem song)

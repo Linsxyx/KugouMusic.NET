@@ -102,6 +102,7 @@
                                                 </ContextMenu>
                                             </Border.ContextMenu>
                                             <Button Classes="Basic"
+                                                    Cursor="Hand"
                                                     HorizontalContentAlignment="Stretch"
                                                     Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
                                                     CommandParameter="{Binding .}">
@@ -163,6 +164,7 @@
                             </ItemsControl>
                             <Button Height="36"
                                     Classes="Basic"
+                                    Cursor="Hand"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Stretch">
                                 <Button.Flyout>

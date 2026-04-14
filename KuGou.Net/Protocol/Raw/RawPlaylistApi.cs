@@ -242,8 +242,8 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
             resourceArray.Add(new JsonObject
             {
                 ["number"] = 1,
-                ["name"] = song.Name ?? "",
-                ["hash"] = song.Hash ?? "",
+                ["name"] = song.Name,
+                ["hash"] = song.Hash,
                 ["size"] = 0,
                 ["sort"] = 0,
                 ["timelen"] = 0,

@@ -6,160 +6,180 @@
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              xmlns:services="using:KugouAvaloniaPlayer.Services"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+             mc:Ignorable="d" d:DesignWidth="680" d:DesignHeight="520"
              x:Class="KugouAvaloniaPlayer.Views.UserView"
              x:DataType="vm:UserViewModel">
 
     <suki:GlassCard Margin="40" Padding="30">
-        <Grid RowDefinitions="Auto, *, Auto">
-            <!-- 用户信息区域 -->
-            <Grid Grid.Row="0" ColumnDefinitions="Auto, *" Margin="0,0,0,30">
-                <!-- 头像 -->
+        <Grid RowDefinitions="Auto,*,Auto">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0,0,0,24">
                 <Border Grid.Column="0"
                         Width="80" Height="80"
                         CornerRadius="40"
                         ClipToBounds="True"
                         Background="#E0E0E0">
-                    <controls:AsyncImage Source="{Binding UserAvatar}"
-                                         Stretch="UniformToFill" />
+                    <controls:AsyncImage Source="{Binding UserAvatar}" Stretch="UniformToFill" />
                 </Border>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="20,0">
-                    <TextBlock Text="{Binding UserName}"
-                               FontSize="24"
-                               FontWeight="Bold" Foreground="{DynamicResource SukiLowText}" />
-                    <TextBlock Text="{Binding VipStatus}"
-                               FontSize="14"
-                               Foreground="{DynamicResource SukiLiquid2}"
-                               Margin="0,5,0,0" />
-                    <TextBlock Text="{Binding UserId, StringFormat='ID: {0}'}"
-                               FontSize="12"
-                               Foreground="{DynamicResource SukiLiquid2}"
-                               Margin="0,3,0,0" />
+                    <TextBlock Text="{Binding UserName}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource SukiLowText}" />
+                    <TextBlock Text="{Binding VipStatus}" FontSize="14" Foreground="{DynamicResource SukiLiquid2}" Margin="0,5,0,0" />
+                    <TextBlock Text="{Binding UserId, StringFormat='ID: {0}'}" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" Margin="0,3,0,0" />
                     <ToggleSwitch Classes="Gorgeous"
-                                  IsChecked="{Binding IsDarkMode, Mode=TwoWay}" HorizontalAlignment="Right" Width="150"
+                                  IsChecked="{Binding IsDarkMode, Mode=TwoWay}"
+                                  HorizontalAlignment="Right"
+                                  Width="150"
                                   VerticalAlignment="Center" />
                 </StackPanel>
             </Grid>
 
-            <ScrollViewer Grid.Row="1" Margin="30,0,30,20">
-                <StackPanel Spacing="20">
+            <ScrollViewer Grid.Row="1" Margin="0,0,0,14">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="设置" FontWeight="Bold" FontSize="20" Margin="2,0,0,2" />
 
-                    <TextBlock Text="通用设置" FontWeight="Bold" FontSize="18" Margin="0,0,0,5" />
-
-                    <!-- 关闭行为设置 -->
-                    <suki:GlassCard IsOpaque="True" Padding="15">
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+                        <suki:GlassCard Grid.Row="0" Grid.Column="0" IsOpaque="True" Padding="14">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="关闭主面板时" FontWeight="DemiBold" />
                                 <TextBlock Text="选择点击关闭按钮时的行为" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+                                <ComboBox ItemsSource="{Binding AvailableCloseBehaviors}" SelectedItem="{Binding SelectedCloseBehavior}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="services:CloseBehavior">
+                                            <TextBlock Text="{Binding Converter={StaticResource CloseBehaviorConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
                             </StackPanel>
+                        </suki:GlassCard>
 
-                            <ComboBox Grid.Column="1"
-                                      ItemsSource="{Binding AvailableCloseBehaviors}"
-                                      SelectedItem="{Binding SelectedCloseBehavior}"
-                                      MinWidth="150">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate DataType="services:CloseBehavior">
-                                        <TextBlock Text="{Binding Converter={StaticResource CloseBehaviorConverter}}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </Grid>
-                    </suki:GlassCard>
-
-                    <!-- 音质选择 -->
-                    <suki:GlassCard IsOpaque="True" Padding="15">
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel>
+                        <suki:GlassCard Grid.Row="0" Grid.Column="1" IsOpaque="True" Padding="14">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="默认播放音质" FontWeight="DemiBold" />
                                 <TextBlock Text="音质从低到高" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+                                <ComboBox ItemsSource="{Binding QualityOptions}" SelectedItem="{Binding SelectedQuality}" />
                             </StackPanel>
-                            <ComboBox Grid.Column="1"
-                                      ItemsSource="{Binding QualityOptions}"
-                                      SelectedItem="{Binding SelectedQuality}"
-                                      MinWidth="150" />
-                        </Grid>
-                    </suki:GlassCard>
+                        </suki:GlassCard>
 
-                    <suki:GlassCard IsOpaque="True" Padding="15">
-                        <Grid ColumnDefinitions="*, Auto, Auto">
-                            <StackPanel>
+                        <suki:GlassCard Grid.Row="1" Grid.Column="0" IsOpaque="True" Padding="14">
+                            <StackPanel Spacing="10">
                                 <TextBlock Text="音效预设" FontWeight="DemiBold" />
-                                <TextBlock Text="选择预设风格或手动调节(预设来自澎湃OS)" FontSize="12"
-                                           Foreground="{DynamicResource SukiLiquid2}" />
+                                <TextBlock Text="选择预设风格或手动调节" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <ComboBox Grid.Column="0"
+                                              ItemsSource="{Binding EQPresetOptions}"
+                                              SelectedItem="{Binding SelectedEQPreset}" />
+                                    <Button Grid.Column="1"
+                                            Classes="Basic"
+                                            Cursor="Hand"
+                                            Command="{Binding OpenEqSettingsCommand}"
+                                            ToolTip.Tip="自定义EQ曲线">
+                                        <Svg Path="/Assets/gear-svgrepo-com.svg" Width="22" Height="16" />
+                                    </Button>
+                                </Grid>
                             </StackPanel>
+                        </suki:GlassCard>
 
-                            <ComboBox Grid.Column="1"
-                                      ItemsSource="{Binding EQPresetOptions}"
-                                      SelectedItem="{Binding SelectedEQPreset}"
-                                      MinWidth="120" Margin="0,0,10,0" />
-
-                            <Button Grid.Column="2" Classes="Basic"
-                                    Command="{Binding OpenEqSettingsCommand}"
-                                    ToolTip.Tip="自定义调节">
-                                <Svg Path="/Assets/gear-svgrepo-com.svg" Width="25" Height="18" />
-                            </Button>
-                        </Grid>
-                    </suki:GlassCard>
-
-                    <!-- 全景声 / 空间音效 -->
-                    <suki:GlassCard IsOpaque="True" Padding="15">
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel>
-                                <TextBlock Text="空间音效" FontWeight="DemiBold" />
-                                <TextBlock Text="3D音效，不保证好用" FontSize="12"
-                                           Foreground="{DynamicResource SukiLiquid2}" />
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding EnableSurround, Mode=TwoWay}" />
-                        </Grid>
-                    </suki:GlassCard>
-
-                    <!-- 自动检查更新 -->
-                    <suki:GlassCard IsOpaque="True" Padding="15">
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel>
-                                <TextBlock Text="启动时自动检查更新" FontWeight="DemiBold" />
-                                <TextBlock Text="每次启动应用时检查是否有新版本" FontSize="12"
-                                           Foreground="{DynamicResource SukiLiquid2}" />
-                            </StackPanel>
-                            <ToggleSwitch Grid.Column="1"
-                                          IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" />
-                        </Grid>
-                    </suki:GlassCard>
-
-                    <!-- 手动检查更新 -->
-                    <suki:GlassCard IsOpaque="True" Padding="15">
-                        <Grid ColumnDefinitions="*, Auto">
-                            <StackPanel>
-                                <TextBlock Text="检查更新" FontWeight="DemiBold" />
-                                <TextBlock Text="手动检查是否有新版本可用" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
-                            </StackPanel>
-                            <Button Grid.Column="1"
-                                    Classes="Basic"
-                                    Command="{Binding CheckForUpdateCommand}"
-                                    IsEnabled="{Binding !IsCheckingUpdate}"
-                                    MinWidth="120">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <PathIcon Data="{x:Static suki:Icons.Refresh}"
-                                              Width="16" Height="16" Foreground="{DynamicResource SukiLowText}" />
-                                    <TextBlock Text="检查更新" Foreground="{DynamicResource SukiLowText}" />
+                        <suki:GlassCard Grid.Row="1" Grid.Column="1" IsOpaque="True" Padding="14">
+                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                <StackPanel>
+                                    <TextBlock Text="空间音效" FontWeight="DemiBold" />
+                                    <TextBlock Text="3D音效，不保证好用" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
                                 </StackPanel>
-                            </Button>
-                        </Grid>
-                    </suki:GlassCard>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableSurround, Mode=TwoWay}" />
+                            </Grid>
+                        </suki:GlassCard>
+
+                        <suki:GlassCard Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" IsOpaque="True" Padding="14">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="歌词悬浮窗字体颜色" FontWeight="DemiBold" />
+                                <TextBlock Text="可分别设置歌词/歌词翻译，支持默认与自定义颜色。" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                    <StackPanel>
+                                        <TextBlock Text="应用目标" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" Margin="0,0,0,4" />
+                                        <ComboBox ItemsSource="{Binding LyricColorTargetOptions}" SelectedItem="{Binding SelectedLyricColorTarget}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="颜色模式" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" Margin="0,0,0,4" />
+                                        <ComboBox ItemsSource="{Binding LyricColorModeOptions}" SelectedItem="{Binding SelectedLyricColorMode}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel IsVisible="{Binding IsLyricColorCustomMode}" Spacing="10">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                        <Border Grid.Column="0"
+                                                Width="28" Height="28"
+                                                CornerRadius="14"
+                                                BorderThickness="1"
+                                                BorderBrush="{DynamicResource SukiBorder}"
+                                                Background="{Binding LyricColorPreviewBrush}" />
+                                        <TextBox Grid.Column="1"
+                                                 Watermark="#FFFFFFFF"
+                                                 Text="{Binding LyricColorHexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="2"
+                                                Command="{Binding ApplyLyricColorHexCommand}"
+                                                Cursor="Hand"
+                                                Content="应用"
+                                                Foreground="{DynamicResource SukiLowText}"
+                                                MinWidth="72" />
+                                    </Grid>
+
+                                    <ItemsControl ItemsSource="{Binding LyricColorPalette}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Columns="8" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Margin="3"
+                                                        Width="24"
+                                                        Height="24"
+                                                        Padding="0"
+                                                        CornerRadius="12"
+                                                        Background="{Binding .}"
+                                                        BorderThickness="1"
+                                                        BorderBrush="{DynamicResource SukiBorder}"
+                                                        Command="{Binding $parent[UserControl].((vm:UserViewModel)DataContext).PickLyricPaletteColorCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </suki:GlassCard>
+
+                        <suki:GlassCard Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" IsOpaque="True" Padding="14">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <StackPanel>
+                                    <TextBlock Text="版本更新" FontWeight="DemiBold" />
+                                    <ToggleSwitch IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" Content="启动时自动检查更新" Foreground="{DynamicResource SukiLiquid2}"/>
+                                </StackPanel>
+
+                                <Button Grid.Column="1"
+                                        Classes="Basic"
+                                        Command="{Binding CheckForUpdateCommand}"
+                                        IsEnabled="{Binding !IsCheckingUpdate}"
+                                        MinWidth="120"
+                                        VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="16" Height="16" Foreground="{DynamicResource SukiLowText}" />
+                                        <TextBlock Text="检查更新" Foreground="{DynamicResource SukiLowText}" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </suki:GlassCard>
+                    </Grid>
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- 退出登录按钮 -->
             <Button Grid.Row="2"
                     Classes="Basic"
                     Command="{Binding LogoutCommand}"
                     HorizontalAlignment="Right"
                     Foreground="{DynamicResource SukiLowText}"
                     Padding="30,10"
-                    Margin="0,0,0,50"
                     ToolTip.Tip="退出登录">
                 <PathIcon Data="{x:Static suki:Icons.Logout}" />
             </Button>

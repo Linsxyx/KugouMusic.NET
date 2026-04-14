@@ -82,7 +82,6 @@ public partial class App : Application
             desktop.Exit += (s, e) =>
             {
                 ShutdownTrayIcon();
-                playerVm.Dispose();
                 SimpleAudioPlayer.Free();
                 _serviceProvider?.Dispose();
             };

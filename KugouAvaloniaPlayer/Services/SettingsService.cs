@@ -26,6 +26,11 @@ public class AppSettings
     public bool EnableSurround { get; set; }
 
     public float[] CustomEqGains { get; set; } = new float[10];
+
+    public bool DesktopLyricUseCustomMainColor { get; set; }
+    public string DesktopLyricCustomMainColor { get; set; } = "#FFFFFFFF";
+    public bool DesktopLyricUseCustomTranslationColor { get; set; }
+    public string DesktopLyricCustomTranslationColor { get; set; } = "#CCFFFFFF";
 }
 
 [JsonSerializable(typeof(AppSettings))]

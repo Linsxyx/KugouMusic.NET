@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
@@ -23,21 +24,53 @@ public class FavoritePlaylistService(
 {
     private const string LikeListIdForAction = "2";
     private readonly Dictionary<string, int> _hashToFileId = new();
+    private int _likeCacheLoadAttemptCount;
+    private bool _hasLoggedFirstLikeCacheSuccess;
 
     private readonly HashSet<string> _likedHashes = new();
 
     public async Task LoadLikeListAsync()
     {
-        var playlists = await userClient.GetPlaylistsAsync();
-        if (playlists is not null && playlists.Status == 1)
+        var attempt = Interlocked.Increment(ref _likeCacheLoadAttemptCount);
+        var isFirstAttempt = attempt == 1;
+        if (isFirstAttempt)
+            logger.LogInformation("开始首次加载“我喜欢”红心缓存。");
+
+        try
         {
-            if (playlists.Playlists.Count < 1) return;
+            var playlists = await userClient.GetPlaylistsAsync();
+            if (playlists is null || playlists.Status != 1)
+            {
+                logger.LogError("加载收藏列表失败: 获取歌单失败, err_code={ErrorCode}", playlists?.ErrorCode);
+                if (isFirstAttempt)
+                    logger.LogWarning("首次加载“我喜欢”红心缓存失败：歌单列表请求异常。");
+                return;
+            }
 
-            var likePlaylist = playlists.Playlists[1];
-            if (string.IsNullOrEmpty(likePlaylist.ListCreateId)) return;
+            if (playlists.Playlists.Count < 1)
+            {
+                logger.LogWarning("加载收藏列表失败: 用户没有任何歌单。");
+                if (isFirstAttempt)
+                    logger.LogWarning("首次加载“我喜欢”红心缓存失败：未找到任何歌单。");
+                return;
+            }
 
-            var songs = await playlistClient.GetSongsAsync(likePlaylist.ListCreateId, pageSize: 1000);
+            var likePlaylist = ResolveLikePlaylist(playlists.Playlists);
+            if (likePlaylist == null || string.IsNullOrWhiteSpace(likePlaylist.ListCreateId))
+            {
+                logger.LogWarning("加载收藏列表失败: 未定位到“我喜欢”歌单。");
+                if (isFirstAttempt)
+                    logger.LogWarning("首次加载“我喜欢”红心缓存失败：无法识别“我喜欢”歌单。");
+                return;
+            }
 
+            logger.LogInformation("已识别“我喜欢”歌单: Name={Name}, ListId={ListId}, IsDefault={IsDefault}, ListCreateId={ListCreateId}",
+                likePlaylist.Name, likePlaylist.ListId, likePlaylist.IsDefault, likePlaylist.ListCreateId);
+
+            var songs = await playlistClient.GetSongsAsync(likePlaylist.ListCreateId, pageSize: 500);
+            
+            logger.LogInformation($"首次“我喜欢”红心缓存加载完成: Songs={songs.Count}, Hashes={_likedHashes.Count}, FileIds={_hashToFileId.Count}");
+            
             lock (_likedHashes)
             {
                 _likedHashes.Clear();
@@ -49,10 +82,23 @@ public class FavoritePlaylistService(
                         if (song.FileId != 0) _hashToFileId[song.Hash.ToLowerInvariant()] = song.FileId;
                     }
             }
+
+            if (isFirstAttempt || !_hasLoggedFirstLikeCacheSuccess)
+            {
+                _hasLoggedFirstLikeCacheSuccess = true;
+                logger.LogInformation($"首次“我喜欢”红心缓存加载完成: Songs={songs.Count}, Hashes={_likedHashes.Count}, FileIds={_hashToFileId.Count}");
+            }
+            else
+            {
+                logger.LogDebug("刷新“我喜欢”红心缓存完成: Songs={SongCount}, Hashes={HashCount}, FileIds={FileIdCount}",
+                    songs.Count, _likedHashes.Count, _hashToFileId.Count);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            logger.LogError($"加载收藏列表失败: err_code{playlists?.ErrorCode}");
+            logger.LogError(ex, "加载收藏列表异常。");
+            if (isFirstAttempt)
+                logger.LogWarning("首次加载“我喜欢”红心缓存发生异常，当前红心状态可能暂时不准确。");
         }
     }
 
@@ -219,5 +265,13 @@ public class FavoritePlaylistService(
     {
         if (listBox.SelectedItem is UserPlaylistItem selectedPlaylist)
             _ = AddSongToPlaylistSafelyAsync(song, selectedPlaylist);
+    }
+
+    private static UserPlaylistItem? ResolveLikePlaylist(List<UserPlaylistItem> playlists)
+    {
+        return playlists.FirstOrDefault(x => x.ListId == 2)
+               ?? playlists.FirstOrDefault(x => x.IsDefault == 2)
+               ?? playlists.FirstOrDefault(x => x.Name.Contains("喜欢", StringComparison.OrdinalIgnoreCase))
+               ?? playlists.FirstOrDefault(x => x.Name.Contains("我喜欢", StringComparison.OrdinalIgnoreCase));
     }
 }

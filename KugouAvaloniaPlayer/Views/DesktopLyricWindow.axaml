@@ -62,6 +62,7 @@
             <TextBlock Text="{Binding Player.CurrentLyricText}"
                        Classes="KaraokeLine DesktopLine"
                        Classes.active="True"
+                       Foreground="{Binding LyricForeground}"
                        IsVisible="{Binding Player.CurrentLyricLine.IsKrcWordLevel, Converter={x:Static BoolConverters.Not}}"
                        HorizontalAlignment="Center"
                        TextWrapping="Wrap"
@@ -85,6 +86,7 @@
                                    Classes="KaraokeWord DesktopWord"
                                    Classes.played="{Binding IsPlayed}"
                                    Classes.current="{Binding IsCurrent}"
+                                   Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
                                    RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
                             <TextBlock.Effect>
                                 <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
@@ -97,6 +99,7 @@
             <TextBlock Text="{Binding Player.CurrentLyricTrans}"
                        Classes="KaraokeTrans DesktopTrans"
                        Classes.active="True"
+                       Foreground="{Binding TranslationLineForeground}"
                        HorizontalAlignment="Center"
                        TextWrapping="Wrap"
                        TextAlignment="Center"
@@ -128,6 +131,7 @@
                                    Classes="KaraokeTransWord DesktopTrans"
                                    Classes.played="{Binding IsPlayed}"
                                    Classes.current="{Binding IsCurrent}"
+                                   Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
                                    RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
                             <TextBlock.Effect>
                                 <DropShadowEffect BlurRadius="3" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
@@ -142,14 +146,16 @@
             <Button Grid.Column="0"
                     Command="{Binding ToggleLockCommand}"
                     IsVisible="{Binding CanMousePassthrough}"
+                    Classes="Basic"
+                    Cursor="Hand"
                     ToolTip.Tip="锁定后需在主界面关闭重开解锁">
                 <Panel>
-                    <PathIcon Data="{x:Static suki:Icons.WindowPin}"
-                              Foreground="White" Width="12"
-                              IsVisible="{Binding !IsLocked}"/>
-                    <PathIcon Data="{x:Static suki:Icons.WindowPinOff}"
-                              Foreground="Red" Width="12"
-                              IsVisible="{Binding IsLocked}"/>
+                    <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="24" Height="24"
+                         Css="path { fill: white; }"
+                         IsVisible="{Binding !IsLocked}"/>
+                    <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="24" Height="24"
+                         Css="path { fill: black; }"
+                         IsVisible="{Binding IsLocked}"/>
                 </Panel>
             </Button>
 
