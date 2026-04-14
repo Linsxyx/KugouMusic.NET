@@ -212,7 +212,12 @@ public partial class SearchViewModel(
         {
             if (_currentDetailType == DetailType.Playlist)
             {
-                var songs = await playlistClient.GetSongsAsync(_currentDetailId, _currentDetailPage, 100);
+                var data = await playlistClient.GetSongsAsync(_currentDetailId, _currentDetailPage, 100);
+                if (data.Status != 1)
+                {
+                    logger.LogError($"Error : {data.ErrorCode}");
+                }
+                var songs = data.Songs;
                 if (songs.Count < 100) _hasMoreDetails = false;
 
                 var songItems = songs.Select(s =>

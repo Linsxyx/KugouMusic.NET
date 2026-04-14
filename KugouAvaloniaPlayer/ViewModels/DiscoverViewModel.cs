@@ -322,7 +322,12 @@ public partial class DiscoverViewModel : PageViewModelBase
         IsLoadingMoreSongs = true;
         try
         {
-            var songs = await _playlistClient.GetSongsAsync(SelectedPlaylist.GlobalId, _songPage, 100);
+            var data = await _playlistClient.GetSongsAsync(SelectedPlaylist.GlobalId, _songPage, 100);
+            if (data.Status != 1)
+            {
+                _logger.LogError($"Error : {data.ErrorCode}");
+            }
+            var songs = data.Songs;
             if (songs.Count < 100)
                 _hasMoreSongs = false;
 

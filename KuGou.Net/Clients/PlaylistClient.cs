@@ -12,7 +12,7 @@ public class PlaylistClient(RawPlaylistApi rawApi, KgSessionManager sessionManag
     /// <summary>
     ///     获取歌单内的歌曲列表
     /// </summary>
-    public async Task<List<PlaylistSong>> GetSongsAsync(string playlistId, int page = 1, int pageSize = 30)
+    public async Task<PlaylistSongResponse?> GetSongsAsync(string playlistId, int page = 1, int pageSize = 30)
     {
         // 逻辑搬运：计算起始索引
         var beginIdx = (page - 1) * pageSize;
@@ -20,7 +20,7 @@ public class PlaylistClient(RawPlaylistApi rawApi, KgSessionManager sessionManag
         var json = await rawApi.GetPlaylistSongsAsync(playlistId, beginIdx, pageSize);
         var data = KgApiResponseParser.Parse<PlaylistSongResponse>(json, AppJsonContext.Default.PlaylistSongResponse);
 
-        return data?.Songs ?? new List<PlaylistSong>();
+        return data;
         //return json;
     }
 

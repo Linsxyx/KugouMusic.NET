@@ -26,6 +26,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
     private readonly ICreatePlaylistDialogService _createPlaylistDialogService;
+    private readonly FavoritePlaylistService _favoritePlaylistService;
     private readonly IFolderPickerService _folderPickerService;
     private readonly ILogger<MyPlaylistsViewModel> _logger;
     private readonly PlaylistClient _playlistClient;
@@ -35,6 +36,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
     private int _currentPage = 1;
     private bool _hasMoreSongs = true;
+    private bool _isLikePlaylistLocalMode;
     [ObservableProperty] private bool _isLoadingMore;
 
     [ObservableProperty] private bool _isShowingSongs;
@@ -45,6 +47,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     public MyPlaylistsViewModel(
         UserClient userClient,
         PlaylistClient playlistClient,
+        FavoritePlaylistService favoritePlaylistService,
         ISukiToastManager toastManager,
         ICreatePlaylistDialogService createPlaylistDialogService,
         IFolderPickerService folderPickerService,
@@ -52,6 +55,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     {
         _userClient = userClient;
         _playlistClient = playlistClient;
+        _favoritePlaylistService = favoritePlaylistService;
         _toastManager = toastManager;
         _createPlaylistDialogService = createPlaylistDialogService;
         _folderPickerService = folderPickerService;
@@ -140,6 +144,11 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         else
         {
             _logger.LogError($"加载失败,err_code{onlinePlaylists?.ErrorCode}");
+            if (_favoritePlaylistService.TryGetLikePlaylistCache(out var cachedLike))
+            {
+                Items.Add(cachedLike.Playlist);
+                _logger.LogInformation("歌单列表远端失败，已从本地缓存兜底显示“我喜欢”。 source={Source}", cachedLike.Source);
+            }
         }
     }
 
@@ -155,16 +164,39 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         _currentPage = 1;
         _hasMoreSongs = true;
         IsLoadingMore = false;
+        _isLikePlaylistLocalMode = false;
 
         if (item.Type == PlaylistType.Online)
-            await LoadMoreSongsInternal();
+        {
+            if (IsLikePlaylist(item))
+            {
+                var loadedLocal = false;
+                if (_favoritePlaylistService.TryGetLikePlaylistCache(out var likeCache) && likeCache.Songs.Count > 0)
+                {
+                    SelectedPlaylistSongs.AddRange(likeCache.Songs);
+                    _isLikePlaylistLocalMode = true;
+                    _hasMoreSongs = false; // 本地快照阶段禁分页，等待远端接管
+                    loadedLocal = true;
+                    /*_logger.LogInformation("打开“我喜欢”歌单命中本地缓存: source={Source}, songs={SongCount}, updatedAt={UpdatedAt}",
+                        likeCache.Source, likeCache.Songs.Count, likeCache.UpdatedAt);*/
+                }
+
+                _ = RefreshLikePlaylistAfterOpenAsync(item, loadedLocal);
+                if (!loadedLocal)
+                    await LoadMoreSongsInternal();
+            }
+            else
+            {
+                await LoadMoreSongsInternal();
+            }
+        }
         else if (item.Type == PlaylistType.Local) await ScanLocalFolder(item.LocalPath!);
     }
 
     [RelayCommand]
     private async Task LoadMore()
     {
-        if (SelectedPlaylist?.Type != PlaylistType.Online || IsLoadingMore || !_hasMoreSongs)
+        if (SelectedPlaylist?.Type != PlaylistType.Online || IsLoadingMore || !_hasMoreSongs || _isLikePlaylistLocalMode)
             return;
 
         _currentPage++;
@@ -193,7 +225,18 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         IsLoadingMore = true;
         try
         {
-            var songs = await _playlistClient.GetSongsAsync(SelectedPlaylist.Id, _currentPage, 100);
+            var data = await _playlistClient.GetSongsAsync(SelectedPlaylist.Id, _currentPage, 100);
+            if (data is null)
+            {
+                _currentPage = Math.Max(1, _currentPage - 1);
+                return;
+            }
+
+            if (data.Status != 1)
+            {
+                _logger.LogWarning($"Error : {data.ErrorCode}");
+            }
+            var songs = data.Songs;
 
             if (songs.Count < 100) _hasMoreSongs = false;
 
@@ -250,7 +293,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                         title = !string.IsNullOrWhiteSpace(tfile.Tag.Title) ? tfile.Tag.Title : title;
 
                         var artists = tfile.Tag.Performers;
-                        if (artists != null && artists.Length > 0) singer = string.Join(", ", artists);
+                        if (artists is { Length: > 0 }) singer = string.Join(", ", artists);
 
                         duration = tfile.Properties?.Duration.TotalSeconds ?? 0;
                     }
@@ -485,5 +528,57 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         {
             _logger.LogError(ex, "处理移除歌曲消息失败");
         }
+    }
+
+    private async Task RefreshLikePlaylistAfterOpenAsync(PlaylistItem openedItem, bool hadLocalSnapshot)
+    {
+        try
+        {
+            await _favoritePlaylistService.LoadLikeListAsync();
+
+            var firstPage = await _playlistClient.GetSongsAsync(openedItem.Id, 1, 100);
+            if (firstPage is null || firstPage.Status != 1)
+            {
+                _logger.LogWarning("打开“我喜欢”后远端接管失败，保留本地列表。 err_code={ErrorCode}, hadLocalSnapshot={HadLocalSnapshot}",
+                    firstPage?.ErrorCode, hadLocalSnapshot);
+                return;
+            }
+
+            var songItems = (firstPage.Songs ?? new List<KuGou.Net.Abstractions.Models.PlaylistSong>()).Select(s => new SongItem
+            {
+                Name = s.Name,
+                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                Hash = s.Hash,
+                AlbumId = s.AlbumId,
+                FileId = s.FileId,
+                Singers = s.Singers,
+                Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
+                DurationSeconds = s.DurationMs / 1000.0
+            }).ToList();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (SelectedPlaylist == null || !IsLikePlaylist(SelectedPlaylist) || SelectedPlaylist.Id != openedItem.Id)
+                    return;
+
+                SelectedPlaylistSongs.Clear();
+                SelectedPlaylistSongs.AddRange(songItems);
+                _currentPage = 1;
+                _hasMoreSongs = songItems.Count >= 100;
+                _isLikePlaylistLocalMode = false;
+            });
+
+            /*_logger.LogInformation("打开“我喜欢”后远端分页接管成功: songs={SongCount}, hasMore={HasMore}",
+                songItems.Count, _hasMoreSongs);*/
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "打开“我喜欢”后后台刷新失败，保留本地数据。");
+        }
+    }
+
+    private static bool IsLikePlaylist(PlaylistItem item)
+    {
+        return item.ListId == 2 || string.Equals(item.Name, "我喜欢", StringComparison.OrdinalIgnoreCase);
     }
 }
