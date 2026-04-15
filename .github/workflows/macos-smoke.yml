@@ -26,7 +26,7 @@ on:
 jobs:
   smoke:
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -67,7 +67,7 @@ jobs:
             echo "=== dylib files ==="
             find ./publish/macos -name "*.dylib" -print || true
             echo
-            echo "=== app bundles ==="
+            echo "=== publish bundles/packages ==="
             find ./publish/macos -maxdepth 3 \( -name "*.app" -o -name "*.pkg" \) -print || true
           } | tee ./diagnostics/publish-tree.txt
 
@@ -114,7 +114,117 @@ jobs:
           {
             echo "=== releases ==="
             find ./releases -maxdepth 4 -print || true
+            echo
+            echo "=== app bundles ==="
+            find ./releases -name "*.app" -print || true
+            echo
+            echo "=== pkg files ==="
+            find ./releases -name "*.pkg" -print || true
           } | tee ./diagnostics/releases-tree.txt
+
+      - name: Inspect packaged mac artifacts
+        run: |
+          {
+            APP_PATH="$(find ./releases -name "*.app" | head -n 1 || true)"
+            PKG_PATH="$(find ./releases -name "*.pkg" | head -n 1 || true)"
+
+            echo "APP_PATH=$APP_PATH"
+            echo "PKG_PATH=$PKG_PATH"
+            echo
+
+            if [ -n "$APP_PATH" ]; then
+              echo "=== Info.plist ==="
+              plutil -p "$APP_PATH/Contents/Info.plist" || true
+              echo
+              echo "=== App bundle tree ==="
+              find "$APP_PATH/Contents" -maxdepth 4 -print || true
+              echo
+              echo "=== codesign (.app) ==="
+              codesign -dv --verbose=4 "$APP_PATH" || true
+              echo
+              echo "=== spctl (.app) ==="
+              spctl -a -vv "$APP_PATH" || true
+            else
+              echo "No .app found in releases"
+            fi
+
+            echo
+
+            if [ -n "$PKG_PATH" ]; then
+              echo "=== pkgutil check ==="
+              pkgutil --check-signature "$PKG_PATH" || true
+              echo
+              echo "=== spctl (.pkg) ==="
+              spctl -a -vv -t install "$PKG_PATH" || true
+            else
+              echo "No .pkg found in releases"
+            fi
+          } | tee ./diagnostics/package-inspect.txt
+
+      - name: Install pkg on runner
+        run: |
+          set -euxo pipefail
+          PKG_PATH="$(find ./releases -name "*.pkg" | head -n 1 || true)"
+          if [ -z "$PKG_PATH" ]; then
+            echo "No .pkg found in releases"
+            exit 1
+          fi
+
+          sudo installer -pkg "$PKG_PATH" -target /
+
+      - name: Inspect installed app
+        run: |
+          set -euxo pipefail
+          APP_DIR="/Applications/KugouAvaloniaPlayer.app"
+
+          {
+            echo "=== installed app exists ==="
+            ls -la "$APP_DIR" || true
+            echo
+            echo "=== installed Info.plist ==="
+            plutil -p "$APP_DIR/Contents/Info.plist" || true
+            echo
+            echo "=== installed app tree ==="
+            find "$APP_DIR/Contents" -maxdepth 4 -print || true
+            echo
+            echo "=== codesign installed app ==="
+            codesign -dv --verbose=4 "$APP_DIR" || true
+            echo
+            echo "=== spctl installed app ==="
+            spctl -a -vv "$APP_DIR" || true
+            echo
+            echo "=== xattr installed app ==="
+            xattr -lr "$APP_DIR" || true
+          } | tee ./diagnostics/installed-app-inspect.txt
+
+      - name: Smoke run installed app
+        run: |
+          set -euxo pipefail
+          APP_BIN="/Applications/KugouAvaloniaPlayer.app/Contents/MacOS/KugouAvaloniaPlayer"
+
+          if [ ! -f "$APP_BIN" ]; then
+            echo "Installed app binary not found: $APP_BIN" | tee ./diagnostics/installed-smoke.log
+            exit 1
+          fi
+
+          chmod +x "$APP_BIN"
+          "$APP_BIN" > ./diagnostics/installed-smoke.log 2>&1 &
+          APP_PID=$!
+          echo "PID=$APP_PID"
+
+          sleep 8
+
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "Installed app exited too early" | tee -a ./diagnostics/installed-smoke.log
+            cat ./diagnostics/installed-smoke.log || true
+            exit 1
+          fi
+
+          echo "Installed app is still running after 8s, treating as installed-smoke-pass" | tee -a ./diagnostics/installed-smoke.log
+          kill "$APP_PID" || true
+          wait "$APP_PID" || true
+
+          cat ./diagnostics/installed-smoke.log || true
 
       - name: Upload diagnostics
         if: always()
