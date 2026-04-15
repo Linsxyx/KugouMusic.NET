@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Adapters.Lyrics;
+using KuGou.Net.Protocol.Session;
 
 namespace KuGou.Net.Native;
 
@@ -17,6 +18,7 @@ public record NativeAddSongItemDto(string Name, string Hash, string AlbumId, str
 // 基础响应与异常
 [JsonSerializable(typeof(NativeErrorResult))]
 [JsonSerializable(typeof(NativeBoolResult))]
+[JsonSerializable(typeof(KgSession))]
 // Auth
 [JsonSerializable(typeof(LoginResponse))]
 [JsonSerializable(typeof(SendCodeResponse))]

@@ -63,7 +63,7 @@ public static class NativeExports
     {
         try
         {
-            var (transport, sessionMgr) = KgHttpClientFactory.CreateWithSession();
+            var (transport, sessionMgr) = KgHttpClientFactory.CreateWithSession(new NativeSessionPersistence());
             _sessionManager = sessionMgr;
 
             // 组装所有的 RawApi 和 Client
@@ -86,16 +86,6 @@ public static class NativeExports
             _discoveryClient = new DiscoveryClient(rawDiscovery, _sessionManager);
             _rankClient = new RankClient(rawRank);
             _albumClient = new AlbumClient(rawAlbum);
-
-            // 恢复本地 Session
-            var saved = KgSessionStore.Load();
-            if (saved != null && !string.IsNullOrEmpty(saved.Token))
-                if (!string.IsNullOrEmpty(saved.Dfid))
-                {
-                    _sessionManager.Session.Dfid = saved.Dfid;
-                    _sessionManager.Session.Mid = saved.Mid;
-                    _sessionManager.Session.Uuid = saved.Uuid;
-                }
 
             return ReturnBool(true);
         }

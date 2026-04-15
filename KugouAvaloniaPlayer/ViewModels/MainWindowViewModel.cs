@@ -179,19 +179,12 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            var saved = KgSessionStore.Load();
-            if (saved != null && !string.IsNullOrEmpty(saved.Token))
+            var session = _sessionManager.Session;
+            if (!string.IsNullOrEmpty(session.Token))
             {
-                if (!string.IsNullOrEmpty(saved.Dfid))
-                {
-                    _sessionManager.Session.Dfid = saved.Dfid;
-                    _sessionManager.Session.Mid = saved.Mid;
-                    _sessionManager.Session.Uuid = saved.Uuid;
-                }
-
                 IsLoggedIn = true;
                 await LoadUserInfo();
-                _logger.LogInformation($"已加载本地用户: {saved.UserId}");
+                _logger.LogInformation($"已加载本地用户: {session.UserId}");
                 _ = Task.Run(async () =>
                 {
                     try

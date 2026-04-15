@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using KuGou.Net.Infrastructure;
+using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
@@ -34,6 +35,7 @@ public partial class App : Application
             builder.AddDebug();
             builder.AddConsole();
         });
+        collection.AddSingleton<ISessionPersistence, KugouSessionPersistence>();
         collection.AddKuGouSdk();
 
         collection.AddSingleton<ISukiToastManager, SukiToastManager>();

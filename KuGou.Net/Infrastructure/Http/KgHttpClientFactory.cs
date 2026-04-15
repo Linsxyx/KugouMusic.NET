@@ -10,10 +10,11 @@ namespace KuGou.Net.Infrastructure.Http;
 /// </summary>
 public static class KgHttpClientFactory
 {
-    public static (IKgTransport Transport, KgSessionManager Session) CreateWithSession()
+    public static (IKgTransport Transport, KgSessionManager Session) CreateWithSession(
+        ISessionPersistence? sessionPersistence = null)
     {
         var cookieContainer = new CookieContainer();
-        var sessionManager = new KgSessionManager(cookieContainer);
+        var sessionManager = new KgSessionManager(cookieContainer, sessionPersistence ?? new InMemorySessionPersistence());
 
         // 调用之前的 Create 方法 (假设你保留了 Create(KgSessionManager existing))
         var transport = Create(sessionManager);
@@ -27,10 +28,13 @@ public static class KgHttpClientFactory
     /// </summary>
     /// <param name="existingSession">如果需要在多个 Client 间共享 Session，可传入已有的 SessionManager</param>
     /// <returns>配置好的传输层对象</returns>
-    public static IKgTransport Create(KgSessionManager? existingSession = null)
+    public static IKgTransport Create(KgSessionManager? existingSession = null,
+        ISessionPersistence? sessionPersistence = null)
     {
         //var cookieContainer = new CookieContainer();
-        var sessionManager = existingSession ?? new KgSessionManager(new CookieContainer());
+        var sessionManager = existingSession
+                             ?? new KgSessionManager(new CookieContainer(),
+                                 sessionPersistence ?? new InMemorySessionPersistence());
 
         var primaryHandler = new HttpClientHandler
         {

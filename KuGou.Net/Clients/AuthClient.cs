@@ -41,7 +41,6 @@ public class AuthClient(
             if (!string.IsNullOrEmpty(newToken))
             {
                 sessionManager.UpdateAuth(newUserId, newToken, "0", "", t1);
-                KgSessionStore.Save(sessionManager.Session);
                 logger.LogInformation($"Token 登录成功! UserID: {newUserId}");
             }
         }
@@ -79,7 +78,6 @@ public class AuthClient(
             var newToken = res.Token;
 
             sessionManager.UpdateAuth(newUserId!, newToken!, "0", "", "");
-            KgSessionStore.Save(sessionManager.Session);
 
             logger.LogInformation($"二维码登录成功! UserID: {newUserId}, Nickname: {res.Nickname}");
         }
@@ -122,7 +120,6 @@ public class AuthClient(
             if (!string.IsNullOrEmpty(newToken))
             {
                 sessionManager.UpdateAuth(newUserId, newToken, vipType, "", t1);
-                KgSessionStore.Save(sessionManager.Session);
                 logger.LogInformation($"Token 刷新成功! UserID: {newUserId}");
             }
         }

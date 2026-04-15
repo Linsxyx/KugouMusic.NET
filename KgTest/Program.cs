@@ -144,19 +144,10 @@ internal class Program
 
     private static async Task LoadLocalSessionOrLogin()
     {
-        var saved = KgSessionStore.Load();
-        if (saved != null && !string.IsNullOrEmpty(saved.Token))
+        var session = _sessionManager?.Session;
+        if (session != null && !string.IsNullOrEmpty(session.Token))
         {
-            Console.WriteLine($"[系统] 已加载本地用户: {saved.UserId}");
-            //_sessionManager?.UpdateAuth(saved.UserId, saved.Token, saved.VipType, saved.VipToken);
-            // 恢复风控信息，避免重复注册
-            if (!string.IsNullOrEmpty(saved.Dfid))
-            {
-                _sessionManager!.Session.Dfid = saved.Dfid;
-                _sessionManager.Session.Mid = saved.Mid;
-                _sessionManager.Session.Uuid = saved.Uuid;
-            }
-
+            Console.WriteLine($"[系统] 已加载本地用户: {session.UserId}");
             // 尝试刷新一下 Token 保活
             // await _authClient!.RefreshSessionAsync();
         }

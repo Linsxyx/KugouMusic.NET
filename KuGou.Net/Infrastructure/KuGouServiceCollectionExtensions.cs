@@ -5,6 +5,7 @@ using KuGou.Net.Infrastructure.Http.Handlers;
 using KuGou.Net.Protocol.Raw;
 using KuGou.Net.Protocol.Session;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace KuGou.Net.Infrastructure;
 
@@ -12,6 +13,7 @@ public static class KuGouServiceCollectionExtensions
 {
     public static IServiceCollection AddKuGouSdk(this IServiceCollection services)
     {
+        services.TryAddSingleton<ISessionPersistence, InMemorySessionPersistence>();
         services.AddSingleton<CookieContainer>();
         services.AddSingleton<KgSessionManager>();
 

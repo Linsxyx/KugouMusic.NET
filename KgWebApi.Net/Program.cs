@@ -1,4 +1,6 @@
 using KuGou.Net.Infrastructure;
+using KuGou.Net.Protocol.Session;
+using KgWebApi.Net.Services;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
@@ -7,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 注册控制器
 builder.Services
+    .AddSingleton<ISessionPersistence, KgWebSessionPersistence>()
     //.AddKuGouTransport()
     .AddKuGouSdk()
     .AddControllers();

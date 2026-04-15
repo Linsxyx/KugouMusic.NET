@@ -38,7 +38,7 @@ public class DeviceClient(RawDeviceApi rawApi, KgSessionManager sessionManager, 
                     session.Mid = KgUtils.CalcNewMid(serverDfid);
                     session.Uuid = KgUtils.Md5(session.Dfid + session.Mid);
 
-                    KgSessionStore.Save(session);
+                    sessionManager.Persist();
                     logger.LogInformation($"[Device] 注册成功! DFID: {serverDfid}");
                     return true;
                 }

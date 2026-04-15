@@ -8,11 +8,18 @@ namespace KuGou.Net.Protocol.Session;
 public class KgSessionManager
 {
     private readonly CookieContainer _cookieContainer;
+    private readonly ISessionPersistence _sessionPersistence;
 
     public KgSessionManager(CookieContainer cookieContainer)
+        : this(cookieContainer, new InMemorySessionPersistence())
+    {
+    }
+
+    public KgSessionManager(CookieContainer cookieContainer, ISessionPersistence sessionPersistence)
     {
         _cookieContainer = cookieContainer;
-        Session = KgSessionStore.Load() ?? new KgSession();
+        _sessionPersistence = sessionPersistence;
+        Session = _sessionPersistence.Load() ?? new KgSession();
 
 
         if (string.IsNullOrEmpty(Session.InstallGuid)) Session.InstallGuid = Guid.NewGuid().ToString("N");
@@ -31,11 +38,16 @@ public class KgSessionManager
         if (string.IsNullOrEmpty(Session.InstallMac)) Session.InstallMac = Guid.NewGuid().ToString("N");
         if (string.IsNullOrEmpty(Session.InstallDev)) Session.InstallDev = KgUtils.RandomString();
 
-        KgSessionStore.Save(Session);
+        _sessionPersistence.Save(Session);
         SyncCookies();
     }
 
     public KgSession Session { get; }
+
+    public void Persist()
+    {
+        _sessionPersistence.Save(Session);
+    }
 
     public void UpdateAuth(string userId, string token, string vipType, string vipToken, string? t1)
     {
@@ -45,7 +57,7 @@ public class KgSessionManager
         Session.VipToken = vipToken;
         Session.T1 = t1;
 
-        KgSessionStore.Save(Session);
+        _sessionPersistence.Save(Session);
         SyncCookies();
     }
 
@@ -59,7 +71,7 @@ public class KgSessionManager
 
     public void Logout()
     {
-        KgSessionStore.Clear();
+        _sessionPersistence.Clear();
 
         ClearCookies();
 
@@ -69,7 +81,7 @@ public class KgSessionManager
         Session.VipToken = "";
         Session.T1 = "";
         Session.Dfid = "-";
-        KgSessionStore.Save(Session);
+        _sessionPersistence.Save(Session);
     }
 
     private void SetCookie(string name, string value)
