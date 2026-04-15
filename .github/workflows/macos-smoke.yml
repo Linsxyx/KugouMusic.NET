@@ -1,176 +1,90 @@
-name: macOS Smoke Test
+name: Verify macOS Release Package
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
-    paths:
-      - ".github/workflows/macos-smoke.yml"
-      - "KugouAvaloniaPlayer/**"
-      - "SimpleAudio/**"
-      - "KuGou.Net/**"
-      - "KuGou.Net.Native/**"
-      - ".github/workflows/release.yml"
-      - "KugouMusic.NET.slnx"
-  pull_request:
-    paths:
-      - ".github/workflows/macos-smoke.yml"
-      - "KugouAvaloniaPlayer/**"
-      - "SimpleAudio/**"
-      - "KuGou.Net/**"
-      - "KuGou.Net.Native/**"
-      - ".github/workflows/release.yml"
-      - "KugouMusic.NET.slnx"
+    inputs:
+      tag:
+        description: "Release tag to verify, for example v0.9.4"
+        required: true
+        type: string
 
 jobs:
-  smoke:
+  verify-release-pkg:
     runs-on: macos-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Show environment
+      - name: Prepare folders
         run: |
-          sw_vers
-          uname -a
-          dotnet --info
+          mkdir -p diagnostics
+          mkdir -p downloads
 
-      - name: Restore
-        run: dotnet restore KugouMusic.NET.slnx
-
-      - name: Build
-        run: dotnet build KugouMusic.NET.slnx -c Release --no-restore
-
-      - name: Publish macOS app
-        run: |
-          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
-            -c Release \
-            -r osx-arm64 \
-            --self-contained true \
-            -o ./publish/macos
-
-      - name: List publish output
-        run: |
-          mkdir -p ./diagnostics
-          {
-            echo "=== publish/macos ==="
-            ls -la ./publish/macos || true
-            echo
-            echo "=== dylib files ==="
-            find ./publish/macos -name "*.dylib" -print || true
-            echo
-            echo "=== publish bundles/packages ==="
-            find ./publish/macos -maxdepth 3 \( -name "*.app" -o -name "*.pkg" \) -print || true
-          } | tee ./diagnostics/publish-tree.txt
-
-      - name: Smoke run published binary
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
         run: |
           set -euxo pipefail
-          chmod +x ./publish/macos/KugouAvaloniaPlayer
-          ./publish/macos/KugouAvaloniaPlayer > ./diagnostics/smoke.log 2>&1 &
-          APP_PID=$!
-          echo "PID=$APP_PID"
 
-          sleep 8
+          API_URL="https://api.github.com/repos/$REPO/releases/tags/$TAG"
+          curl -L \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$API_URL" \
+            -o diagnostics/release.json
 
-          if ! kill -0 "$APP_PID" 2>/dev/null; then
-            echo "App exited too early" | tee -a ./diagnostics/smoke.log
-            cat ./diagnostics/smoke.log || true
+          cat diagnostics/release.json
+
+          PKG_URL="$(python3 - <<'PY'
+import json
+with open("diagnostics/release.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+assets = data.get("assets", [])
+target = None
+for a in assets:
+    name = a.get("name", "")
+    if name == "KugouAvaloniaPlayer-mac.pkg" or name.endswith(".pkg"):
+        target = a.get("browser_download_url")
+        break
+
+print(target or "")
+PY
+          )"
+
+          if [ -z "$PKG_URL" ]; then
+            echo "No mac pkg asset found in release $TAG" | tee diagnostics/download.log
             exit 1
           fi
 
-          echo "App is still running after 8s, treating as smoke-pass" | tee -a ./diagnostics/smoke.log
-          kill "$APP_PID" || true
-          wait "$APP_PID" || true
+          echo "PKG_URL=$PKG_URL" | tee diagnostics/download.log
 
-          cat ./diagnostics/smoke.log || true
+          curl -L "$PKG_URL" -o downloads/KugouAvaloniaPlayer-mac.pkg
 
-      - name: Install Velopack CLI
-        run: dotnet tool install -g vpk
+          ls -lah downloads | tee -a diagnostics/download.log
+          shasum -a 256 downloads/KugouAvaloniaPlayer-mac.pkg | tee diagnostics/pkg-sha256.txt
 
-      - name: Pack with Velopack
+      - name: Inspect downloaded pkg
         run: |
           set -euxo pipefail
-          export PATH="$HOME/.dotnet/tools:$PATH"
-          which vpk
-          which cp
-          vpk pack \
-            -u KugouAvaloniaPlayer \
-            -v 0.0.1 \
-            -p ./publish/macos \
-            -e KugouAvaloniaPlayer \
-            -o ./releases
-
-      - name: List release output
-        run: |
           {
-            echo "=== releases ==="
-            find ./releases -maxdepth 4 -print || true
+            echo "=== file ==="
+            file downloads/KugouAvaloniaPlayer-mac.pkg || true
             echo
-            echo "=== app bundles ==="
-            find ./releases -name "*.app" -print || true
+            echo "=== pkgutil --check-signature ==="
+            pkgutil --check-signature downloads/KugouAvaloniaPlayer-mac.pkg || true
             echo
-            echo "=== pkg files ==="
-            find ./releases -name "*.pkg" -print || true
-          } | tee ./diagnostics/releases-tree.txt
+            echo "=== spctl (.pkg) ==="
+            spctl -a -vv -t install downloads/KugouAvaloniaPlayer-mac.pkg || true
+          } | tee diagnostics/pkg-inspect.txt
 
-      - name: Inspect packaged mac artifacts
-        run: |
-          {
-            APP_PATH="$(find ./releases -name "*.app" | head -n 1 || true)"
-            PKG_PATH="$(find ./releases -name "*.pkg" | head -n 1 || true)"
-
-            echo "APP_PATH=$APP_PATH"
-            echo "PKG_PATH=$PKG_PATH"
-            echo
-
-            if [ -n "$APP_PATH" ]; then
-              echo "=== Info.plist ==="
-              plutil -p "$APP_PATH/Contents/Info.plist" || true
-              echo
-              echo "=== App bundle tree ==="
-              find "$APP_PATH/Contents" -maxdepth 4 -print || true
-              echo
-              echo "=== codesign (.app) ==="
-              codesign -dv --verbose=4 "$APP_PATH" || true
-              echo
-              echo "=== spctl (.app) ==="
-              spctl -a -vv "$APP_PATH" || true
-            else
-              echo "No .app found in releases"
-            fi
-
-            echo
-
-            if [ -n "$PKG_PATH" ]; then
-              echo "=== pkgutil check ==="
-              pkgutil --check-signature "$PKG_PATH" || true
-              echo
-              echo "=== spctl (.pkg) ==="
-              spctl -a -vv -t install "$PKG_PATH" || true
-            else
-              echo "No .pkg found in releases"
-            fi
-          } | tee ./diagnostics/package-inspect.txt
-
-      - name: Install pkg on runner
+      - name: Install downloaded pkg
         run: |
           set -euxo pipefail
-          PKG_PATH="$(find ./releases -name "*.pkg" | head -n 1 || true)"
-          if [ -z "$PKG_PATH" ]; then
-            echo "No .pkg found in releases"
-            exit 1
-          fi
-
-          sudo installer -pkg "$PKG_PATH" -target /
+          sudo installer -pkg downloads/KugouAvaloniaPlayer-mac.pkg -target / | tee diagnostics/installer.log
 
       - name: Inspect installed app
         run: |
@@ -195,7 +109,7 @@ jobs:
             echo
             echo "=== xattr installed app ==="
             xattr -lr "$APP_DIR" || true
-          } | tee ./diagnostics/installed-app-inspect.txt
+          } | tee diagnostics/installed-app-inspect.txt
 
       - name: Smoke run installed app
         run: |
@@ -203,35 +117,35 @@ jobs:
           APP_BIN="/Applications/KugouAvaloniaPlayer.app/Contents/MacOS/KugouAvaloniaPlayer"
 
           if [ ! -f "$APP_BIN" ]; then
-            echo "Installed app binary not found: $APP_BIN" | tee ./diagnostics/installed-smoke.log
+            echo "Installed app binary not found: $APP_BIN" | tee diagnostics/installed-smoke.log
             exit 1
           fi
 
           chmod +x "$APP_BIN"
-          "$APP_BIN" > ./diagnostics/installed-smoke.log 2>&1 &
+          "$APP_BIN" > diagnostics/installed-smoke.log 2>&1 &
           APP_PID=$!
-          echo "PID=$APP_PID"
+          echo "PID=$APP_PID" | tee -a diagnostics/installed-smoke.log
 
           sleep 8
 
           if ! kill -0 "$APP_PID" 2>/dev/null; then
-            echo "Installed app exited too early" | tee -a ./diagnostics/installed-smoke.log
-            cat ./diagnostics/installed-smoke.log || true
+            echo "Installed app exited too early" | tee -a diagnostics/installed-smoke.log
+            cat diagnostics/installed-smoke.log || true
             exit 1
           fi
 
-          echo "Installed app is still running after 8s, treating as installed-smoke-pass" | tee -a ./diagnostics/installed-smoke.log
+          echo "Installed app is still running after 8s, treating as pass" | tee -a diagnostics/installed-smoke.log
           kill "$APP_PID" || true
           wait "$APP_PID" || true
 
-          cat ./diagnostics/installed-smoke.log || true
+          cat diagnostics/installed-smoke.log || true
 
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: macos-smoke-diagnostics
+          name: macos-release-verify-${{ inputs.tag }}
           path: |
-            ./diagnostics/**
-            ./releases/**
+            diagnostics/**
+            downloads/KugouAvaloniaPlayer-mac.pkg
           if-no-files-found: warn
