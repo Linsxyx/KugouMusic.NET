@@ -38,19 +38,33 @@
 
 ### 下载
 
-请前往 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases) 下载最新安装包：
+请前往 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases) 下载最新包：
 
 - Windows：`KugouAvaloniaPlayer-win.exe`
 - Linux：`KugouAvaloniaPlayer-linux.AppImage`
-- macOS：`KugouAvaloniaPlayer-mac.pkg`
+- macOS（Velopack 安装包）：`KugouAvaloniaPlayer-mac-Setup.pkg`
+- macOS（便携包）：`KugouAvaloniaPlayer-mac.app.zip`
 
 ### 自动更新说明
 
 项目通过 **Velopack + GitHub Releases** 提供更新能力。
 
-- 使用正式安装包安装后：可在应用内检查更新
+- 使用 Velopack 安装包安装后：可在应用内检查更新
 - 可在「用户中心」启用“启动时自动检查更新”
-- 非安装包直接运行（如本地 `dotnet run`）时，自动更新会被跳过
+- 非安装包直接运行（如 `.app.zip`、本地 `dotnet run`）时，自动更新会被跳过
+
+### macOS 使用说明（当前未签名）
+
+1. 推荐优先下载 `KugouAvaloniaPlayer-mac-Setup.pkg`（支持 Velopack 自动更新）。
+2. 如果安装或启动被 Gatekeeper 拦截，请先执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
+```
+
+3. 如果安装或启动 `KugouAvaloniaPlayer-mac-Setup.pkg` 失败，也可以下载 `KugouAvaloniaPlayer-mac.app.zip` 解压直接运行（这种方式不支持自动更新）。
+   解压后可双击运行：`KugouAvaloniaPlayer-mac.app/KugouAvaloniaPlayer.app`。
+   若从终端启动，请运行：`./KugouAvaloniaPlayer-mac.app/KugouAvaloniaPlayer.app/Contents/MacOS/KugouAvaloniaPlayer`。
 
 ## 快速开始（开发者）
 
@@ -212,6 +226,16 @@ KugouMusic.NET
 
 自动更新依赖 Velopack 安装上下文。若你通过 `dotnet run` 或手动复制文件运行，应用会跳过自动更新检查。请使用 Releases 安装包安装。
 
+### 1.1 macOS 提示“已损坏”或双击无响应怎么办？
+
+当前发布包未签名/未公证，macOS 可能会拦截。可先执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
+```
+
+再重新启动应用。
+
 ### 2. 为什么未登录时不能播放在线歌曲？
 
 当前播放器对在线播放要求有效登录态。请先在登录弹窗中完成验证码登录或二维码登录。
@@ -224,6 +248,12 @@ KugouMusic.NET
 
 完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
 
+### v0.9.5
+
+- 新增桌面歌词悬浮窗字体自定义能力
+- 将登录态持久化能力从 SDK 解耦，分别落在桌面端与 Web API 侧
+- 调整 macOS 发布流程，补充 `.app` 并重新接入 Velopack 打包链路
+
 ### v0.9.4
 
 - 支持导入网易云歌单
@@ -235,10 +265,6 @@ KugouMusic.NET
 - 重构设置页面，并新增歌词悬浮窗字体颜色设置
 - 对获取“我喜欢”歌单时概率报错 `39013` 做错误处理
 
-### v0.9.2
-
-- 修复首次歌词加载时歌词挤在一起的问题
-- 删除旧的滚动歌词样式
 
 ## 免责声明与致谢
 
