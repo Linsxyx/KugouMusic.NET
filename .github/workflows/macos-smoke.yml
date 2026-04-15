@@ -1,0 +1,87 @@
+name: macOS Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/macos-smoke.yml"
+      - "KugouAvaloniaPlayer/**"
+      - "SimpleAudio/**"
+      - "KuGou.Net/**"
+      - "KuGou.Net.Native/**"
+      - "KugouMusic.NET.slnx"
+  pull_request:
+    paths:
+      - ".github/workflows/macos-smoke.yml"
+      - "KugouAvaloniaPlayer/**"
+      - "SimpleAudio/**"
+      - "KuGou.Net/**"
+      - "KuGou.Net.Native/**"
+      - "KugouMusic.NET.slnx"
+
+jobs:
+  smoke:
+    runs-on: macos-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore KugouMusic.NET.slnx
+
+      - name: Build
+        run: dotnet build KugouMusic.NET.slnx -c Release --no-restore
+
+      - name: Publish macOS app
+        run: |
+          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+            -c Release \
+            -r osx-arm64 \
+            --self-contained true \
+            -o ./publish/macos
+
+      - name: List publish output
+        run: |
+          echo "=== publish/macos ==="
+          ls -la ./publish/macos || true
+          echo "=== dylib files ==="
+          find ./publish/macos -name "*.dylib" -print || true
+          echo "=== app bundles ==="
+          find ./publish/macos -maxdepth 2 -name "*.app" -print || true
+
+      - name: Smoke run published binary
+        run: |
+          chmod +x ./publish/macos/KugouAvaloniaPlayer
+          ./publish/macos/KugouAvaloniaPlayer > smoke.log 2>&1 &
+          APP_PID=$!
+          echo "PID=$APP_PID"
+
+          # 等待几秒，验证是不是启动即崩
+          sleep 8
+
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "App exited too early"
+            cat smoke.log || true
+            exit 1
+          fi
+
+          echo "App is still running after 8s, treating as smoke-pass"
+          kill "$APP_PID" || true
+          wait "$APP_PID" || true
+          cat smoke.log || true
+
+      - name: Upload smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-smoke-log
+          path: smoke.log
