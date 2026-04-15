@@ -38,22 +38,25 @@ jobs:
 
           cat diagnostics/release.json
 
-          PKG_URL="$(python3 - <<'PY'
-import json
-with open("diagnostics/release.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+          cat > diagnostics/find_pkg_url.py <<'PY'
+          import json
 
-assets = data.get("assets", [])
-target = None
-for a in assets:
-    name = a.get("name", "")
-    if name == "KugouAvaloniaPlayer-mac.pkg" or name.endswith(".pkg"):
-        target = a.get("browser_download_url")
-        break
+          with open("diagnostics/release.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
 
-print(target or "")
-PY
-          )"
+          assets = data.get("assets", [])
+          target = ""
+
+          for asset in assets:
+              name = asset.get("name", "")
+              if name == "KugouAvaloniaPlayer-mac.pkg" or name.endswith(".pkg"):
+                  target = asset.get("browser_download_url", "")
+                  break
+
+          print(target)
+          PY
+
+          PKG_URL="$(python3 diagnostics/find_pkg_url.py)"
 
           if [ -z "$PKG_URL" ]; then
             echo "No mac pkg asset found in release $TAG" | tee diagnostics/download.log
