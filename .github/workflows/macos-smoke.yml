@@ -11,6 +11,7 @@ on:
       - "SimpleAudio/**"
       - "KuGou.Net/**"
       - "KuGou.Net.Native/**"
+      - ".github/workflows/release.yml"
       - "KugouMusic.NET.slnx"
   pull_request:
     paths:
@@ -19,12 +20,13 @@ on:
       - "SimpleAudio/**"
       - "KuGou.Net/**"
       - "KuGou.Net.Native/**"
+      - ".github/workflows/release.yml"
       - "KugouMusic.NET.slnx"
 
 jobs:
   smoke:
     runs-on: macos-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -34,6 +36,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+
+      - name: Show environment
+        run: |
+          sw_vers
+          uname -a
+          dotnet --info
 
       - name: Restore
         run: dotnet restore KugouMusic.NET.slnx
@@ -51,37 +59,68 @@ jobs:
 
       - name: List publish output
         run: |
-          echo "=== publish/macos ==="
-          ls -la ./publish/macos || true
-          echo "=== dylib files ==="
-          find ./publish/macos -name "*.dylib" -print || true
-          echo "=== app bundles ==="
-          find ./publish/macos -maxdepth 2 -name "*.app" -print || true
+          mkdir -p ./diagnostics
+          {
+            echo "=== publish/macos ==="
+            ls -la ./publish/macos || true
+            echo
+            echo "=== dylib files ==="
+            find ./publish/macos -name "*.dylib" -print || true
+            echo
+            echo "=== app bundles ==="
+            find ./publish/macos -maxdepth 3 \( -name "*.app" -o -name "*.pkg" \) -print || true
+          } | tee ./diagnostics/publish-tree.txt
 
       - name: Smoke run published binary
         run: |
+          set -euxo pipefail
           chmod +x ./publish/macos/KugouAvaloniaPlayer
-          ./publish/macos/KugouAvaloniaPlayer > smoke.log 2>&1 &
+          ./publish/macos/KugouAvaloniaPlayer > ./diagnostics/smoke.log 2>&1 &
           APP_PID=$!
           echo "PID=$APP_PID"
 
-          # 等待几秒，验证是不是启动即崩
           sleep 8
 
           if ! kill -0 "$APP_PID" 2>/dev/null; then
-            echo "App exited too early"
-            cat smoke.log || true
+            echo "App exited too early" | tee -a ./diagnostics/smoke.log
+            cat ./diagnostics/smoke.log || true
             exit 1
           fi
 
-          echo "App is still running after 8s, treating as smoke-pass"
+          echo "App is still running after 8s, treating as smoke-pass" | tee -a ./diagnostics/smoke.log
           kill "$APP_PID" || true
           wait "$APP_PID" || true
-          cat smoke.log || true
 
-      - name: Upload smoke log
+          cat ./diagnostics/smoke.log || true
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Pack with Velopack
+        env:
+          PATH: ~/.dotnet/tools:${{ env.PATH }}
+        run: |
+          set -euxo pipefail
+          vpk pack \
+            -u KugouAvaloniaPlayer \
+            -v 0.0.0-ci \
+            -p ./publish/macos \
+            -e KugouAvaloniaPlayer \
+            -o ./releases
+
+      - name: List release output
+        run: |
+          {
+            echo "=== releases ==="
+            find ./releases -maxdepth 4 -print || true
+          } | tee ./diagnostics/releases-tree.txt
+
+      - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: macos-smoke-log
-          path: smoke.log
+          name: macos-smoke-diagnostics
+          path: |
+            ./diagnostics/**
+            ./releases/**
+          if-no-files-found: warn
