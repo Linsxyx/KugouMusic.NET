@@ -1,0 +1,202 @@
+name: Test macOS app zip startup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-macos-zip:
+    runs-on: macos-latest
+    timeout-minutes: 25
+
+    env:
+      APP_NAME: KugouAvaloniaPlayer
+      BUNDLE_ID: com.KugouAvaloniaPlayer.KugouAvaloniaPlayer
+      RID: osx-arm64
+      VERSION: 0.0.0-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Show environment
+        shell: bash
+        run: |
+          sw_vers
+          uname -a
+          dotnet --info
+
+      - name: Restore
+        shell: bash
+        run: dotnet restore KugouMusic.NET.slnx
+
+      - name: Build
+        shell: bash
+        run: dotnet build KugouMusic.NET.slnx -c Release --no-restore
+
+      - name: Publish macOS files
+        shell: bash
+        run: |
+          mkdir -p ./diagnostics
+          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+            -c Release \
+            "-p:BUILD_VERSION=${VERSION}" \
+            -r "${RID}" \
+            --self-contained true \
+            -o ./publish/macos
+
+      - name: Record publish tree
+        shell: bash
+        run: |
+          {
+            echo "=== publish/macos tree ==="
+            find ./publish/macos -maxdepth 2 | sort
+            echo
+            echo "=== dylibs ==="
+            find ./publish/macos -name "*.dylib" | sort
+          } | tee ./diagnostics/publish-tree.txt
+
+      - name: Create .app bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          APP="./dist/${APP_NAME}.app"
+
+          rm -rf ./dist
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+
+          cp -R ./publish/macos/* "$APP/Contents/MacOS/"
+
+          cat > "$APP/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleDisplayName</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundleExecutable</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundleIdentifier</key>
+            <string>${BUNDLE_ID}</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>12.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+          chmod +x "$APP/Contents/MacOS/${APP_NAME}"
+
+      - name: Record app bundle tree
+        shell: bash
+        run: |
+          {
+            echo "=== dist app tree ==="
+            find "./dist/${APP_NAME}.app" -maxdepth 4 | sort
+          } | tee ./diagnostics/dist-app-tree.txt
+
+      - name: Zip app bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p ./releases
+          ditto -c -k --sequesterRsrc --keepParent \
+            "./dist/${APP_NAME}.app" \
+            "./releases/${APP_NAME}-mac.app.zip"
+
+      - name: Record release files
+        shell: bash
+        run: |
+          {
+            echo "=== releases tree ==="
+            find ./releases -maxdepth 2 | sort
+            echo
+            echo "=== zip file info ==="
+            ls -lah "./releases/${APP_NAME}-mac.app.zip"
+          } | tee ./diagnostics/releases-tree.txt
+
+      - name: Unzip app bundle for startup test
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          rm -rf ./zip-test
+          mkdir -p ./zip-test
+
+          ditto -x -k "./releases/${APP_NAME}-mac.app.zip" "./zip-test"
+
+          {
+            echo "=== unzipped app tree ==="
+            find "./zip-test/${APP_NAME}.app" -maxdepth 4 | sort
+          } | tee ./diagnostics/unzipped-app-tree.txt
+
+      - name: Inspect unzipped app security metadata
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          APP_PATH="./zip-test/${APP_NAME}.app"
+
+          {
+            echo "=== codesign ==="
+            codesign -dv --verbose=4 "$APP_PATH" 2>&1 || true
+            echo
+            echo "=== spctl ==="
+            spctl -a -vv "$APP_PATH" 2>&1 || true
+            echo
+            echo "=== xattr ==="
+            xattr -lr "$APP_PATH" 2>&1 || true
+          } | tee ./diagnostics/app-security.txt
+
+      - name: Startup test zipped app binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          APP_BIN="./zip-test/${APP_NAME}.app/Contents/MacOS/${APP_NAME}"
+
+          chmod +x "$APP_BIN"
+
+          "$APP_BIN" > ./diagnostics/zip-startup.log 2>&1 &
+          APP_PID=$!
+
+          echo "PID=$APP_PID" | tee -a ./diagnostics/zip-startup.log
+          sleep 8
+
+          if ps -p "$APP_PID" > /dev/null; then
+            echo "RESULT=RUNNING_AFTER_8S" | tee -a ./diagnostics/zip-startup.log
+            kill "$APP_PID" || true
+            wait "$APP_PID" || true
+          else
+            echo "RESULT=EXITED_BEFORE_8S" | tee -a ./diagnostics/zip-startup.log
+            exit 1
+          fi
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-zip-startup-diagnostics
+          path: |
+            ./diagnostics/**
+            ./releases/KugouAvaloniaPlayer-mac.app.zip
+          if-no-files-found: warn
