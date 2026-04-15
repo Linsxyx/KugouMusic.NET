@@ -24,4 +24,6 @@ public record DesktopLyricColorSettingsChangedMessage(
     bool UseCustomMainColor,
     string MainColorHex,
     bool UseCustomTranslationColor,
-    string TranslationColorHex);
+    string TranslationColorHex,
+    bool UseCustomFont,
+    string FontFamilyName);

@@ -43,15 +43,18 @@
         <Style Selector="TextBlock.DesktopLine">
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="FontSize" Value="{Binding FontSize}" />
+            <Setter Property="FontFamily" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
 
         <Style Selector="TextBlock.DesktopWord">
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="FontSize" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}" />
+            <Setter Property="FontFamily" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
 
         <Style Selector="TextBlock.DesktopTrans">
             <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontFamily" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
     </Window.Styles>
 

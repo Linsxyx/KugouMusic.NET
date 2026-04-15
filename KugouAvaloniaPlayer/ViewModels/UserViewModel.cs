@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -26,6 +28,8 @@ public partial class UserViewModel : PageViewModelBase
     private readonly EqSettingsViewModel _eqSettingsViewModel;
     private readonly UserClient _userClient;
     private bool _isInitializingLyricColorEditor;
+    private bool _isInitializingLyricFontEditor;
+    private readonly HashSet<string> _availableLyricFonts;
 
     [ObservableProperty] private bool _autoCheckUpdate;
     [ObservableProperty] private bool _enableSurround;
@@ -35,6 +39,8 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private string _lyricColorHexInput = "#FFFFFFFF";
     [ObservableProperty] private string _selectedLyricColorMode = LyricColorModeDefault;
     [ObservableProperty] private string _selectedLyricColorTarget = LyricTargetMain;
+    [ObservableProperty] private string _selectedLyricFontMode = LyricColorModeDefault;
+    [ObservableProperty] private string? _selectedLyricFontFamily;
 
     [ObservableProperty] private CloseBehavior _selectedCloseBehavior;
     [ObservableProperty] private string _selectedEQPreset;
@@ -62,7 +68,10 @@ public partial class UserViewModel : PageViewModelBase
         SelectedEQPreset = Array.Exists(EQPresetOptions, x => x == preset) ? preset : "原声";
 
         EnableSurround = SettingsManager.Settings.EnableSurround;
+        LyricFontFamilyOptions = LoadSystemFontFamilies();
+        _availableLyricFonts = new HashSet<string>(LyricFontFamilyOptions, StringComparer.OrdinalIgnoreCase);
         LoadLyricColorEditorFromSettings();
+        LoadLyricFontEditorFromSettings();
     }
 
     public string[] EQPresetOptions { get; }
@@ -70,6 +79,7 @@ public partial class UserViewModel : PageViewModelBase
     public string[] LyricColorTargetOptions { get; } = [LyricTargetMain, LyricTargetTranslation];
 
     public string[] LyricColorModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
+    public string[] LyricFontModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
 
     public string[] LyricColorPalette { get; } =
     [
@@ -86,6 +96,7 @@ public partial class UserViewModel : PageViewModelBase
         "#FFB0BEC5",
         "#FFFFCDD2"
     ];
+    public string[] LyricFontFamilyOptions { get; }
 
     private PlayerViewModel Player { get; }
 
@@ -97,6 +108,7 @@ public partial class UserViewModel : PageViewModelBase
     public string[] QualityOptions { get; } = { "128", "320", "flac", "high" };
 
     public bool IsLyricColorCustomMode => SelectedLyricColorMode == LyricColorModeCustom;
+    public bool IsLyricFontCustomMode => SelectedLyricFontMode == LyricColorModeCustom;
 
     public IBrush LyricColorPreviewBrush => new SolidColorBrush(ParseColorOrDefault(LyricColorHexInput, Colors.Transparent));
 
@@ -180,7 +192,7 @@ public partial class UserViewModel : PageViewModelBase
         LyricColorHexInput = normalized;
         OnPropertyChanged(nameof(LyricColorPreviewBrush));
         SettingsManager.Save();
-        NotifyDesktopLyricColorChanged();
+        NotifyDesktopLyricStyleChanged();
     }
 
     public event Action? CheckForUpdateRequested;
@@ -230,12 +242,45 @@ public partial class UserViewModel : PageViewModelBase
 
         SetCurrentTargetCustomEnabled(value == LyricColorModeCustom);
         SettingsManager.Save();
-        NotifyDesktopLyricColorChanged();
+        NotifyDesktopLyricStyleChanged();
     }
 
     partial void OnLyricColorHexInputChanged(string value)
     {
         OnPropertyChanged(nameof(LyricColorPreviewBrush));
+    }
+
+    partial void OnSelectedLyricFontModeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsLyricFontCustomMode));
+        if (_isInitializingLyricFontEditor) return;
+
+        SettingsManager.Settings.DesktopLyricUseCustomFont = value == LyricColorModeCustom;
+        if (SettingsManager.Settings.DesktopLyricUseCustomFont && !string.IsNullOrWhiteSpace(SelectedLyricFontFamily))
+            SettingsManager.Settings.DesktopLyricCustomFontFamily = SelectedLyricFontFamily;
+        SettingsManager.Save();
+        NotifyDesktopLyricStyleChanged();
+    }
+
+    partial void OnSelectedLyricFontFamilyChanged(string? value)
+    {
+        if (_isInitializingLyricFontEditor) return;
+
+        var normalized = NormalizeFontName(value);
+        if (normalized == null)
+            return;
+
+        if (!string.Equals(value, normalized, StringComparison.Ordinal))
+        {
+            _isInitializingLyricFontEditor = true;
+            SelectedLyricFontFamily = normalized;
+            _isInitializingLyricFontEditor = false;
+        }
+
+        SettingsManager.Settings.DesktopLyricCustomFontFamily = normalized;
+        SettingsManager.Settings.DesktopLyricUseCustomFont = SelectedLyricFontMode == LyricColorModeCustom;
+        SettingsManager.Save();
+        NotifyDesktopLyricStyleChanged();
     }
 
     public void SetCheckingUpdateState(bool isChecking)
@@ -281,6 +326,20 @@ public partial class UserViewModel : PageViewModelBase
         OnPropertyChanged(nameof(LyricColorPreviewBrush));
     }
 
+    private void LoadLyricFontEditorFromSettings()
+    {
+        _isInitializingLyricFontEditor = true;
+
+        SelectedLyricFontMode = SettingsManager.Settings.DesktopLyricUseCustomFont
+            ? LyricColorModeCustom
+            : LyricColorModeDefault;
+        SelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.DesktopLyricCustomFontFamily)
+                                  ?? LyricFontFamilyOptions.FirstOrDefault();
+
+        _isInitializingLyricFontEditor = false;
+        OnPropertyChanged(nameof(IsLyricFontCustomMode));
+    }
+
     private bool IsEditingMainLyricColor()
     {
         return SelectedLyricColorTarget == LyricTargetMain;
@@ -308,17 +367,41 @@ public partial class UserViewModel : PageViewModelBase
         return Color.TryParse(colorText.Trim(), out var parsed) ? parsed.ToString() : null;
     }
 
+    private string? NormalizeFontName(string? fontName)
+    {
+        if (string.IsNullOrWhiteSpace(fontName)) return null;
+        var trimmed = fontName.Trim();
+
+        if (!_availableLyricFonts.Contains(trimmed))
+            return null;
+
+        return LyricFontFamilyOptions.FirstOrDefault(x =>
+            string.Equals(x, trimmed, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static Color ParseColorOrDefault(string? colorText, Color fallback)
     {
         return Color.TryParse(colorText, out var parsed) ? parsed : fallback;
     }
 
-    private static void NotifyDesktopLyricColorChanged()
+    private static void NotifyDesktopLyricStyleChanged()
     {
         WeakReferenceMessenger.Default.Send(new DesktopLyricColorSettingsChangedMessage(
             SettingsManager.Settings.DesktopLyricUseCustomMainColor,
             SettingsManager.Settings.DesktopLyricCustomMainColor,
             SettingsManager.Settings.DesktopLyricUseCustomTranslationColor,
-            SettingsManager.Settings.DesktopLyricCustomTranslationColor));
+            SettingsManager.Settings.DesktopLyricCustomTranslationColor,
+            SettingsManager.Settings.DesktopLyricUseCustomFont,
+            SettingsManager.Settings.DesktopLyricCustomFontFamily));
+    }
+
+    private static string[] LoadSystemFontFamilies()
+    {
+        return FontManager.Current.SystemFonts
+            .Select(f => f.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
+            .ToArray();
     }
 }

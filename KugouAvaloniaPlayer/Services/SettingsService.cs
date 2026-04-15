@@ -31,6 +31,8 @@ public class AppSettings
     public string DesktopLyricCustomMainColor { get; set; } = "#FFFFFFFF";
     public bool DesktopLyricUseCustomTranslationColor { get; set; }
     public string DesktopLyricCustomTranslationColor { get; set; } = "#CCFFFFFF";
+    public bool DesktopLyricUseCustomFont { get; set; }
+    public string DesktopLyricCustomFontFamily { get; set; } = string.Empty;
 }
 
 [JsonSerializable(typeof(AppSettings))]

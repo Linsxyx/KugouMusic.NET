@@ -147,6 +147,37 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </StackPanel>
+
+                                <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,4" />
+
+                                <TextBlock Text="歌词悬浮窗字体" FontWeight="DemiBold" />
+                                <TextBlock Text="支持系统已安装字体，统一应用到歌词与翻译。" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+
+                                <StackPanel>
+                                    <TextBlock Text="字体模式" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding LyricFontModeOptions}" SelectedItem="{Binding SelectedLyricFontMode}" />
+                                </StackPanel>
+
+                                <StackPanel IsVisible="{Binding IsLyricFontCustomMode}" Spacing="8">
+                                    <TextBlock Text="字体选择" FontSize="12" Foreground="{DynamicResource SukiLiquid2}" />
+                                    <ComboBox ItemsSource="{Binding LyricFontFamilyOptions}"
+                                              SelectedItem="{Binding SelectedLyricFontFamily}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding .}" FontFamily="{Binding .}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <Border BorderThickness="1"
+                                            BorderBrush="{DynamicResource SukiBorder}"
+                                            CornerRadius="8"
+                                            Padding="10">
+                                        <TextBlock Text="歌词字体预览 Preview 123"
+                                                   TextWrapping="Wrap"
+                                                   FontFamily="{Binding SelectedLyricFontFamily}" />
+                                    </Border>
+                                </StackPanel>
                             </StackPanel>
                         </suki:GlassCard>
 

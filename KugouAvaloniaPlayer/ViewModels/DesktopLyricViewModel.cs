@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Avalonia.Media;
+using System;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -17,19 +18,23 @@ public partial class DesktopLyricViewModel : ViewModelBase
     {
         Player = player;
         CanMousePassthrough = canMousePassthrough;
-        ApplyColorSettings(
+        ApplyLyricStyleSettings(
             SettingsManager.Settings.DesktopLyricUseCustomMainColor,
             SettingsManager.Settings.DesktopLyricCustomMainColor,
             SettingsManager.Settings.DesktopLyricUseCustomTranslationColor,
-            SettingsManager.Settings.DesktopLyricCustomTranslationColor);
+            SettingsManager.Settings.DesktopLyricCustomTranslationColor,
+            SettingsManager.Settings.DesktopLyricUseCustomFont,
+            SettingsManager.Settings.DesktopLyricCustomFontFamily);
 
         WeakReferenceMessenger.Default.Register<DesktopLyricColorSettingsChangedMessage>(this, (_, message) =>
         {
-            ApplyColorSettings(
+            ApplyLyricStyleSettings(
                 message.UseCustomMainColor,
                 message.MainColorHex,
                 message.UseCustomTranslationColor,
-                message.TranslationColorHex);
+                message.TranslationColorHex,
+                message.UseCustomFont,
+                message.FontFamilyName);
         });
     }
 
@@ -37,6 +42,7 @@ public partial class DesktopLyricViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isLocked;
 
+    [ObservableProperty] private FontFamily? _lyricFontFamily;
     [ObservableProperty] private IBrush _lyricForeground = DefaultLyricBrush;
     [ObservableProperty] private IBrush _translationLineForeground = DefaultTranslationLineBrush;
     [ObservableProperty] private IBrush _translationWordForeground = DefaultTranslationWordBrush;
@@ -51,12 +57,16 @@ public partial class DesktopLyricViewModel : ViewModelBase
         IsLocked = !IsLocked;
     }
 
-    private void ApplyColorSettings(
+    private void ApplyLyricStyleSettings(
         bool useCustomMainColor,
         string mainColorHex,
         bool useCustomTranslationColor,
-        string translationColorHex)
+        string translationColorHex,
+        bool useCustomFont,
+        string fontFamilyName)
     {
+        ApplyFontSettings(useCustomFont, fontFamilyName);
+
         LyricForeground = useCustomMainColor
             ? new SolidColorBrush(ParseColorOrDefault(mainColorHex, Colors.White))
             : DefaultLyricBrush;
@@ -71,6 +81,30 @@ public partial class DesktopLyricViewModel : ViewModelBase
 
         TranslationLineForeground = DefaultTranslationLineBrush;
         TranslationWordForeground = DefaultTranslationWordBrush;
+    }
+
+    private void ApplyFontSettings(bool useCustomFont, string fontFamilyName)
+    {
+        if (!useCustomFont || string.IsNullOrWhiteSpace(fontFamilyName))
+        {
+            LyricFontFamily = null;
+            return;
+        }
+
+        LyricFontFamily = IsSystemFontInstalled(fontFamilyName)
+            ? new FontFamily(fontFamilyName)
+            : null;
+    }
+
+    private static bool IsSystemFontInstalled(string fontFamilyName)
+    {
+        foreach (var systemFont in FontManager.Current.SystemFonts)
+        {
+            if (string.Equals(systemFont.Name, fontFamilyName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private static Color ParseColorOrDefault(string? colorText, Color fallback)
