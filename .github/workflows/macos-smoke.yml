@@ -103,7 +103,7 @@ jobs:
           set -euxo pipefail
           vpk pack \
             -u KugouAvaloniaPlayer \
-            -v 0.0.0-ci \
+            -v 0.0.1 \
             -p ./publish/macos \
             -e KugouAvaloniaPlayer \
             -o ./releases
