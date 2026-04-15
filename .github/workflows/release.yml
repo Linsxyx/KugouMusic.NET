@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-windows-linux:
     strategy:
       matrix:
         include:
@@ -19,9 +19,6 @@ jobs:
           - os: ubuntu-latest
             rid: linux-x64
             name: linux
-          - os: macos-latest
-            rid: osx-arm64
-            name: macos-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -61,9 +58,9 @@ jobs:
 
           vpk pack \
             -u KugouAvaloniaPlayer \
-            -v $VERSION \
+            -v "$VERSION" \
             -p ./publish \
-            -e $EXE_NAME \
+            -e "$EXE_NAME" \
             -o ./releases
 
       - name: Upload Artifacts
@@ -72,11 +69,146 @@ jobs:
           name: releases-${{ matrix.name }}
           path: ./releases/*
 
+  build-macos:
+    runs-on: macos-latest
+
+    env:
+      APP_NAME: KugouAvaloniaPlayer
+      BUNDLE_ID: com.KugouAvaloniaPlayer.KugouAvaloniaPlayer
+      RID: osx-arm64
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set version
+        shell: bash
+        run: |
+          echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Publish macOS files
+        shell: bash
+        run: |
+          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+            -c Release \
+            "-p:BUILD_VERSION=$VERSION" \
+            -r "$RID" \
+            --self-contained true \
+            -o ./publish/macos
+
+      - name: Create .app bundle
+        shell: bash
+        run: |
+          APP="./dist/${APP_NAME}.app"
+
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+
+          cp -R ./publish/macos/* "$APP/Contents/MacOS/"
+
+          cat > "$APP/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleDisplayName</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundleExecutable</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundleIdentifier</key>
+            <string>${BUNDLE_ID}</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>12.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+          chmod +x "$APP/Contents/MacOS/${APP_NAME}"
+
+      - name: Show app structure
+        shell: bash
+        run: |
+          find "./dist/${APP_NAME}.app" -maxdepth 3 | sort
+
+      - name: Smoke run app binary
+        shell: bash
+        run: |
+          APP_BIN="./dist/${APP_NAME}.app/Contents/MacOS/${APP_NAME}"
+
+          "$APP_BIN" > smoke.log 2>&1 &
+          APP_PID=$!
+
+          sleep 8
+
+          if ps -p "$APP_PID" > /dev/null; then
+            echo "App is still running after 8s, treating as smoke-pass"
+            kill "$APP_PID" || true
+          else
+            echo "App exited before 8s"
+          fi
+
+          cat smoke.log || true
+
+      - name: Zip app bundle
+        shell: bash
+        run: |
+          mkdir -p ./releases
+          ditto -c -k --sequesterRsrc --keepParent \
+            "./dist/${APP_NAME}.app" \
+            "./releases/${APP_NAME}-mac.app.zip"
+
+      - name: Build unsigned pkg
+        shell: bash
+        run: |
+          mkdir -p ./pkgroot/Applications
+          cp -R "./dist/${APP_NAME}.app" "./pkgroot/Applications/"
+
+          pkgbuild \
+            --root ./pkgroot \
+            --identifier "${BUNDLE_ID}" \
+            --version "${VERSION}" \
+            --install-location / \
+            "./releases/${APP_NAME}-mac-unsigned.pkg"
+
+      - name: Inspect pkg signature status
+        shell: bash
+        run: |
+          spctl -a -vv -t install "./releases/${APP_NAME}-mac-unsigned.pkg" || true
+          pkgutil --check-signature "./releases/${APP_NAME}-mac-unsigned.pkg" || true
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: releases-macos
+          path: ./releases/*
+
   release:
-    needs: build
+    needs:
+      - build-windows-linux
+      - build-macos
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -88,12 +220,17 @@ jobs:
         shell: bash
         run: |
           mkdir -p ./release_files
+
           cp ./all_artifacts/*.exe ./release_files/KugouAvaloniaPlayer-win.exe 2>/dev/null || true
-          cp ./all_artifacts/*.pkg ./release_files/KugouAvaloniaPlayer-mac.pkg 2>/dev/null || true
           cp ./all_artifacts/*.AppImage ./release_files/KugouAvaloniaPlayer-linux.AppImage 2>/dev/null || true
-          cp ./all_artifacts/*.nupkg ./release_files/
+          cp ./all_artifacts/*-mac.app.zip ./release_files/KugouAvaloniaPlayer-mac.app.zip 2>/dev/null || true
+          cp ./all_artifacts/*-mac-unsigned.pkg ./release_files/KugouAvaloniaPlayer-mac-unsigned.pkg 2>/dev/null || true
+          cp ./all_artifacts/*.nupkg ./release_files/ 2>/dev/null || true
           cp ./all_artifacts/RELEASES* ./release_files/ 2>/dev/null || true
           cp ./all_artifacts/releases.*.json ./release_files/ 2>/dev/null || true
+
+          ls -lah ./release_files
+
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
