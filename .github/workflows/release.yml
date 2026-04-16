@@ -96,6 +96,28 @@ jobs:
         run: |
           echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
+      - name: Build macOS icon (.icns)
+        shell: bash
+        run: |
+          ICONSET_DIR="./dist/AppIcon.iconset"
+          SOURCE_PNG="./KugouAvaloniaPlayer/Assets/IMG_20260216_070951.png"
+          ICNS_PATH="./dist/KugouAvaloniaPlayer.icns"
+
+          mkdir -p "$ICONSET_DIR"
+
+          sips -z 16 16 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_16x16.png"
+          sips -z 32 32 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_16x16@2x.png"
+          sips -z 32 32 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_32x32.png"
+          sips -z 64 64 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_32x32@2x.png"
+          sips -z 128 128 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_128x128.png"
+          sips -z 256 256 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_128x128@2x.png"
+          sips -z 256 256 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_256x256.png"
+          sips -z 512 512 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_256x256@2x.png"
+          sips -z 512 512 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_512x512.png"
+          sips -z 1024 1024 "$SOURCE_PNG" --out "$ICONSET_DIR/icon_512x512@2x.png"
+
+          iconutil -c icns "$ICONSET_DIR" -o "$ICNS_PATH"
+
       - name: Publish macOS files
         shell: bash
         run: |
@@ -208,7 +230,7 @@ jobs:
             -v "$VERSION" \
             -p ./publish/macos \
             -e "$APP_NAME" \
-            -i ./KugouAvaloniaPlayer/Assets/Test.ico \
+            -i ./dist/KugouAvaloniaPlayer.icns \
             -o ./releases
 
       - name: Upload macOS artifacts
