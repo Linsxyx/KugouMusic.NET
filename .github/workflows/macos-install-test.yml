@@ -1,0 +1,279 @@
+name: macOS Install Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/macos-install-test.yml"
+      - ".github/workflows/release.yml"
+      - "KugouAvaloniaPlayer/**"
+      - "SimpleAudio/**"
+      - "KuGou.Net/**"
+      - "KuGou.Net.Native/**"
+      - "KugouMusic.NET.slnx"
+
+jobs:
+  macos-install-test:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    env:
+      APP_NAME: KugouAvaloniaPlayer
+      BUNDLE_ID: com.KugouAvaloniaPlayer.KugouAvaloniaPlayer
+      RID: osx-arm64
+      VERSION: 0.0.1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Show environment
+        run: |
+          sw_vers
+          uname -a
+          dotnet --info
+
+      - name: Restore
+        run: dotnet restore KugouMusic.NET.slnx
+
+      - name: Build
+        run: dotnet build KugouMusic.NET.slnx -c Release --no-restore
+
+      - name: Publish macOS files
+        shell: bash
+        run: |
+          set -euxo pipefail
+          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+            -c Release \
+            "-p:BUILD_VERSION=${VERSION}" \
+            -r "${RID}" \
+            --self-contained true \
+            -o ./publish/macos
+
+      - name: Create .app bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APP="./dist/${APP_NAME}.app"
+
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+
+          cp -R ./publish/macos/* "$APP/Contents/MacOS/"
+
+          cat > "$APP/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleDisplayName</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundleExecutable</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundleIdentifier</key>
+            <string>${BUNDLE_ID}</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>${APP_NAME}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${VERSION}</string>
+            <key>CFBundleVersion</key>
+            <string>${VERSION}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>12.0</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+
+          chmod +x "$APP/Contents/MacOS/${APP_NAME}"
+
+      - name: Inspect app bundle
+        run: |
+          mkdir -p diagnostics
+          {
+            echo "=== dist app tree ==="
+            find "./dist/${APP_NAME}.app" -maxdepth 4 -print | sort
+            echo
+            echo "=== Info.plist ==="
+            plutil -p "./dist/${APP_NAME}.app/Contents/Info.plist" || true
+            echo
+            echo "=== codesign app ==="
+            codesign -dv --verbose=4 "./dist/${APP_NAME}.app" 2>&1 || true
+            echo
+            echo "=== spctl app ==="
+            spctl -a -vv "./dist/${APP_NAME}.app" 2>&1 || true
+          } | tee diagnostics/app-bundle-inspect.txt
+
+      - name: Smoke run app bundle binary directly
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APP_BIN="./dist/${APP_NAME}.app/Contents/MacOS/${APP_NAME}"
+
+          "$APP_BIN" > diagnostics/direct-app-run.log 2>&1 &
+          APP_PID=$!
+
+          sleep 8
+
+          if ps -p "$APP_PID" > /dev/null; then
+            echo "Direct app run survived 8s" | tee -a diagnostics/direct-app-run.log
+            kill "$APP_PID" || true
+            wait "$APP_PID" || true
+          else
+            echo "Direct app run exited before 8s" | tee -a diagnostics/direct-app-run.log
+            cat diagnostics/direct-app-run.log || true
+            exit 1
+          fi
+
+          cat diagnostics/direct-app-run.log || true
+
+      - name: Zip app bundle
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p ./releases
+          ditto -c -k --sequesterRsrc --keepParent \
+            "./dist/${APP_NAME}.app" \
+            "./releases/${APP_NAME}-mac.app.zip"
+
+      - name: Test unzip app.zip and run
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf ./unzipped
+          mkdir -p ./unzipped
+          ditto -x -k "./releases/${APP_NAME}-mac.app.zip" "./unzipped"
+
+          {
+            echo "=== unzipped tree ==="
+            find ./unzipped -maxdepth 4 -print | sort
+            echo
+            echo "=== spctl unzipped app ==="
+            spctl -a -vv "./unzipped/${APP_NAME}.app" 2>&1 || true
+          } | tee diagnostics/unzip-inspect.txt
+
+          APP_BIN="./unzipped/${APP_NAME}.app/Contents/MacOS/${APP_NAME}"
+          "$APP_BIN" > diagnostics/unzipped-app-run.log 2>&1 &
+          APP_PID=$!
+
+          sleep 8
+
+          if ps -p "$APP_PID" > /dev/null; then
+            echo "Unzipped app run survived 8s" | tee -a diagnostics/unzipped-app-run.log
+            kill "$APP_PID" || true
+            wait "$APP_PID" || true
+          else
+            echo "Unzipped app run exited before 8s" | tee -a diagnostics/unzipped-app-run.log
+            cat diagnostics/unzipped-app-run.log || true
+            exit 1
+          fi
+
+          cat diagnostics/unzipped-app-run.log || true
+
+      - name: Build unsigned pkg
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf ./pkgroot
+          mkdir -p ./pkgroot/Applications
+          cp -R "./dist/${APP_NAME}.app" "./pkgroot/Applications/"
+
+          pkgbuild \
+            --root ./pkgroot \
+            --identifier "${BUNDLE_ID}" \
+            --version "${VERSION}" \
+            --install-location / \
+            "./releases/${APP_NAME}-mac-unsigned.pkg"
+
+      - name: Inspect unsigned pkg
+        shell: bash
+        run: |
+          {
+            echo "=== spctl pkg ==="
+            spctl -a -vv -t install "./releases/${APP_NAME}-mac-unsigned.pkg" 2>&1 || true
+            echo
+            echo "=== pkg signature ==="
+            pkgutil --check-signature "./releases/${APP_NAME}-mac-unsigned.pkg" 2>&1 || true
+            echo
+            echo "=== xattr pkg ==="
+            xattr -lr "./releases/${APP_NAME}-mac-unsigned.pkg" 2>&1 || true
+          } | tee diagnostics/pkg-inspect.txt
+
+      - name: CLI install unsigned pkg
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo installer -pkg "./releases/${APP_NAME}-mac-unsigned.pkg" -target / | tee diagnostics/installer-output.txt
+
+      - name: Verify installed app
+        shell: bash
+        run: |
+          set -euxo pipefail
+          INSTALLED_APP="/Applications/${APP_NAME}.app"
+
+          if [ ! -d "$INSTALLED_APP" ]; then
+            echo "Installed app not found: $INSTALLED_APP" | tee diagnostics/installed-app-check.txt
+            exit 1
+          fi
+
+          {
+            echo "=== installed app exists ==="
+            ls -la "/Applications" || true
+            echo
+            echo "=== installed app tree ==="
+            find "$INSTALLED_APP" -maxdepth 4 -print | sort
+            echo
+            echo "=== spctl installed app ==="
+            spctl -a -vv "$INSTALLED_APP" 2>&1 || true
+            echo
+            echo "=== codesign installed app ==="
+            codesign -dv --verbose=4 "$INSTALLED_APP" 2>&1 || true
+            echo
+            echo "=== xattr installed app ==="
+            xattr -lr "$INSTALLED_APP" 2>&1 || true
+          } | tee diagnostics/installed-app-check.txt
+
+      - name: Smoke run installed app binary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          APP_BIN="/Applications/${APP_NAME}.app/Contents/MacOS/${APP_NAME}"
+
+          "$APP_BIN" > diagnostics/installed-app-run.log 2>&1 &
+          APP_PID=$!
+
+          sleep 8
+
+          if ps -p "$APP_PID" > /dev/null; then
+            echo "Installed app run survived 8s" | tee -a diagnostics/installed-app-run.log
+            kill "$APP_PID" || true
+            wait "$APP_PID" || true
+          else
+            echo "Installed app run exited before 8s" | tee -a diagnostics/installed-app-run.log
+            cat diagnostics/installed-app-run.log || true
+            exit 1
+          fi
+
+          cat diagnostics/installed-app-run.log || true
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-install-test-diagnostics
+          path: |
+            diagnostics/**
+            releases/**
+          if-no-files-found: warn
