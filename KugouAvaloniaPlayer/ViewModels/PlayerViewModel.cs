@@ -127,7 +127,11 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
         try
         {
-            if (string.IsNullOrEmpty(_sessionManager.Session.Token) || _sessionManager.Session.UserId == "0")
+            var localFilePath = song.LocalFilePath;
+            var isLocalSong = !string.IsNullOrWhiteSpace(localFilePath) && File.Exists(localFilePath);
+
+            if (!isLocalSong &&
+                (string.IsNullOrEmpty(_sessionManager.Session.Token) || _sessionManager.Session.UserId == "0"))
             {
                 _toastManager.CreateToast()
                     .OfType(NotificationType.Warning)
@@ -166,10 +170,10 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             StopAndReset();
 
             string? url;
-            if (File.Exists(song.LocalFilePath))
+            if (isLocalSong)
             {
-                url = song.LocalFilePath;
-                _ = _lyricsService.LoadLocalLyricsAsync(song.LocalFilePath);
+                url = localFilePath;
+                _ = _lyricsService.LoadLocalLyricsAsync(localFilePath!);
             }
             else
             {
