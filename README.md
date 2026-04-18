@@ -60,19 +60,26 @@ Apple Music风格的滚动歌词，支持在线歌词和本地歌词，歌词浮
 
 - Windows x64：`KugouAvaloniaPlayer-win-x64.exe`
 - Linux x64：`KugouAvaloniaPlayer-linux-x64.AppImage`
-- Linux arm64：`KugouAvaloniaPlayer-linux-arm64.AppImage`
+- Linux arm64（手动更新包）：`KugouAvaloniaPlayer-linux-arm64.tar.gz`
 - macOS arm64 安装包：`KugouAvaloniaPlayer-mac-arm64-Setup.pkg`
-- macOS arm64 便携包：`KugouAvaloniaPlayer-mac-arm64.app.zip`
-- macOS x64 安装包：`KugouAvaloniaPlayer-mac-x64-Setup.pkg`
-- macOS x64 便携包：`KugouAvaloniaPlayer-mac-x64.app.zip`
+- macOS arm64（手动更新包）：`KugouAvaloniaPlayer-mac-arm64.app.zip`
+- macOS x64（手动更新包）：`KugouAvaloniaPlayer-mac-x64.app.zip`
 
 ### 自动更新
 
 项目通过 **Velopack + GitHub Releases** 提供更新能力。
 
-- 使用安装包安装后：可在应用内检查更新
-- 可在设置中启用“启动时自动检查更新”
-- 直接运行便携包或本地 `dotnet run` 时：自动更新会被跳过
+- 支持自动更新的架构：
+  - Windows x64（`KugouAvaloniaPlayer-win-x64.exe`）
+  - Linux x64（`KugouAvaloniaPlayer-linux-x64.AppImage`）
+  - macOS arm64（`KugouAvaloniaPlayer-mac-arm64-Setup.pkg`）
+- 不支持自动更新的架构（仅手动更新）：
+  - Linux arm64（`KugouAvaloniaPlayer-linux-arm64.tar.gz`）
+  - macOS x64（`KugouAvaloniaPlayer-mac-x64.app.zip`）
+- 手动更新方式：
+  - 下载对应架构的新压缩包
+  - 解压后覆盖旧程序目录，或迁移到新目录运行
+  - 手动更新不会自动提示，请定期关注 Releases
 
 ### macOS 说明
 
@@ -82,7 +89,7 @@ Apple Music风格的滚动歌词，支持在线歌词和本地歌词，歌词浮
 xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 ```
 
-如果 `KugouAvaloniaPlayer-mac-arm64-Setup.pkg` 或 `KugouAvaloniaPlayer-mac-x64-Setup.pkg` 无法安装，也可以使用对应架构的 `.app.zip` 解压直接运行，但这种方式不支持自动更新。
+如果 `KugouAvaloniaPlayer-mac-arm64-Setup.pkg` 无法安装，可以改用 `KugouAvaloniaPlayer-mac-arm64.app.zip` 解压运行；`KugouAvaloniaPlayer-mac-x64.app.zip` 本身就是手动更新包，不支持自动更新。
 
 ## 核心功能
 

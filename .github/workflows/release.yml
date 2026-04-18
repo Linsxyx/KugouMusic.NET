@@ -50,6 +50,7 @@ jobs:
             -o ./publish
 
       - name: Pack with Velopack
+        if: ${{ matrix.rid != 'linux-arm64' }}
         shell: bash
         run: |
           VERSION=${GITHUB_REF_NAME#v}
@@ -66,6 +67,13 @@ jobs:
             -e "$EXE_NAME" \
             -i ./KugouAvaloniaPlayer/Assets/Test.ico \
             -o ./releases
+
+      - name: Create linux-arm64 archive (no auto-update)
+        if: ${{ matrix.rid == 'linux-arm64' }}
+        shell: bash
+        run: |
+          mkdir -p ./releases
+          tar -czf ./releases/KugouAvaloniaPlayer-linux-arm64.tar.gz -C ./publish .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -215,6 +223,7 @@ jobs:
             "./releases/${APP_NAME}-${RID}.app.zip"
 
       - name: Build unsigned pkg
+        if: ${{ matrix.rid == 'osx-arm64' }}
         shell: bash
         run: |
           mkdir -p ./pkgroot/Applications
@@ -228,12 +237,14 @@ jobs:
             "./releases/${APP_NAME}-${RID}-unsigned.pkg"
 
       - name: Inspect pkg signature status
+        if: ${{ matrix.rid == 'osx-arm64' }}
         shell: bash
         run: |
           spctl -a -vv -t install "./releases/${APP_NAME}-${RID}-unsigned.pkg" || true
           pkgutil --check-signature "./releases/${APP_NAME}-${RID}-unsigned.pkg" || true
 
       - name: Pack with Velopack (macOS)
+        if: ${{ matrix.rid == 'osx-arm64' }}
         shell: bash
         run: |
           vpk pack \
@@ -274,12 +285,11 @@ jobs:
 
           cp ./all_artifacts/releases-windows-x64/*.exe ./release_files/KugouAvaloniaPlayer-win-x64.exe 2>/dev/null || true
           cp ./all_artifacts/releases-linux-x64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage 2>/dev/null || true
-          cp ./all_artifacts/releases-linux-arm64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-arm64.AppImage 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-arm64/*.tar.gz ./release_files/KugouAvaloniaPlayer-linux-arm64.tar.gz 2>/dev/null || true
 
           cp ./all_artifacts/releases-macos-arm64/*osx-arm64.app.zip ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip 2>/dev/null || true
           cp ./all_artifacts/releases-macos-x64/*osx-x64.app.zip ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip 2>/dev/null || true
           cp ./all_artifacts/releases-macos-arm64/*osx-arm64*Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg 2>/dev/null || true
-          cp ./all_artifacts/releases-macos-x64/*osx-x64*Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-x64-Setup.pkg 2>/dev/null || true
 
           cp ./all_artifacts/releases-windows-x64/*.nupkg ./release_files/ 2>/dev/null || true
           cp ./all_artifacts/releases-linux-x64/*.nupkg ./release_files/ 2>/dev/null || true
