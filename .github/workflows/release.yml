@@ -266,25 +266,32 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./all_artifacts
-          merge-multiple: true
 
       - name: Prepare Clean Release
         shell: bash
         run: |
           mkdir -p ./release_files
 
-          cp ./all_artifacts/*.exe ./release_files/KugouAvaloniaPlayer-win-x64.exe 2>/dev/null || true
-          cp ./all_artifacts/*linux-x64*.AppImage ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage 2>/dev/null || true
-          cp ./all_artifacts/*linux-arm64*.AppImage ./release_files/KugouAvaloniaPlayer-linux-arm64.AppImage 2>/dev/null || true
+          cp ./all_artifacts/releases-windows-x64/*.exe ./release_files/KugouAvaloniaPlayer-win-x64.exe 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-x64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-arm64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-arm64.AppImage 2>/dev/null || true
 
-          cp ./all_artifacts/*osx-arm64.app.zip ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip 2>/dev/null || true
-          cp ./all_artifacts/*osx-x64.app.zip ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip 2>/dev/null || true
-          cp ./all_artifacts/*osx-arm64*Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg 2>/dev/null || true
-          cp ./all_artifacts/*osx-x64*Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-x64-Setup.pkg 2>/dev/null || true
+          cp ./all_artifacts/releases-macos-arm64/*osx-arm64.app.zip ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip 2>/dev/null || true
+          cp ./all_artifacts/releases-macos-x64/*osx-x64.app.zip ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip 2>/dev/null || true
+          cp ./all_artifacts/releases-macos-arm64/*osx-arm64*Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg 2>/dev/null || true
+          cp ./all_artifacts/releases-macos-x64/*osx-x64*Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-x64-Setup.pkg 2>/dev/null || true
 
-          cp ./all_artifacts/*.nupkg ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/RELEASES* ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/releases.*.json ./release_files/ 2>/dev/null || true
+          cp ./all_artifacts/releases-windows-x64/*.nupkg ./release_files/ 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-x64/*.nupkg ./release_files/ 2>/dev/null || true
+          cp ./all_artifacts/releases-macos-arm64/*.nupkg ./release_files/ 2>/dev/null || true
+
+          cp ./all_artifacts/releases-windows-x64/RELEASES* ./release_files/ 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-x64/RELEASES* ./release_files/ 2>/dev/null || true
+          cp ./all_artifacts/releases-macos-arm64/RELEASES* ./release_files/ 2>/dev/null || true
+
+          cp ./all_artifacts/releases-windows-x64/releases.*.json ./release_files/ 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-x64/releases.*.json ./release_files/ 2>/dev/null || true
+          cp ./all_artifacts/releases-macos-arm64/releases.*.json ./release_files/ 2>/dev/null || true
 
           ls -lah ./release_files
 
