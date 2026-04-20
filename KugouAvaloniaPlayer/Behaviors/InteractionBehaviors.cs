@@ -12,13 +12,14 @@ namespace KugouAvaloniaPlayer.Behaviors;
 
 public sealed class InteractionBehaviors
 {
-    public sealed record KeyDownCommandContext(object? Parameter, KeyEventArgs EventArgs);
-
     private static readonly Dictionary<Control, EventHandler<VisualTreeAttachmentEventArgs>> AttachedHandlers = new();
     private static readonly Dictionary<Control, EventHandler<VisualTreeAttachmentEventArgs>> DetachedHandlers = new();
     private static readonly Dictionary<InputElement, EventHandler<KeyEventArgs>> EnterKeyHandlers = new();
     private static readonly Dictionary<InputElement, EventHandler<KeyEventArgs>> KeyDownHandlers = new();
-    private static readonly Dictionary<InputElement, EventHandler<PointerPressedEventArgs>> PointerPressedHandlers = new();
+
+    private static readonly Dictionary<InputElement, EventHandler<PointerPressedEventArgs>> PointerPressedHandlers =
+        new();
+
     private static readonly Dictionary<InputElement, EventHandler<TappedEventArgs>> DoubleTappedHandlers = new();
     private static readonly Dictionary<Control, EventHandler<ScrollChangedEventArgs>> NearBottomScrollHandlers = new();
 
@@ -29,16 +30,19 @@ public sealed class InteractionBehaviors
         AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, ICommand?>("AttachedToVisualTreeCommand");
 
     public static readonly AttachedProperty<object?> AttachedToVisualTreeCommandParameterProperty =
-        AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, object?>("AttachedToVisualTreeCommandParameter");
+        AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, object?>(
+            "AttachedToVisualTreeCommandParameter");
 
     public static readonly AttachedProperty<bool> AttachedToVisualTreeCommandRunOnceProperty =
-        AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, bool>("AttachedToVisualTreeCommandRunOnce", true);
+        AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, bool>("AttachedToVisualTreeCommandRunOnce",
+            true);
 
     public static readonly AttachedProperty<ICommand?> DetachedFromVisualTreeCommandProperty =
         AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, ICommand?>("DetachedFromVisualTreeCommand");
 
     public static readonly AttachedProperty<object?> DetachedFromVisualTreeCommandParameterProperty =
-        AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, object?>("DetachedFromVisualTreeCommandParameter");
+        AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, object?>(
+            "DetachedFromVisualTreeCommandParameter");
 
     public static readonly AttachedProperty<ICommand?> EnterKeyCommandProperty =
         AvaloniaProperty.RegisterAttached<InteractionBehaviors, InputElement, ICommand?>("EnterKeyCommand");
@@ -56,7 +60,8 @@ public sealed class InteractionBehaviors
         AvaloniaProperty.RegisterAttached<InteractionBehaviors, InputElement, ICommand?>("PointerPressedCommand");
 
     public static readonly AttachedProperty<object?> PointerPressedCommandParameterProperty =
-        AvaloniaProperty.RegisterAttached<InteractionBehaviors, InputElement, object?>("PointerPressedCommandParameter");
+        AvaloniaProperty
+            .RegisterAttached<InteractionBehaviors, InputElement, object?>("PointerPressedCommandParameter");
 
     public static readonly AttachedProperty<ICommand?> DoubleTappedCommandProperty =
         AvaloniaProperty.RegisterAttached<InteractionBehaviors, InputElement, ICommand?>("DoubleTappedCommand");
@@ -89,100 +94,164 @@ public sealed class InteractionBehaviors
     }
 
     public static void SetAttachedToVisualTreeCommand(AvaloniaObject element, ICommand? value)
-        => element.SetValue(AttachedToVisualTreeCommandProperty, value);
+    {
+        element.SetValue(AttachedToVisualTreeCommandProperty, value);
+    }
 
     public static ICommand? GetAttachedToVisualTreeCommand(AvaloniaObject element)
-        => element.GetValue(AttachedToVisualTreeCommandProperty);
+    {
+        return element.GetValue(AttachedToVisualTreeCommandProperty);
+    }
 
     public static void SetAttachedToVisualTreeCommandParameter(AvaloniaObject element, object? value)
-        => element.SetValue(AttachedToVisualTreeCommandParameterProperty, value);
+    {
+        element.SetValue(AttachedToVisualTreeCommandParameterProperty, value);
+    }
 
     public static object? GetAttachedToVisualTreeCommandParameter(AvaloniaObject element)
-        => element.GetValue(AttachedToVisualTreeCommandParameterProperty);
+    {
+        return element.GetValue(AttachedToVisualTreeCommandParameterProperty);
+    }
 
     public static void SetAttachedToVisualTreeCommandRunOnce(AvaloniaObject element, bool value)
-        => element.SetValue(AttachedToVisualTreeCommandRunOnceProperty, value);
+    {
+        element.SetValue(AttachedToVisualTreeCommandRunOnceProperty, value);
+    }
 
     public static bool GetAttachedToVisualTreeCommandRunOnce(AvaloniaObject element)
-        => element.GetValue(AttachedToVisualTreeCommandRunOnceProperty);
+    {
+        return element.GetValue(AttachedToVisualTreeCommandRunOnceProperty);
+    }
 
     public static void SetDetachedFromVisualTreeCommand(AvaloniaObject element, ICommand? value)
-        => element.SetValue(DetachedFromVisualTreeCommandProperty, value);
+    {
+        element.SetValue(DetachedFromVisualTreeCommandProperty, value);
+    }
 
     public static ICommand? GetDetachedFromVisualTreeCommand(AvaloniaObject element)
-        => element.GetValue(DetachedFromVisualTreeCommandProperty);
+    {
+        return element.GetValue(DetachedFromVisualTreeCommandProperty);
+    }
 
     public static void SetDetachedFromVisualTreeCommandParameter(AvaloniaObject element, object? value)
-        => element.SetValue(DetachedFromVisualTreeCommandParameterProperty, value);
+    {
+        element.SetValue(DetachedFromVisualTreeCommandParameterProperty, value);
+    }
 
     public static object? GetDetachedFromVisualTreeCommandParameter(AvaloniaObject element)
-        => element.GetValue(DetachedFromVisualTreeCommandParameterProperty);
+    {
+        return element.GetValue(DetachedFromVisualTreeCommandParameterProperty);
+    }
 
     public static void SetEnterKeyCommand(AvaloniaObject element, ICommand? value)
-        => element.SetValue(EnterKeyCommandProperty, value);
+    {
+        element.SetValue(EnterKeyCommandProperty, value);
+    }
 
     public static ICommand? GetEnterKeyCommand(AvaloniaObject element)
-        => element.GetValue(EnterKeyCommandProperty);
+    {
+        return element.GetValue(EnterKeyCommandProperty);
+    }
 
     public static void SetEnterKeyCommandParameter(AvaloniaObject element, object? value)
-        => element.SetValue(EnterKeyCommandParameterProperty, value);
+    {
+        element.SetValue(EnterKeyCommandParameterProperty, value);
+    }
 
     public static object? GetEnterKeyCommandParameter(AvaloniaObject element)
-        => element.GetValue(EnterKeyCommandParameterProperty);
+    {
+        return element.GetValue(EnterKeyCommandParameterProperty);
+    }
 
     public static void SetKeyDownCommand(AvaloniaObject element, ICommand? value)
-        => element.SetValue(KeyDownCommandProperty, value);
+    {
+        element.SetValue(KeyDownCommandProperty, value);
+    }
 
     public static ICommand? GetKeyDownCommand(AvaloniaObject element)
-        => element.GetValue(KeyDownCommandProperty);
+    {
+        return element.GetValue(KeyDownCommandProperty);
+    }
 
     public static void SetKeyDownCommandParameter(AvaloniaObject element, object? value)
-        => element.SetValue(KeyDownCommandParameterProperty, value);
+    {
+        element.SetValue(KeyDownCommandParameterProperty, value);
+    }
 
     public static object? GetKeyDownCommandParameter(AvaloniaObject element)
-        => element.GetValue(KeyDownCommandParameterProperty);
+    {
+        return element.GetValue(KeyDownCommandParameterProperty);
+    }
 
     public static void SetPointerPressedCommand(AvaloniaObject element, ICommand? value)
-        => element.SetValue(PointerPressedCommandProperty, value);
+    {
+        element.SetValue(PointerPressedCommandProperty, value);
+    }
 
     public static ICommand? GetPointerPressedCommand(AvaloniaObject element)
-        => element.GetValue(PointerPressedCommandProperty);
+    {
+        return element.GetValue(PointerPressedCommandProperty);
+    }
 
     public static void SetPointerPressedCommandParameter(AvaloniaObject element, object? value)
-        => element.SetValue(PointerPressedCommandParameterProperty, value);
+    {
+        element.SetValue(PointerPressedCommandParameterProperty, value);
+    }
 
     public static object? GetPointerPressedCommandParameter(AvaloniaObject element)
-        => element.GetValue(PointerPressedCommandParameterProperty);
+    {
+        return element.GetValue(PointerPressedCommandParameterProperty);
+    }
 
     public static void SetDoubleTappedCommand(AvaloniaObject element, ICommand? value)
-        => element.SetValue(DoubleTappedCommandProperty, value);
+    {
+        element.SetValue(DoubleTappedCommandProperty, value);
+    }
 
     public static ICommand? GetDoubleTappedCommand(AvaloniaObject element)
-        => element.GetValue(DoubleTappedCommandProperty);
+    {
+        return element.GetValue(DoubleTappedCommandProperty);
+    }
 
     public static void SetDoubleTappedCommandParameter(AvaloniaObject element, object? value)
-        => element.SetValue(DoubleTappedCommandParameterProperty, value);
+    {
+        element.SetValue(DoubleTappedCommandParameterProperty, value);
+    }
 
     public static object? GetDoubleTappedCommandParameter(AvaloniaObject element)
-        => element.GetValue(DoubleTappedCommandParameterProperty);
+    {
+        return element.GetValue(DoubleTappedCommandParameterProperty);
+    }
 
     public static void SetScrollNearBottomCommand(AvaloniaObject element, ICommand? value)
-        => element.SetValue(ScrollNearBottomCommandProperty, value);
+    {
+        element.SetValue(ScrollNearBottomCommandProperty, value);
+    }
 
     public static ICommand? GetScrollNearBottomCommand(AvaloniaObject element)
-        => element.GetValue(ScrollNearBottomCommandProperty);
+    {
+        return element.GetValue(ScrollNearBottomCommandProperty);
+    }
 
     public static void SetScrollNearBottomCommandParameter(AvaloniaObject element, object? value)
-        => element.SetValue(ScrollNearBottomCommandParameterProperty, value);
+    {
+        element.SetValue(ScrollNearBottomCommandParameterProperty, value);
+    }
 
     public static object? GetScrollNearBottomCommandParameter(AvaloniaObject element)
-        => element.GetValue(ScrollNearBottomCommandParameterProperty);
+    {
+        return element.GetValue(ScrollNearBottomCommandParameterProperty);
+    }
 
     public static void SetScrollNearBottomThreshold(AvaloniaObject element, double value)
-        => element.SetValue(ScrollNearBottomThresholdProperty, value);
+    {
+        element.SetValue(ScrollNearBottomThresholdProperty, value);
+    }
 
     public static double GetScrollNearBottomThreshold(AvaloniaObject element)
-        => element.GetValue(ScrollNearBottomThresholdProperty);
+    {
+        return element.GetValue(ScrollNearBottomThresholdProperty);
+    }
 
     private static void OnAttachedToVisualTreeCommandChanged(Control control, AvaloniaPropertyChangedEventArgs e)
     {
@@ -360,4 +429,6 @@ public sealed class InteractionBehaviors
         command.Execute(actualParameter);
         return true;
     }
+
+    public sealed record KeyDownCommandContext(object? Parameter, KeyEventArgs EventArgs);
 }

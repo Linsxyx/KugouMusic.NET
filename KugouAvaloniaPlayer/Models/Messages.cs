@@ -1,5 +1,4 @@
 using KuGou.Net.Abstractions.Models;
-using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
 
 namespace KugouAvaloniaPlayer.Models;
@@ -17,6 +16,7 @@ public record RemoveFromPlaylistMessage(SongItem Song);
 public record AuthStateChangedMessage(bool IsLoggedIn);
 
 public record NavigatePageMessage(PageViewModelBase TargetPage);
+
 public record RequestNavigateBackMessage;
 
 public record RefreshPlaylistsMessage;

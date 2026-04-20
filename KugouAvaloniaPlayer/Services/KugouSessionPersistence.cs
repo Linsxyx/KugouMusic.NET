@@ -12,6 +12,7 @@ public sealed class KugouSessionPersistence : ISessionPersistence
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "kugou",
         "session.json");
+
     private static readonly KugouSessionJsonContext JsonContext = new(new JsonSerializerOptions
     {
         WriteIndented = false

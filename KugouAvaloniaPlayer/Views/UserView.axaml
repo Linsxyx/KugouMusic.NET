@@ -5,7 +5,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
-             xmlns:services="using:KugouAvaloniaPlayer.Services"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models"
              mc:Ignorable="d"
@@ -43,7 +42,7 @@
                                FontSize="16"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource SukiText}" />
-                    
+
 
                     <Separator Margin="0,6,0,8" />
 
@@ -125,7 +124,8 @@
                                           SelectedItem="{Binding SelectedCloseBehavior}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate DataType="models:CloseBehavior">
-                                            <TextBlock Text="{Binding Converter={StaticResource CloseBehaviorConverter}}" />
+                                            <TextBlock
+                                                Text="{Binding Converter={StaticResource CloseBehaviorConverter}}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
@@ -152,12 +152,14 @@
                                           SelectedItem="{Binding Player.QualitySelection}">
                                     <ComboBox.ItemTemplate>
                                         <DataTemplate DataType="x:String">
-                                            <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
+                                            <TextBlock
+                                                Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                     <ComboBox.SelectionBoxItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
+                                            <TextBlock
+                                                Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
                                         </DataTemplate>
                                     </ComboBox.SelectionBoxItemTemplate>
                                 </ComboBox>
@@ -196,6 +198,17 @@
                                 </StackPanel>
                                 <ToggleSwitch Grid.Column="1"
                                               IsChecked="{Binding EnableSeamlessTransition, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
+                                    <TextBlock Text="播放页音频可视化" FontWeight="DemiBold" />
+                                    <TextBlock Text="控制播放页面进度条下方的频谱动画显示"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding EnableNowPlayingVisualizer, Mode=TwoWay}" />
                             </Grid>
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
@@ -316,7 +329,8 @@
                                                   SelectedItem="{Binding DesktopSelectedLyricColorMode}" />
                                     </Grid>
 
-                                    <StackPanel IsVisible="{Binding IsDesktopLyricColorCustomMode}" Spacing="8" Margin="0,4,0,0">
+                                    <StackPanel IsVisible="{Binding IsDesktopLyricColorCustomMode}" Spacing="8"
+                                                Margin="0,4,0,0">
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                             <Border Grid.Column="0"
                                                     Width="28"
@@ -372,7 +386,8 @@
                                                   SelectedItem="{Binding DesktopSelectedLyricFontMode}" />
                                     </Grid>
 
-                                    <StackPanel IsVisible="{Binding IsDesktopLyricFontCustomMode}" Spacing="8" Margin="0,4,0,0">
+                                    <StackPanel IsVisible="{Binding IsDesktopLyricFontCustomMode}" Spacing="8"
+                                                Margin="0,4,0,0">
                                         <TextBlock Text="字体选择" FontWeight="DemiBold" />
                                         <ComboBox ItemsSource="{Binding LyricFontFamilyOptions}"
                                                   SelectedItem="{Binding DesktopSelectedLyricFontFamily}">
@@ -427,7 +442,8 @@
                                                   SelectedItem="{Binding PlayPageSelectedLyricColorMode}" />
                                     </Grid>
 
-                                    <StackPanel IsVisible="{Binding IsPlayPageLyricColorCustomMode}" Spacing="8" Margin="0,4,0,0">
+                                    <StackPanel IsVisible="{Binding IsPlayPageLyricColorCustomMode}" Spacing="8"
+                                                Margin="0,4,0,0">
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                             <Border Grid.Column="0"
                                                     Width="28"
@@ -483,7 +499,8 @@
                                                   SelectedItem="{Binding PlayPageSelectedLyricFontMode}" />
                                     </Grid>
 
-                                    <StackPanel IsVisible="{Binding IsPlayPageLyricFontCustomMode}" Spacing="8" Margin="0,4,0,0">
+                                    <StackPanel IsVisible="{Binding IsPlayPageLyricFontCustomMode}" Spacing="8"
+                                                Margin="0,4,0,0">
                                         <TextBlock Text="字体选择" FontWeight="DemiBold" />
                                         <ComboBox ItemsSource="{Binding LyricFontFamilyOptions}"
                                                   SelectedItem="{Binding PlayPageSelectedLyricFontFamily}">
@@ -523,7 +540,7 @@
                                             Value="{Binding PlayPageLyricFontSize, Mode=TwoWay}"
                                             TickFrequency="1"
                                             IsSnapToTickEnabled="True"
-                                            Margin="0,0,0,4" Classes="Player"/>
+                                            Margin="0,0,0,4" Classes="Player" />
 
                                     <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
 

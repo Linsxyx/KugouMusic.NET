@@ -46,22 +46,31 @@
         </Style>
 
         <Style Selector="TextBlock.NowPlayingLine">
-            <Setter Property="FontSize" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontSize}" />
-            <Setter Property="FontFamily" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}" />
-            <Setter Property="Foreground" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricForeground}" />
+            <Setter Property="FontSize"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontSize}" />
+            <Setter Property="FontFamily"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}" />
+            <Setter Property="Foreground"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricForeground}" />
         </Style>
 
         <Style Selector="TextBlock.NowPlayingWord">
-            <Setter Property="FontSize" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontSize}" />
-            <Setter Property="FontFamily" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}" />
-            <Setter Property="Foreground" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricForeground}" />
+            <Setter Property="FontSize"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontSize}" />
+            <Setter Property="FontFamily"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}" />
+            <Setter Property="Foreground"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricForeground}" />
         </Style>
 
         <Style Selector="TextBlock.NowPlayingTrans">
-            <Setter Property="FontSize" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationFontSize}" />
+            <Setter Property="FontSize"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationFontSize}" />
             <Setter Property="Margin" Value="0,5,0,0" />
-            <Setter Property="FontFamily" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}" />
-            <Setter Property="Foreground" Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationLineForeground}" />
+            <Setter Property="FontFamily"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}" />
+            <Setter Property="Foreground"
+                    Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationLineForeground}" />
         </Style>
 
         <Style Selector="Slider.NowPlayingVolume">
@@ -72,6 +81,19 @@
 
         <Style Selector="Slider.NowPlayingVolume:pointerover /template/ RepeatButton#PART_DecreaseButton">
             <Setter Property="Opacity" Value="1" />
+        </Style>
+
+        <Style Selector="Border.VisualizerBar">
+            <Setter Property="Width" Value="6" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
+                    <GradientStop Color="#45FFFFFF" Offset="0" />
+                    <GradientStop Color="#B8FFFFFF" Offset="0.6" />
+                    <GradientStop Color="#F5FFFFFF" Offset="1" />
+                </LinearGradientBrush>
+            </Setter>
         </Style>
 
     </UserControl.Styles>
@@ -130,10 +152,11 @@
                 </Button>
             </StackPanel>
 
-            <Grid Grid.Row="1" ColumnDefinitions="4*, 6*" Margin="0,30,0,50">
+            <Grid Grid.Row="1" ColumnDefinitions="4*, 6*" Margin="0,30,0,28">
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="40">
-                    <suki:GlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220" MinHeight="220" MaxWidth="350" MaxHeight="350">
+                    <suki:GlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
+                                    MinHeight="220" MaxWidth="350" MaxHeight="350">
                         <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
                     </suki:GlassCard>
 
@@ -202,18 +225,48 @@
                                 </Button>
                             </StackPanel>
 
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto, *" MinWidth="220" MaxWidth="420" Margin="0,4,0,0" HorizontalAlignment="Stretch">
-                                <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Player.TotalDurationSeconds}"
-                                        Value="{Binding Player.CurrentPositionSeconds}"
-                                        Margin="8,0" IsSnapToTickEnabled="False"
-                                        HorizontalAlignment="Stretch"
-                                        Classes="Player" />
+                            <Grid Grid.Row="1"
+                                  RowDefinitions="Auto, 78"
+                                  MinWidth="220"
+                                  MaxWidth="420"
+                                  Margin="0,4,0,0"
+                                  HorizontalAlignment="Stretch">
+                                <Grid ColumnDefinitions="Auto, *">
+                                    <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Player.TotalDurationSeconds}"
+                                            Value="{Binding Player.CurrentPositionSeconds}"
+                                            Margin="8,0" IsSnapToTickEnabled="False"
+                                            HorizontalAlignment="Stretch"
+                                            Classes="Player" />
+                                </Grid>
+
+                                <ItemsControl Grid.Row="1"
+                                              Height="64"
+                                              Margin="0,14,0,0"
+                                              HorizontalAlignment="Center"
+                                              IsVisible="{Binding Player.IsNowPlayingVisualizerEnabled}"
+                                              VerticalAlignment="Bottom"
+                                              ItemsSource="{Binding Player.NowPlayingVisualizerBars}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="5"
+                                                        HorizontalAlignment="Center" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:AudioVisualizerBarViewModel">
+                                            <Border Classes="VisualizerBar"
+                                                    Height="{Binding Height}"
+                                                    Opacity="{Binding Opacity}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </Grid>
 
                             <Grid Grid.Row="2"
                                   ColumnDefinitions="Auto, *, Auto"
-                                  MinWidth="200"
-                                  MaxWidth="320"
+                                  MinWidth="220"
+                                  MaxWidth="420"
                                   Margin="0,10,0,0"
                                   HorizontalAlignment="Center"
                                   IsVisible="{Binding IsNowPlayingVolumeVisible}">
@@ -229,7 +282,7 @@
                                         Value="{Binding Player.MusicVolume}"
                                         Margin="10,0"
                                         Classes="Player NowPlayingVolume"
-                                        HorizontalAlignment="Stretch"/>
+                                        HorizontalAlignment="Stretch" />
                                 <Svg Grid.Column="2"
                                      Path="/Assets/VolumeUp.svg"
                                      Css="path { fill: white; }"
@@ -266,7 +319,8 @@
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                 <Binding Path="IsKrcWordLevel"
                                                          Converter="{x:Static BoolConverters.Not}" />
-                                                <Binding Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingPrimaryLyricVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingPrimaryLyricVisible" />
                                             </MultiBinding>
                                         </TextBlock.IsVisible>
                                     </TextBlock>
@@ -275,7 +329,8 @@
                                         <Grid.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                 <Binding Path="IsKrcWordLevel" />
-                                                <Binding Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingPrimaryLyricVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingPrimaryLyricVisible" />
                                             </MultiBinding>
                                         </Grid.IsVisible>
                                         <ItemsControl ItemsSource="{Binding Words}"
@@ -310,7 +365,8 @@
                                                          Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
                                                 <Binding Path="HasWordLevelTranslation"
                                                          Converter="{x:Static BoolConverters.Not}" />
-                                                <Binding Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingTranslationVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingTranslationVisible" />
                                             </MultiBinding>
                                         </TextBlock.IsVisible>
                                     </TextBlock>
@@ -319,7 +375,8 @@
                                         <Grid.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                 <Binding Path="HasWordLevelTranslation" />
-                                                <Binding Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingTranslationVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingTranslationVisible" />
                                             </MultiBinding>
                                         </Grid.IsVisible>
                                         <ItemsControl ItemsSource="{Binding TranslationWords}"
@@ -353,7 +410,8 @@
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                 <Binding Path="Romanization"
                                                          Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
-                                                <Binding Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingRomanizationVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingRomanizationVisible" />
                                             </MultiBinding>
                                         </TextBlock.IsVisible>
                                     </TextBlock>
@@ -368,6 +426,7 @@
                            Foreground="White" Opacity="0.5" FontSize="24" FontWeight="Bold"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
+
         </Grid>
     </Grid>
 </UserControl>

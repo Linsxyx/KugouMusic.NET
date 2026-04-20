@@ -170,12 +170,14 @@
                               VerticalAlignment="Center">
                         <ComboBox.ItemTemplate>
                             <DataTemplate DataType="x:String">
-                                <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
+                                <TextBlock
+                                    Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                         <ComboBox.SelectionBoxItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
+                                <TextBlock
+                                    Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
                             </DataTemplate>
                         </ComboBox.SelectionBoxItemTemplate>
                     </ComboBox>

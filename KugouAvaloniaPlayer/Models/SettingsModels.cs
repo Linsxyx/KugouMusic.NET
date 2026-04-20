@@ -102,6 +102,8 @@ public class AppSettings
 
     public bool EnableSeamlessTransition { get; set; }
 
+    public bool EnableNowPlayingVisualizer { get; set; }
+
     public float[] CustomEqGains { get; set; } = new float[10];
 
     public bool DesktopLyricUseCustomMainColor { get; set; }
@@ -121,6 +123,7 @@ public class AppSettings
     public string PlayPageLyricCustomFontFamily { get; set; } = string.Empty;
     public LyricAlignmentOption PlayPageLyricAlignment { get; set; } = LyricAlignmentOption.Center;
     public double PlayPageLyricFontSize { get; set; } = 33;
+
     public NowPlayingLyricDisplayMode PlayPageLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Collections;
@@ -31,19 +30,19 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
+    private static readonly IBrush DefaultLyricBrush = new SolidColorBrush(Colors.White);
+    private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
+    private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
     private readonly AuthClient _authClient;
     private readonly IDesktopLyricWindowService _desktopLyricWindowService;
     private readonly DiscoveryClient _discoveryClient;
+    private readonly ILogger<MainWindowViewModel> _logger;
     private readonly ILoginDialogService _loginDialogService;
     private readonly INavigationService _navigationService;
-    private readonly ILogger<MainWindowViewModel> _logger;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
-    private static readonly IBrush DefaultLyricBrush = new SolidColorBrush(Colors.White);
-    private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
-    private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
 
     [ObservableProperty] private PageViewModelBase _activePage;
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
@@ -55,20 +54,22 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private bool _isNowPlayingOpen;
     [ObservableProperty] private bool _isNowPlayingVolumeVisible;
     [ObservableProperty] private bool _isQueuePaneOpen;
-    [ObservableProperty] private FontFamily? _nowPlayingLyricFontFamily;
-    [ObservableProperty] private IBrush _nowPlayingLyricForeground = DefaultLyricBrush;
-    [ObservableProperty] private IBrush _nowPlayingTranslationLineForeground = DefaultTranslationLineBrush;
-    [ObservableProperty] private IBrush _nowPlayingTranslationWordForeground = DefaultTranslationWordBrush;
-    [ObservableProperty] private HorizontalAlignment _nowPlayingLyricHorizontalAlignment = HorizontalAlignment.Center;
-    [ObservableProperty] private TextAlignment _nowPlayingLyricTextAlignment = TextAlignment.Center;
-    [ObservableProperty] private double _nowPlayingLyricFontSize = 26;
-    [ObservableProperty] private double _nowPlayingTranslationFontSize = 16;
+    private bool _isUpdatingActivePageFromNavigation;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNowPlayingPrimaryLyricVisible))]
     [NotifyPropertyChangedFor(nameof(IsNowPlayingTranslationVisible))]
     [NotifyPropertyChangedFor(nameof(IsNowPlayingRomanizationVisible))]
     private NowPlayingLyricDisplayMode _nowPlayingLyricDisplayMode = NowPlayingLyricDisplayMode.LyricsWithTranslation;
-    private bool _isUpdatingActivePageFromNavigation;
+
+    [ObservableProperty] private FontFamily? _nowPlayingLyricFontFamily;
+    [ObservableProperty] private double _nowPlayingLyricFontSize = 26;
+    [ObservableProperty] private IBrush _nowPlayingLyricForeground = DefaultLyricBrush;
+    [ObservableProperty] private HorizontalAlignment _nowPlayingLyricHorizontalAlignment = HorizontalAlignment.Center;
+    [ObservableProperty] private TextAlignment _nowPlayingLyricTextAlignment = TextAlignment.Center;
+    [ObservableProperty] private double _nowPlayingTranslationFontSize = 16;
+    [ObservableProperty] private IBrush _nowPlayingTranslationLineForeground = DefaultTranslationLineBrush;
+    [ObservableProperty] private IBrush _nowPlayingTranslationWordForeground = DefaultTranslationWordBrush;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
     private string _searchKeyword = "";
@@ -160,10 +161,8 @@ public partial class MainWindowViewModel : ObservableObject
                 OnLogoutRequested();
         });
 
-        WeakReferenceMessenger.Default.Register<NavigatePageMessage>(this, (_, m) =>
-        {
-            _navigationService.Push(m.TargetPage);
-        });
+        WeakReferenceMessenger.Default.Register<NavigatePageMessage>(this,
+            (_, m) => { _navigationService.Push(m.TargetPage); });
 
         WeakReferenceMessenger.Default.Register<RequestNavigateBackMessage>(this, (_, _) => { NavigateBack(); });
         WeakReferenceMessenger.Default.Register<LyricStyleSettingsChangedMessage>(this, (_, message) =>
@@ -189,6 +188,27 @@ public partial class MainWindowViewModel : ObservableObject
             if (SettingsManager.Settings.AutoCheckUpdate) await CheckForUpdatesAsync();
         });
     }
+
+    public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+
+    public PlayerViewModel Player { get; }
+    public ISukiToastManager ToastManager { get; }
+    public ISukiDialogManager DialogManager { get; }
+
+    public AvaloniaList<PageViewModelBase> Pages { get; } = new();
+
+    private LoginViewModel LoginViewModel { get; }
+    public MyPlaylistsViewModel PlaylistsViewModel { get; }
+
+    public AvaloniaList<PlaylistItem> SidebarOnlinePlaylists { get; } = new();
+    public AvaloniaList<PlaylistItem> SidebarLocalPlaylists { get; } = new();
+    public bool IsNowPlayingPrimaryLyricVisible => true;
+
+    public bool IsNowPlayingTranslationVisible =>
+        NowPlayingLyricDisplayMode == NowPlayingLyricDisplayMode.LyricsWithTranslation;
+
+    public bool IsNowPlayingRomanizationVisible =>
+        NowPlayingLyricDisplayMode == NowPlayingLyricDisplayMode.LyricsWithRomanization;
 
     private void OnDesktopLyricWindowStateChanged(bool isOpen)
     {
@@ -231,25 +251,6 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
-    public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
-
-    public PlayerViewModel Player { get; }
-    public ISukiToastManager ToastManager { get; }
-    public ISukiDialogManager DialogManager { get; }
-
-    public AvaloniaList<PageViewModelBase> Pages { get; } = new();
-
-    private LoginViewModel LoginViewModel { get; }
-    public MyPlaylistsViewModel PlaylistsViewModel { get; }
-
-    public AvaloniaList<PlaylistItem> SidebarOnlinePlaylists { get; } = new();
-    public AvaloniaList<PlaylistItem> SidebarLocalPlaylists { get; } = new();
-    public bool IsNowPlayingPrimaryLyricVisible => true;
-    public bool IsNowPlayingTranslationVisible =>
-        NowPlayingLyricDisplayMode == NowPlayingLyricDisplayMode.LyricsWithTranslation;
-    public bool IsNowPlayingRomanizationVisible =>
-        NowPlayingLyricDisplayMode == NowPlayingLyricDisplayMode.LyricsWithRomanization;
-    
 
     /*public PlaylistItem SidebarAddPlaylistItem { get; } = new()
     {
@@ -629,10 +630,8 @@ public partial class MainWindowViewModel : ObservableObject
     private static bool IsSystemFontInstalled(string fontFamilyName)
     {
         foreach (var systemFont in FontManager.Current.SystemFonts)
-        {
             if (string.Equals(systemFont.Name, fontFamilyName, StringComparison.OrdinalIgnoreCase))
                 return true;
-        }
 
         return false;
     }
@@ -762,8 +761,8 @@ public partial class MainWindowViewModel : ObservableObject
             Width = 24,
             Height = 24,
             Padding = new Thickness(0),
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top
         };
         ToolTip.SetTip(hideButton, "后台继续下载");
 
@@ -783,7 +782,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             Text = "下载会在后台继续进行。",
             Opacity = 0.72,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center
         });
         progressContent.Children.Add(hideButton);
         Grid.SetColumn(hideButton, 1);

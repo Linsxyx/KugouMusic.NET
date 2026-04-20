@@ -12,6 +12,7 @@ using Avalonia.Controls.Templates;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 using SukiUI.Dialogs;
@@ -33,10 +34,10 @@ public class FavoritePlaylistService(
     private readonly Dictionary<string, int> _hashToFileId = new();
     private readonly SemaphoreSlim _likeCacheLoadLock = new(1, 1);
     private readonly HashSet<string> _likedHashes = new();
+    private bool _hasLoggedFirstLikeCacheSuccess;
 
     private LikeCacheFileModel? _latestCache;
     private int _likeCacheLoadAttemptCount;
-    private bool _hasLoggedFirstLikeCacheSuccess;
     private bool _loadedFromLocalCache;
 
     public async Task LoadLikeListAsync()
@@ -52,7 +53,7 @@ public class FavoritePlaylistService(
             // 本地优先：先让红心和列表可用，不阻塞后续远端刷新。
             if (!_loadedFromLocalCache && TryLoadLikeCacheFromDisk(out var localCache))
             {
-                ApplyCacheToMemory(localCache!, source: "local");
+                ApplyCacheToMemory(localCache!, "local");
                 _loadedFromLocalCache = true;
                 if (isFirstAttempt)
                 {
@@ -69,7 +70,8 @@ public class FavoritePlaylistService(
             var playlists = await userClient.GetPlaylistsAsync();
             if (playlists is null || playlists.Status != 1)
             {
-                logger.LogWarning("我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=playlist_list_error remote_err_code={ErrorCode}",
+                logger.LogWarning(
+                    "我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=playlist_list_error remote_err_code={ErrorCode}",
                     _latestCache != null,
                     playlists?.ErrorCode);
                 return;
@@ -77,27 +79,32 @@ public class FavoritePlaylistService(
 
             if (playlists.Playlists.Count < 1)
             {
-                logger.LogWarning("我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=no_playlists", _latestCache != null);
+                logger.LogWarning("我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=no_playlists",
+                    _latestCache != null);
                 return;
             }
 
             var likePlaylist = ResolveLikePlaylist(playlists.Playlists);
             if (likePlaylist == null || string.IsNullOrWhiteSpace(likePlaylist.ListCreateId))
             {
-                logger.LogWarning("我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=like_playlist_not_found", _latestCache != null);
+                logger.LogWarning(
+                    "我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=like_playlist_not_found",
+                    _latestCache != null);
                 return;
             }
 
             var data = await playlistClient.GetSongsAsync(likePlaylist.ListCreateId, pageSize: 1000);
             if (data is null)
             {
-                logger.LogWarning("我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=response_null", _latestCache != null);
+                logger.LogWarning("我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=response_null",
+                    _latestCache != null);
                 return;
             }
 
             if (data.Status != 1)
             {
-                logger.LogWarning("我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=remote_error remote_err_code={ErrorCode} status={Status}",
+                logger.LogWarning(
+                    "我喜欢远端刷新失败: source=remote cache_hit={CacheHit} fallback_reason=remote_error remote_err_code={ErrorCode} status={Status}",
                     _latestCache != null,
                     data.ErrorCode,
                     data.Status);
@@ -106,13 +113,14 @@ public class FavoritePlaylistService(
 
             var songs = data.Songs ?? new List<PlaylistSong>();
             var remoteCache = BuildCacheModelFromRemote(likePlaylist, songs);
-            ApplyCacheToMemory(remoteCache, source: "remote");
+            ApplyCacheToMemory(remoteCache, "remote");
             SaveLikeCacheToDisk(remoteCache);
 
             if (isFirstAttempt || !_hasLoggedFirstLikeCacheSuccess)
             {
                 _hasLoggedFirstLikeCacheSuccess = true;
-                logger.LogInformation("我喜欢远端刷新成功: source=remote songs={SongCount} hashes={HashCount} fileIds={FileIdCount}",
+                logger.LogInformation(
+                    "我喜欢远端刷新成功: source=remote songs={SongCount} hashes={HashCount} fileIds={FileIdCount}",
                     songs.Count, _likedHashes.Count, _hashToFileId.Count);
             }
             else
@@ -141,7 +149,7 @@ public class FavoritePlaylistService(
 
         if (TryLoadLikeCacheFromDisk(out var diskCache))
         {
-            ApplyCacheToMemory(diskCache!, source: "local");
+            ApplyCacheToMemory(diskCache!, "local");
             snapshot = ToSnapshot(diskCache!);
             return snapshot.Songs.Count > 0;
         }
@@ -260,7 +268,8 @@ public class FavoritePlaylistService(
     private void UpsertSongInCache(SongItem song)
     {
         var cache = EnsureCacheForCurrentUser();
-        var existing = cache.Items.FirstOrDefault(x => string.Equals(x.Hash, song.Hash, StringComparison.OrdinalIgnoreCase));
+        var existing =
+            cache.Items.FirstOrDefault(x => string.Equals(x.Hash, song.Hash, StringComparison.OrdinalIgnoreCase));
         if (existing != null)
         {
             existing.FileId = song.FileId == 0 ? existing.FileId : (int)song.FileId;
@@ -295,14 +304,12 @@ public class FavoritePlaylistService(
         {
             var index = cache.Items.ToDictionary(x => x.Hash.ToLowerInvariant(), x => x);
             foreach (var hash in _likedHashes)
-            {
                 if (!index.ContainsKey(hash))
                     cache.Items.Add(new LikeSongCacheItem
                     {
                         Hash = hash,
                         FileId = _hashToFileId.GetValueOrDefault(hash)
                     });
-            }
 
             cache.Items = cache.Items
                 .Where(x => !string.IsNullOrWhiteSpace(x.Hash) && _likedHashes.Contains(x.Hash.ToLowerInvariant()))
@@ -467,7 +474,7 @@ public class FavoritePlaylistService(
             Id = cache.PlaylistCreateId ?? "",
             ListId = cache.PlaylistListId == 0 ? 2 : cache.PlaylistListId,
             Count = cache.PlaylistCount > 0 ? cache.PlaylistCount : cache.Items.Count,
-            Type = Models.PlaylistType.Online,
+            Type = PlaylistType.Online,
             Cover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg"
         };
 
@@ -555,7 +562,9 @@ public class FavoritePlaylistService(
         cache.PlaylistListId = cache.PlaylistListId == 0 ? 2 : cache.PlaylistListId;
         cache.PlaylistIsDefault = cache.PlaylistIsDefault == 0 ? 2 : cache.PlaylistIsDefault;
         cache.Items ??= new List<LikeSongCacheItem>();
-        cache.UpdatedAt = string.IsNullOrWhiteSpace(cache.UpdatedAt) ? DateTimeOffset.Now.ToString("O") : cache.UpdatedAt;
+        cache.UpdatedAt = string.IsNullOrWhiteSpace(cache.UpdatedAt)
+            ? DateTimeOffset.Now.ToString("O")
+            : cache.UpdatedAt;
         cache.Source = source;
         return cache;
     }

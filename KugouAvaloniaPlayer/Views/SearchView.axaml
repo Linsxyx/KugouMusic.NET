@@ -123,7 +123,7 @@
                     </StackPanel>
                 </Border>
             </Grid>
-            
+
             <Grid IsVisible="{Binding HasSearched}" RowDefinitions="Auto, *">
                 <Grid Grid.Row="0" RowDefinitions="Auto, Auto" Margin="0,0,0,15">
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
@@ -293,7 +293,8 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                        VerticalAlignment="Bottom"
                                         Margin="10" Spacing="10"
                                         IsVisible="{Binding IsLoadingMoreDetails}">
                                 <suki:Loading Width="20" Height="20" />

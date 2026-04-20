@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Avalonia.Controls;
+using Avalonia.Input;
 using KugouAvaloniaPlayer.Models;
 using Microsoft.Extensions.Logging;
 
@@ -33,12 +34,12 @@ public sealed partial class GlobalShortcutService
     private static readonly XErrorHandler s_x11ErrorHandler = X11ErrorHandler;
     private static int s_x11LastErrorCode;
     private static bool s_x11TrapErrors;
+    private readonly Dictionary<GlobalShortcutAction, LinuxShortcutRegistration> _linuxRegistrations = new();
 
     private readonly object _x11SyncRoot = new();
-    private readonly Dictionary<GlobalShortcutAction, LinuxShortcutRegistration> _linuxRegistrations = new();
     private IntPtr _x11Display;
-    private IntPtr _x11RootWindow;
     private Thread? _x11EventThread;
+    private IntPtr _x11RootWindow;
     private volatile bool _x11StopRequested;
 
     private partial bool GetPlatformSupport()
@@ -78,7 +79,8 @@ public sealed partial class GlobalShortcutService
         _x11EventThread.Start();
     }
 
-    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture, out string? errorMessage)
+    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture,
+        out string? errorMessage)
     {
         errorMessage = null;
         if (_x11Display == IntPtr.Zero || _x11RootWindow == IntPtr.Zero)
@@ -141,7 +143,8 @@ public sealed partial class GlobalShortcutService
             }
 
             foreach (var ignored in X11IgnoredModifiers)
-                XGrabKey(_x11Display, keycode, baseModifiers | ignored, _x11RootWindow, true, X11GrabModeAsync, X11GrabModeAsync);
+                XGrabKey(_x11Display, keycode, baseModifiers | ignored, _x11RootWindow, true, X11GrabModeAsync,
+                    X11GrabModeAsync);
 
             XSync(_x11Display, false);
 
@@ -222,17 +225,17 @@ public sealed partial class GlobalShortcutService
         return native;
     }
 
-    private static IntPtr ToX11Keysym(Avalonia.Input.Key key)
+    private static IntPtr ToX11Keysym(Key key)
     {
         return key switch
         {
-            Avalonia.Input.Key.Space => new IntPtr(0x20),
-            Avalonia.Input.Key.Left => new IntPtr(0xFF51),
-            Avalonia.Input.Key.Up => new IntPtr(0xFF52),
-            Avalonia.Input.Key.Right => new IntPtr(0xFF53),
-            Avalonia.Input.Key.Down => new IntPtr(0xFF54),
-            >= Avalonia.Input.Key.A and <= Avalonia.Input.Key.Z => new IntPtr('a' + (key - Avalonia.Input.Key.A)),
-            >= Avalonia.Input.Key.D0 and <= Avalonia.Input.Key.D9 => new IntPtr('0' + (key - Avalonia.Input.Key.D0)),
+            Key.Space => new IntPtr(0x20),
+            Key.Left => new IntPtr(0xFF51),
+            Key.Up => new IntPtr(0xFF52),
+            Key.Right => new IntPtr(0xFF53),
+            Key.Down => new IntPtr(0xFF54),
+            >= Key.A and <= Key.Z => new IntPtr('a' + (key - Key.A)),
+            >= Key.D0 and <= Key.D9 => new IntPtr('0' + (key - Key.D0)),
             _ => IntPtr.Zero
         };
     }
@@ -248,6 +251,41 @@ public sealed partial class GlobalShortcutService
 
         return 0;
     }
+
+    [DllImport("libX11.so.6")]
+    private static extern int XInitThreads();
+
+    [DllImport("libX11.so.6")]
+    private static extern IntPtr XOpenDisplay(IntPtr display_name);
+
+    [DllImport("libX11.so.6")]
+    private static extern IntPtr XDefaultRootWindow(IntPtr display);
+
+    [DllImport("libX11.so.6")]
+    private static extern void XGrabKey(IntPtr display, int keycode, uint modifiers, IntPtr grab_window,
+        bool owner_events,
+        int pointer_mode, int keyboard_mode);
+
+    [DllImport("libX11.so.6")]
+    private static extern void XUngrabKey(IntPtr display, int keycode, uint modifiers, IntPtr grab_window);
+
+    [DllImport("libX11.so.6")]
+    private static extern int XPending(IntPtr display);
+
+    [DllImport("libX11.so.6")]
+    private static extern void XNextEvent(IntPtr display, out XEvent xevent);
+
+    [DllImport("libX11.so.6")]
+    private static extern byte XKeysymToKeycode(IntPtr display, IntPtr keysym);
+
+    [DllImport("libX11.so.6")]
+    private static extern void XFlush(IntPtr display);
+
+    [DllImport("libX11.so.6")]
+    private static extern void XSync(IntPtr display, bool discard);
+
+    [DllImport("libX11.so.6")]
+    private static extern IntPtr XSetErrorHandler(XErrorHandler handler);
 
     private sealed record LinuxShortcutRegistration(byte KeyCode, uint BaseModifiers);
 
@@ -274,11 +312,9 @@ public sealed partial class GlobalShortcutService
     [StructLayout(LayoutKind.Explicit, Size = 192)]
     private struct XEvent
     {
-        [FieldOffset(0)]
-        public int Type;
+        [FieldOffset(0)] public int Type;
 
-        [FieldOffset(0)]
-        public XKeyEvent KeyEvent;
+        [FieldOffset(0)] public XKeyEvent KeyEvent;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -292,40 +328,6 @@ public sealed partial class GlobalShortcutService
         public byte request_code;
         public byte minor_code;
     }
-
-    [DllImport("libX11.so.6")]
-    private static extern int XInitThreads();
-
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XOpenDisplay(IntPtr display_name);
-
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XDefaultRootWindow(IntPtr display);
-
-    [DllImport("libX11.so.6")]
-    private static extern void XGrabKey(IntPtr display, int keycode, uint modifiers, IntPtr grab_window, bool owner_events,
-        int pointer_mode, int keyboard_mode);
-
-    [DllImport("libX11.so.6")]
-    private static extern void XUngrabKey(IntPtr display, int keycode, uint modifiers, IntPtr grab_window);
-
-    [DllImport("libX11.so.6")]
-    private static extern int XPending(IntPtr display);
-
-    [DllImport("libX11.so.6")]
-    private static extern void XNextEvent(IntPtr display, out XEvent xevent);
-
-    [DllImport("libX11.so.6")]
-    private static extern byte XKeysymToKeycode(IntPtr display, IntPtr keysym);
-
-    [DllImport("libX11.so.6")]
-    private static extern void XFlush(IntPtr display);
-
-    [DllImport("libX11.so.6")]
-    private static extern void XSync(IntPtr display, bool discard);
-
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XSetErrorHandler(XErrorHandler handler);
 
     private delegate int XErrorHandler(IntPtr display, IntPtr errorEventPtr);
 }

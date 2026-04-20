@@ -9,15 +9,15 @@ public partial class GlobalShortcutItemViewModel(GlobalShortcutAction action, st
 {
     private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#D92D20"));
     private static readonly IBrush InfoBrush = new SolidColorBrush(Color.Parse("#667085"));
+    [ObservableProperty] private bool _hasError;
+    [ObservableProperty] private bool _isRecording;
+
+    [ObservableProperty] private string _shortcutText = "未设置";
+    [ObservableProperty] private IBrush _statusForeground = InfoBrush;
+    [ObservableProperty] private string? _statusMessage;
 
     public GlobalShortcutAction Action { get; } = action;
     public string DisplayName { get; } = displayName;
-
-    [ObservableProperty] private string _shortcutText = "未设置";
-    [ObservableProperty] private string? _statusMessage;
-    [ObservableProperty] private bool _isRecording;
-    [ObservableProperty] private bool _hasError;
-    [ObservableProperty] private IBrush _statusForeground = InfoBrush;
 
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
 

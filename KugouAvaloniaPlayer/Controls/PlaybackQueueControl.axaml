@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              x:Class="KugouAvaloniaPlayer.Controls.PlaybackQueueControl"
              x:DataType="vm:MainWindowViewModel">

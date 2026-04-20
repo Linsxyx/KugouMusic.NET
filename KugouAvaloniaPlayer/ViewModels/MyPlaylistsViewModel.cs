@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
@@ -11,6 +11,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
@@ -27,22 +28,22 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
     private readonly ICreatePlaylistDialogService _createPlaylistDialogService;
+    private readonly IExternalPlaylistImportService _externalPlaylistImportService;
     private readonly FavoritePlaylistService _favoritePlaylistService;
     private readonly IFolderPickerService _folderPickerService;
     private readonly ILogger<MyPlaylistsViewModel> _logger;
-    private readonly IExternalPlaylistImportService _externalPlaylistImportService;
     private readonly PlaylistClient _playlistClient;
     private readonly ISukiToastManager _toastManager;
     private readonly UserClient _userClient;
-    private CancellationTokenSource? _refreshPlaylistsCts;
 
     private int _currentPage = 1;
     private bool _hasMoreSongs = true;
+    [ObservableProperty] private bool _isImportingExternalPlaylist;
     private bool _isLikePlaylistLocalMode;
     [ObservableProperty] private bool _isLoadingMore;
-    [ObservableProperty] private bool _isImportingExternalPlaylist;
 
     [ObservableProperty] private bool _isShowingSongs;
+    private CancellationTokenSource? _refreshPlaylistsCts;
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsOnlinePlaylist))]
     private PlaylistItem? _selectedPlaylist;
@@ -195,13 +196,17 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                 await LoadMoreSongsInternal();
             }
         }
-        else if (item.Type == PlaylistType.Local) await ScanLocalFolder(item.LocalPath!);
+        else if (item.Type == PlaylistType.Local)
+        {
+            await ScanLocalFolder(item.LocalPath!);
+        }
     }
 
     [RelayCommand]
     private async Task LoadMore()
     {
-        if (SelectedPlaylist?.Type != PlaylistType.Online || IsLoadingMore || !_hasMoreSongs || _isLikePlaylistLocalMode)
+        if (SelectedPlaylist?.Type != PlaylistType.Online || IsLoadingMore || !_hasMoreSongs ||
+            _isLikePlaylistLocalMode)
             return;
 
         _currentPage++;
@@ -237,10 +242,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                 return;
             }
 
-            if (data.Status != 1)
-            {
-                _logger.LogWarning($"Error : {data.ErrorCode}");
-            }
+            if (data.Status != 1) _logger.LogWarning($"Error : {data.ErrorCode}");
             var songs = data.Songs;
 
             if (songs.Count < 100) _hasMoreSongs = false;
@@ -441,6 +443,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             {
                 _toastManager.Dismiss(progressToast);
             }
+
             if (!importResult.Success)
             {
                 _toastManager.CreateToast()
@@ -668,7 +671,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                 return;
             }
 
-            var songItems = (firstPage.Songs ?? new List<KuGou.Net.Abstractions.Models.PlaylistSong>()).Select(s => new SongItem
+            var songItems = (firstPage.Songs ?? new List<PlaylistSong>()).Select(s => new SongItem
             {
                 Name = s.Name,
                 Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
@@ -682,7 +685,8 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (SelectedPlaylist == null || !IsLikePlaylist(SelectedPlaylist) || SelectedPlaylist.Id != openedItem.Id)
+                if (SelectedPlaylist == null || !IsLikePlaylist(SelectedPlaylist) ||
+                    SelectedPlaylist.Id != openedItem.Id)
                     return;
 
                 SelectedPlaylistSongs.Clear();

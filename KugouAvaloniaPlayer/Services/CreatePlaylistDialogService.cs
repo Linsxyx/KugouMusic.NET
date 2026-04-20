@@ -8,7 +8,9 @@ namespace KugouAvaloniaPlayer.Services;
 public interface ICreatePlaylistDialogService
 {
     Task<string?> PromptPlaylistNameAsync(string? defaultValue = null);
-    Task<string?> PromptTextAsync(string title, string watermark, string? defaultValue = null, string confirmText = "确定");
+
+    Task<string?> PromptTextAsync(string title, string watermark, string? defaultValue = null,
+        string confirmText = "确定");
 }
 
 public sealed class CreatePlaylistDialogService(ISukiDialogManager dialogManager) : ICreatePlaylistDialogService

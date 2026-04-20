@@ -46,12 +46,15 @@ public interface IExternalPlaylistParseStrategy
 {
     string PlatformName { get; }
     bool CanHandle(Uri uri);
-    Task<ExternalPlaylistParseResult> ParseAndLoadAsync(Uri uri, string sourceText, CancellationToken cancellationToken = default);
+
+    Task<ExternalPlaylistParseResult> ParseAndLoadAsync(Uri uri, string sourceText,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IExternalPlaylistImportService
 {
-    Task<ExternalPlaylistParseResult> ParseAndLoadAsync(string sourceText, CancellationToken cancellationToken = default);
+    Task<ExternalPlaylistParseResult> ParseAndLoadAsync(string sourceText,
+        CancellationToken cancellationToken = default);
 
     Task<ExternalPlaylistImportResult> ImportToKugouAsync(
         ExternalPlaylistParseResult parseResult,
@@ -120,7 +123,8 @@ public sealed class ExternalPlaylistImportService(
 
             var sourceSongNames = parseResult.SongNames.AsEnumerable().Reverse().ToList();
             var total = sourceSongNames.Count;
-            var matchedSongs = new List<(string SourceName, string Name, string Hash, string AlbumId, string MixSongId)>();
+            var matchedSongs =
+                new List<(string SourceName, string Name, string Hash, string AlbumId, string MixSongId)>();
             var failedNames = new List<string>();
             var matchedProcessed = 0;
 
@@ -295,7 +299,8 @@ public sealed class NeteasePlaylistParseStrategy(
             client.DefaultRequestHeaders.UserAgent.ParseAdd(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36");
 
-            using var requestContent = new FormUrlEncodedContent(new Dictionary<string, string> { ["id"] = playlistId });
+            using var requestContent =
+                new FormUrlEncodedContent(new Dictionary<string, string> { ["id"] = playlistId });
             using var response = await client.PostAsync(NeteasePlaylistDetailApi, requestContent, cancellationToken);
             response.EnsureSuccessStatusCode();
 
@@ -508,7 +513,7 @@ public sealed class QqMusicPlaylistParseStrategy(
         try
         {
             var first = await FetchQqPlaylistPageAsync(playlistId, 0, QqPageSize, cancellationToken);
-            if (first == null || first.SongNames.Count == 0 && first.Total <= 0)
+            if (first == null || (first.SongNames.Count == 0 && first.Total <= 0))
                 return new ExternalPlaylistParseResult { ErrorMessage = "QQ音乐歌单数据获取失败，请稍后重试。" };
 
             var playlistName = string.IsNullOrWhiteSpace(first.Title) ? "导入歌单" : first.Title;
@@ -660,7 +665,8 @@ public sealed class QqMusicPlaylistParseStrategy(
 
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
-        if (root.TryGetProperty("code", out var codeEl) && codeEl.ValueKind == JsonValueKind.Number && codeEl.GetInt32() != 0)
+        if (root.TryGetProperty("code", out var codeEl) && codeEl.ValueKind == JsonValueKind.Number &&
+            codeEl.GetInt32() != 0)
             return null;
         if (!root.TryGetProperty("req_0", out var req0))
             return null;
@@ -717,7 +723,7 @@ public sealed class QqMusicPlaylistParseStrategy(
         {
             var x1 = HexValue(md5Str[i * 2]);
             var x2 = HexValue(md5Str[i * 2 + 1]);
-            var x3 = (x1 * 16 ^ x2) ^ l1[i];
+            var x3 = (x1 * 16) ^ x2 ^ l1[i];
             ls2.Add(x3);
         }
 

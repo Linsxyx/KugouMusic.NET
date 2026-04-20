@@ -12,9 +12,9 @@ public sealed class DesktopLyricMousePassthroughService(ILogger<DesktopLyricMous
     private const int ShapeInput = 2;
     private const int ShapeSet = 0;
     private const int Unsorted = 0;
+    private bool _runtimeInfoLogged;
 
     private bool _x11Available = true;
-    private bool _runtimeInfoLogged;
 
     public bool IsSupported =>
         OperatingSystem.IsLinux() &&
@@ -34,7 +34,7 @@ public sealed class DesktopLyricMousePassthroughService(ILogger<DesktopLyricMous
         if (!string.Equals(platformHandle.HandleDescriptor, "XID", StringComparison.OrdinalIgnoreCase))
             return;
 
-        IntPtr display = IntPtr.Zero;
+        var display = IntPtr.Zero;
         try
         {
             display = XOpenDisplay(IntPtr.Zero);

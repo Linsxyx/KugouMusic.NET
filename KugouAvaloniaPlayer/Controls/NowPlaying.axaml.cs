@@ -40,12 +40,10 @@ public partial class NowPlaying : UserControl
 
     private void OnMainWindowPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(MainWindowViewModel.IsNowPlayingOpen) || _mainWindowViewModel?.IsNowPlayingOpen != true)
+        if (e.PropertyName != nameof(MainWindowViewModel.IsNowPlayingOpen) ||
+            _mainWindowViewModel?.IsNowPlayingOpen != true)
             return;
 
-        Dispatcher.UIThread.Post(() =>
-        {
-            LyricScrollView?.ForceSecondPassLayout();
-        }, DispatcherPriority.Render);
+        Dispatcher.UIThread.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
     }
 }

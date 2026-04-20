@@ -43,18 +43,23 @@
         <Style Selector="TextBlock.DesktopLine">
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="FontSize" Value="{Binding FontSize}" />
-            <Setter Property="FontFamily" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
+            <Setter Property="FontFamily"
+                    Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
 
         <Style Selector="TextBlock.DesktopWord">
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="FontSize" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}" />
-            <Setter Property="FontFamily" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
+            <Setter Property="FontSize"
+                    Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}" />
+            <Setter Property="FontFamily"
+                    Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
 
         <Style Selector="TextBlock.DesktopTrans">
-            <Setter Property="FontSize" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationFontSize}" />
-            <Setter Property="FontFamily" Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
+            <Setter Property="FontSize"
+                    Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationFontSize}" />
+            <Setter Property="FontFamily"
+                    Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
     </Window.Styles>
 
@@ -154,14 +159,15 @@
                 <Panel>
                     <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="24" Height="24"
                          Css="path { fill: white; }"
-                         IsVisible="{Binding !IsLocked}"/>
+                         IsVisible="{Binding !IsLocked}" />
                     <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="24" Height="24"
                          Css="path { fill: black; }"
-                         IsVisible="{Binding IsLocked}"/>
+                         IsVisible="{Binding IsLocked}" />
                 </Panel>
             </Button>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8" Margin="12,0,0,0">
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8"
+                        Margin="12,0,0,0">
                 <Button Command="{Binding DecreaseFontSizeCommand}" Classes="Basic" ToolTip.Tip="减小歌词字号">
                     <TextBlock Text="A-" Foreground="White" FontWeight="SemiBold" />
                 </Button>

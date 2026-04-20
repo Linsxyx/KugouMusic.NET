@@ -237,16 +237,20 @@ public sealed partial class GlobalShortcutService(
     : IGlobalShortcutService
 {
     private readonly Dictionary<GlobalShortcutAction, GlobalShortcutGesture> _activeGestures = new();
-    private readonly Dictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult> _currentResults = CreateEmptyResults();
-    private Window? _mainWindow;
+
+    private readonly Dictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult> _currentResults =
+        CreateEmptyResults();
+
     private readonly ILogger<GlobalShortcutService> _logger = logger;
+    private Window? _mainWindow;
 
     public bool IsSupported => GetPlatformSupport();
 
     public IReadOnlyDictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult> CurrentResults =>
         new ReadOnlyDictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult>(_currentResults);
 
-    public event Action<IReadOnlyDictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult>>? RegistrationChanged;
+    public event Action<IReadOnlyDictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult>>?
+        RegistrationChanged;
 
     public void Initialize(Window mainWindow)
     {
@@ -257,8 +261,9 @@ public sealed partial class GlobalShortcutService(
     public GlobalShortcutApplyResult LoadFromSettings(GlobalShortcutSettings settings)
     {
         var desired = ParseSettings(settings, out var parseResults);
-        ApplyDesiredGestures(desired, parseResults, bestEffort: true);
-        return new GlobalShortcutApplyResult(parseResults.Values.All(x => x.IsRegistered || x.FailureKind == GlobalShortcutRegistrationFailureKind.None),
+        ApplyDesiredGestures(desired, parseResults, true);
+        return new GlobalShortcutApplyResult(
+            parseResults.Values.All(x => x.IsRegistered || x.FailureKind == GlobalShortcutRegistrationFailureKind.None),
             CurrentResults);
     }
 
@@ -275,11 +280,11 @@ public sealed partial class GlobalShortcutService(
         }
 
         var previous = _activeGestures.ToDictionary(x => x.Key, x => x.Value);
-        var success = ApplyDesiredGestures(desired, parseResults, bestEffort: false);
+        var success = ApplyDesiredGestures(desired, parseResults, false);
         if (success)
             return new GlobalShortcutApplyResult(true, CurrentResults);
 
-        ApplyDesiredGestures(previous, CreateEmptyResults(), bestEffort: true);
+        ApplyDesiredGestures(previous, CreateEmptyResults(), true);
         return new GlobalShortcutApplyResult(false, parseResults);
     }
 
@@ -343,12 +348,10 @@ public sealed partial class GlobalShortcutService(
     {
         _activeGestures.Clear();
         foreach (var action in Enum.GetValues<GlobalShortcutAction>())
-        {
             _currentResults[action] = desired.ContainsKey(action)
                 ? new GlobalShortcutRegistrationResult(false, "当前平台暂不支持全局快捷键",
                     GlobalShortcutRegistrationFailureKind.UnsupportedPlatform)
                 : new GlobalShortcutRegistrationResult(false);
-        }
 
         NotifyRegistrationChanged();
     }
@@ -424,6 +427,9 @@ public sealed partial class GlobalShortcutService(
 
     private partial bool GetPlatformSupport();
     private partial void InitializePlatform(Window mainWindow);
-    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture, out string? errorMessage);
+
+    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture,
+        out string? errorMessage);
+
     private partial void UnregisterPlatformShortcut(GlobalShortcutAction action);
 }

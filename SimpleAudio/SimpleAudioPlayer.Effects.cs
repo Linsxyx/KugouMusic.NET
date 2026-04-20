@@ -7,6 +7,8 @@ namespace SimpleAudio;
 
 public partial class SimpleAudioPlayer
 {
+    private const int RealtimeSpectrumBandCount = 28;
+
     public void SetEQ(float[]? gains)
     {
         if (gains == null || gains.Length != 10)
@@ -134,14 +136,59 @@ public partial class SimpleAudioPlayer
         var rms = totalEnergy > 0 ? Math.Sqrt(totalEnergy / Math.Max(1, fft.Length - dcOffset)) : 0d;
         var brightness = totalEnergy > 0 ? highEnergy / totalEnergy : 0d;
         var spectralCentroid = totalEnergy > 0 ? weightedFrequency / totalEnergy : 0d;
+        var spectrumBands = BuildSpectrumBands(fft, sampleRate, dcOffset);
         return new AudioAnalysisSnapshot
         {
             PositionSeconds = GetPosition().TotalSeconds,
             DurationSeconds = GetDuration().TotalSeconds,
             Rms = rms,
             Brightness = brightness,
-            SpectralCentroid = spectralCentroid
+            SpectralCentroid = spectralCentroid,
+            SpectrumBands = spectrumBands
         };
+    }
+
+    private static float[] BuildSpectrumBands(float[] fft, int sampleRate, int dcOffset)
+    {
+        var bands = new float[RealtimeSpectrumBandCount];
+        if (fft.Length <= dcOffset + 1 || sampleRate <= 0)
+        {
+            return bands;
+        }
+
+        var minFreq = 42d;
+        var maxFreq = Math.Min(16000d, sampleRate / 2d);
+        if (maxFreq <= minFreq)
+        {
+            return bands;
+        }
+
+        var freqScale = maxFreq / minFreq;
+        for (var bandIndex = 0; bandIndex < bands.Length; bandIndex++)
+        {
+            var startFreq = minFreq * Math.Pow(freqScale, bandIndex / (double)bands.Length);
+            var endFreq = minFreq * Math.Pow(freqScale, (bandIndex + 1d) / bands.Length);
+            var startIndex = Math.Clamp((int)Math.Floor(startFreq * 2048d / sampleRate), dcOffset, fft.Length - 1);
+            var endIndex = Math.Clamp((int)Math.Ceiling(endFreq * 2048d / sampleRate), startIndex + 1, fft.Length);
+
+            var peak = 0f;
+            var sum = 0f;
+            var count = 0;
+            for (var i = startIndex; i < endIndex; i++)
+            {
+                var value = Math.Max(0f, fft[i]);
+                peak = Math.Max(peak, value);
+                sum += value;
+                count++;
+            }
+
+            var average = count > 0 ? sum / count : 0f;
+            var magnitude = Math.Max(peak * 0.72f, average);
+            var normalized = (float)(Math.Log10(1 + magnitude * 220f) / 2.08d);
+            bands[bandIndex] = Math.Clamp(normalized, 0f, 1f);
+        }
+
+        return bands;
     }
 
     private void ApplyEQ()

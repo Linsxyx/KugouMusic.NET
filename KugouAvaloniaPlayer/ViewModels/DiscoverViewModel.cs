@@ -331,10 +331,7 @@ public partial class DiscoverViewModel : PageViewModelBase
                 return;
             }
 
-            if (data.Status != 1)
-            {
-                _logger.LogError($"Error : {data.ErrorCode}");
-            }
+            if (data.Status != 1) _logger.LogError($"Error : {data.ErrorCode}");
             var songs = data.Songs;
             if (songs.Count < 100)
                 _hasMoreSongs = false;

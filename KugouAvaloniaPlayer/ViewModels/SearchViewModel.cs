@@ -31,20 +31,20 @@ public partial class SearchViewModel(
     // 用于收藏歌单的信息
     private string _currentPlaylistGlobalId = "";
     private string _currentPlaylistName = "";
-    [ObservableProperty] private bool _isLoadingHot;
-    [ObservableProperty] private int _selectedHotMainIndex;
     [ObservableProperty] private SearchType _currentSearchType = SearchType.Song;
     [ObservableProperty] private string? _detailCover;
     [ObservableProperty] private string? _detailSubTitle;
     [ObservableProperty] private string? _detailTitle;
     private bool _hasMoreDetails = true;
     [ObservableProperty] private bool _hasSearched;
+    [ObservableProperty] private bool _isLoadingHot;
     [ObservableProperty] private bool _isLoadingMoreDetails;
 
     [ObservableProperty] private bool _isSearching;
 
     [ObservableProperty] private bool _isShowingDetail;
     [ObservableProperty] private string _searchKeyword = "";
+    [ObservableProperty] private int _selectedHotMainIndex;
     private bool _suppressHotSelectionChanged;
 
     public override string DisplayName => "搜索";
@@ -333,10 +333,7 @@ public partial class SearchViewModel(
                     return;
                 }
 
-                if (data.Status != 1)
-                {
-                    logger.LogError($"Error : {data.ErrorCode}");
-                }
+                if (data.Status != 1) logger.LogError($"Error : {data.ErrorCode}");
                 var songs = data.Songs;
                 if (songs.Count < 100) _hasMoreDetails = false;
 

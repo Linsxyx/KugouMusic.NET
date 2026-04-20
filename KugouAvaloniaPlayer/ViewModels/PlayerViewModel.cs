@@ -23,6 +23,9 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class PlayerViewModel : ViewModelBase, IDisposable
 {
     private const int MaxConsecutiveFailures = 5;
+    private const int VisualizerBarCount = 28;
+    private const double VisualizerMinHeight = 8;
+    private const double VisualizerHeightRange = 56;
     private const double AnalysisWindowSec = 15.0;
     private const double FallbackMixDurationSec = 9.6;
     private const double FallbackMixEntrySec = 4.6;
@@ -37,48 +40,49 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private readonly DualTrackAudioPlayer _player;
     private readonly SemaphoreSlim _playSongLock = new(1, 1);
-    private readonly ITransitionAnalysisService _transitionAnalysisService;
 
     private readonly PlaybackQueueManager _queueManager;
     private readonly KgSessionManager _sessionManager;
-    private readonly ISukiToastManager _toastManager;
     private readonly List<PlaybackTelemetryPoint> _tailTelemetry = [];
-    private int _disposeState;
+    private readonly ISukiToastManager _toastManager;
+    private readonly ITransitionAnalysisService _transitionAnalysisService;
+    private TransitionProfile? _activeTransitionProfile;
+    private string? _analysisFailureSongKey;
+    private bool _autoTransitionStarted;
 
     private int _consecutiveFailures;
-    private bool _autoTransitionStarted;
-    private bool _isAnalyzingTransition;
-    private bool _isPreparingNextTrack;
-    private string? _analysisFailureSongKey;
-    private string? _prepareFailureSongKey;
-    private CancellationTokenSource? _transitionWorkCancellation;
-    private TransitionProfile? _pendingTransitionProfile;
-    private SongItem? _pendingTransitionSong;
-    private PreparedTrack? _preparedNextTrack;
-    private SongItem? _preparedNextSong;
-    private string? _preparedNextSource;
-    private bool _preparedNextIsLocal;
-    private TransitionProfile? _activeTransitionProfile;
-    private bool _incomingSteadyStateLogged;
 
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
     [ObservableProperty] private string _currentLyricText = "---";
     [ObservableProperty] private string _currentLyricTrans = "";
     [ObservableProperty] private SongItem? _currentPlayingSong;
     [ObservableProperty] private double _currentPositionSeconds;
+    private int _disposeState;
+    private bool _incomingSteadyStateLogged;
+    private bool _isAnalyzingTransition;
     [ObservableProperty] private bool _isBuffering;
     [ObservableProperty] private bool _isDraggingProgress;
     [ObservableProperty] private bool _isLiked;
+    [ObservableProperty] private bool _isNowPlayingVisualizerEnabled;
     [ObservableProperty] private bool _isPlayingAudio;
-    [ObservableProperty] private bool _isSwitchingQuality;
+    private bool _isPreparingNextTrack;
     [ObservableProperty] private bool _isSeamlessTransitionEnabled;
+    [ObservableProperty] private bool _isSwitchingQuality;
+    private bool _isSyncingQualitySelection;
     private CancellationTokenSource? _loadCancellation;
     [ObservableProperty] private string _musicQuality = "128";
-    [ObservableProperty] private string _qualitySelection = "128";
     [ObservableProperty] private float _musicVolume = 0.8f;
+    private TransitionProfile? _pendingTransitionProfile;
+    private SongItem? _pendingTransitionSong;
     private int _playRequestVersion;
+    private bool _preparedNextIsLocal;
+    private SongItem? _preparedNextSong;
+    private string? _preparedNextSource;
+    private PreparedTrack? _preparedNextTrack;
+    private string? _prepareFailureSongKey;
+    [ObservableProperty] private string _qualitySelection = "128";
     [ObservableProperty] private double _totalDurationSeconds;
-    private bool _isSyncingQualitySelection;
+    private CancellationTokenSource? _transitionWorkCancellation;
 
     public PlayerViewModel(
         MusicClient musicClient, ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
@@ -98,10 +102,11 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _player.PlaybackEnded += OnPlaybackEnded;
         MusicQuality = SettingsManager.Settings.MusicQuality;
         IsSeamlessTransitionEnabled = SettingsManager.Settings.EnableSeamlessTransition;
+        IsNowPlayingVisualizerEnabled = SettingsManager.Settings.EnableNowPlayingVisualizer;
         QualitySelection = MusicQuality;
         UpdateAudioEffects(SettingsManager.Settings.EQPreset, SettingsManager.Settings.EnableSurround);
 
-        _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         _playbackTimer.Tick += OnPlaybackTimerTick;
 
         WeakReferenceMessenger.Default.Register<AddToNextMessage>(this,
@@ -110,20 +115,9 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             (_, m) => _ = ShowPlaylistDialogSafelyAsync(m.Song));
     }
 
-    private async Task ShowPlaylistDialogSafelyAsync(SongItem song)
-    {
-        try
-        {
-            await _favoriteService.ShowAddToPlaylistDialogAsync(song);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "打开添加到歌单对话框失败");
-        }
-    }
-
     public AvaloniaList<SongItem> PlaybackQueue => _queueManager.PlaybackQueue;
     public AvaloniaList<LyricLineViewModel> LyricLines => _lyricsService.LyricLines;
+    public AvaloniaList<AudioVisualizerBarViewModel> NowPlayingVisualizerBars { get; } = CreateVisualizerBars();
     public string[] QualityOptions { get; } = ["128", "320", "flac", "high"];
 
     public bool IsShuffleMode => _queueManager.IsShuffleMode;
@@ -142,6 +136,18 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _queueManager.Clear();
         _lyricsService.Clear();
         GC.SuppressFinalize(this);
+    }
+
+    private async Task ShowPlaylistDialogSafelyAsync(SongItem song)
+    {
+        try
+        {
+            await _favoriteService.ShowAddToPlaylistDialogAsync(song);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "打开添加到歌单对话框失败");
+        }
     }
 
     public async Task PlaySongAsync(SongItem? song, IList<SongItem>? contextList = null)
@@ -186,7 +192,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             _loadCancellation = currentLoadCts;
 
             _queueManager.SetupQueue(song, contextList);
-            ResetTransitionPipeline(cancelPreparedTrack: true);
+            ResetTransitionPipeline(true);
             ResetTailTelemetry();
 
             if (CurrentPlayingSong != null) CurrentPlayingSong.IsPlaying = false;
@@ -208,7 +214,8 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
             if (requestVersion != _playRequestVersion || currentLoadCts.IsCancellationRequested) return;
 
-            var loadSuccess = await TryLoadStreamAsync(sourceInfo.Source, song.Name, AudioLoadTimeout, currentLoadCts.Token);
+            var loadSuccess =
+                await TryLoadStreamAsync(sourceInfo.Source, song.Name, AudioLoadTimeout, currentLoadCts.Token);
 
             if (loadSuccess)
             {
@@ -327,6 +334,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             _player.Pause();
             IsPlayingAudio = false;
             _playbackTimer.Stop();
+            ResetVisualizerBars();
         }
         else
         {
@@ -378,7 +386,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private void StopAndReset()
     {
-        ResetTransitionPipeline(cancelPreparedTrack: true);
+        ResetTransitionPipeline(true);
         _playbackTimer.Stop();
         _player.Stop();
         IsPlayingAudio = false;
@@ -388,6 +396,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         CurrentPositionSeconds = 0;
         _lyricsService.Clear();
         ResetTailTelemetry();
+        ResetVisualizerBars();
     }
 
     private void OnPlaybackEnded()
@@ -403,7 +412,9 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
         var pos = _player.GetPosition();
         CurrentPositionSeconds = pos.TotalSeconds;
-        CaptureTailTelemetry(_player.GetActiveAnalysisSnapshot());
+        var analysisSnapshot = _player.GetActiveAnalysisSnapshot();
+        CaptureTailTelemetry(analysisSnapshot);
+        UpdateNowPlayingVisualizer(analysisSnapshot);
 
         var activeLine = _lyricsService.SyncLyrics(pos.TotalMilliseconds);
         if (activeLine != CurrentLyricLine)
@@ -421,19 +432,17 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             _preparedNextTrack == null &&
             _preparedNextSong == null)
         {
-#if DEBUG
+/*#if DEBUG
             if (CurrentPlayingSong != null)
-            {
                 _logger.LogInformation(
                     "智能过渡结束：当前歌曲《{SongName}》交叉阶段已完全结束，当前播放位置 {CurrentPositionSec:F2}s",
                     CurrentPlayingSong.Name,
                     pos.TotalSeconds);
-            }
-#endif
-            ResetTransitionPipeline(cancelPreparedTrack: false);
+#endif*/
+            ResetTransitionPipeline(false);
         }
 
-#if DEBUG
+/*#if DEBUG
         if (_autoTransitionStarted &&
             _player.IsCrossfading &&
             !_incomingSteadyStateLogged &&
@@ -449,30 +458,18 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 _activeTransitionProfile.IncomingSettleSec,
                 _activeTransitionProfile.MixDurationSec);
         }
-#endif
+#endif*/
 
-        if (!IsSeamlessTransitionEnabled || _player.IsCrossfading || IsSwitchingQuality)
-        {
-            return;
-        }
+        if (!IsSeamlessTransitionEnabled || _player.IsCrossfading || IsSwitchingQuality) return;
 
         var remainingSec = Math.Max(0, TotalDurationSeconds - pos.TotalSeconds);
         var requestVersion = _playRequestVersion;
         var currentLoadCts = _loadCancellation;
-        if (currentLoadCts == null || currentLoadCts.IsCancellationRequested)
-        {
-            return;
-        }
+        if (currentLoadCts == null || currentLoadCts.IsCancellationRequested) return;
 
-        if (remainingSec <= PreloadWindowSec)
-        {
-            _ = EnsurePreparedNextTrackAsync(requestVersion, currentLoadCts.Token);
-        }
+        if (remainingSec <= PreloadWindowSec) _ = EnsurePreparedNextTrackAsync(requestVersion, currentLoadCts.Token);
 
-        if (remainingSec <= AnalysisWindowSec)
-        {
-            _ = EnsureTransitionAnalysisAsync(requestVersion, currentLoadCts.Token);
-        }
+        if (remainingSec <= AnalysisWindowSec) _ = EnsureTransitionAnalysisAsync(requestVersion, currentLoadCts.Token);
 
         TryStartAutoCrossfade(remainingSec);
     }
@@ -483,8 +480,9 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         if (_player.IsCrossfading)
         {
             _player.AbortCrossfade();
-            ResetTransitionPipeline(cancelPreparedTrack: false);
+            ResetTransitionPipeline(false);
         }
+
         _player.SetPosition(TimeSpan.FromSeconds(value));
         _lyricsService.SyncLyrics(value * 1000);
     }
@@ -560,19 +558,68 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _player.SetSurround(surround);
     }
 
-    public void SetSeamlessTransitionEnabled(bool enabled)
+    private static AvaloniaList<AudioVisualizerBarViewModel> CreateVisualizerBars()
     {
-        if (IsSeamlessTransitionEnabled == enabled)
+        var bars = new AvaloniaList<AudioVisualizerBarViewModel>();
+        for (var i = 0; i < VisualizerBarCount; i++) bars.Add(new AudioVisualizerBarViewModel());
+
+        return bars;
+    }
+
+    private void ResetVisualizerBars()
+    {
+        for (var i = 0; i < NowPlayingVisualizerBars.Count; i++)
         {
+            NowPlayingVisualizerBars[i].Height = VisualizerMinHeight;
+            NowPlayingVisualizerBars[i].Opacity = 0.22;
+        }
+    }
+
+    private void UpdateNowPlayingVisualizer(AudioAnalysisSnapshot snapshot)
+    {
+        var spectrumBands = snapshot.SpectrumBands;
+        if (spectrumBands == null || spectrumBands.Count == 0)
+        {
+            ResetVisualizerBars();
             return;
         }
+
+        var energyBoost = Math.Clamp(snapshot.Rms * 10.5, 0d, 1d);
+        var brightnessBoost = Math.Clamp(snapshot.Brightness * 1.45, 0d, 1d);
+
+        for (var i = 0; i < NowPlayingVisualizerBars.Count; i++)
+        {
+            var sourceIndex = Math.Min(i, spectrumBands.Count - 1);
+            var band = Math.Clamp(spectrumBands[sourceIndex], 0f, 1f);
+            var emphasis = 1d - Math.Abs(i / (NowPlayingVisualizerBars.Count - 1d) - 0.5d) * 0.22d;
+            var target = Math.Clamp((band * 0.72d + energyBoost * 0.2d + brightnessBoost * 0.08d) * emphasis, 0d, 1d);
+            var targetHeight = VisualizerMinHeight + target * VisualizerHeightRange;
+            var bar = NowPlayingVisualizerBars[i];
+
+            var smoothing = targetHeight >= bar.Height ? 0.58d : 0.18d;
+            bar.Height += (targetHeight - bar.Height) * smoothing;
+            bar.Opacity = Math.Clamp(0.24 + target * 0.76, 0.24, 1d);
+        }
+    }
+
+    public void SetSeamlessTransitionEnabled(bool enabled)
+    {
+        if (IsSeamlessTransitionEnabled == enabled) return;
 
         IsSeamlessTransitionEnabled = enabled;
         if (!enabled)
         {
             _player.AbortCrossfade();
-            ResetTransitionPipeline(cancelPreparedTrack: true);
+            ResetTransitionPipeline(true);
         }
+    }
+
+    public void SetNowPlayingVisualizerEnabled(bool enabled)
+    {
+        if (IsNowPlayingVisualizerEnabled == enabled) return;
+
+        IsNowPlayingVisualizerEnabled = enabled;
+        if (!enabled) ResetVisualizerBars();
     }
 
     public async Task<bool> SwitchQualityAsync(string? quality)
@@ -640,7 +687,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             var resumePosition = CurrentPositionSeconds;
 
             CancelAndDisposeLoadCancellation();
-            ResetTransitionPipeline(cancelPreparedTrack: true);
+            ResetTransitionPipeline(true);
             var currentLoadCts = new CancellationTokenSource();
             _loadCancellation = currentLoadCts;
 
@@ -722,21 +769,16 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         };
     }
 
-    private async Task<(string? Source, bool IsLocal)> ResolvePlaybackSourceAsync(SongItem song, CancellationToken cancellationToken)
+    private async Task<(string? Source, bool IsLocal)> ResolvePlaybackSourceAsync(SongItem song,
+        CancellationToken cancellationToken)
     {
         var localFilePath = song.LocalFilePath;
         var isLocalSong = !string.IsNullOrWhiteSpace(localFilePath) && File.Exists(localFilePath);
-        if (isLocalSong)
-        {
-            return (localFilePath, true);
-        }
+        if (isLocalSong) return (localFilePath, true);
 
         cancellationToken.ThrowIfCancellationRequested();
         var playData = await _musicClient.GetPlayInfoAsync(song.Hash, MusicQuality);
-        if (playData == null || playData.Status != 1)
-        {
-            return (null, false);
-        }
+        if (playData == null || playData.Status != 1) return (null, false);
 
         var url = playData.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
         return (url, false);
@@ -745,13 +787,9 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private void StartLyricsLoad(SongItem song, bool isLocal)
     {
         if (isLocal && !string.IsNullOrWhiteSpace(song.LocalFilePath))
-        {
             _ = _lyricsService.LoadLocalLyricsAsync(song.LocalFilePath);
-        }
         else
-        {
             _ = _lyricsService.LoadOnlineLyricsAsync(song.Hash, song.Name);
-        }
     }
 
     private void ResetTransitionPipeline(bool cancelPreparedTrack)
@@ -784,22 +822,15 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private void CaptureTailTelemetry(AudioAnalysisSnapshot snapshot)
     {
-        if (snapshot.DurationSeconds <= 0 || snapshot.PositionSeconds < 0)
-        {
-            return;
-        }
+        if (snapshot.DurationSeconds <= 0 || snapshot.PositionSeconds < 0) return;
 
         if (_tailTelemetry.Count > 0 && snapshot.PositionSeconds + 0.15 < _tailTelemetry[^1].PositionSeconds)
-        {
             _tailTelemetry.Clear();
-        }
 
-        _tailTelemetry.Add(new PlaybackTelemetryPoint(snapshot.PositionSeconds, snapshot.DurationSeconds, snapshot.Rms, snapshot.Brightness));
+        _tailTelemetry.Add(new PlaybackTelemetryPoint(snapshot.PositionSeconds, snapshot.DurationSeconds, snapshot.Rms,
+            snapshot.Brightness));
 
-        while (_tailTelemetry.Count > TailTelemetryCapacity)
-        {
-            _tailTelemetry.RemoveAt(0);
-        }
+        while (_tailTelemetry.Count > TailTelemetryCapacity) _tailTelemetry.RemoveAt(0);
 
         var minPosition = Math.Max(0, snapshot.PositionSeconds - 15.0);
         _tailTelemetry.RemoveAll(x => x.PositionSeconds < minPosition);
@@ -807,22 +838,18 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private TailPlaybackMetrics? BuildTailPlaybackMetrics()
     {
-        if (_tailTelemetry.Count == 0)
-        {
-            return null;
-        }
+        if (_tailTelemetry.Count == 0) return null;
 
         var points = _tailTelemetry.Where(x => x.PositionSeconds >= _tailTelemetry[^1].PositionSeconds - 8.0).ToList();
-        if (points.Count == 0)
-        {
-            return null;
-        }
+        if (points.Count == 0) return null;
 
         var peakRms = points.Max(x => x.Rms);
         var silenceThreshold = Math.Max(peakRms * 0.18, 0.0025);
         var lastActive = points.LastOrDefault(x => x.Rms >= silenceThreshold);
         var lastPoint = points[^1];
-        var tailSilenceSec = lastActive.PositionSeconds <= 0 ? 0 : Math.Max(0, lastPoint.PositionSeconds - lastActive.PositionSeconds);
+        var tailSilenceSec = lastActive.PositionSeconds <= 0
+            ? 0
+            : Math.Max(0, lastPoint.PositionSeconds - lastActive.PositionSeconds);
         var averageRms = points.Average(x => x.Rms);
         var averageBrightness = points.Average(x => x.Brightness);
         return new TailPlaybackMetrics
@@ -835,10 +862,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private SongItem? GetUpcomingSong()
     {
-        if (CurrentPlayingSong == null || _queueManager.PlaybackQueue.Count <= 1)
-        {
-            return null;
-        }
+        if (CurrentPlayingSong == null || _queueManager.PlaybackQueue.Count <= 1) return null;
 
         var nextSong = _queueManager.GetNext(CurrentPlayingSong);
         return nextSong == CurrentPlayingSong ? null : nextSong;
@@ -846,38 +870,26 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private async Task EnsurePreparedNextTrackAsync(int requestVersion, CancellationToken cancellationToken)
     {
-        if (_autoTransitionStarted || _isPreparingNextTrack || _player.IsCrossfading)
-        {
-            return;
-        }
+        if (_autoTransitionStarted || _isPreparingNextTrack || _player.IsCrossfading) return;
 
         var nextSong = GetUpcomingSong();
-        if (nextSong == null)
-        {
-            return;
-        }
+        if (nextSong == null) return;
 
         var nextSongKey = BuildSongTransitionKey(nextSong);
-        if (_preparedNextSong == nextSong && _player.HasPreparedTrack && !string.IsNullOrWhiteSpace(_preparedNextSource))
-        {
-            return;
-        }
+        if (_preparedNextSong == nextSong && _player.HasPreparedTrack &&
+            !string.IsNullOrWhiteSpace(_preparedNextSource)) return;
 
-        if (string.Equals(_prepareFailureSongKey, nextSongKey, StringComparison.Ordinal))
-        {
-            return;
-        }
+        if (string.Equals(_prepareFailureSongKey, nextSongKey, StringComparison.Ordinal)) return;
 
         _isPreparingNextTrack = true;
         try
         {
             var transitionCts = EnsureTransitionCancellation();
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, transitionCts.Token);
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, transitionCts.Token);
             var sourceInfo = await ResolvePlaybackSourceAsync(nextSong, linkedCts.Token);
-            if (requestVersion != _playRequestVersion || linkedCts.IsCancellationRequested || string.IsNullOrWhiteSpace(sourceInfo.Source))
-            {
-                return;
-            }
+            if (requestVersion != _playRequestVersion || linkedCts.IsCancellationRequested ||
+                string.IsNullOrWhiteSpace(sourceInfo.Source)) return;
 
             if (!_player.PrepareNext(sourceInfo.Source))
             {
@@ -913,48 +925,37 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private async Task EnsureTransitionAnalysisAsync(int requestVersion, CancellationToken cancellationToken)
     {
-        if (_autoTransitionStarted || _isAnalyzingTransition || _player.IsCrossfading || _preparedNextTrack == null || _preparedNextSong == null)
-        {
-            return;
-        }
+        if (_autoTransitionStarted || _isAnalyzingTransition || _player.IsCrossfading || _preparedNextTrack == null ||
+            _preparedNextSong == null) return;
 
         var nextSongKey = BuildSongTransitionKey(_preparedNextSong);
-        if (_pendingTransitionSong == _preparedNextSong && _pendingTransitionProfile != null)
-        {
-            return;
-        }
+        if (_pendingTransitionSong == _preparedNextSong && _pendingTransitionProfile != null) return;
 
-        if (string.Equals(_analysisFailureSongKey, nextSongKey, StringComparison.Ordinal))
-        {
-            return;
-        }
+        if (string.Equals(_analysisFailureSongKey, nextSongKey, StringComparison.Ordinal)) return;
 
         var currentSong = CurrentPlayingSong;
         var currentSource = _player.ActiveSource;
-        if (currentSong == null || string.IsNullOrWhiteSpace(currentSource))
-        {
-            return;
-        }
+        if (currentSong == null || string.IsNullOrWhiteSpace(currentSource)) return;
 
         _isAnalyzingTransition = true;
         try
         {
             var transitionCts = EnsureTransitionCancellation();
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, transitionCts.Token);
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, transitionCts.Token);
             var currentTrack = new PreparedTrack
             {
                 Id = BuildSongTransitionKey(currentSong),
                 Source = currentSource,
-                IsLocal = !string.IsNullOrWhiteSpace(currentSong.LocalFilePath) && File.Exists(currentSong.LocalFilePath),
+                IsLocal = !string.IsNullOrWhiteSpace(currentSong.LocalFilePath) &&
+                          File.Exists(currentSong.LocalFilePath),
                 DurationSeconds = TotalDurationSeconds,
                 TailMetrics = BuildTailPlaybackMetrics()
             };
 
-            var profile = await _transitionAnalysisService.AnalyzeAsync(currentTrack, _preparedNextTrack, linkedCts.Token);
-            if (requestVersion != _playRequestVersion || linkedCts.IsCancellationRequested)
-            {
-                return;
-            }
+            var profile =
+                await _transitionAnalysisService.AnalyzeAsync(currentTrack, _preparedNextTrack, linkedCts.Token);
+            if (requestVersion != _playRequestVersion || linkedCts.IsCancellationRequested) return;
 
             _analysisFailureSongKey = null;
             _pendingTransitionSong = _preparedNextSong;
@@ -982,31 +983,19 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private void TryStartAutoCrossfade(double remainingSec)
     {
-        if (_autoTransitionStarted || _pendingTransitionProfile == null || _preparedNextSong == null || !_player.HasPreparedTrack)
-        {
-            return;
-        }
+        if (_autoTransitionStarted || _pendingTransitionProfile == null || _preparedNextSong == null ||
+            !_player.HasPreparedTrack) return;
 
-        if (_pendingTransitionSong != _preparedNextSong)
-        {
-            return;
-        }
+        if (_pendingTransitionSong != _preparedNextSong) return;
 
-        if (remainingSec > _pendingTransitionProfile.MixEntrySec)
-        {
-            return;
-        }
+        if (remainingSec > _pendingTransitionProfile.MixEntrySec) return;
 
-        if (!_player.StartCrossfade(_pendingTransitionProfile))
-        {
-            return;
-        }
-#if DEBUG
+        if (!_player.StartCrossfade(_pendingTransitionProfile)) return;
+/*#if DEBUG
         var nextSong = _preparedNextSong;
         var transitionProfile = _pendingTransitionProfile;
         var outgoingSong = CurrentPlayingSong;
         if (nextSong != null)
-        {
             _logger.LogInformation(
                 "智能过渡启动：上一首《{OutgoingSong}》剩余 {RemainingSec:F2}s 开始淡出，下一首《{IncomingSong}》预计在 {IncomingSettleSec:F2}s 左右进入正常播放参数区，交叉将在 {MixDurationSec:F2}s 左右完全结束（起混点 {MixEntrySec:F2}s）",
                 outgoingSong?.Name ?? "未知歌曲",
@@ -1015,22 +1004,20 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 transitionProfile.IncomingSettleSec,
                 transitionProfile.MixDurationSec,
                 transitionProfile.MixEntrySec);
-        }
-#endif
+#endif*/
         _autoTransitionStarted = true;
         _activeTransitionProfile = _pendingTransitionProfile;
         _incomingSteadyStateLogged = false;
         var oldSong = CurrentPlayingSong;
-        if (oldSong != null)
-        {
-            oldSong.IsPlaying = false;
-        }
+        if (oldSong != null) oldSong.IsPlaying = false;
 
         CurrentPlayingSong = _preparedNextSong;
         CurrentPlayingSong.IsPlaying = true;
         IsLiked = _favoriteService.IsLiked(CurrentPlayingSong.Hash);
         CurrentPositionSeconds = 0;
-        TotalDurationSeconds = CurrentPlayingSong.DurationSeconds > 0 ? CurrentPlayingSong.DurationSeconds : _player.GetDuration().TotalSeconds;
+        TotalDurationSeconds = CurrentPlayingSong.DurationSeconds > 0
+            ? CurrentPlayingSong.DurationSeconds
+            : _player.GetDuration().TotalSeconds;
         CurrentLyricLine = null;
         CurrentLyricText = "歌词加载中...";
         CurrentLyricTrans = "";
@@ -1057,10 +1044,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     private static string BuildSongTransitionKey(SongItem song)
     {
-        if (!string.IsNullOrWhiteSpace(song.LocalFilePath))
-        {
-            return $"local:{song.LocalFilePath}";
-        }
+        if (!string.IsNullOrWhiteSpace(song.LocalFilePath)) return $"local:{song.LocalFilePath}";
 
         return $"remote:{song.Hash}:{song.DurationSeconds:0.###}";
     }

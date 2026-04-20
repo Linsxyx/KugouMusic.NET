@@ -13,4 +13,6 @@ public readonly record struct AudioAnalysisSnapshot
     public double Brightness { get; init; }
 
     public double SpectralCentroid { get; init; }
+
+    public IReadOnlyList<float>? SpectrumBands { get; init; }
 }

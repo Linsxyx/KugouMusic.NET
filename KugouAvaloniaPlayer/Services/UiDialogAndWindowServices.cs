@@ -1,9 +1,9 @@
 using System;
 using System.ComponentModel;
 using Avalonia;
-using Avalonia.Threading;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;

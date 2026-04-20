@@ -1,10 +1,9 @@
 using System;
 using System.Collections;
-using System.Collections.Specialized;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics;
 using Avalonia;
-using Avalonia.Animation;
-using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -16,9 +15,14 @@ public class MeasuredLyricScrollView : ItemsControl
     private const int StaggerRange = 5;
     private const int StaggerStepMs = 35;
     private const int EntranceStepMs = 25;
-    private static readonly TimeSpan EntranceDuration = TimeSpan.FromMilliseconds(520);
     private const double DefaultEstimatedLineHeight = 72;
     private const double EntranceRiseOffset = 110;
+    private const double SpringStiffness = 0.105;
+    private const double SpringDamping = 0.72;
+    private const double OpacityResponse = 14.0;
+    private const double SettleTopThreshold = 0.35;
+    private const double SettleVelocityThreshold = 0.2;
+    private const double SettleOpacityThreshold = 0.01;
 
     public static readonly StyledProperty<object?> ActiveItemProperty =
         AvaloniaProperty.Register<MeasuredLyricScrollView, object?>(nameof(ActiveItem));
@@ -27,7 +31,8 @@ public class MeasuredLyricScrollView : ItemsControl
         AvaloniaProperty.Register<MeasuredLyricScrollView, double>(nameof(LineSpacing), 18);
 
     public static readonly StyledProperty<TimeSpan> ScrollDurationProperty =
-        AvaloniaProperty.Register<MeasuredLyricScrollView, TimeSpan>(nameof(ScrollDuration), TimeSpan.FromMilliseconds(420));
+        AvaloniaProperty.Register<MeasuredLyricScrollView, TimeSpan>(nameof(ScrollDuration),
+            TimeSpan.FromMilliseconds(420));
 
     public static readonly StyledProperty<double> WheelStepProperty =
         AvaloniaProperty.Register<MeasuredLyricScrollView, double>(nameof(WheelStep), 80);
@@ -35,18 +40,25 @@ public class MeasuredLyricScrollView : ItemsControl
     public static readonly StyledProperty<double> ActiveAnchorRatioProperty =
         AvaloniaProperty.Register<MeasuredLyricScrollView, double>(nameof(ActiveAnchorRatio), 0.5);
 
+    private readonly Dictionary<int, double> _knownHeights = new();
+    private readonly Dictionary<Control, SpringState> _springStates = new();
+
+    private readonly Stopwatch _frameStopwatch = new();
+    private readonly DispatcherTimer _springTimer;
     private readonly DispatcherTimer _userScrollResetTimer;
     private INotifyCollectionChanged? _collectionChangedSource;
     private bool _deferredActiveItemUpdate;
-    private bool _isUserScrolling;
-    private int? _lockedActiveIndex;
-    private bool _layoutUpdateQueued;
-    private double _manualOffset;
     private bool _isFirstLayoutPass = true;
-    private readonly Dictionary<int, double> _knownHeights = new();
+    private bool _isUserScrolling;
+    private bool _layoutUpdateQueued;
+    private int? _lockedActiveIndex;
+    private double _manualOffset;
 
     public MeasuredLyricScrollView()
     {
+        _springTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _springTimer.Tick += OnSpringTimerTick;
+
         _userScrollResetTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1800) };
         _userScrollResetTimer.Tick += OnUserScrollTimeout;
 
@@ -88,6 +100,9 @@ public class MeasuredLyricScrollView : ItemsControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+
+        _springTimer.Stop();
+        _userScrollResetTimer.Stop();
         UnhookCollectionChanged();
     }
 
@@ -184,7 +199,8 @@ public class MeasuredLyricScrollView : ItemsControl
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
         if (_isUserScrolling) return;
-        QueueLayoutUpdate();
+        if (RefreshMeasuredHeights())
+            QueueLayoutUpdate();
     }
 
     private void QueueLayoutUpdate()
@@ -228,54 +244,35 @@ public class MeasuredLyricScrollView : ItemsControl
 
         // Keep the active lyric line on a configurable visual anchor rather than always hard-centering it.
         var centerY = Bounds.Height * Math.Clamp(ActiveAnchorRatio, 0.0, 1.0) + _manualOffset;
+        var activeContainers = new HashSet<Control>();
 
         for (var i = 0; i < ItemCount; i++)
         {
             if (ContainerFromIndex(i) is not Control container) continue;
 
-            var isEntrance = _isFirstLayoutPass && !_isUserScrolling;
-            var topDelay = _isUserScrolling
-                ? TimeSpan.Zero
-                : isEntrance
-                    ? GetEntranceDelay(i, activeIndex)
-                    : GetTopTransitionDelay(i, staggerAnchorIndex);
-            var topDuration = _isUserScrolling
-                ? TimeSpan.Zero
-                : isEntrance
-                    ? EntranceDuration
-                    : ScrollDuration;
-            EnsureTransitions(container, topDelay, topDuration);
+            activeContainers.Add(container);
 
             var targetCenterY = centerY;
 
             if (i < activeIndex)
-            {
                 for (var j = i; j < activeIndex; j++)
                     targetCenterY -= heights[j] + LineSpacing;
-            }
             else if (i > activeIndex)
-            {
                 for (var j = activeIndex; j < i; j++)
                     targetCenterY += heights[j] + LineSpacing;
-            }
 
             var targetTop = targetCenterY - heights[i] / 2;
-
-            if (isEntrance)
-            {
-                // 首次加载从下往上依次抬升，避免“先挤成一团再展开”
-                SetTopImmediate(container, targetTop + EntranceRiseOffset + Math.Abs(i - activeIndex) * 8);
-            }
-
-            Canvas.SetTop(container, targetTop);
             Canvas.SetLeft(container, 0);
             container.Width = Bounds.Width;
 
             var distance = Math.Abs(i - activeIndex);
-            container.Opacity = Math.Clamp(1 - distance * 0.16, 0.24, 1);
+            var targetOpacity = Math.Clamp(1 - distance * 0.16, 0.24, 1);
+            UpdateSpringState(container, targetTop, targetOpacity, i, activeIndex);
         }
 
+        TrimStaleStates(activeContainers);
         _isFirstLayoutPass = false;
+        EnsureSpringTimerRunning();
     }
 
     private int GetActiveIndex()
@@ -290,27 +287,76 @@ public class MeasuredLyricScrollView : ItemsControl
         return -1;
     }
 
-    private static TimeSpan GetTopTransitionDelay(int index, int activeIndex)
-    {
-        var delta = index - activeIndex;
-        if (Math.Abs(delta) > StaggerRange)
-            return TimeSpan.Zero;
-        var delayMs = (StaggerRange + delta) * StaggerStepMs;
-        return TimeSpan.FromMilliseconds(Math.Max(0, delayMs));
-    }
-
     private static TimeSpan GetEntranceDelay(int index, int activeIndex)
     {
         var distance = Math.Abs(index - activeIndex);
         return TimeSpan.FromMilliseconds(Math.Min(220, distance * EntranceStepMs));
     }
 
-    private static void SetTopImmediate(Control container, double top)
+    private static TimeSpan GetTopTransitionDelay(int index, int activeIndex)
     {
-        var transitions = container.Transitions;
-        container.Transitions = null;
-        Canvas.SetTop(container, top);
-        container.Transitions = transitions;
+        var delta = index - activeIndex;
+        if (Math.Abs(delta) > StaggerRange)
+            return TimeSpan.Zero;
+
+        var delayMs = (StaggerRange + delta) * StaggerStepMs;
+        return TimeSpan.FromMilliseconds(Math.Max(0, delayMs));
+    }
+
+    private void UpdateSpringState(Control container, double targetTop, double targetOpacity, int index, int activeIndex)
+    {
+        var isEntrance = _isFirstLayoutPass && !_isUserScrolling;
+        var topDelay = isEntrance
+            ? GetEntranceDelay(index, activeIndex)
+            : GetTopTransitionDelay(index, activeIndex + 1);
+        if (!_springStates.TryGetValue(container, out var state))
+        {
+            state = new SpringState();
+            _springStates[container] = state;
+        }
+
+        if (_isUserScrolling)
+        {
+            state.CurrentTop = targetTop;
+            state.TargetTop = targetTop;
+            state.Velocity = 0;
+            state.CurrentOpacity = targetOpacity;
+            state.TargetOpacity = targetOpacity;
+            state.ClearPendingTarget();
+            state.IsInitialized = true;
+            Canvas.SetTop(container, targetTop);
+            container.Opacity = targetOpacity;
+            return;
+        }
+
+        if (!state.IsInitialized)
+        {
+            state.CurrentTop = isEntrance
+                ? targetTop + EntranceRiseOffset + Math.Abs(index - activeIndex) * 8
+                : targetTop;
+            state.Velocity = 0;
+            state.CurrentOpacity = isEntrance ? 0 : targetOpacity;
+            state.IsInitialized = true;
+
+            if (topDelay > TimeSpan.Zero)
+            {
+                state.TargetTop = state.CurrentTop;
+                state.TargetOpacity = state.CurrentOpacity;
+                state.QueueTarget(targetTop, targetOpacity, topDelay.TotalSeconds);
+            }
+            else
+            {
+                state.TargetTop = targetTop;
+                state.TargetOpacity = targetOpacity;
+                state.ClearPendingTarget();
+            }
+
+            Canvas.SetTop(container, state.CurrentTop);
+            container.Opacity = state.CurrentOpacity;
+            return;
+        }
+
+        state.ScheduleTarget(targetTop, targetOpacity, topDelay.TotalSeconds);
     }
 
     private void ResetFirstLayoutState()
@@ -332,45 +378,165 @@ public class MeasuredLyricScrollView : ItemsControl
         }, DispatcherPriority.Render);
     }
 
-    private void EnsureTransitions(Control container, TimeSpan topDelay, TimeSpan topDuration)
+    private bool RefreshMeasuredHeights()
     {
-        if (container.Transitions is not Transitions transitions || transitions.Count < 2)
+        var hasChanged = false;
+        for (var i = 0; i < ItemCount; i++)
         {
-            transitions = new Transitions
+            if (ContainerFromIndex(i) is not Control container) continue;
+
+            var height = container.Bounds.Height;
+            if (height <= 0)
+                height = container.DesiredSize.Height;
+            if (height <= 0) continue;
+
+            if (!_knownHeights.TryGetValue(i, out var knownHeight) || Math.Abs(knownHeight - height) > 0.5)
             {
-                new DoubleTransition
-                {
-                    Property = Canvas.TopProperty,
-                    Duration = topDuration,
-                    Delay = topDelay,
-                    Easing = new CubicEaseOut()
-                },
-                new DoubleTransition
-                {
-                    Property = OpacityProperty,
-                    Duration = TimeSpan.FromMilliseconds(320),
-                    Delay = TimeSpan.Zero,
-                    Easing = new CubicEaseOut()
-                }
-            };
-            container.Transitions = transitions;
+                _knownHeights[i] = height;
+                hasChanged = true;
+            }
+        }
+
+        return hasChanged;
+    }
+
+    private void OnSpringTimerTick(object? sender, EventArgs e)
+    {
+        if (_springStates.Count == 0)
+        {
+            _springTimer.Stop();
             return;
         }
 
-        if (transitions[0] is DoubleTransition topTransition)
+        var elapsed = _frameStopwatch.Elapsed;
+        _frameStopwatch.Restart();
+        var dt = Math.Clamp(elapsed.TotalSeconds, 1d / 240d, 1d / 20d);
+        var frameFactor = dt * 60d;
+        var opacityFactor = 1 - Math.Exp(-OpacityResponse * dt);
+        var hasActiveMotion = false;
+
+        foreach (var (container, state) in _springStates)
         {
-            topTransition.Property = Canvas.TopProperty;
-            topTransition.Duration = topDuration;
-            topTransition.Delay = topDelay;
-            topTransition.Easing = new CubicEaseOut();
+            if (!state.IsInitialized) continue;
+
+            state.UpdatePendingTarget(dt);
+
+            var displacement = state.TargetTop - state.CurrentTop;
+            state.Velocity += displacement * SpringStiffness * frameFactor;
+            state.Velocity *= Math.Pow(SpringDamping, frameFactor);
+            state.CurrentTop += state.Velocity * frameFactor;
+
+            if (Math.Abs(state.TargetTop - state.CurrentTop) <= SettleTopThreshold &&
+                Math.Abs(state.Velocity) <= SettleVelocityThreshold)
+            {
+                state.CurrentTop = state.TargetTop;
+                state.Velocity = 0;
+            }
+            else
+            {
+                hasActiveMotion = true;
+            }
+
+            state.CurrentOpacity += (state.TargetOpacity - state.CurrentOpacity) * opacityFactor;
+            if (Math.Abs(state.TargetOpacity - state.CurrentOpacity) <= SettleOpacityThreshold)
+            {
+                state.CurrentOpacity = state.TargetOpacity;
+            }
+            else
+            {
+                hasActiveMotion = true;
+            }
+
+            Canvas.SetTop(container, state.CurrentTop);
+            container.Opacity = state.CurrentOpacity;
         }
 
-        if (transitions[1] is DoubleTransition opacityTransition)
+        if (!hasActiveMotion)
+            _springTimer.Stop();
+    }
+
+    private void EnsureSpringTimerRunning()
+    {
+        if (_isUserScrolling || _springStates.Count == 0) return;
+
+        if (_springTimer.IsEnabled) return;
+
+        _frameStopwatch.Restart();
+        _springTimer.Start();
+    }
+
+    private void TrimStaleStates(HashSet<Control> activeContainers)
+    {
+        if (_springStates.Count == activeContainers.Count) return;
+
+        var staleContainers = new List<Control>();
+        foreach (var container in _springStates.Keys)
         {
-            opacityTransition.Property = OpacityProperty;
-            opacityTransition.Duration = TimeSpan.FromMilliseconds(320);
-            opacityTransition.Delay = TimeSpan.Zero;
-            opacityTransition.Easing = new CubicEaseOut();
+            if (!activeContainers.Contains(container))
+                staleContainers.Add(container);
+        }
+
+        foreach (var staleContainer in staleContainers)
+            _springStates.Remove(staleContainer);
+    }
+
+    private sealed class SpringState
+    {
+        public double CurrentOpacity;
+        public double CurrentTop;
+        public double DelayRemainingSeconds;
+        public bool HasPendingTarget;
+        public bool IsInitialized;
+        public double PendingTargetOpacity;
+        public double PendingTargetTop;
+        public double TargetOpacity;
+        public double TargetTop;
+        public double Velocity;
+
+        public void ScheduleTarget(double targetTop, double targetOpacity, double delaySeconds)
+        {
+            var currentRequestedTop = HasPendingTarget ? PendingTargetTop : TargetTop;
+            var currentRequestedOpacity = HasPendingTarget ? PendingTargetOpacity : TargetOpacity;
+
+            if (Math.Abs(currentRequestedTop - targetTop) <= 0.5 &&
+                Math.Abs(currentRequestedOpacity - targetOpacity) <= 0.01)
+                return;
+
+            if (delaySeconds <= 0)
+            {
+                TargetTop = targetTop;
+                TargetOpacity = targetOpacity;
+                ClearPendingTarget();
+                return;
+            }
+
+            QueueTarget(targetTop, targetOpacity, delaySeconds);
+        }
+
+        public void QueueTarget(double targetTop, double targetOpacity, double delaySeconds)
+        {
+            PendingTargetTop = targetTop;
+            PendingTargetOpacity = targetOpacity;
+            DelayRemainingSeconds = Math.Max(0, delaySeconds);
+            HasPendingTarget = true;
+        }
+
+        public void UpdatePendingTarget(double dt)
+        {
+            if (!HasPendingTarget) return;
+
+            DelayRemainingSeconds -= dt;
+            if (DelayRemainingSeconds > 0) return;
+
+            TargetTop = PendingTargetTop;
+            TargetOpacity = PendingTargetOpacity;
+            ClearPendingTarget();
+        }
+
+        public void ClearPendingTarget()
+        {
+            HasPendingTarget = false;
+            DelayRemainingSeconds = 0;
         }
     }
 }

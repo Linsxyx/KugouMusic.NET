@@ -15,7 +15,8 @@ partial class App
     private NativeMenuItem? _playPauseItem;
     private TrayIcon? _trayIcon;
 
-    private void InitializeTrayIcon(PlayerViewModel player, IClassicDesktopStyleApplicationLifetime desktop, MainWindowViewModel mainWindowViewModel)
+    private void InitializeTrayIcon(PlayerViewModel player, IClassicDesktopStyleApplicationLifetime desktop,
+        MainWindowViewModel mainWindowViewModel)
     {
         _playerViewModel = player;
 
@@ -24,7 +25,7 @@ partial class App
         var icon = new WindowIcon(iconStream);
 
         var showItem = new NativeMenuItem("显示主界面");
-        
+
         showItem.Click += (s, e) => ShowMainWindow(desktop);
 
         var showLyric = new NativeMenuItem("桌面歌词");

@@ -92,6 +92,7 @@ public partial class App : Application
             desktop.MainWindow = mainWindow;
 
             var globalShortcutService = services.GetRequiredService<IGlobalShortcutService>();
+
             void InitializeGlobalShortcuts(object? _, EventArgs __)
             {
                 mainWindow.Opened -= InitializeGlobalShortcuts;

@@ -52,7 +52,7 @@
             <Setter Property="RenderTransform" Value="translateY(0)" />
         </Style>
     </suki:SukiWindow.Styles>
-    
+
     <!--<suki:SukiWindow.LogoContent>
         <Image Source="../Assets/Test.ico" Width="15" Height="15" />
     </suki:SukiWindow.LogoContent>-->
@@ -97,17 +97,18 @@
                                     <DataTemplate DataType="vm:PlaylistItem">
                                         <Border Height="40" CornerRadius="8" Padding="6,4">
                                             <Border.ContextMenu>
-                                                <ContextMenu DataContext="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel}">
+                                                <ContextMenu
+                                                    DataContext="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel}">
                                                     <MenuItem Header="删除歌单"
                                                               Command="{Binding DeleteOnlinePlaylistCommand}"
                                                               CommandParameter="{Binding $parent[ContextMenu].PlacementTarget.DataContext}" />
                                                 </ContextMenu>
                                             </Border.ContextMenu>
-                                                    <Button Classes="Basic"
-                                                            Cursor="Hand"
-                                                            HorizontalContentAlignment="Stretch"
+                                            <Button Classes="Basic"
+                                                    Cursor="Hand"
+                                                    HorizontalContentAlignment="Stretch"
                                                     Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                            CommandParameter="{Binding .}">
+                                                    CommandParameter="{Binding .}">
                                                 <Grid ColumnDefinitions="32,*,Auto" VerticalAlignment="Center">
                                                     <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
                                                             VerticalAlignment="Center">
@@ -136,7 +137,8 @@
                                     <DataTemplate DataType="vm:PlaylistItem">
                                         <Border Height="40" CornerRadius="8" Padding="6,4">
                                             <Border.ContextMenu>
-                                                <ContextMenu DataContext="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel}">
+                                                <ContextMenu
+                                                    DataContext="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel}">
                                                     <MenuItem Header="移除本地歌单"
                                                               Command="{Binding DeleteLocalPlaylistCommand}"
                                                               CommandParameter="{Binding $parent[ContextMenu].PlacementTarget.DataContext}" />

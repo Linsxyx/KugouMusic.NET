@@ -1,5 +1,4 @@
 using KuGou.Net.Clients;
-using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using Microsoft.Extensions.Logging;
 

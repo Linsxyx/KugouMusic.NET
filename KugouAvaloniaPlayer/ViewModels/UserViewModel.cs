@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
-using KugouAvaloniaPlayer.Behaviors;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
+using KugouAvaloniaPlayer.Behaviors;
 using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
@@ -38,34 +39,35 @@ public partial class UserViewModel : PageViewModelBase
     private const string LyricColorModeCustom = "自定义";
 
     private readonly AuthClient _authClient;
+    private readonly HashSet<string> _availableLyricFonts;
     private readonly ISukiDialogManager _dialogManager;
     private readonly EqSettingsViewModel _eqSettingsViewModel;
     private readonly IGlobalShortcutService _globalShortcutService;
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
-    private bool _isInitializingLyricColorEditor;
-    private bool _isInitializingLyricFontEditor;
-    private readonly HashSet<string> _availableLyricFonts;
 
     [ObservableProperty] private bool _autoCheckUpdate;
-    [ObservableProperty] private bool _enableSeamlessTransition;
-    [ObservableProperty] private bool _enableSurround;
-    [ObservableProperty] private bool _isCheckingUpdate;
-    [ObservableProperty] private bool _isLoading = true;
 
     [ObservableProperty] private string _desktopLyricColorHexInput = "#FFFFFFFF";
     [ObservableProperty] private string _desktopSelectedLyricColorMode = LyricColorModeDefault;
     [ObservableProperty] private string _desktopSelectedLyricColorTarget = LyricTargetMain;
-    [ObservableProperty] private string _desktopSelectedLyricFontMode = LyricColorModeDefault;
     [ObservableProperty] private string? _desktopSelectedLyricFontFamily;
+    [ObservableProperty] private string _desktopSelectedLyricFontMode = LyricColorModeDefault;
+    [ObservableProperty] private bool _enableGlobalShortcuts;
+    [ObservableProperty] private bool _enableNowPlayingVisualizer;
+    [ObservableProperty] private bool _enableSeamlessTransition;
+    [ObservableProperty] private bool _enableSurround;
+    [ObservableProperty] private bool _isCheckingUpdate;
+    private bool _isInitializingLyricColorEditor;
+    private bool _isInitializingLyricFontEditor;
+    [ObservableProperty] private bool _isLoading = true;
     [ObservableProperty] private string _playPageLyricColorHexInput = "#FFFFFFFF";
+    [ObservableProperty] private double _playPageLyricFontSize = 26;
+    [ObservableProperty] private string _playPageSelectedLyricAlignment = LyricAlignmentCenter;
     [ObservableProperty] private string _playPageSelectedLyricColorMode = LyricColorModeDefault;
     [ObservableProperty] private string _playPageSelectedLyricColorTarget = LyricTargetMain;
-    [ObservableProperty] private string _playPageSelectedLyricAlignment = LyricAlignmentCenter;
-    [ObservableProperty] private string _playPageSelectedLyricFontMode = LyricColorModeDefault;
     [ObservableProperty] private string? _playPageSelectedLyricFontFamily;
-    [ObservableProperty] private double _playPageLyricFontSize = 26;
-    [ObservableProperty] private bool _enableGlobalShortcuts;
+    [ObservableProperty] private string _playPageSelectedLyricFontMode = LyricColorModeDefault;
 
     [ObservableProperty] private CloseBehavior _selectedCloseBehavior;
     [ObservableProperty] private string _selectedEQPreset;
@@ -97,6 +99,7 @@ public partial class UserViewModel : PageViewModelBase
 
         EnableSurround = SettingsManager.Settings.EnableSurround;
         EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
+        EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
         LyricFontFamilyOptions = LoadSystemFontFamilies();
         _availableLyricFonts = new HashSet<string>(LyricFontFamilyOptions, StringComparer.OrdinalIgnoreCase);
         UserId = _sessionManager.Session.UserId;
@@ -119,9 +122,11 @@ public partial class UserViewModel : PageViewModelBase
     }
 
     public string[] EQPresetOptions { get; }
+
     public string[] SettingsSections { get; } =
     [
-        SettingsSectionGeneral, SettingsSectionPlayback, SettingsSectionShortcuts, SettingsSectionLyrics, SettingsSectionUpdate,
+        SettingsSectionGeneral, SettingsSectionPlayback, SettingsSectionShortcuts, SettingsSectionLyrics,
+        SettingsSectionUpdate,
         SettingsSectionAccount
     ];
 
@@ -147,6 +152,7 @@ public partial class UserViewModel : PageViewModelBase
         "#FFB0BEC5",
         "#FFFFCDD2"
     ];
+
     public string[] LyricFontFamilyOptions { get; }
     public GlobalShortcutItemViewModel[] ShortcutItems { get; }
 
@@ -167,8 +173,13 @@ public partial class UserViewModel : PageViewModelBase
     public bool IsLyricsSection => SelectedSettingsSection == SettingsSectionLyrics;
     public bool IsUpdateSection => SelectedSettingsSection == SettingsSectionUpdate;
     public bool IsAccountSection => SelectedSettingsSection == SettingsSectionAccount;
-    public IBrush DesktopLyricColorPreviewBrush => new SolidColorBrush(ParseColorOrDefault(DesktopLyricColorHexInput, Colors.Transparent));
-    public IBrush PlayPageLyricColorPreviewBrush => new SolidColorBrush(ParseColorOrDefault(PlayPageLyricColorHexInput, Colors.Transparent));
+
+    public IBrush DesktopLyricColorPreviewBrush =>
+        new SolidColorBrush(ParseColorOrDefault(DesktopLyricColorHexInput, Colors.Transparent));
+
+    public IBrush PlayPageLyricColorPreviewBrush =>
+        new SolidColorBrush(ParseColorOrDefault(PlayPageLyricColorHexInput, Colors.Transparent));
+
     public string PlayPageLyricFontSizeDisplay => $"{Math.Round(PlayPageLyricFontSize):0}pt";
 
     public bool IsDarkMode
@@ -345,6 +356,13 @@ public partial class UserViewModel : PageViewModelBase
         Player.SetSeamlessTransitionEnabled(value);
     }
 
+    partial void OnEnableNowPlayingVisualizerChanged(bool value)
+    {
+        SettingsManager.Settings.EnableNowPlayingVisualizer = value;
+        SettingsManager.Save();
+        Player.SetNowPlayingVisualizerEnabled(value);
+    }
+
     partial void OnDesktopSelectedLyricColorTargetChanged(string value)
     {
         LoadDesktopLyricColorEditorFromSettings();
@@ -391,7 +409,8 @@ public partial class UserViewModel : PageViewModelBase
         if (_isInitializingLyricFontEditor) return;
 
         SettingsManager.Settings.DesktopLyricUseCustomFont = value == LyricColorModeCustom;
-        if (SettingsManager.Settings.DesktopLyricUseCustomFont && !string.IsNullOrWhiteSpace(DesktopSelectedLyricFontFamily))
+        if (SettingsManager.Settings.DesktopLyricUseCustomFont &&
+            !string.IsNullOrWhiteSpace(DesktopSelectedLyricFontFamily))
             SettingsManager.Settings.DesktopLyricCustomFontFamily = DesktopSelectedLyricFontFamily;
         SettingsManager.Save();
         NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
@@ -403,7 +422,8 @@ public partial class UserViewModel : PageViewModelBase
         if (_isInitializingLyricFontEditor) return;
 
         SettingsManager.Settings.PlayPageLyricUseCustomFont = value == LyricColorModeCustom;
-        if (SettingsManager.Settings.PlayPageLyricUseCustomFont && !string.IsNullOrWhiteSpace(PlayPageSelectedLyricFontFamily))
+        if (SettingsManager.Settings.PlayPageLyricUseCustomFont &&
+            !string.IsNullOrWhiteSpace(PlayPageSelectedLyricFontFamily))
             SettingsManager.Settings.PlayPageLyricCustomFontFamily = PlayPageSelectedLyricFontFamily;
         SettingsManager.Save();
         NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
@@ -716,7 +736,7 @@ public partial class UserViewModel : PageViewModelBase
         if (item == null)
             return;
 
-        StopRecording(clearStatus: false);
+        StopRecording(false);
         item.IsRecording = true;
         item.SetInfo("按下新的快捷键，Esc 取消。");
     }
@@ -729,7 +749,7 @@ public partial class UserViewModel : PageViewModelBase
 
         var args = context.EventArgs;
         args.Handled = true;
-        if (args.Key == Avalonia.Input.Key.Escape)
+        if (args.Key == Key.Escape)
         {
             item.IsRecording = false;
             item.ClearStatus();
@@ -760,7 +780,8 @@ public partial class UserViewModel : PageViewModelBase
         var gestureText = GlobalShortcutParser.Format(gesture);
         var conflict = ShortcutItems.FirstOrDefault(x =>
             x != item &&
-            string.Equals(GlobalShortcutParser.NormalizeText(SettingsManager.Settings.GlobalShortcuts.GetShortcut(x.Action)),
+            string.Equals(
+                GlobalShortcutParser.NormalizeText(SettingsManager.Settings.GlobalShortcuts.GetShortcut(x.Action)),
                 gestureText, StringComparison.Ordinal));
         if (conflict != null)
         {
@@ -825,7 +846,8 @@ public partial class UserViewModel : PageViewModelBase
         }
     }
 
-    private void ApplyRegistrationResults(IReadOnlyDictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult> results)
+    private void ApplyRegistrationResults(
+        IReadOnlyDictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult> results)
     {
         foreach (var item in ShortcutItems)
         {

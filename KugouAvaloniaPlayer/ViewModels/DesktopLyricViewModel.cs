@@ -1,10 +1,10 @@
+using System;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
-using Avalonia.Media;
-using System;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -17,6 +17,16 @@ public partial class DesktopLyricViewModel : ViewModelBase
     private static readonly IBrush DefaultLyricBrush = new SolidColorBrush(Colors.White);
     private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
     private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
+
+    [ObservableProperty] private double _fontSize = 30;
+
+    [ObservableProperty] private bool _isLocked;
+
+    [ObservableProperty] private FontFamily? _lyricFontFamily;
+    [ObservableProperty] private IBrush _lyricForeground = DefaultLyricBrush;
+    [ObservableProperty] private double _translationFontSize = 18;
+    [ObservableProperty] private IBrush _translationLineForeground = DefaultTranslationLineBrush;
+    [ObservableProperty] private IBrush _translationWordForeground = DefaultTranslationWordBrush;
 
     public DesktopLyricViewModel(PlayerViewModel player, bool canMousePassthrough)
     {
@@ -46,19 +56,11 @@ public partial class DesktopLyricViewModel : ViewModelBase
         });
     }
 
-    [ObservableProperty] private double _fontSize = 30;
-    [ObservableProperty] private double _translationFontSize = 18;
-
-    [ObservableProperty] private bool _isLocked;
-
-    [ObservableProperty] private FontFamily? _lyricFontFamily;
-    [ObservableProperty] private IBrush _lyricForeground = DefaultLyricBrush;
-    [ObservableProperty] private IBrush _translationLineForeground = DefaultTranslationLineBrush;
-    [ObservableProperty] private IBrush _translationWordForeground = DefaultTranslationWordBrush;
-
     public bool CanMousePassthrough { get; }
 
     public PlayerViewModel Player { get; }
+
+    public string FontSizeDisplay => $"{Math.Round(FontSize):0}pt";
 
     [RelayCommand]
     private void ToggleLock()
@@ -77,8 +79,6 @@ public partial class DesktopLyricViewModel : ViewModelBase
     {
         FontSize = ClampFontSize(FontSize - FontSizeStep);
     }
-
-    public string FontSizeDisplay => $"{Math.Round(FontSize):0}pt";
 
     partial void OnFontSizeChanged(double value)
     {
@@ -137,10 +137,8 @@ public partial class DesktopLyricViewModel : ViewModelBase
     private static bool IsSystemFontInstalled(string fontFamilyName)
     {
         foreach (var systemFont in FontManager.Current.SystemFonts)
-        {
             if (string.Equals(systemFont.Name, fontFamilyName, StringComparison.OrdinalIgnoreCase))
                 return true;
-        }
 
         return false;
     }
