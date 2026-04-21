@@ -96,6 +96,22 @@
             </Setter>
         </Style>
 
+        <Style Selector="StackPanel#AlbumMotionContainer">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.28" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="controls1|MeasuredLyricScrollView#LyricScrollView">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.32" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+
     </UserControl.Styles>
 
     <Grid Name="Root"
@@ -104,8 +120,15 @@
           VerticalAlignment="Stretch"
           ClipToBounds="True">
         <Panel>
+            <controls:AsyncImage Source="{Binding Player.PreparedNextCover}"
+                                 Width="1"
+                                 Height="1"
+                                 Opacity="0"
+                                 IsHitTestVisible="False"
+                                 HorizontalAlignment="Left"
+                                 VerticalAlignment="Top" />
             <Border Background="#FF000000" />
-            <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}"
+            <controls:AsyncImage Source="{Binding Player.DisplayedPlayingSong.Cover}"
                                  Stretch="UniformToFill"
                                  RenderTransformOrigin="0.5,0.5"
                                  RenderTransform="scale(1.12)">
@@ -144,8 +167,8 @@
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <Svg Path="/Assets/translation-svgrepo-com.svg"
                                  Css="path { fill: white; }"
-                                 Width="15"
-                                 Height="15"
+                                 Width="25"                                                                                                                                                                                 
+                                 Height="25"
                                  Opacity="0.9" />
                         </StackPanel>
                     </Border>
@@ -154,17 +177,31 @@
 
             <Grid Grid.Row="1" ColumnDefinitions="4*, 6*" Margin="0,30,0,28">
 
-                <StackPanel Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="40">
+                <StackPanel Grid.Column="0"
+                            x:Name="AlbumMotionContainer"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="40"
+                            Opacity="{Binding Player.NowPlayingArtworkOpacity}">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform Y="{Binding Player.NowPlayingArtworkTranslateY}">
+                            <TranslateTransform.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Y" Duration="0:0:0.28" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </TranslateTransform.Transitions>
+                        </TranslateTransform>
+                    </StackPanel.RenderTransform>
                     <suki:GlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
                                     MinHeight="220" MaxWidth="350" MaxHeight="350">
-                        <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}" Stretch="UniformToFill" />
+                        <controls:AsyncImage Source="{Binding Player.DisplayedPlayingSong.Cover}" Stretch="UniformToFill" />
                     </suki:GlassCard>
 
                     <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">
-                        <TextBlock Text="{Binding Player.CurrentPlayingSong.Name}"
+                        <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name}"
                                    FontSize="28" FontWeight="Bold" Foreground="White"
                                    TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding Player.CurrentPlayingSong.Singer}"
+                        <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer}"
                                    FontSize="18" Foreground="#DDFFFFFF"
                                    TextTrimming="CharacterEllipsis" />
                         <Grid RowDefinitions="Auto, Auto, Auto" VerticalAlignment="Center"
@@ -302,7 +339,17 @@
                                                    ActiveAnchorRatio="0.34"
                                                    ScrollDuration="0:0:0.37"
                                                    LineSpacing="22"
-                                                   Margin="60,0,0,0">
+                                                   Margin="60,0,0,0"
+                                                   Opacity="{Binding Player.NowPlayingLyricsOpacity}">
+                    <controls1:MeasuredLyricScrollView.RenderTransform>
+                        <TranslateTransform Y="{Binding Player.NowPlayingLyricsTranslateY}">
+                            <TranslateTransform.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Y" Duration="0:0:0.32" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </TranslateTransform.Transitions>
+                        </TranslateTransform>
+                    </controls1:MeasuredLyricScrollView.RenderTransform>
                     <controls1:MeasuredLyricScrollView.ItemTemplate>
                         <DataTemplate DataType="vm:LyricLineViewModel">
                             <Grid Margin="0,15"

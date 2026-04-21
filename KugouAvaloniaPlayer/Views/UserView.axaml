@@ -191,7 +191,7 @@
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                 <StackPanel>
-                                    <TextBlock Text="无感过渡" FontWeight="DemiBold" />
+                                    <TextBlock Text="智能过渡" FontWeight="DemiBold" />
                                     <TextBlock Text="自动预加载并在尾段平滑切到下一首"
                                                FontSize="12"
                                                Foreground="{DynamicResource SukiLowText}" />

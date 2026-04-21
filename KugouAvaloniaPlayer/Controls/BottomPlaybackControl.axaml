@@ -52,18 +52,18 @@
                                 ClipToBounds="True"
                                 Width="48"
                                 Height="48">
-                            <controls:AsyncImage Source="{Binding Player.CurrentPlayingSong.Cover}"
+                            <controls:AsyncImage Source="{Binding Player.DisplayedPlayingSong.Cover}"
                                                  Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="1"
                                     VerticalAlignment="Center"
                                     Margin="12,0,0,0"
                                     Spacing="4">
-                            <TextBlock Text="{Binding Player.CurrentPlayingSong.Name, TargetNullValue='KA Music'}"
+                            <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name, TargetNullValue='KA Music'}"
                                        FontWeight="SemiBold"
                                        FontSize="13"
                                        MaxWidth="200" />
-                            <TextBlock Text="{Binding Player.CurrentPlayingSong.Singer, TargetNullValue='Ready'}"
+                            <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer, TargetNullValue='Ready'}"
                                        FontSize="11"
                                        Opacity="0.55"
                                        MaxWidth="200" />
