@@ -6,12 +6,14 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
-using Avalonia.Controls.Templates;
+using Avalonia.Threading;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
+using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -20,7 +22,7 @@ using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.Services;
 
-public class FavoritePlaylistService(
+public partial class FavoritePlaylistService(
     UserClient userClient,
     PlaylistClient playlistClient,
     KgSessionManager sessionManager,
@@ -30,8 +32,13 @@ public class FavoritePlaylistService(
 {
     private const string LikeListIdForAction = "2";
     private const int CacheSchemaVersion = 2;
+    private static readonly TimeSpan LoadPlaylistDialogTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan AddSongToPlaylistTimeout = TimeSpan.FromSeconds(12);
+    private const string DefaultPlaylistCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
+    private const string LikePlaylistCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
 
     private readonly Dictionary<string, int> _hashToFileId = new();
+    private readonly SemaphoreSlim _addToPlaylistDialogLock = new(1, 1);
     private readonly SemaphoreSlim _likeCacheLoadLock = new(1, 1);
     private readonly HashSet<string> _likedHashes = new();
     private bool _hasLoggedFirstLikeCacheSuccess;
@@ -232,36 +239,71 @@ public class FavoritePlaylistService(
 
     public async Task ShowAddToPlaylistDialogAsync(SongItem song)
     {
-        var playlists = await userClient.GetPlaylistsAsync();
-        if (playlists is not null && playlists.Status == 1)
+        if (!await _addToPlaylistDialogLock.WaitAsync(0))
         {
-            var onlinePlaylists = playlists.Playlists.Where(p => !string.IsNullOrEmpty(p.ListCreateId)).ToList();
+            ShowToast(NotificationType.Information, "请稍候", "歌单列表正在加载中...");
+            return;
+        }
 
-            if (onlinePlaylists.Count == 0)
+        ShowProgressDialog("加载歌单", "正在获取你的歌单列表...");
+
+        try
+        {
+            var playlists = await WaitWithTimeoutAsync(
+                userClient.GetPlaylistsAsync(),
+                LoadPlaylistDialogTimeout,
+                "加载歌单超时，请检查网络后重试。");
+
+            DismissDialog();
+
+            if (playlists is null || playlists.Status != 1)
             {
-                toastManager.CreateToast().OfType(NotificationType.Warning).WithTitle("提示").WithContent("请先创建歌单")
-                    .Dismiss().ByClicking()
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
+                logger.LogError("获取歌单列表失败 err_code{ErrorCode}", playlists?.ErrorCode);
+                ShowToast(NotificationType.Error, "加载失败", "歌单列表获取失败，请稍后再试。");
                 return;
             }
 
-            var listBox = new ListBox
+            var onlinePlaylists = playlists.Playlists.Where(p => !string.IsNullOrEmpty(p.ListCreateId)).ToList();
+            if (onlinePlaylists.Count == 0)
             {
-                Width = 300, MaxHeight = 400, ItemsSource = onlinePlaylists, SelectionMode = SelectionMode.Single,
-                ItemTemplate = new FuncDataTemplate<UserPlaylistItem>((item, _) => new TextBlock { Text = item.Name })
+                ShowToast(NotificationType.Warning, "提示", "请先创建歌单");
+                return;
+            }
+
+            var dialogViewModel = new AddToPlaylistDialogViewModel(
+                song.Name,
+                song.Singer,
+                song.Cover,
+                onlinePlaylists.Select(ToPlaylistDialogItem),
+                async selectedPlaylist =>
+                {
+                    DismissDialog();
+                    await AddSongToPlaylistInnerAsync(song, selectedPlaylist.ListId, selectedPlaylist.Name);
+                },
+                DismissDialog);
+
+            var dialogView = new AddToPlaylistDialog
+            {
+                DataContext = dialogViewModel
             };
 
-            dialogManager.CreateDialog()
-                .WithTitle("添加到歌单")
-                .WithContent(listBox)
-                .WithActionButton("取消", _ => { }, true, "Standard")
-                .WithActionButton("添加", _ => HandleAddToPlaylistClick(song, listBox), true, "Standard")
-                .TryShow();
+            ShowDialog(dialogView);
         }
-        else
+        catch (TimeoutException ex)
         {
-            logger.LogError("获取歌单列表失败 err_code{ErrorCode}", playlists?.ErrorCode);
+            DismissDialog();
+            logger.LogWarning(ex, "获取歌单列表超时");
+            ShowToast(NotificationType.Error, "加载超时", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            DismissDialog();
+            logger.LogError(ex, "获取歌单列表失败");
+            ShowToast(NotificationType.Error, "加载失败", ex.Message);
+        }
+        finally
+        {
+            _addToPlaylistDialogLock.Release();
         }
     }
 
@@ -324,10 +366,17 @@ public class FavoritePlaylistService(
     {
         try
         {
+            ShowProgressDialog("正在添加", $"准备将「{song.Name}」加入「{playlistName}」...");
+
             var songList = new List<(string Name, string Hash, string AlbumId, string MixSongId)>
                 { (song.Name, song.Hash, song.AlbumId, "0") };
 
-            var result = await playlistClient.AddSongsAsync(playlistId, songList);
+            var result = await WaitWithTimeoutAsync(
+                playlistClient.AddSongsAsync(playlistId, songList),
+                AddSongToPlaylistTimeout,
+                "添加歌曲超时，请检查网络后重试。");
+
+            DismissDialog();
 
             if (result?.Status == 1)
             {
@@ -348,43 +397,25 @@ public class FavoritePlaylistService(
                     });
                 }
 
-                toastManager.CreateToast()
-                    .OfType(NotificationType.Success).WithTitle("添加成功")
-                    .WithContent($"已添加到「{playlistName}」")
-                    .Dismiss().ByClicking()
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
+                ShowToast(NotificationType.Success, "添加成功", $"已添加到「{playlistName}」");
             }
             else
             {
-                toastManager.CreateToast().OfType(NotificationType.Error).WithTitle("添加失败")
-                    .Dismiss().ByClicking()
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
+                ShowToast(NotificationType.Error, "添加失败", $"未能添加到「{playlistName}」");
             }
         }
-        catch (Exception ex)
+        catch (TimeoutException ex)
         {
-            logger.LogError(ex, "添加歌曲到歌单失败");
-        }
-    }
-
-    private async Task AddSongToPlaylistSafelyAsync(SongItem song, UserPlaylistItem selectedPlaylist)
-    {
-        try
-        {
-            await AddSongToPlaylistInnerAsync(song, selectedPlaylist.ListId.ToString(), selectedPlaylist.Name);
+            DismissDialog();
+            logger.LogWarning(ex, "添加歌曲到歌单超时");
+            ShowToast(NotificationType.Error, "添加超时", ex.Message);
         }
         catch (Exception ex)
         {
+            DismissDialog();
             logger.LogError(ex, "添加歌曲到歌单失败");
+            ShowToast(NotificationType.Error, "添加失败", ex.Message);
         }
-    }
-
-    private void HandleAddToPlaylistClick(SongItem song, ListBox listBox)
-    {
-        if (listBox.SelectedItem is UserPlaylistItem selectedPlaylist)
-            _ = AddSongToPlaylistSafelyAsync(song, selectedPlaylist);
     }
 
     private LikeCacheFileModel BuildCacheModelFromRemote(UserPlaylistItem likePlaylist, List<PlaylistSong> songs)
@@ -660,4 +691,113 @@ public sealed class LikeSongCacheItem
 [JsonSerializable(typeof(LikeCacheFileModel))]
 internal partial class LikeCacheJsonContext : JsonSerializerContext
 {
+}
+
+partial class FavoritePlaylistService
+{
+    private static async Task<T> WaitWithTimeoutAsync<T>(Task<T> task, TimeSpan timeout, string message)
+    {
+        try
+        {
+            return await task.WaitAsync(timeout);
+        }
+        catch (TimeoutException ex)
+        {
+            throw new TimeoutException(message, ex);
+        }
+    }
+
+    private PlaylistDialogPlaylistItemViewModel ToPlaylistDialogItem(UserPlaylistItem item)
+    {
+        return new PlaylistDialogPlaylistItemViewModel
+        {
+            Name = item.Name,
+            ListId = item.ListId.ToString(),
+            SongCount = item.Count,
+            IsLikedPlaylist = item.ListId == 2,
+            Cover = string.IsNullOrWhiteSpace(item.Pic)
+                ? item.ListId == 2 ? LikePlaylistCover : DefaultPlaylistCover
+                : item.Pic
+        };
+    }
+
+    private void ShowDialog(Control content)
+    {
+        void Show()
+        {
+            dialogManager.CreateDialog()
+                .WithContent(content)
+                .TryShow();
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+            Show();
+        else
+            Dispatcher.UIThread.Post(Show);
+    }
+
+    private void ShowProgressDialog(string title, string message)
+    {
+        var content = new Border
+        {
+            Padding = new Thickness(20, 18),
+            Child = new StackPanel
+            {
+                Spacing = 12,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = title,
+                        FontSize = 18,
+                        FontWeight = Avalonia.Media.FontWeight.SemiBold
+                    },
+                    new StackPanel
+                    {
+                        Orientation = Avalonia.Layout.Orientation.Horizontal,
+                        Spacing = 10,
+                        Children =
+                        {
+                            new SukiUI.Controls.Loading
+                            {
+                                Width = 22,
+                                Height = 22
+                            },
+                            new TextBlock
+                            {
+                                Text = message,
+                                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        ShowDialog(content);
+    }
+
+    private void DismissDialog()
+    {
+        void Dismiss()
+        {
+            dialogManager.DismissDialog();
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+            Dismiss();
+        else
+            Dispatcher.UIThread.Post(Dismiss);
+    }
+
+    private void ShowToast(NotificationType type, string title, string content)
+    {
+        toastManager.CreateToast()
+            .OfType(type)
+            .WithTitle(title)
+            .WithContent(content)
+            .Dismiss().ByClicking()
+            .Dismiss().After(TimeSpan.FromSeconds(3))
+            .Queue();
+    }
 }
