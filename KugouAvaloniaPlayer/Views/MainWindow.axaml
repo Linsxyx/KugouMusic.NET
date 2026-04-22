@@ -97,11 +97,11 @@
                                     <DataTemplate DataType="vm:PlaylistItem">
                                         <Border Height="40" CornerRadius="8" Padding="6,4">
                                             <Border.ContextMenu>
-                                                <ContextMenu
-                                                    DataContext="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel}">
+                                                <ContextMenu>
                                                     <MenuItem Header="删除歌单"
-                                                              Command="{Binding DeleteOnlinePlaylistCommand}"
-                                                              CommandParameter="{Binding $parent[ContextMenu].PlacementTarget.DataContext}" />
+                                                              Tag="{Binding .}"
+                                                              Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}"
+                                                              CommandParameter="{Binding $self.Tag}" />
                                                 </ContextMenu>
                                             </Border.ContextMenu>
                                             <Button Classes="Basic"
@@ -137,11 +137,11 @@
                                     <DataTemplate DataType="vm:PlaylistItem">
                                         <Border Height="40" CornerRadius="8" Padding="6,4">
                                             <Border.ContextMenu>
-                                                <ContextMenu
-                                                    DataContext="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel}">
+                                                <ContextMenu>
                                                     <MenuItem Header="移除本地歌单"
-                                                              Command="{Binding DeleteLocalPlaylistCommand}"
-                                                              CommandParameter="{Binding $parent[ContextMenu].PlacementTarget.DataContext}" />
+                                                              Tag="{Binding .}"
+                                                              Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteLocalPlaylistCommand}"
+                                                              CommandParameter="{Binding $self.Tag}" />
                                                 </ContextMenu>
                                             </Border.ContextMenu>
                                             <Button Classes="Basic"

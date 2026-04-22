@@ -119,7 +119,7 @@ jobs:
         shell: bash
         run: |
           ICONSET_DIR="./dist/AppIcon.iconset"
-          SOURCE_PNG="./KugouAvaloniaPlayer/Assets/IMG_20260216_070951.png"
+          SOURCE_PNG="./KugouAvaloniaPlayer/Assets/Test.png"
           ICNS_PATH="./dist/KugouAvaloniaPlayer.icns"
 
           mkdir -p "$ICONSET_DIR"
