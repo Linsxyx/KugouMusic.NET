@@ -220,7 +220,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
         _fadingDeck?.SetReverbTime(_currentReverbTimeMs);
     }
 
-    public bool StartCrossfade(TransitionProfile profile)
+    public bool StartCrossfade(TransitionProfile profile, double? availableOverlapSec = null)
     {
         lock (_crossfadeGate)
         {
@@ -252,7 +252,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
             _crossfadeProgress = 0f;
             IsCrossfading = true;
             _crossfadeCancellation = new CancellationTokenSource();
-            _crossfadeTask = RunCrossfadeAsync(outgoingDeck, incomingDeck, profile, _crossfadeCancellation.Token);
+            _crossfadeTask = RunCrossfadeAsync(outgoingDeck, incomingDeck, profile, availableOverlapSec, _crossfadeCancellation.Token);
             return true;
         }
     }
@@ -329,20 +329,53 @@ public sealed class DualTrackAudioPlayer : IDisposable
         SimpleAudioPlayer outgoingDeck,
         SimpleAudioPlayer incomingDeck,
         TransitionProfile profile,
+        double? availableOverlapSec,
         CancellationToken cancellationToken)
     {
-        var durationSec = Math.Max(0.1, profile.MixDurationSec);
-        var breathRatio = Math.Clamp(profile.MixBreathSec / durationSec, 0.12, 0.52);
+        var plannedOverlapSec = profile.OverlapSec > 0
+            ? profile.OverlapSec
+            : Math.Min(profile.MixEntrySec, profile.MixDurationSec);
+        plannedOverlapSec = Math.Max(0.35, plannedOverlapSec);
+        var overlapSec = Math.Min(plannedOverlapSec, Math.Max(0.35, availableOverlapSec ?? plannedOverlapSec));
+        var releaseSec = profile.ReleaseSec > 0
+            ? profile.ReleaseSec
+            : Math.Max(0.7, profile.MixDurationSec - overlapSec);
+        releaseSec = Math.Clamp(releaseSec, 0.55, 4.5);
+        var durationSec = Math.Max(0.5, overlapSec + releaseSec);
+        var breathSec = Math.Clamp(profile.MixBreathSec, overlapSec * 0.12, Math.Max(0.12, overlapSec * 0.78));
         var stopwatch = Stopwatch.StartNew();
+        double? outgoingEndedAtSec = null;
 
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var ratio = Math.Clamp(stopwatch.Elapsed.TotalSeconds / durationSec, 0.0, 1.0);
+                var elapsedSec = stopwatch.Elapsed.TotalSeconds;
+                if (outgoingEndedAtSec == null && outgoingDeck.IsStopped)
+                {
+                    outgoingEndedAtSec = elapsedSec;
+                }
+
+                var overlapRatio = outgoingEndedAtSec.HasValue
+                    ? 1.0
+                    : Math.Clamp(elapsedSec / overlapSec, 0.0, 1.0);
+                var releaseElapsedSec = outgoingEndedAtSec.HasValue
+                    ? elapsedSec - outgoingEndedAtSec.Value
+                    : elapsedSec - overlapSec;
+                var releaseRatio = Math.Clamp(releaseElapsedSec / releaseSec, 0.0, 1.0);
+                var ratio = Math.Clamp(elapsedSec / durationSec, 0.0, 1.0);
                 _crossfadeProgress = (float)ratio;
-                ApplyCrossfadeState(outgoingDeck, incomingDeck, profile, ratio, breathRatio);
-                if (ratio >= 1.0)
+                ApplyCrossfadeState(
+                    outgoingDeck,
+                    incomingDeck,
+                    profile,
+                    elapsedSec,
+                    overlapSec,
+                    overlapRatio,
+                    releaseRatio,
+                    breathSec,
+                    outgoingEndedAtSec.HasValue);
+                if (ratio >= 1.0 || outgoingEndedAtSec.HasValue && releaseRatio >= 1.0)
                 {
                     break;
                 }
@@ -381,45 +414,51 @@ public sealed class DualTrackAudioPlayer : IDisposable
         SimpleAudioPlayer outgoingDeck,
         SimpleAudioPlayer incomingDeck,
         TransitionProfile profile,
-        double ratio,
-        double breathRatio)
+        double elapsedSec,
+        double overlapSec,
+        double overlapRatio,
+        double releaseRatio,
+        double breathSec,
+        bool outgoingReleased)
     {
-        var safeRatio = Math.Clamp(ratio, 0.0, 1.0);
-        var outgoingCore = Math.Cos(safeRatio * Math.PI * 0.5);
-        var outgoingDuckCurve = 1.0 - (0.14 * safeRatio) - (0.12 * Math.Pow(safeRatio, 2.2));
+        var safeOverlapRatio = Math.Clamp(overlapRatio, 0.0, 1.0);
+        var safeReleaseRatio = Math.Clamp(releaseRatio, 0.0, 1.0);
+        var outgoingCore = Math.Cos(safeOverlapRatio * Math.PI * 0.5);
+        var outgoingDuckCurve = 1.0 - (0.14 * safeOverlapRatio) - (0.12 * Math.Pow(safeOverlapRatio, 2.2));
         var outgoingShape = 1.02 + profile.OutgoingDuckStrength * 0.38;
         var outgoingCurve = Math.Pow(Math.Max(0.0, outgoingCore * Math.Max(0.0, outgoingDuckCurve)), outgoingShape);
-        var incomingRatio = ratio <= breathRatio ? 0 : (ratio - breathRatio) / Math.Max(0.001, 1.0 - breathRatio);
+        var incomingRatio = elapsedSec <= breathSec
+            ? 0
+            : (Math.Min(elapsedSec, overlapSec) - breathSec) / Math.Max(0.001, overlapSec - breathSec);
         var incomingCurve = EaseOutSine(incomingRatio);
-        var outgoingGain = (float)Math.Clamp(outgoingCurve, 0.0, 1.0);
+        var outgoingGain = outgoingReleased ? 0f : (float)Math.Clamp(outgoingCurve, 0.0, 1.0);
         var incomingBase = 0.82f - profile.IncomingToneDepth * 0.12f;
         var incomingTarget = 0.93f - Math.Max(0f, profile.IncomingToneDepth - 0.16f) * 0.08f;
         var incomingGain = (float)Math.Clamp((incomingBase + incomingCurve * (incomingTarget - incomingBase)) * profile.IncomingGainCap, 0.0, 1.0);
         var combinedCap = 1.02f + profile.IncomingGainCap * 0.03f;
-        if (outgoingGain + incomingGain > combinedCap)
+        if (!outgoingReleased && outgoingGain + incomingGain > combinedCap)
         {
             incomingGain = Math.Max(0f, combinedCap - outgoingGain);
         }
 
-        var settleStartRatio = Math.Clamp(profile.IncomingSettleSec / Math.Max(0.1, profile.MixDurationSec), breathRatio + 0.08, 0.96);
-        var settleRatio = EaseOutSine(Math.Clamp((safeRatio - settleStartRatio) / Math.Max(0.001, 1.0 - settleStartRatio), 0.0, 1.0));
+        var settleRatio = EaseOutSine(safeReleaseRatio);
         incomingGain = Lerp(incomingGain, 1f, (float)settleRatio);
 
         outgoingDeck.SetTransitionGain(outgoingGain);
         incomingDeck.SetTransitionGain(incomingGain);
 
-        var entryEnhance = EaseInOutCubic(Math.Min(1.0, safeRatio / 0.36));
+        var entryEnhance = EaseInOutCubic(Math.Min(1.0, safeOverlapRatio / 0.36));
         var outgoingTone = profile.OutgoingToneDepth * (0.82 + entryEnhance * 0.18);
         var incomingTone = profile.IncomingToneDepth * (0.84 - incomingRatio * 0.72);
-        outgoingDeck.SetTransitionTone((float)Math.Clamp(outgoingTone * entryEnhance, 0.0, 1.0));
+        outgoingDeck.SetTransitionTone(outgoingReleased ? 0f : (float)Math.Clamp(outgoingTone * entryEnhance, 0.0, 1.0));
         var incomingToneDepth = (float)Math.Clamp(incomingTone * (0.88 + entryEnhance * 0.12), 0.0, 1.0);
         incomingDeck.SetTransitionTone(Lerp(incomingToneDepth, 0f, (float)settleRatio));
 
-        outgoingDeck.SetReverbAmount((float)Math.Clamp(profile.OutgoingReverbAmount * (0.55 + entryEnhance * 0.45), 0.0, 1.0));
+        outgoingDeck.SetReverbAmount(outgoingReleased ? 0f : (float)Math.Clamp(profile.OutgoingReverbAmount * (0.55 + entryEnhance * 0.45), 0.0, 1.0));
         var incomingReverb = (float)Math.Clamp(profile.IncomingReverbAmount * (0.95 - incomingRatio * 0.45), 0.0, 1.0);
         incomingDeck.SetReverbAmount(Lerp(incomingReverb, _currentReverbAmount, (float)settleRatio));
 
-        outgoingDeck.SetStereoWidth((float)Math.Clamp(profile.StereoWidth * (0.65 + entryEnhance * 0.35), 0.0, 1.0));
+        outgoingDeck.SetStereoWidth(outgoingReleased ? 0f : (float)Math.Clamp(profile.StereoWidth * (0.65 + entryEnhance * 0.35), 0.0, 1.0));
         var incomingStereoWidth = (float)Math.Clamp(profile.StereoWidth * (0.70 + incomingRatio * 0.20), 0.0, 1.0);
         incomingDeck.SetStereoWidth(Lerp(incomingStereoWidth, _currentStereoWidth, (float)settleRatio));
     }

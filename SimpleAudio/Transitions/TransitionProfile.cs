@@ -6,11 +6,15 @@ public sealed record TransitionProfile
 
     public double MixEntrySec { get; init; } = 4.6;
 
-    public double MixDurationSec { get; init; } = 9.6;
+    public double MixDurationSec { get; init; } = 6.8;
+
+    public double OverlapSec { get; init; } = 4.6;
+
+    public double ReleaseSec { get; init; } = 2.2;
 
     public double MixBreathSec { get; init; } = 2.1;
 
-    public double IncomingSettleSec { get; init; } = 7.4;
+    public double IncomingSettleSec { get; init; } = 5.8;
 
     public float OutgoingDuckStrength { get; init; } = 0.58f;
 

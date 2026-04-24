@@ -156,12 +156,14 @@ public partial class PlayerViewModel
 
     private async Task EnsureTransitionAnalysisAsync(int requestVersion, CancellationToken cancellationToken)
     {
-        if (_autoTransitionStarted || _isAnalyzingTransition || _player.IsCrossfading || _preparedNextTrack == null ||
-            _preparedNextSong == null)
+        var preparedNextTrack = _preparedNextTrack;
+        var preparedNextSong = _preparedNextSong;
+        if (_autoTransitionStarted || _isAnalyzingTransition || _player.IsCrossfading || preparedNextTrack == null ||
+            preparedNextSong == null)
             return;
 
-        var nextSongKey = BuildSongTransitionKey(_preparedNextSong);
-        if (_pendingTransitionSong == _preparedNextSong && _pendingTransitionProfile != null)
+        var nextSongKey = BuildSongTransitionKey(preparedNextSong);
+        if (_pendingTransitionSong == preparedNextSong && _pendingTransitionProfile != null)
             return;
 
         if (string.Equals(_analysisFailureSongKey, nextSongKey, StringComparison.Ordinal))
@@ -189,12 +191,13 @@ public partial class PlayerViewModel
             };
 
             var profile =
-                await _transitionAnalysisService.AnalyzeAsync(currentTrack, _preparedNextTrack, linkedCts.Token);
-            if (requestVersion != _playRequestVersion || linkedCts.IsCancellationRequested)
+                await _transitionAnalysisService.AnalyzeAsync(currentTrack, preparedNextTrack, linkedCts.Token);
+            if (requestVersion != _playRequestVersion || linkedCts.IsCancellationRequested ||
+                _autoTransitionStarted || preparedNextSong != _preparedNextSong || preparedNextTrack != _preparedNextTrack)
                 return;
 
             _analysisFailureSongKey = null;
-            _pendingTransitionSong = _preparedNextSong;
+            _pendingTransitionSong = preparedNextSong;
             _pendingTransitionProfile = profile;
         }
         catch (OperationCanceledException)
@@ -202,14 +205,13 @@ public partial class PlayerViewModel
         }
         catch (Exception ex)
         {
+            if (_autoTransitionStarted || preparedNextSong != _preparedNextSong || preparedNextTrack != _preparedNextTrack)
+                return;
+
             _logger.LogDebug(ex, "过渡分析失败，回退默认参数");
             _analysisFailureSongKey = nextSongKey;
-            _pendingTransitionSong = _preparedNextSong;
-            _pendingTransitionProfile = TransitionProfile.Default with
-            {
-                MixDurationSec = FallbackMixDurationSec,
-                MixEntrySec = FallbackMixEntrySec
-            };
+            _pendingTransitionSong = preparedNextSong;
+            _pendingTransitionProfile = BuildFallbackTransitionProfile(FallbackMixEntrySec);
         }
         finally
         {
@@ -219,17 +221,22 @@ public partial class PlayerViewModel
 
     private void TryStartAutoCrossfade(double remainingSec)
     {
-        if (_autoTransitionStarted || _pendingTransitionProfile == null || _preparedNextSong == null ||
-            !_player.HasPreparedTrack)
+        if (_autoTransitionStarted || _preparedNextSong == null || !_player.HasPreparedTrack)
             return;
 
-        if (_pendingTransitionSong != _preparedNextSong)
-            return;
+        if (_pendingTransitionProfile == null || _pendingTransitionSong != _preparedNextSong)
+        {
+            if (remainingSec > FallbackMixEntrySec)
+                return;
+
+            _pendingTransitionSong = _preparedNextSong;
+            _pendingTransitionProfile = BuildFallbackTransitionProfile(remainingSec);
+        }
 
         if (remainingSec > _pendingTransitionProfile.MixEntrySec)
             return;
 
-        if (!_player.StartCrossfade(_pendingTransitionProfile))
+        if (!_player.StartCrossfade(_pendingTransitionProfile, remainingSec))
             return;
 
         _autoTransitionStarted = true;
@@ -256,6 +263,29 @@ public partial class PlayerViewModel
         _preparedNextSource = null;
         _preparedNextIsLocal = false;
         PreparedNextCover = null;
+    }
+
+    private static TransitionProfile BuildFallbackTransitionProfile(double availableOverlapSec)
+    {
+        var overlapSec = Math.Clamp(Math.Min(availableOverlapSec, FallbackMixEntrySec), 2.4, FallbackMixEntrySec);
+        var releaseSec = Math.Max(1.4, FallbackMixDurationSec - overlapSec);
+        return TransitionProfile.Default with
+        {
+            MixEntrySec = FallbackMixEntrySec,
+            MixDurationSec = overlapSec + releaseSec,
+            OverlapSec = overlapSec,
+            ReleaseSec = releaseSec,
+            MixBreathSec = Math.Clamp(TransitionProfile.Default.MixBreathSec, 0.95, overlapSec * 0.68),
+            IncomingSettleSec = overlapSec + releaseSec * 0.55,
+            OutgoingDuckStrength = 0.5f,
+            IncomingGainCap = 0.94f,
+            OutgoingToneDepth = 0.42f,
+            IncomingToneDepth = 0.18f,
+            OutgoingReverbAmount = 0.08f,
+            IncomingReverbAmount = 0.04f,
+            StereoWidth = 0.07f,
+            Confidence = 0.2f
+        };
     }
 
     private CancellationTokenSource EnsureTransitionCancellation()

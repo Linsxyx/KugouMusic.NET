@@ -38,13 +38,9 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         var tailActivity = Math.Clamp(currentAnalysis.TailActivityRatio, 0.0, 1.0);
         tailWeakness = Math.Max(tailWeakness, Math.Clamp((0.58 - tailActivity) / 0.58, 0.0, 1.0));
 
-        var bpmDifficulty = 0.0;
-        if (currentAnalysis.Bpm > 0 && nextAnalysis.Bpm > 0)
-        {
-            bpmDifficulty = Math.Clamp(Math.Abs(currentAnalysis.Bpm - nextAnalysis.Bpm) / 42.0, 0.0, 1.0);
-        }
+        var bpmDifficulty = EstimateBpmDifficulty(currentAnalysis.Bpm, nextAnalysis.Bpm);
 
-        var mixDurationSec = Clamp(
+        var mixSpanSeed = Clamp(
             8.15
             + bpmDifficulty * 1.20
             + loudnessDifficulty * 0.85
@@ -55,9 +51,31 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             6.8,
             12.8);
         var mixEntrySec = Clamp(4.0 + invalidTailSec * 0.92 + tailSilenceSec * 0.35 + introSilenceSec * 0.92 + tailWeakness * 1.1 + bpmDifficulty * 0.35 - introStrength * 0.95 - introBrightness * 0.45 - introActivityProtect * 0.35, 2.9, 14.0);
-        var mixBreathSec = Clamp(1.65 + introStrength * 0.75 + introBrightness * 0.45 + loudnessDifficulty * 0.25 + introBlankness * 0.35, 1.4, 3.4);
-        var settleFloor = Math.Max(mixBreathSec + 1.15, 3.1);
-        var settleCeiling = Math.Max(settleFloor + 0.75, mixDurationSec - 0.55);
+        var overlapSec = Clamp(
+            3.25
+            + bpmDifficulty * 0.35
+            + loudnessDifficulty * 0.35
+            + tailWeakness * 0.55
+            + introBlankness * 0.40
+            - introStrength * 0.55
+            - introActivityProtect * 0.20,
+            2.4,
+            Math.Max(2.4, Math.Min(mixEntrySec, 7.2)));
+        var releaseSec = Clamp(
+            mixSpanSeed - overlapSec,
+            1.45,
+            3.8);
+        var mixDurationSec = overlapSec + releaseSec;
+        var mixBreathSec = Clamp(
+            1.25
+            + introStrength * 0.42
+            + introBrightness * 0.22
+            + loudnessDifficulty * 0.16
+            + introBlankness * 0.22,
+            0.95,
+            Math.Max(1.05, overlapSec * 0.72));
+        var settleFloor = Math.Max(mixBreathSec + 0.9, overlapSec + releaseSec * 0.25);
+        var settleCeiling = Math.Max(settleFloor + 0.45, mixDurationSec - 0.2);
         var incomingSettleSec = Clamp(
             mixDurationSec * (
                 0.66
@@ -81,11 +99,14 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         if (currentAnalysis.IsReliable) confidence += 0.28f;
         if (nextAnalysis.IsReliable) confidence += 0.28f;
         if (current.TailMetrics is { } metrics && (metrics.TailRms > 0 || metrics.TailSilenceSec > 0)) confidence += 0.18f;
+        confidence = Math.Clamp(confidence, 0.15f, 0.95f);
 
-        return new TransitionProfile
+        var profile = new TransitionProfile
         {
             MixEntrySec = mixEntrySec,
             MixDurationSec = mixDurationSec,
+            OverlapSec = overlapSec,
+            ReleaseSec = releaseSec,
             MixBreathSec = mixBreathSec,
             IncomingSettleSec = incomingSettleSec,
             OutgoingDuckStrength = outgoingDuck,
@@ -95,7 +116,62 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             OutgoingReverbAmount = outgoingReverb,
             IncomingReverbAmount = incomingReverb,
             StereoWidth = stereoWidth,
-            Confidence = Math.Clamp(confidence, 0.15f, 0.95f)
+            Confidence = confidence
+        };
+
+        return ShapeProfileForConfidence(profile);
+    }
+
+    private static double EstimateBpmDifficulty(double currentBpm, double nextBpm)
+    {
+        if (currentBpm <= 0 || nextBpm <= 0)
+        {
+            return 0;
+        }
+
+        var bestDiff = Math.Abs(currentBpm - nextBpm);
+        var candidates = new[] { nextBpm * 0.5, nextBpm, nextBpm * 2.0 };
+        foreach (var candidate in candidates)
+        {
+            if (candidate > 0)
+            {
+                bestDiff = Math.Min(bestDiff, Math.Abs(currentBpm - candidate));
+            }
+        }
+
+        return Math.Clamp(bestDiff / 42.0, 0.0, 1.0);
+    }
+
+    private static TransitionProfile ShapeProfileForConfidence(TransitionProfile profile)
+    {
+        var trust = Math.Clamp((profile.Confidence - 0.22f) / 0.68f, 0f, 1f);
+        var conservative = TransitionProfile.Default with
+        {
+            OutgoingDuckStrength = 0.48f,
+            IncomingGainCap = 0.95f,
+            OutgoingToneDepth = 0.38f,
+            IncomingToneDepth = 0.16f,
+            OutgoingReverbAmount = 0.06f,
+            IncomingReverbAmount = 0.03f,
+            StereoWidth = 0.05f,
+            Confidence = profile.Confidence
+        };
+
+        return profile with
+        {
+            MixEntrySec = Lerp(conservative.MixEntrySec, profile.MixEntrySec, trust),
+            MixDurationSec = Lerp(conservative.MixDurationSec, profile.MixDurationSec, trust),
+            OverlapSec = Lerp(conservative.OverlapSec, profile.OverlapSec, trust),
+            ReleaseSec = Lerp(conservative.ReleaseSec, profile.ReleaseSec, trust),
+            MixBreathSec = Lerp(conservative.MixBreathSec, profile.MixBreathSec, trust),
+            IncomingSettleSec = Lerp(conservative.IncomingSettleSec, profile.IncomingSettleSec, trust),
+            OutgoingDuckStrength = Lerp(conservative.OutgoingDuckStrength, profile.OutgoingDuckStrength, trust),
+            IncomingGainCap = Lerp(conservative.IncomingGainCap, profile.IncomingGainCap, trust),
+            OutgoingToneDepth = Lerp(conservative.OutgoingToneDepth, profile.OutgoingToneDepth, trust),
+            IncomingToneDepth = Lerp(conservative.IncomingToneDepth, profile.IncomingToneDepth, trust),
+            OutgoingReverbAmount = Lerp(conservative.OutgoingReverbAmount, profile.OutgoingReverbAmount, trust),
+            IncomingReverbAmount = Lerp(conservative.IncomingReverbAmount, profile.IncomingReverbAmount, trust),
+            StereoWidth = Lerp(conservative.StereoWidth, profile.StereoWidth, trust)
         };
     }
 
@@ -147,14 +223,15 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
 
                 var bpm = EstimateBpm(handle, effectiveDuration);
                 var startRms = ReadWindowRms(handle, 0, Math.Min(IntroWindowSec, effectiveDuration), sampleRate, channels);
-                var startBrightness = ReadWindowBrightness(handle, 0, sampleRate);
                 var introWindowSec = Math.Min(IntroWindowSec, effectiveDuration);
+                var startBrightness = ReadWindowBrightness(handle, 0, introWindowSec, sampleRate);
                 var introSilence = EstimateEdgeSilence(handle, 0, introWindowSec, sampleRate, channels, scanFromTail: false, out var introAvailable, out var introActivityRatio);
 
                 var tailStart = Math.Max(0, effectiveDuration - OutroWindowSec);
-                var endRms = ReadWindowRms(handle, tailStart, Math.Min(OutroWindowSec, effectiveDuration), sampleRate, channels);
-                var endBrightness = ReadWindowBrightness(handle, tailStart, sampleRate);
-                var tailSilence = EstimateEdgeSilence(handle, tailStart, Math.Min(OutroWindowSec, effectiveDuration), sampleRate, channels, scanFromTail: true, out var tailAvailable, out var tailActivityRatio);
+                var tailWindowSec = Math.Min(OutroWindowSec, effectiveDuration);
+                var endRms = ReadWindowRms(handle, tailStart, tailWindowSec, sampleRate, channels);
+                var endBrightness = ReadWindowBrightness(handle, tailStart, tailWindowSec, sampleRate);
+                var tailSilence = EstimateEdgeSilence(handle, tailStart, tailWindowSec, sampleRate, channels, scanFromTail: true, out var tailAvailable, out var tailActivityRatio);
                 var tailScanStart = Math.Max(0, effectiveDuration - TailScanWindowSec);
                 var tailScanSec = Math.Min(TailScanWindowSec, effectiveDuration);
                 var invalidTailSec = EstimateInvalidTail(handle, tailScanStart, tailScanSec, sampleRate, channels);
@@ -259,7 +336,43 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         return Math.Sqrt(sumSquares / sampleCount);
     }
 
-    private static double ReadWindowBrightness(int handle, double startSec, int sampleRate)
+    private static double ReadWindowBrightness(int handle, double startSec, double windowSec, int sampleRate)
+    {
+        if (windowSec <= 0)
+        {
+            return 0;
+        }
+
+        var probeCount = windowSec >= 4.0 ? 5 : windowSec >= 1.5 ? 3 : 1;
+        var values = new double[probeCount];
+        var valueCount = 0;
+        var maxOffset = Math.Max(0, windowSec - 0.08);
+        for (var i = 0; i < probeCount; i++)
+        {
+            var offset = probeCount == 1 ? 0 : maxOffset * i / (probeCount - 1);
+            var brightness = ReadPointBrightness(handle, startSec + offset, sampleRate);
+            if (brightness > 0)
+            {
+                values[valueCount++] = brightness;
+            }
+        }
+
+        if (valueCount == 0)
+        {
+            return 0;
+        }
+
+        if (valueCount == values.Length)
+        {
+            return Percentile(values, 0.5);
+        }
+
+        var compact = new double[valueCount];
+        Array.Copy(values, compact, valueCount);
+        return Percentile(compact, 0.5);
+    }
+
+    private static double ReadPointBrightness(int handle, double startSec, int sampleRate)
     {
         if (!TrySeekSeconds(handle, startSec))
         {
@@ -535,5 +648,17 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
     private static double Clamp(double value, double min, double max)
     {
         return Math.Min(max, Math.Max(min, value));
+    }
+
+    private static double Lerp(double from, double to, double amount)
+    {
+        var safe = Math.Clamp(amount, 0.0, 1.0);
+        return from + (to - from) * safe;
+    }
+
+    private static float Lerp(float from, float to, double amount)
+    {
+        var safe = (float)Math.Clamp(amount, 0.0, 1.0);
+        return from + (to - from) * safe;
     }
 }

@@ -26,7 +26,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private const double VisualizerMinHeight = 8;
     private const double VisualizerHeightRange = 56;
     private const double AnalysisWindowSec = 15.0;
-    private const double FallbackMixDurationSec = 9.6;
+    private const double FallbackMixDurationSec = 6.8;
     private const double FallbackMixEntrySec = 4.6;
     private const double PreloadWindowSec = 18.0;
     private static readonly TimeSpan SeamlessVisualSwitchDelay = TimeSpan.FromSeconds(2);
