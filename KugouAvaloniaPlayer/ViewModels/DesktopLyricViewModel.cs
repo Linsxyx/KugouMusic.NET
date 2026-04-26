@@ -24,6 +24,7 @@ public partial class DesktopLyricViewModel : ViewModelBase
     [ObservableProperty] private bool _isControlBarExpanded;
     [ObservableProperty] private bool _isControlHotspotHovered;
     [ObservableProperty] private bool _isCollapsedLockIconHovered;
+    [ObservableProperty] private bool _enableLegacyWordLyricEffect;
 
     [ObservableProperty] private FontFamily? _lyricFontFamily;
     [ObservableProperty] private IBrush _lyricForeground = DefaultLyricBrush;
@@ -37,6 +38,7 @@ public partial class DesktopLyricViewModel : ViewModelBase
         CanMousePassthrough = canMousePassthrough;
         UsesSeparateLockOverlay = canMousePassthrough && usesSeparateLockOverlay;
         IsControlBarExpanded = false;
+        EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
         FontSize = ClampFontSize(SettingsManager.Settings.DesktopLyricFontSize);
         ApplyLyricStyleSettings(
             SettingsManager.Settings.DesktopLyricUseCustomMainColor,
@@ -58,6 +60,7 @@ public partial class DesktopLyricViewModel : ViewModelBase
                 message.TranslationColorHex,
                 message.UseCustomFont,
                 message.FontFamilyName);
+            EnableLegacyWordLyricEffect = message.EnableLegacyWordLyricEffect;
         });
     }
 

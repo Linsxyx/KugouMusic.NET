@@ -30,7 +30,8 @@ public record LyricStyleSettingsChangedMessage(
     bool UseCustomFont,
     string FontFamilyName,
     LyricAlignmentOption Alignment,
-    double FontSize);
+    double FontSize,
+    bool EnableLegacyWordLyricEffect);
 
 public enum LyricSettingsScope
 {

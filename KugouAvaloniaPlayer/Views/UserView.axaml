@@ -305,6 +305,19 @@
 
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                         <StackPanel>
+                                            <TextBlock Text="启用旧版逐字歌词" FontWeight="DemiBold" />
+                                            <TextBlock Text="使用逐词抬升与透明度变化效果"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding EnableLegacyWordLyricEffect, Mode=TwoWay}" />
+                                    </Grid>
+
+                                    <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
                                             <TextBlock Text="颜色应用目标" FontWeight="DemiBold" />
                                             <TextBlock Text="为歌词或翻译单独配置颜色"
                                                        FontSize="12"

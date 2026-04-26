@@ -123,6 +123,7 @@ public class AppSettings
     public string PlayPageLyricCustomFontFamily { get; set; } = string.Empty;
     public LyricAlignmentOption PlayPageLyricAlignment { get; set; } = LyricAlignmentOption.Center;
     public double PlayPageLyricFontSize { get; set; } = 33;
+    public bool EnableLegacyWordLyricEffect { get; set; }
 
     public NowPlayingLyricDisplayMode PlayPageLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;

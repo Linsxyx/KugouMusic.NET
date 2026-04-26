@@ -378,6 +378,8 @@
                                                 <Binding Path="IsKrcWordLevel" />
                                                 <Binding
                                                     Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingPrimaryLyricVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).EnableLegacyWordLyricEffect" />
                                             </MultiBinding>
                                         </Grid.IsVisible>
                                         <ItemsControl ItemsSource="{Binding Words}"
@@ -394,6 +396,38 @@
                                                                Classes.played="{Binding IsPlayed}"
                                                                Classes.current="{Binding IsCurrent}"
                                                                RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+
+                                    <Grid Width="{Binding $parent[controls1:MeasuredLyricScrollView].Bounds.Width}">
+                                        <Grid.IsVisible>
+                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                <Binding Path="IsKrcWordLevel" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingPrimaryLyricVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).EnableLegacyWordLyricEffect"
+                                                    Converter="{x:Static BoolConverters.Not}" />
+                                            </MultiBinding>
+                                        </Grid.IsVisible>
+                                        <ItemsControl ItemsSource="{Binding Words}"
+                                                      HorizontalAlignment="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricHorizontalAlignment}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:LyricWordViewModel">
+                                                    <controls1:KaraokeGradientTextBlock Text="{Binding Text}"
+                                                                                       Progress="{Binding Progress}"
+                                                                                       FontSize="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontSize}"
+                                                                                       FontFamily="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}"
+                                                                                       FontWeight="Bold"
+                                                                                       Foreground="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricForeground}"
+                                                                                       PlayedForeground="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricForeground}" />
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -424,6 +458,8 @@
                                                 <Binding Path="HasWordLevelTranslation" />
                                                 <Binding
                                                     Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingTranslationVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).EnableLegacyWordLyricEffect" />
                                             </MultiBinding>
                                         </Grid.IsVisible>
                                         <ItemsControl ItemsSource="{Binding TranslationWords}"
@@ -441,6 +477,39 @@
                                                                Classes.current="{Binding IsCurrent}"
                                                                Foreground="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationWordForeground}"
                                                                RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+
+                                    <Grid Width="{Binding $parent[controls1:MeasuredLyricScrollView].Bounds.Width}">
+                                        <Grid.IsVisible>
+                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                <Binding Path="HasWordLevelTranslation" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).IsNowPlayingTranslationVisible" />
+                                                <Binding
+                                                    Path="$parent[UserControl].((vm:MainWindowViewModel)DataContext).EnableLegacyWordLyricEffect"
+                                                    Converter="{x:Static BoolConverters.Not}" />
+                                            </MultiBinding>
+                                        </Grid.IsVisible>
+                                        <ItemsControl ItemsSource="{Binding TranslationWords}"
+                                                      HorizontalAlignment="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricHorizontalAlignment}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:LyricWordViewModel">
+                                                    <controls1:KaraokeGradientTextBlock Text="{Binding Text}"
+                                                                                       Progress="{Binding Progress}"
+                                                                                       FontSize="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationFontSize}"
+                                                                                       FontFamily="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingLyricFontFamily}"
+                                                                                       FontWeight="Medium"
+                                                                                       Foreground="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationWordForeground}"
+                                                                                       PlayedForeground="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationWordForeground}"
+                                                                                       UnplayedOpacity="0.4" />
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>

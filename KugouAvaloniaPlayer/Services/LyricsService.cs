@@ -336,6 +336,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             var elapsed = currentMs - word.StartTime;
             var progress = Math.Clamp(elapsed / duration, 0, 1);
 
+            word.Progress = progress;
             word.IsCurrent = progress > 0 && progress < 1;
             word.IsPlayed = progress >= 1;
             word.LiftOffset = word.IsCurrent ? -Math.Sin(progress * Math.PI) * 8 : 0;
@@ -351,6 +352,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             word.IsCurrent = false;
             word.IsPlayed = false;
             word.LiftOffset = 0;
+            word.Progress = 0;
         }
 
         foreach (var word in line.TranslationWords)
@@ -358,6 +360,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             word.IsCurrent = false;
             word.IsPlayed = false;
             word.LiftOffset = 0;
+            word.Progress = 0;
         }
     }
 

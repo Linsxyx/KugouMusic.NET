@@ -53,6 +53,7 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private string _desktopSelectedLyricColorTarget = LyricTargetMain;
     [ObservableProperty] private string? _desktopSelectedLyricFontFamily;
     [ObservableProperty] private string _desktopSelectedLyricFontMode = LyricColorModeDefault;
+    [ObservableProperty] private bool _enableLegacyWordLyricEffect;
     [ObservableProperty] private bool _enableGlobalShortcuts;
     [ObservableProperty] private bool _enableNowPlayingVisualizer;
     [ObservableProperty] private bool _enableSeamlessTransition;
@@ -100,6 +101,7 @@ public partial class UserViewModel : PageViewModelBase
         EnableSurround = SettingsManager.Settings.EnableSurround;
         EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
         EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
+        EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
         LyricFontFamilyOptions = LoadSystemFontFamilies();
         _availableLyricFonts = new HashSet<string>(LyricFontFamilyOptions, StringComparer.OrdinalIgnoreCase);
         UserId = _sessionManager.Session.UserId;
@@ -361,6 +363,14 @@ public partial class UserViewModel : PageViewModelBase
         SettingsManager.Settings.EnableNowPlayingVisualizer = value;
         SettingsManager.Save();
         Player.SetNowPlayingVisualizerEnabled(value);
+    }
+
+    partial void OnEnableLegacyWordLyricEffectChanged(bool value)
+    {
+        SettingsManager.Settings.EnableLegacyWordLyricEffect = value;
+        SettingsManager.Save();
+        NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
+        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
     }
 
     partial void OnDesktopSelectedLyricColorTargetChanged(string value)
@@ -687,7 +697,8 @@ public partial class UserViewModel : PageViewModelBase
                 : SettingsManager.Settings.PlayPageLyricAlignment,
             isDesktop
                 ? SettingsManager.Settings.DesktopLyricFontSize
-                : SettingsManager.Settings.PlayPageLyricFontSize));
+                : SettingsManager.Settings.PlayPageLyricFontSize,
+            SettingsManager.Settings.EnableLegacyWordLyricEffect));
     }
 
     private static LyricAlignmentOption ParseAlignment(string? alignment)

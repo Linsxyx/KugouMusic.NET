@@ -50,6 +50,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private bool _isLoggedIn;
 
+    [ObservableProperty] private bool _enableLegacyWordLyricEffect;
     [ObservableProperty] private bool _isNowPlayingOpen;
     [ObservableProperty] private bool _isNowPlayingVolumeVisible;
     [ObservableProperty] private bool _isQueuePaneOpen;
@@ -127,6 +128,7 @@ public partial class MainWindowViewModel : ObservableObject
         _navigationService.ReplaceRoot(_dailyRecommendViewModel);
         ActivePage = _dailyRecommendViewModel;
         IsDesktopLyricEnabled = _desktopLyricWindowService.IsOpen;
+        EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
         ApplyNowPlayingLyricStyleSettings(
             SettingsManager.Settings.PlayPageLyricUseCustomMainColor,
             SettingsManager.Settings.PlayPageLyricCustomMainColor,
@@ -176,6 +178,7 @@ public partial class MainWindowViewModel : ObservableObject
                 message.FontFamilyName,
                 message.Alignment,
                 message.FontSize);
+            EnableLegacyWordLyricEffect = message.EnableLegacyWordLyricEffect;
         });
 
         Task.Run(async () =>

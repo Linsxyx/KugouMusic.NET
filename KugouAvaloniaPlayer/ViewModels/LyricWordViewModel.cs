@@ -8,6 +8,7 @@ public partial class LyricWordViewModel : ObservableObject
     [ObservableProperty] private bool _isCurrent;
     [ObservableProperty] private bool _isPlayed;
     [ObservableProperty] private double _liftOffset;
+    [ObservableProperty] private double _progress;
     [ObservableProperty] private double _startTime;
     [ObservableProperty] private string _text = "";
 }
