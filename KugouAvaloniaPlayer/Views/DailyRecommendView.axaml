@@ -225,6 +225,19 @@
                                 <StackPanel Grid.Column="0"
                                             Spacing="6"
                                             IsVisible="{Binding CanUsePersonalFm}">
+                                    <RadioButton Classes="Segmented fm-mode-pill fm-mode-peak"
+                                                 IsEnabled="{Binding CanEditFmConfiguration}"
+                                                 IsChecked="{Binding SelectedFmMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PersonalFmMode.Peak}}"
+                                                 Command="{Binding ChangePersonalFmModeCommand}"
+                                                 CommandParameter="{x:Static models:PersonalFmMode.Peak}">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="6"
+                                                    HorizontalAlignment="Center">
+                                            <Border Classes="fm-mode-dot fm-mode-dot-peak" />
+                                            <TextBlock Classes="fm-mode-title" Text="巅峰" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                    
                                     <RadioButton Classes="Segmented fm-mode-pill fm-mode-heart"
                                                  IsEnabled="{Binding CanEditFmConfiguration}"
                                                  IsChecked="{Binding SelectedFmMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PersonalFmMode.Normal}}"
@@ -248,19 +261,6 @@
                                                     HorizontalAlignment="Center">
                                             <Border Classes="fm-mode-dot fm-mode-dot-small" />
                                             <TextBlock Classes="fm-mode-title" Text="小众" />
-                                        </StackPanel>
-                                    </RadioButton>
-
-                                    <RadioButton Classes="Segmented fm-mode-pill fm-mode-peak"
-                                                 IsEnabled="{Binding CanEditFmConfiguration}"
-                                                 IsChecked="{Binding SelectedFmMode, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:PersonalFmMode.Peak}}"
-                                                 Command="{Binding ChangePersonalFmModeCommand}"
-                                                 CommandParameter="{x:Static models:PersonalFmMode.Peak}">
-                                        <StackPanel Orientation="Horizontal"
-                                                    Spacing="6"
-                                                    HorizontalAlignment="Center">
-                                            <Border Classes="fm-mode-dot fm-mode-dot-peak" />
-                                            <TextBlock Classes="fm-mode-title" Text="巅峰" />
                                         </StackPanel>
                                     </RadioButton>
                                 </StackPanel>

@@ -54,6 +54,7 @@ public partial class App : Application
         collection.AddSingleton<IDesktopLyricWindowService, DesktopLyricWindowService>();
         collection.AddSingleton<IGlobalShortcutService, GlobalShortcutService>();
         collection.AddSingleton<IFolderPickerService, FolderPickerService>();
+        collection.AddSingleton<IGitHubReleaseService, GitHubReleaseService>();
 
         SettingsManager.Load();
 

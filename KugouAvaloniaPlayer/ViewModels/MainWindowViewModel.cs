@@ -713,7 +713,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         ToastManager.CreateToast()
             .WithTitle("发现新版本")
-            .WithContent($"版本 {newVersion.TargetFullRelease.Version} 现已发布，是否立即更新？")
+            .WithContent($"版本 {newVersion.TargetFullRelease.Version} 现已发布，详细可在设置”更新与关于“中查看，是否立即更新？")
             .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Standard)
             .WithActionButton("立即更新", toast => { _ = ShowUpdatingToastAndDownloadAsync(updateManager, newVersion); },
                 true, SukiButtonStyles.Standard)

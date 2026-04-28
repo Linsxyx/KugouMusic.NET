@@ -1,6 +1,9 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia.Input;
 using Avalonia.Media;
@@ -28,6 +31,7 @@ public partial class UserViewModel : PageViewModelBase
     private const string SettingsSectionLyrics = "歌词设置";
     private const string SettingsSectionUpdate = "更新与关于";
     private const string SettingsSectionAccount = "账户";
+    private const string RepositoryUrl = "https://github.com/Linsxyx/KugouMusic.NET";
     private const string LyricScopeDesktop = "桌面歌词";
     private const string LyricScopePlayPage = "播放页面歌词";
     private const string LyricTargetMain = "歌词";
@@ -43,6 +47,7 @@ public partial class UserViewModel : PageViewModelBase
     private readonly ISukiDialogManager _dialogManager;
     private readonly EqSettingsViewModel _eqSettingsViewModel;
     private readonly IGlobalShortcutService _globalShortcutService;
+    private readonly IGitHubReleaseService _releaseService;
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
 
@@ -60,6 +65,7 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private bool _enableSeamlessTransition;
     [ObservableProperty] private bool _enableSurround;
     [ObservableProperty] private bool _isCheckingUpdate;
+    [ObservableProperty] private bool _isLoadingReleaseNotes;
     private bool _isInitializingLyricColorEditor;
     private bool _isInitializingLyricFontEditor;
     [ObservableProperty] private bool _isLoading = true;
@@ -70,6 +76,7 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private string _playPageSelectedLyricColorTarget = LyricTargetMain;
     [ObservableProperty] private string? _playPageSelectedLyricFontFamily;
     [ObservableProperty] private string _playPageSelectedLyricFontMode = LyricColorModeDefault;
+    [ObservableProperty] private string _releaseNotesStatus = "正在加载最近版本发布说明...";
 
     [ObservableProperty] private CloseBehavior _selectedCloseBehavior;
     [ObservableProperty] private string _selectedEQPreset;
@@ -81,7 +88,7 @@ public partial class UserViewModel : PageViewModelBase
 
     public UserViewModel(PlayerViewModel player, UserClient userClient, AuthClient authClient,
         ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
-        IGlobalShortcutService globalShortcutService)
+        IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService)
     {
         _userClient = userClient;
         _authClient = authClient;
@@ -89,6 +96,7 @@ public partial class UserViewModel : PageViewModelBase
         _eqSettingsViewModel = eqSettingsViewModel;
         _sessionManager = sessionManager;
         _globalShortcutService = globalShortcutService;
+        _releaseService = releaseService;
 
         Player = player;
         SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
@@ -159,11 +167,14 @@ public partial class UserViewModel : PageViewModelBase
 
     public string[] LyricFontFamilyOptions { get; }
     public GlobalShortcutItemViewModel[] ShortcutItems { get; }
+    public ObservableCollection<ReleaseNoteItemViewModel> RecentReleaseNotes { get; } = [];
 
     public PlayerViewModel Player { get; }
 
     public override string DisplayName => "设置";
     public override string Icon => "/Assets/gear-svgrepo-com.svg";
+    public string AppDisplayName => "KA Music";
+    public string AppVersion => $"v {GetCurrentVersion()}";
 
     public CloseBehavior[] AvailableCloseBehaviors { get; } = Enum.GetValues<CloseBehavior>();
 
@@ -177,6 +188,8 @@ public partial class UserViewModel : PageViewModelBase
     public bool IsLyricsSection => SelectedSettingsSection == SettingsSectionLyrics;
     public bool IsUpdateSection => SelectedSettingsSection == SettingsSectionUpdate;
     public bool IsAccountSection => SelectedSettingsSection == SettingsSectionAccount;
+    public bool HasReleaseNotes => RecentReleaseNotes.Count > 0;
+    public bool IsReleaseNotesStatusVisible => IsLoadingReleaseNotes || !HasReleaseNotes;
 
     public IBrush DesktopLyricColorPreviewBrush =>
         new SolidColorBrush(ParseColorOrDefault(DesktopLyricColorHexInput, Colors.Transparent));
@@ -237,6 +250,18 @@ public partial class UserViewModel : PageViewModelBase
         IsCheckingUpdate = true;
         CheckForUpdateRequested?.Invoke();
         await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private async Task RefreshReleaseNotes()
+    {
+        await LoadReleaseNotesAsync(forceRefresh: true);
+    }
+
+    [RelayCommand]
+    private void OpenRepository()
+    {
+        OpenUrl(RepositoryUrl);
     }
 
     [RelayCommand]
@@ -748,6 +773,70 @@ public partial class UserViewModel : PageViewModelBase
         OnPropertyChanged(nameof(IsLyricsSection));
         OnPropertyChanged(nameof(IsUpdateSection));
         OnPropertyChanged(nameof(IsAccountSection));
+
+        if (value == SettingsSectionUpdate)
+            _ = LoadReleaseNotesAsync();
+    }
+
+    partial void OnIsLoadingReleaseNotesChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsReleaseNotesStatusVisible));
+    }
+
+    private async Task LoadReleaseNotesAsync(bool forceRefresh = false)
+    {
+        if (IsLoadingReleaseNotes)
+            return;
+
+        if (!forceRefresh && RecentReleaseNotes.Count > 0)
+            return;
+
+        IsLoadingReleaseNotes = true;
+        ReleaseNotesStatus = "正在加载最近版本发布说明...";
+
+        try
+        {
+            var releases = await _releaseService.GetRecentReleasesAsync(3);
+            RecentReleaseNotes.Clear();
+            foreach (var release in releases)
+                RecentReleaseNotes.Add(new ReleaseNoteItemViewModel(release));
+
+            ReleaseNotesStatus = RecentReleaseNotes.Count == 0
+                ? "暂时没有获取到发布说明，可前往 Releases 页面查看。"
+                : string.Empty;
+        }
+        finally
+        {
+            IsLoadingReleaseNotes = false;
+            OnPropertyChanged(nameof(HasReleaseNotes));
+            OnPropertyChanged(nameof(IsReleaseNotesStatusVisible));
+        }
+    }
+
+    private static string GetCurrentVersion()
+    {
+        var version = Assembly.GetEntryAssembly()?.GetName().Version
+                      ?? Assembly.GetExecutingAssembly().GetName().Version;
+
+        return version == null
+            ? "未知"
+            : $"{version.Major}.{version.Minor}.{version.Build}";
+    }
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Browser launch is a convenience action; keep this page usable if the OS blocks it.
+        }
     }
 
     [RelayCommand]
@@ -906,4 +995,11 @@ public partial class UserViewModel : PageViewModelBase
         snapshot.EnableGlobalShortcuts = EnableGlobalShortcuts;
         return snapshot;
     }
+}
+
+public sealed class ReleaseNoteItemViewModel(GitHubReleaseInfo release)
+{
+    public string Title { get; } = release.Title;
+    public string PublishedAt { get; } = release.PublishedAt;
+    public string Summary { get; } = release.Summary;
 }
