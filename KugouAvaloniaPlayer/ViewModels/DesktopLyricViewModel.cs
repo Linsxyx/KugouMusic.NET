@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -41,6 +43,13 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private LyricLineViewModel? _bottomLyricLine;
     [ObservableProperty] private bool _isTopLyricLineCurrent;
     [ObservableProperty] private bool _isBottomLyricLineCurrent;
+    [ObservableProperty] private double _topLaneOpacity = 1;
+    [ObservableProperty] private double _bottomLaneOpacity = 1;
+    [ObservableProperty] private double _topLaneTranslateY;
+    [ObservableProperty] private double _bottomLaneTranslateY;
+
+    private CancellationTokenSource? _topLaneAnimationCancellation;
+    private CancellationTokenSource? _bottomLaneAnimationCancellation;
 
     public DesktopLyricViewModel(PlayerViewModel player, bool canMousePassthrough, bool usesSeparateLockOverlay)
     {
@@ -230,6 +239,7 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        CancelAndDisposeLaneAnimations();
         Player.PropertyChanged -= OnPlayerPropertyChanged;
         WeakReferenceMessenger.Default.UnregisterAll(this);
     }
@@ -248,31 +258,150 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
 
         if (!IsDoubleLineEnabled || currentLine == null || currentIndex < 0)
         {
-            TopLyricLine = null;
-            BottomLyricLine = null;
-            IsTopLyricLineCurrent = false;
-            IsBottomLyricLineCurrent = false;
-            RaiseDoubleLineComputedProperties();
+            SetTopLaneImmediate(null, false);
+            SetBottomLaneImmediate(null, false);
             return;
         }
 
         var nextLine = Player.NextLyricLine;
         if (currentIndex % 2 == 0)
         {
-            TopLyricLine = currentLine;
-            BottomLyricLine = nextLine;
-            IsTopLyricLineCurrent = true;
-            IsBottomLyricLineCurrent = false;
+            SetTopLane(currentLine, true);
+            SetBottomLane(nextLine, false);
         }
         else
         {
-            TopLyricLine = nextLine;
-            BottomLyricLine = currentLine;
-            IsTopLyricLineCurrent = false;
-            IsBottomLyricLineCurrent = true;
+            SetTopLane(nextLine, false);
+            SetBottomLane(currentLine, true);
+        }
+    }
+
+    private void SetTopLane(LyricLineViewModel? line, bool isCurrent)
+    {
+        if (ReferenceEquals(TopLyricLine, line))
+        {
+            IsTopLyricLineCurrent = isCurrent;
+            RaiseDoubleLineComputedProperties();
+            return;
         }
 
+        if (TopLyricLine == null || line == null)
+        {
+            SetTopLaneImmediate(line, isCurrent);
+            return;
+        }
+
+        _ = AnimateTopLaneChangeAsync(line, isCurrent);
+    }
+
+    private void SetBottomLane(LyricLineViewModel? line, bool isCurrent)
+    {
+        if (ReferenceEquals(BottomLyricLine, line))
+        {
+            IsBottomLyricLineCurrent = isCurrent;
+            RaiseDoubleLineComputedProperties();
+            return;
+        }
+
+        if (BottomLyricLine == null || line == null)
+        {
+            SetBottomLaneImmediate(line, isCurrent);
+            return;
+        }
+
+        _ = AnimateBottomLaneChangeAsync(line, isCurrent);
+    }
+
+    private void SetTopLaneImmediate(LyricLineViewModel? line, bool isCurrent)
+    {
+        CancelAndDisposeTopLaneAnimation();
+        TopLyricLine = line;
+        IsTopLyricLineCurrent = isCurrent;
+        TopLaneOpacity = 1;
+        TopLaneTranslateY = 0;
         RaiseDoubleLineComputedProperties();
+    }
+
+    private void SetBottomLaneImmediate(LyricLineViewModel? line, bool isCurrent)
+    {
+        CancelAndDisposeBottomLaneAnimation();
+        BottomLyricLine = line;
+        IsBottomLyricLineCurrent = isCurrent;
+        BottomLaneOpacity = 1;
+        BottomLaneTranslateY = 0;
+        RaiseDoubleLineComputedProperties();
+    }
+
+    private async Task AnimateTopLaneChangeAsync(LyricLineViewModel line, bool isCurrent)
+    {
+        CancelAndDisposeTopLaneAnimation();
+        var cts = new CancellationTokenSource();
+        _topLaneAnimationCancellation = cts;
+
+        try
+        {
+            TopLaneOpacity = 0;
+            TopLaneTranslateY = -8;
+            await Task.Delay(120, cts.Token);
+
+            TopLyricLine = line;
+            IsTopLyricLineCurrent = isCurrent;
+            RaiseDoubleLineComputedProperties();
+            TopLaneTranslateY = 8;
+            await Task.Delay(16, cts.Token);
+
+            TopLaneOpacity = 1;
+            TopLaneTranslateY = 0;
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private async Task AnimateBottomLaneChangeAsync(LyricLineViewModel line, bool isCurrent)
+    {
+        CancelAndDisposeBottomLaneAnimation();
+        var cts = new CancellationTokenSource();
+        _bottomLaneAnimationCancellation = cts;
+
+        try
+        {
+            BottomLaneOpacity = 0;
+            BottomLaneTranslateY = 8;
+            await Task.Delay(120, cts.Token);
+
+            BottomLyricLine = line;
+            IsBottomLyricLineCurrent = isCurrent;
+            RaiseDoubleLineComputedProperties();
+            BottomLaneTranslateY = -8;
+            await Task.Delay(16, cts.Token);
+
+            BottomLaneOpacity = 1;
+            BottomLaneTranslateY = 0;
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private void CancelAndDisposeLaneAnimations()
+    {
+        CancelAndDisposeTopLaneAnimation();
+        CancelAndDisposeBottomLaneAnimation();
+    }
+
+    private void CancelAndDisposeTopLaneAnimation()
+    {
+        _topLaneAnimationCancellation?.Cancel();
+        _topLaneAnimationCancellation?.Dispose();
+        _topLaneAnimationCancellation = null;
+    }
+
+    private void CancelAndDisposeBottomLaneAnimation()
+    {
+        _bottomLaneAnimationCancellation?.Cancel();
+        _bottomLaneAnimationCancellation?.Dispose();
+        _bottomLaneAnimationCancellation = null;
     }
 
     private void RaiseDoubleLineComputedProperties()

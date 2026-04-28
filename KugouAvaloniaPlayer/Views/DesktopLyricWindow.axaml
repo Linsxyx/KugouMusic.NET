@@ -152,6 +152,17 @@
             <Setter Property="FontFamily"
                     Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
+
+        <Style Selector="Panel.DesktopLane">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform"
+                                                   Duration="0:0:0.18"
+                                                   Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
     </Window.Styles>
 
     <Grid RowDefinitions="Auto,*"
@@ -475,8 +486,11 @@
                   VerticalAlignment="Center"
                   IsVisible="{Binding IsDoubleLineEnabled}">
                 <Panel Grid.Row="0"
+                       Classes="DesktopLane"
                        HorizontalAlignment="Stretch"
-                       IsVisible="{Binding IsTopLyricLineVisible}">
+                       IsVisible="{Binding IsTopLyricLineVisible}"
+                       Opacity="{Binding TopLaneOpacity}"
+                       RenderTransform="{Binding TopLaneTranslateY, Converter={StaticResource WordLiftTransformConverter}}">
                     <TextBlock Text="{Binding TopLyricLine.Content}"
                                Classes="KaraokeLine DesktopLine"
                                Classes.active="{Binding IsTopLyricLineCurrent}"
@@ -541,8 +555,11 @@
                 </Panel>
 
                 <Panel Grid.Row="1"
+                       Classes="DesktopLane"
                        HorizontalAlignment="Stretch"
-                       IsVisible="{Binding IsBottomLyricLineVisible}">
+                       IsVisible="{Binding IsBottomLyricLineVisible}"
+                       Opacity="{Binding BottomLaneOpacity}"
+                       RenderTransform="{Binding BottomLaneTranslateY, Converter={StaticResource WordLiftTransformConverter}}">
                     <TextBlock Text="{Binding BottomLyricLine.Content}"
                                Classes="KaraokeLine DesktopLine"
                                Classes.active="{Binding IsBottomLyricLineCurrent}"
