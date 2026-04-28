@@ -35,10 +35,7 @@ public partial class PlayerViewModel
             if (loadVersion != _lyricsLoadVersion || CurrentPlayingSong != song)
                 return;
 
-            var activeLine = _lyricsService.SyncLyrics(CurrentPositionSeconds * 1000);
-            CurrentLyricLine = activeLine;
-            CurrentLyricText = activeLine?.Content ?? "暂无歌词";
-            CurrentLyricTrans = activeLine?.Translation ?? "";
+            SyncCurrentLyricFromPosition(CurrentPositionSeconds * 1000);
         }
         catch (Exception ex)
         {
@@ -47,8 +44,10 @@ public partial class PlayerViewModel
                 return;
 
             CurrentLyricLine = null;
+            CurrentLyricIndex = -1;
             CurrentLyricText = "暂无歌词";
             CurrentLyricTrans = "";
+            NextLyricLine = null;
         }
         finally
         {

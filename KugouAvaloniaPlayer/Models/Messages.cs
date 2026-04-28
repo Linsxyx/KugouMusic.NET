@@ -33,6 +33,8 @@ public record LyricStyleSettingsChangedMessage(
     double FontSize,
     bool EnableLegacyWordLyricEffect);
 
+public record DesktopLyricDoubleLineChangedMessage(bool IsEnabled);
+
 public enum LyricSettingsScope
 {
     Desktop,

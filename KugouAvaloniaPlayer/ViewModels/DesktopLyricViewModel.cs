@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,11 +9,14 @@ using KugouAvaloniaPlayer.Services;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class DesktopLyricViewModel : ViewModelBase
+public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
 {
     private const double MinFontSize = 18;
     private const double MaxFontSize = 50;
     private const double FontSizeStep = 2;
+    private const double ControlBarReservedHeight = 64;
+    private const double MinWindowHeight = 140;
+    private const double WindowVerticalPadding = 24;
 
     private static readonly IBrush DefaultLyricBrush = new SolidColorBrush(Colors.White);
     private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
@@ -26,22 +30,29 @@ public partial class DesktopLyricViewModel : ViewModelBase
     [ObservableProperty] private bool _isCollapsedLockIconHovered;
     [ObservableProperty] private bool _enableLegacyWordLyricEffect;
     [ObservableProperty] private bool _isTranslationVisible = true;
+    [ObservableProperty] private bool _isDoubleLineEnabled;
 
     [ObservableProperty] private FontFamily? _lyricFontFamily;
     [ObservableProperty] private IBrush _lyricForeground = DefaultLyricBrush;
     [ObservableProperty] private double _translationFontSize = 18;
     [ObservableProperty] private IBrush _translationLineForeground = DefaultTranslationLineBrush;
     [ObservableProperty] private IBrush _translationWordForeground = DefaultTranslationWordBrush;
+    [ObservableProperty] private LyricLineViewModel? _topLyricLine;
+    [ObservableProperty] private LyricLineViewModel? _bottomLyricLine;
+    [ObservableProperty] private bool _isTopLyricLineCurrent;
+    [ObservableProperty] private bool _isBottomLyricLineCurrent;
 
     public DesktopLyricViewModel(PlayerViewModel player, bool canMousePassthrough, bool usesSeparateLockOverlay)
     {
         Player = player;
+        Player.PropertyChanged += OnPlayerPropertyChanged;
         CanMousePassthrough = canMousePassthrough;
         UsesSeparateLockOverlay = canMousePassthrough && usesSeparateLockOverlay;
         IsControlBarExpanded = false;
         EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
         FontSize = ClampFontSize(SettingsManager.Settings.DesktopLyricFontSize);
         IsTranslationVisible = SettingsManager.Settings.DesktopLyricShowTranslation;
+        IsDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
         ApplyLyricStyleSettings(
             SettingsManager.Settings.DesktopLyricUseCustomMainColor,
             SettingsManager.Settings.DesktopLyricCustomMainColor,
@@ -64,6 +75,13 @@ public partial class DesktopLyricViewModel : ViewModelBase
                 message.FontFamilyName);
             EnableLegacyWordLyricEffect = message.EnableLegacyWordLyricEffect;
         });
+
+        WeakReferenceMessenger.Default.Register<DesktopLyricDoubleLineChangedMessage>(this, (_, message) =>
+        {
+            IsDoubleLineEnabled = message.IsEnabled;
+        });
+
+        RefreshDoubleLineLanes();
     }
 
     public bool CanMousePassthrough { get; }
@@ -72,9 +90,30 @@ public partial class DesktopLyricViewModel : ViewModelBase
     public PlayerViewModel Player { get; }
 
     public string FontSizeDisplay => $"{Math.Round(FontSize):0}pt";
+    public double WindowHeight => CalculateWindowHeight();
     public bool IsUnlockedInteractionEnabled => !IsLocked;
     public bool IsCollapsedLockIconVisible => CanMousePassthrough && IsLocked;
     public bool IsEmbeddedCollapsedLockIconVisible => IsCollapsedLockIconVisible && !UsesSeparateLockOverlay;
+    public bool IsSingleLineMode => !IsDoubleLineEnabled;
+    public bool IsDesktopTranslationActuallyVisible => IsTranslationVisible && !IsDoubleLineEnabled;
+    public bool IsTopLyricLineVisible => IsDoubleLineEnabled && TopLyricLine != null;
+    public bool IsBottomLyricLineVisible => IsDoubleLineEnabled && BottomLyricLine != null;
+    public bool IsTopPlainTextVisible =>
+        IsTopLyricLineVisible && (!IsTopLyricLineCurrent || TopLyricLine?.IsKrcWordLevel != true);
+    public bool IsBottomPlainTextVisible =>
+        IsBottomLyricLineVisible && (!IsBottomLyricLineCurrent || BottomLyricLine?.IsKrcWordLevel != true);
+    public bool IsTopLegacyWordsVisible =>
+        IsTopLyricLineVisible && IsTopLyricLineCurrent && TopLyricLine?.IsKrcWordLevel == true &&
+        EnableLegacyWordLyricEffect;
+    public bool IsBottomLegacyWordsVisible =>
+        IsBottomLyricLineVisible && IsBottomLyricLineCurrent && BottomLyricLine?.IsKrcWordLevel == true &&
+        EnableLegacyWordLyricEffect;
+    public bool IsTopGradientWordsVisible =>
+        IsTopLyricLineVisible && IsTopLyricLineCurrent && TopLyricLine?.IsKrcWordLevel == true &&
+        !EnableLegacyWordLyricEffect;
+    public bool IsBottomGradientWordsVisible =>
+        IsBottomLyricLineVisible && IsBottomLyricLineCurrent && BottomLyricLine?.IsKrcWordLevel == true &&
+        !EnableLegacyWordLyricEffect;
 
     [RelayCommand]
     private void ToggleLock()
@@ -113,12 +152,30 @@ public partial class DesktopLyricViewModel : ViewModelBase
         SettingsManager.Settings.DesktopLyricFontSize = value;
         SettingsManager.Save();
         OnPropertyChanged(nameof(FontSizeDisplay));
+        OnPropertyChanged(nameof(WindowHeight));
     }
 
     partial void OnIsTranslationVisibleChanged(bool value)
     {
         SettingsManager.Settings.DesktopLyricShowTranslation = value;
         SettingsManager.Save();
+        OnPropertyChanged(nameof(IsDesktopTranslationActuallyVisible));
+        OnPropertyChanged(nameof(WindowHeight));
+    }
+
+    partial void OnIsDoubleLineEnabledChanged(bool value)
+    {
+        SettingsManager.Settings.DesktopLyricDoubleLineEnabled = value;
+        SettingsManager.Save();
+        OnPropertyChanged(nameof(IsSingleLineMode));
+        OnPropertyChanged(nameof(IsDesktopTranslationActuallyVisible));
+        OnPropertyChanged(nameof(WindowHeight));
+        RefreshDoubleLineLanes();
+    }
+
+    partial void OnEnableLegacyWordLyricEffectChanged(bool value)
+    {
+        RaiseDoubleLineComputedProperties();
     }
 
     partial void OnIsLockedChanged(bool value)
@@ -169,6 +226,65 @@ public partial class DesktopLyricViewModel : ViewModelBase
         IsLocked = false;
         IsControlBarExpanded = true;
         IsControlHotspotHovered = true;
+    }
+
+    public void Dispose()
+    {
+        Player.PropertyChanged -= OnPlayerPropertyChanged;
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+    }
+
+    private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(Player.CurrentLyricLine) or nameof(Player.CurrentLyricIndex) or
+            nameof(Player.NextLyricLine))
+            RefreshDoubleLineLanes();
+    }
+
+    private void RefreshDoubleLineLanes()
+    {
+        var currentLine = Player.CurrentLyricLine;
+        var currentIndex = Player.CurrentLyricIndex;
+
+        if (!IsDoubleLineEnabled || currentLine == null || currentIndex < 0)
+        {
+            TopLyricLine = null;
+            BottomLyricLine = null;
+            IsTopLyricLineCurrent = false;
+            IsBottomLyricLineCurrent = false;
+            RaiseDoubleLineComputedProperties();
+            return;
+        }
+
+        var nextLine = Player.NextLyricLine;
+        if (currentIndex % 2 == 0)
+        {
+            TopLyricLine = currentLine;
+            BottomLyricLine = nextLine;
+            IsTopLyricLineCurrent = true;
+            IsBottomLyricLineCurrent = false;
+        }
+        else
+        {
+            TopLyricLine = nextLine;
+            BottomLyricLine = currentLine;
+            IsTopLyricLineCurrent = false;
+            IsBottomLyricLineCurrent = true;
+        }
+
+        RaiseDoubleLineComputedProperties();
+    }
+
+    private void RaiseDoubleLineComputedProperties()
+    {
+        OnPropertyChanged(nameof(IsTopLyricLineVisible));
+        OnPropertyChanged(nameof(IsBottomLyricLineVisible));
+        OnPropertyChanged(nameof(IsTopPlainTextVisible));
+        OnPropertyChanged(nameof(IsBottomPlainTextVisible));
+        OnPropertyChanged(nameof(IsTopLegacyWordsVisible));
+        OnPropertyChanged(nameof(IsBottomLegacyWordsVisible));
+        OnPropertyChanged(nameof(IsTopGradientWordsVisible));
+        OnPropertyChanged(nameof(IsBottomGradientWordsVisible));
     }
 
     private void ApplyLyricStyleSettings(
@@ -227,5 +343,16 @@ public partial class DesktopLyricViewModel : ViewModelBase
     private static double ClampFontSize(double fontSize)
     {
         return Math.Clamp(fontSize, MinFontSize, MaxFontSize);
+    }
+
+    private double CalculateWindowHeight()
+    {
+        var lyricContentHeight = IsDoubleLineEnabled
+            ? FontSize * 2.65
+            : FontSize * 1.45 + (IsDesktopTranslationActuallyVisible ? TranslationFontSize * 1.45 + 8 : 0);
+
+        return Math.Ceiling(Math.Max(
+            MinWindowHeight,
+            ControlBarReservedHeight + lyricContentHeight + WindowVerticalPadding));
     }
 }

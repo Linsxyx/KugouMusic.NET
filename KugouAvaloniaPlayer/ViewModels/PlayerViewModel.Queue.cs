@@ -140,6 +140,8 @@ public partial class PlayerViewModel
         CurrentLyricText = "---";
         CurrentLyricTrans = "";
         CurrentLyricLine = null;
+        CurrentLyricIndex = -1;
+        NextLyricLine = null;
         CurrentPositionSeconds = 0;
         _lyricsService.Clear();
         Interlocked.Increment(ref _lyricsLoadVersion);

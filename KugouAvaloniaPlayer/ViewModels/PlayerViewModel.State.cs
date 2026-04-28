@@ -28,13 +28,7 @@ public partial class PlayerViewModel
 
         if (!_isDelayingVisualSwitch)
         {
-            var activeLine = _lyricsService.SyncLyrics(pos.TotalMilliseconds);
-            if (activeLine != CurrentLyricLine)
-            {
-                CurrentLyricLine = activeLine;
-                CurrentLyricText = activeLine?.Content ?? "暂无歌词";
-                CurrentLyricTrans = activeLine?.Translation ?? "";
-            }
+            SyncCurrentLyricFromPosition(pos.TotalMilliseconds);
         }
 
         if (_autoTransitionStarted &&
@@ -77,7 +71,7 @@ public partial class PlayerViewModel
         }
 
         _player.SetPosition(TimeSpan.FromSeconds(value));
-        _lyricsService.SyncLyrics(value * 1000);
+        SyncCurrentLyricFromPosition(value * 1000);
     }
 
     partial void OnMusicVolumeChanged(float value)
@@ -262,10 +256,7 @@ public partial class PlayerViewModel
             _player.SetPosition(TimeSpan.FromSeconds(safePosition));
             CurrentPositionSeconds = safePosition;
 
-            var activeLine = _lyricsService.SyncLyrics(safePosition * 1000);
-            CurrentLyricLine = activeLine;
-            CurrentLyricText = activeLine?.Content ?? CurrentLyricText;
-            CurrentLyricTrans = activeLine?.Translation ?? CurrentLyricTrans;
+            SyncCurrentLyricFromPosition(safePosition * 1000, preserveExistingText: true);
 
             if (wasPlaying)
             {
@@ -297,6 +288,24 @@ public partial class PlayerViewModel
             IsSwitchingQuality = false;
             _playSongLock.Release();
         }
+    }
+
+    private void SyncCurrentLyricFromPosition(double currentMs, bool preserveExistingText = false)
+    {
+        var activeLine = _lyricsService.SyncLyrics(currentMs);
+        var activeIndex = activeLine == null ? -1 : _lyricsService.CurrentLyricIndex;
+        var nextLine = _lyricsService.GetLineAt(activeIndex + 1);
+
+        if (activeLine == CurrentLyricLine &&
+            activeIndex == CurrentLyricIndex &&
+            nextLine == NextLyricLine)
+            return;
+
+        CurrentLyricLine = activeLine;
+        CurrentLyricIndex = activeIndex;
+        NextLyricLine = nextLine;
+        CurrentLyricText = activeLine?.Content ?? (preserveExistingText ? CurrentLyricText : "暂无歌词");
+        CurrentLyricTrans = activeLine?.Translation ?? (preserveExistingText ? CurrentLyricTrans : "");
     }
 
     private static string GetQualitySwitchFailureMessage(PlaybackSourceFailureReason reason)

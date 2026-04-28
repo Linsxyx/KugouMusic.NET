@@ -125,6 +125,7 @@ public sealed class DesktopLyricWindowService(
             desktopLyricMousePassthroughService.Apply(lyricWindow, DesktopLyricHitTestLayout.FullWindow);
             CloseLockOverlayWindow();
             lyricViewModel.PropertyChanged -= onLyricViewModelPropertyChanged;
+            lyricViewModel.Dispose();
             if (ReferenceEquals(_lyricWindow, lyricWindow))
                 _lyricWindow = null;
             IsOpenChanged?.Invoke(false);

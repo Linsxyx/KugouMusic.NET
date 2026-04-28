@@ -18,17 +18,23 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
     private LyricLineViewModel? _currentActiveLine;
     private LyricLineViewModel? _currentWordProgressLine;
     public AvaloniaList<LyricLineViewModel> LyricLines { get; } = new();
+    public int CurrentLyricIndex { get; private set; } = -1;
 
     public void Clear()
     {
         LyricLines.Clear();
         _currentActiveLine = null;
         _currentWordProgressLine = null;
+        CurrentLyricIndex = -1;
     }
 
     public LyricLineViewModel? SyncLyrics(double currentMs)
     {
-        if (LyricLines.Count == 0) return null;
+        if (LyricLines.Count == 0)
+        {
+            CurrentLyricIndex = -1;
+            return null;
+        }
 
         int left = 0, right = LyricLines.Count - 1, resultIndex = 0;
 
@@ -50,6 +56,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             }
 
         var activeLine = LyricLines[resultIndex];
+        CurrentLyricIndex = resultIndex;
 
         if (_currentActiveLine != activeLine)
         {
@@ -61,6 +68,11 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         UpdateKrcWordProgress(activeLine, currentMs);
 
         return activeLine;
+    }
+
+    public LyricLineViewModel? GetLineAt(int index)
+    {
+        return index >= 0 && index < LyricLines.Count ? LyricLines[index] : null;
     }
 
     public async Task LoadOnlineLyricsAsync(string hash, string name)

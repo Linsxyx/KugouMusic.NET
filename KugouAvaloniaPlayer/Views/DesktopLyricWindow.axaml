@@ -9,7 +9,8 @@
         x:Class="KugouAvaloniaPlayer.Views.DesktopLyricWindow"
         x:DataType="vm:DesktopLyricViewModel"
         Title="DesktopLyric"
-        Width="1024" Height="140"
+        Width="1024"
+        Height="{Binding WindowHeight}"
         SystemDecorations="None"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
@@ -305,167 +306,306 @@
             </Border>
         </Grid>
 
-        <StackPanel Grid.Row="1"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    IsHitTestVisible="False"
-                    Margin="32,0">
-            <TextBlock Text="{Binding Player.CurrentLyricText}"
-                       Classes="KaraokeLine DesktopLine"
-                       Classes.active="True"
-                       Foreground="{Binding LyricForeground}"
-                       IsVisible="{Binding Player.CurrentLyricLine.IsKrcWordLevel, Converter={x:Static BoolConverters.Not}}"
-                       HorizontalAlignment="Center"
-                       TextWrapping="Wrap"
-                       TextAlignment="Center">
-                <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                </TextBlock.Effect>
-            </TextBlock>
+        <Grid Grid.Row="1"
+              IsHitTestVisible="False"
+              Margin="32,0">
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        IsVisible="{Binding IsSingleLineMode}">
+                <TextBlock Text="{Binding Player.CurrentLyricText}"
+                           Classes="KaraokeLine DesktopLine"
+                           Classes.active="True"
+                           Foreground="{Binding LyricForeground}"
+                           IsVisible="{Binding Player.CurrentLyricLine.IsKrcWordLevel, Converter={x:Static BoolConverters.Not}}"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center">
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                    </TextBlock.Effect>
+                </TextBlock>
 
-            <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.Words}"
-                          HorizontalAlignment="Center">
-                <ItemsControl.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="Player.CurrentLyricLine.IsKrcWordLevel" />
-                        <Binding Path="EnableLegacyWordLyricEffect" />
-                    </MultiBinding>
-                </ItemsControl.IsVisible>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:LyricWordViewModel">
-                        <TextBlock Text="{Binding Text}"
-                                   Classes="KaraokeWord DesktopWord"
-                                   Classes.played="{Binding IsPlayed}"
-                                   Classes.current="{Binding IsCurrent}"
-                                   Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
-                                   RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
-                            <TextBlock.Effect>
-                                <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                            </TextBlock.Effect>
-                        </TextBlock>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.Words}"
+                              HorizontalAlignment="Center">
+                    <ItemsControl.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="Player.CurrentLyricLine.IsKrcWordLevel" />
+                            <Binding Path="EnableLegacyWordLyricEffect" />
+                        </MultiBinding>
+                    </ItemsControl.IsVisible>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:LyricWordViewModel">
+                            <TextBlock Text="{Binding Text}"
+                                       Classes="KaraokeWord DesktopWord"
+                                       Classes.played="{Binding IsPlayed}"
+                                       Classes.current="{Binding IsCurrent}"
+                                       Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
+                                       RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-            <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.Words}"
-                          HorizontalAlignment="Center">
-                <ItemsControl.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="Player.CurrentLyricLine.IsKrcWordLevel" />
-                        <Binding Path="EnableLegacyWordLyricEffect"
-                                 Converter="{x:Static BoolConverters.Not}" />
-                    </MultiBinding>
-                </ItemsControl.IsVisible>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:LyricWordViewModel">
-                        <controls:KaraokeGradientTextBlock Text="{Binding Text}"
-                                                           Progress="{Binding Progress}"
-                                                           FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}"
-                                                           FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
-                                                           FontWeight="Bold"
-                                                           Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
-                                                           PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}">
-                            <controls:KaraokeGradientTextBlock.Effect>
-                                <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                            </controls:KaraokeGradientTextBlock.Effect>
-                        </controls:KaraokeGradientTextBlock>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.Words}"
+                              HorizontalAlignment="Center">
+                    <ItemsControl.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="Player.CurrentLyricLine.IsKrcWordLevel" />
+                            <Binding Path="EnableLegacyWordLyricEffect"
+                                     Converter="{x:Static BoolConverters.Not}" />
+                        </MultiBinding>
+                    </ItemsControl.IsVisible>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:LyricWordViewModel">
+                            <controls:KaraokeGradientTextBlock Text="{Binding Text}"
+                                                               Progress="{Binding Progress}"
+                                                               FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}"
+                                                               FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
+                                                               PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}">
+                                <controls:KaraokeGradientTextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                </controls:KaraokeGradientTextBlock.Effect>
+                            </controls:KaraokeGradientTextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-            <TextBlock Text="{Binding Player.CurrentLyricTrans}"
-                       Classes="KaraokeTrans DesktopTrans"
-                       Classes.active="True"
-                       Foreground="{Binding TranslationLineForeground}"
-                       HorizontalAlignment="Center"
-                       TextWrapping="Wrap"
-                       TextAlignment="Center">
-                <TextBlock.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="IsTranslationVisible" />
-                        <Binding Path="Player.CurrentLyricTrans"
-                                 Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
-                        <Binding Path="Player.CurrentLyricLine.HasWordLevelTranslation"
-                                 Converter="{x:Static BoolConverters.Not}" />
-                    </MultiBinding>
-                </TextBlock.IsVisible>
-                <TextBlock.Effect>
-                    <DropShadowEffect BlurRadius="3" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                </TextBlock.Effect>
-            </TextBlock>
+                <TextBlock Text="{Binding Player.CurrentLyricTrans}"
+                           Classes="KaraokeTrans DesktopTrans"
+                           Classes.active="True"
+                           Foreground="{Binding TranslationLineForeground}"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center">
+                    <TextBlock.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="IsDesktopTranslationActuallyVisible" />
+                            <Binding Path="Player.CurrentLyricTrans"
+                                     Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                            <Binding Path="Player.CurrentLyricLine.HasWordLevelTranslation"
+                                     Converter="{x:Static BoolConverters.Not}" />
+                        </MultiBinding>
+                    </TextBlock.IsVisible>
+                    <TextBlock.Effect>
+                        <DropShadowEffect BlurRadius="3" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                    </TextBlock.Effect>
+                </TextBlock>
 
-            <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.TranslationWords}"
-                          HorizontalAlignment="Center">
-                <ItemsControl.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="IsTranslationVisible" />
-                        <Binding Path="Player.CurrentLyricLine.HasWordLevelTranslation" />
-                        <Binding Path="EnableLegacyWordLyricEffect" />
-                    </MultiBinding>
-                </ItemsControl.IsVisible>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:LyricWordViewModel">
-                        <TextBlock Text="{Binding Text}"
-                                   Classes="KaraokeTransWord DesktopTrans"
-                                   Classes.played="{Binding IsPlayed}"
-                                   Classes.current="{Binding IsCurrent}"
-                                   Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
-                                   RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
-                            <TextBlock.Effect>
-                                <DropShadowEffect BlurRadius="3" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                            </TextBlock.Effect>
-                        </TextBlock>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.TranslationWords}"
+                              HorizontalAlignment="Center">
+                    <ItemsControl.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="IsDesktopTranslationActuallyVisible" />
+                            <Binding Path="Player.CurrentLyricLine.HasWordLevelTranslation" />
+                            <Binding Path="EnableLegacyWordLyricEffect" />
+                        </MultiBinding>
+                    </ItemsControl.IsVisible>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:LyricWordViewModel">
+                            <TextBlock Text="{Binding Text}"
+                                       Classes="KaraokeTransWord DesktopTrans"
+                                       Classes.played="{Binding IsPlayed}"
+                                       Classes.current="{Binding IsCurrent}"
+                                       Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
+                                       RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="3" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-            <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.TranslationWords}"
-                          HorizontalAlignment="Center">
-                <ItemsControl.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                        <Binding Path="IsTranslationVisible" />
-                        <Binding Path="Player.CurrentLyricLine.HasWordLevelTranslation" />
-                        <Binding Path="EnableLegacyWordLyricEffect"
-                                 Converter="{x:Static BoolConverters.Not}" />
-                    </MultiBinding>
-                </ItemsControl.IsVisible>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:LyricWordViewModel">
-                        <controls:KaraokeGradientTextBlock Text="{Binding Text}"
-                                                           Progress="{Binding Progress}"
-                                                           FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationFontSize}"
-                                                           FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
-                                                           FontWeight="Medium"
-                                                           Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
-                                                           PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
-                                                           UnplayedOpacity="0.4">
-                            <controls:KaraokeGradientTextBlock.Effect>
-                                <DropShadowEffect BlurRadius="3" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                            </controls:KaraokeGradientTextBlock.Effect>
-                        </controls:KaraokeGradientTextBlock>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
+                <ItemsControl ItemsSource="{Binding Player.CurrentLyricLine.TranslationWords}"
+                              HorizontalAlignment="Center">
+                    <ItemsControl.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="IsDesktopTranslationActuallyVisible" />
+                            <Binding Path="Player.CurrentLyricLine.HasWordLevelTranslation" />
+                            <Binding Path="EnableLegacyWordLyricEffect"
+                                     Converter="{x:Static BoolConverters.Not}" />
+                        </MultiBinding>
+                    </ItemsControl.IsVisible>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:LyricWordViewModel">
+                            <controls:KaraokeGradientTextBlock Text="{Binding Text}"
+                                                               Progress="{Binding Progress}"
+                                                               FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationFontSize}"
+                                                               FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
+                                                               FontWeight="Medium"
+                                                               Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
+                                                               PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
+                                                               UnplayedOpacity="0.4">
+                                <controls:KaraokeGradientTextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="3" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                </controls:KaraokeGradientTextBlock.Effect>
+                            </controls:KaraokeGradientTextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <Grid RowDefinitions="Auto,Auto"
+                  RowSpacing="0"
+                  VerticalAlignment="Center"
+                  IsVisible="{Binding IsDoubleLineEnabled}">
+                <Panel Grid.Row="0"
+                       HorizontalAlignment="Stretch"
+                       IsVisible="{Binding IsTopLyricLineVisible}">
+                    <TextBlock Text="{Binding TopLyricLine.Content}"
+                               Classes="KaraokeLine DesktopLine"
+                               Classes.active="{Binding IsTopLyricLineCurrent}"
+                               Foreground="{Binding LyricForeground}"
+                               IsVisible="{Binding IsTopPlainTextVisible}"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+
+                    <ItemsControl ItemsSource="{Binding TopLyricLine.Words}"
+                                  HorizontalAlignment="Center"
+                                  IsVisible="{Binding IsTopLegacyWordsVisible}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:LyricWordViewModel">
+                                <TextBlock Text="{Binding Text}"
+                                           Classes="KaraokeWord DesktopWord"
+                                           Classes.played="{Binding IsPlayed}"
+                                           Classes.current="{Binding IsCurrent}"
+                                           Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
+                                           RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding TopLyricLine.Words}"
+                                  HorizontalAlignment="Center"
+                                  IsVisible="{Binding IsTopGradientWordsVisible}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:LyricWordViewModel">
+                                <controls:KaraokeGradientTextBlock Text="{Binding Text}"
+                                                                   Progress="{Binding Progress}"
+                                                                   FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}"
+                                                                   FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
+                                                                   PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}">
+                                    <controls:KaraokeGradientTextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                    </controls:KaraokeGradientTextBlock.Effect>
+                                </controls:KaraokeGradientTextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Panel>
+
+                <Panel Grid.Row="1"
+                       HorizontalAlignment="Stretch"
+                       IsVisible="{Binding IsBottomLyricLineVisible}">
+                    <TextBlock Text="{Binding BottomLyricLine.Content}"
+                               Classes="KaraokeLine DesktopLine"
+                               Classes.active="{Binding IsBottomLyricLineCurrent}"
+                               Foreground="{Binding LyricForeground}"
+                               IsVisible="{Binding IsBottomPlainTextVisible}"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               TextAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+
+                    <ItemsControl ItemsSource="{Binding BottomLyricLine.Words}"
+                                  HorizontalAlignment="Center"
+                                  IsVisible="{Binding IsBottomLegacyWordsVisible}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:LyricWordViewModel">
+                                <TextBlock Text="{Binding Text}"
+                                           Classes="KaraokeWord DesktopWord"
+                                           Classes.played="{Binding IsPlayed}"
+                                           Classes.current="{Binding IsCurrent}"
+                                           Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
+                                           RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <ItemsControl ItemsSource="{Binding BottomLyricLine.Words}"
+                                  HorizontalAlignment="Center"
+                                  IsVisible="{Binding IsBottomGradientWordsVisible}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:LyricWordViewModel">
+                                <controls:KaraokeGradientTextBlock Text="{Binding Text}"
+                                                                   Progress="{Binding Progress}"
+                                                                   FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}"
+                                                                   FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
+                                                                   PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}">
+                                    <controls:KaraokeGradientTextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                                    </controls:KaraokeGradientTextBlock.Effect>
+                                </controls:KaraokeGradientTextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Panel>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

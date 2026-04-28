@@ -53,6 +53,7 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private string _desktopSelectedLyricColorTarget = LyricTargetMain;
     [ObservableProperty] private string? _desktopSelectedLyricFontFamily;
     [ObservableProperty] private string _desktopSelectedLyricFontMode = LyricColorModeDefault;
+    [ObservableProperty] private bool _desktopLyricDoubleLineEnabled;
     [ObservableProperty] private bool _enableLegacyWordLyricEffect;
     [ObservableProperty] private bool _enableGlobalShortcuts;
     [ObservableProperty] private bool _enableNowPlayingVisualizer;
@@ -102,6 +103,7 @@ public partial class UserViewModel : PageViewModelBase
         EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
         EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
         EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
+        DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
         LyricFontFamilyOptions = LoadSystemFontFamilies();
         _availableLyricFonts = new HashSet<string>(LyricFontFamilyOptions, StringComparer.OrdinalIgnoreCase);
         UserId = _sessionManager.Session.UserId;
@@ -371,6 +373,13 @@ public partial class UserViewModel : PageViewModelBase
         SettingsManager.Save();
         NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
         NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+    }
+
+    partial void OnDesktopLyricDoubleLineEnabledChanged(bool value)
+    {
+        SettingsManager.Settings.DesktopLyricDoubleLineEnabled = value;
+        SettingsManager.Save();
+        WeakReferenceMessenger.Default.Send(new DesktopLyricDoubleLineChangedMessage(value));
     }
 
     partial void OnDesktopSelectedLyricColorTargetChanged(string value)

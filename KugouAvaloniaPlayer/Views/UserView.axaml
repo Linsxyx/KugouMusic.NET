@@ -314,6 +314,17 @@
                                                       IsChecked="{Binding EnableLegacyWordLyricEffect, Mode=TwoWay}" />
                                     </Grid>
 
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="双行歌词" FontWeight="DemiBold" />
+                                            <TextBlock Text="按奇偶行上下错开显示，开启后不显示翻译"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding DesktopLyricDoubleLineEnabled, Mode=TwoWay}" />
+                                    </Grid>
+
                                     <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
 
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">

@@ -58,8 +58,10 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private int _consecutiveFailures;
 
     [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
+    [ObservableProperty] private int _currentLyricIndex = -1;
     [ObservableProperty] private string _currentLyricText = "---";
     [ObservableProperty] private string _currentLyricTrans = "";
+    [ObservableProperty] private LyricLineViewModel? _nextLyricLine;
     [ObservableProperty] private SongItem? _currentPlayingSong;
     [ObservableProperty] private double _currentPositionSeconds;
     private int _disposeState;
