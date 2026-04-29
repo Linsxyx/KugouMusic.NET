@@ -34,13 +34,6 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Install Linux NativeAOT prerequisites
-        if: ${{ startsWith(matrix.os, 'ubuntu') }}
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang zlib1g-dev
-
       - name: Install Velopack CLI
         shell: bash
         run: dotnet tool install -g vpk
@@ -54,7 +47,6 @@ jobs:
             "-p:BUILD_VERSION=$CLEAN_VERSION" \
             -r ${{ matrix.rid }} \
             --self-contained true \
-            -p:PublishAot=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o ./publish
@@ -165,7 +157,6 @@ jobs:
             "-p:BUILD_VERSION=$VERSION" \
             -r "$RID" \
             --self-contained true \
-            -p:PublishAot=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o ./publish/macos
