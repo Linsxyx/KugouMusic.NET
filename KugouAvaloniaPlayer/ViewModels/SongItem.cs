@@ -55,6 +55,12 @@ public partial class SongItem : ObservableObject
     {
         WeakReferenceMessenger.Default.Send(new RemoveFromPlaylistMessage(this));
     }
+
+    [RelayCommand]
+    private void SetLocalCover()
+    {
+        WeakReferenceMessenger.Default.Send(new SetLocalSongCoverMessage(this));
+    }
 }
 
 public partial class PlaylistItem : ObservableObject

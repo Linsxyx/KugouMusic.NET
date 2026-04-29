@@ -46,7 +46,9 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     [ObservableProperty] private bool _isShowingSongs;
     private CancellationTokenSource? _refreshPlaylistsCts;
 
-    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsOnlinePlaylist))]
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOnlinePlaylist))]
+    [NotifyPropertyChangedFor(nameof(IsLocalPlaylist))]
     private PlaylistItem? _selectedPlaylist;
 
     public MyPlaylistsViewModel(
@@ -74,6 +76,8 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
         WeakReferenceMessenger.Default.Register<RemoveFromPlaylistMessage>(this,
             (_, m) => _ = RemoveSongFromPlaylistSafelyAsync(m.Song));
+        WeakReferenceMessenger.Default.Register<SetLocalSongCoverMessage>(this,
+            (_, m) => _ = SetLocalSongCoverSafelyAsync(m.Song));
 
         WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (r, m) => { _ = LoadAllPlaylists(); });
         WeakReferenceMessenger.Default.Register<RefreshPlaylistsMessage>(this,
@@ -82,6 +86,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
     // 标识当前选中的歌单是否为网络歌单
     public bool IsOnlinePlaylist => SelectedPlaylist?.Type == PlaylistType.Online;
+    public bool IsLocalPlaylist => SelectedPlaylist?.Type == PlaylistType.Local;
 
     public override string DisplayName => "我的歌单";
     public override string Icon => "/Assets/music-player-svgrepo-com.svg";
@@ -114,14 +119,17 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         var localItems = new List<PlaylistItem>();
         foreach (var path in SettingsManager.Settings.LocalMusicFolders)
             if (Directory.Exists(path))
+            {
+                var meta = GetLocalPlaylistMeta(path);
                 localItems.Add(new PlaylistItem
                 {
-                    Name = new DirectoryInfo(path).Name,
+                    Name = string.IsNullOrWhiteSpace(meta?.Name) ? new DirectoryInfo(path).Name : meta.Name,
                     LocalPath = path,
                     Type = PlaylistType.Local,
-                    Cover = DefaultCover,
+                    Cover = GetImageSourceOrDefault(meta?.CoverPath, DefaultCover),
                     Count = 0
                 });
+            }
 
         if (localItems.Count > 0)
             Items.AddRange(localItems);
@@ -233,11 +241,70 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         Items.Remove(item);
 
         if (!string.IsNullOrEmpty(item.LocalPath))
+        {
             if (SettingsManager.Settings.LocalMusicFolders.Contains(item.LocalPath))
             {
                 SettingsManager.Settings.LocalMusicFolders.Remove(item.LocalPath);
-                SettingsManager.Save();
             }
+
+            SettingsManager.Settings.LocalPlaylistMetas.Remove(item.LocalPath);
+            SettingsManager.Save();
+        }
+    }
+
+    [RelayCommand]
+    private async Task EditLocalPlaylist(PlaylistItem? item)
+    {
+        item ??= SelectedPlaylist;
+        if (item?.Type != PlaylistType.Local || string.IsNullOrWhiteSpace(item.LocalPath)) return;
+
+        var meta = EnsureLocalPlaylistMeta(item.LocalPath);
+        var defaultName = string.IsNullOrWhiteSpace(meta.Name) ? item.Name : meta.Name;
+        var result = await _createPlaylistDialogService.PromptLocalPlaylistEditAsync(defaultName, meta.CoverPath);
+        if (result == null)
+            return;
+
+        meta.Name = result.Name;
+        meta.CoverPath = result.CoverPath;
+        SettingsManager.Save();
+
+        item.Name = result.Name;
+        item.Cover = GetImageSourceOrDefault(result.CoverPath, DefaultCover);
+
+        _toastManager.CreateToast()
+            .OfType(NotificationType.Success)
+            .WithTitle("已保存")
+            .WithContent($"已更新本地歌单「{item.Name}」")
+            .Dismiss().After(TimeSpan.FromSeconds(3))
+            .Dismiss().ByClicking()
+            .Queue();
+    }
+
+    [RelayCommand]
+    private async Task SetLocalSongCover(SongItem? song)
+    {
+        if (song == null || SelectedPlaylist?.Type != PlaylistType.Local ||
+            string.IsNullOrWhiteSpace(SelectedPlaylist.LocalPath) ||
+            string.IsNullOrWhiteSpace(song.LocalFilePath))
+            return;
+
+        var coverPath = await _folderPickerService.PickSingleImageFileAsync("选择歌曲封面");
+        if (string.IsNullOrWhiteSpace(coverPath))
+            return;
+
+        var meta = EnsureLocalPlaylistMeta(SelectedPlaylist.LocalPath);
+        meta.SongCoverPaths[Path.GetFileName(song.LocalFilePath)] = coverPath;
+        SettingsManager.Save();
+
+        song.Cover = GetImageSourceOrDefault(coverPath, DefaultSongCover);
+
+        _toastManager.CreateToast()
+            .OfType(NotificationType.Success)
+            .WithTitle("已设置封面")
+            .WithContent($"已更新「{song.Name}」的本地封面")
+            .Dismiss().After(TimeSpan.FromSeconds(3))
+            .Dismiss().ByClicking()
+            .Queue();
     }
 
     private async Task LoadMoreSongsInternal()
@@ -376,7 +443,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                         Singer = singer,
                         DurationSeconds = duration,
                         LocalFilePath = file,
-                        Cover = DefaultSongCover
+                        Cover = GetLocalSongCoverSource(path, file)
                     });
                 }
 
@@ -716,6 +783,18 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         }
     }
 
+    private async Task SetLocalSongCoverSafelyAsync(SongItem? song)
+    {
+        try
+        {
+            await SetLocalSongCover(song);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "处理设置本地歌曲封面消息失败");
+        }
+    }
+
     private async Task RefreshLikePlaylistAfterOpenAsync(PlaylistItem openedItem, bool hadLocalSnapshot)
     {
         try
@@ -767,5 +846,41 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private static bool IsLikePlaylist(PlaylistItem item)
     {
         return item.ListId == 2 || string.Equals(item.Name, "我喜欢", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static LocalPlaylistMeta? GetLocalPlaylistMeta(string localPath)
+    {
+        return SettingsManager.Settings.LocalPlaylistMetas.TryGetValue(localPath, out var meta) ? meta : null;
+    }
+
+    private static LocalPlaylistMeta EnsureLocalPlaylistMeta(string localPath)
+    {
+        if (!SettingsManager.Settings.LocalPlaylistMetas.TryGetValue(localPath, out var meta) || meta == null)
+        {
+            meta = new LocalPlaylistMeta();
+            SettingsManager.Settings.LocalPlaylistMetas[localPath] = meta;
+        }
+
+        meta.SongCoverPaths ??= new Dictionary<string, string>();
+        return meta;
+    }
+
+    private static string GetLocalSongCoverSource(string playlistPath, string songPath)
+    {
+        var meta = GetLocalPlaylistMeta(playlistPath);
+        if (meta?.SongCoverPaths == null)
+            return DefaultSongCover;
+
+        return meta.SongCoverPaths.TryGetValue(Path.GetFileName(songPath), out var coverPath)
+            ? GetImageSourceOrDefault(coverPath, DefaultSongCover)
+            : DefaultSongCover;
+    }
+
+    private static string GetImageSourceOrDefault(string? imagePath, string defaultSource)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath) || !System.IO.File.Exists(imagePath))
+            return defaultSource;
+
+        return new Uri(imagePath).AbsoluteUri;
     }
 }

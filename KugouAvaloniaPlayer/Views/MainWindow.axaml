@@ -139,6 +139,10 @@
                                                 <Border Height="40" CornerRadius="8" Padding="6,4">
                                                     <Border.ContextMenu>
                                                         <ContextMenu>
+                                                            <MenuItem Header="编辑本地歌单"
+                                                                      Tag="{Binding .}"
+                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.EditLocalPlaylistCommand}"
+                                                                      CommandParameter="{Binding $self.Tag}" />
                                                             <MenuItem Header="移除本地歌单"
                                                                       Tag="{Binding .}"
                                                                       Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteLocalPlaylistCommand}"

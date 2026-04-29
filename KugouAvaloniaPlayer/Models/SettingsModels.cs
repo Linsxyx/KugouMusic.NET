@@ -94,6 +94,7 @@ public class AppSettings
     public CloseBehavior CloseBehavior { get; set; } = CloseBehavior.MinimizeToTray;
     public string MusicQuality { get; set; } = "128";
     public List<string> LocalMusicFolders { get; set; } = new();
+    public Dictionary<string, LocalPlaylistMeta> LocalPlaylistMetas { get; set; } = new();
     public bool AutoCheckUpdate { get; set; } = true;
 
     public string EQPreset { get; set; } = "原声";
@@ -131,4 +132,11 @@ public class AppSettings
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
 
     public GlobalShortcutSettings GlobalShortcuts { get; set; } = new();
+}
+
+public class LocalPlaylistMeta
+{
+    public string? Name { get; set; }
+    public string? CoverPath { get; set; }
+    public Dictionary<string, string> SongCoverPaths { get; set; } = new();
 }

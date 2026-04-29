@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -10,6 +11,9 @@ namespace KugouAvaloniaPlayer.Services;
 [JsonSerializable(typeof(GlobalShortcutSettings))]
 [JsonSerializable(typeof(LyricAlignmentOption))]
 [JsonSerializable(typeof(NowPlayingLyricDisplayMode))]
+[JsonSerializable(typeof(LocalPlaylistMeta))]
+[JsonSerializable(typeof(Dictionary<string, LocalPlaylistMeta>))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(AppSettings))]
 internal partial class AppSettingsJsonContext : JsonSerializerContext
 {
@@ -39,6 +43,9 @@ public static class SettingsManager
             {
                 var json = File.ReadAllText(SettingsPath);
                 Settings = JsonSerializer.Deserialize(json, JsonContext.AppSettings) ?? new AppSettings();
+                Settings.LocalMusicFolders ??= new List<string>();
+                Settings.LocalPlaylistMetas ??= new Dictionary<string, LocalPlaylistMeta>();
+                Settings.GlobalShortcuts ??= new GlobalShortcutSettings();
             }
         }
         catch (Exception)

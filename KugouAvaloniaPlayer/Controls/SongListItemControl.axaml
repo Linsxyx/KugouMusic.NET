@@ -53,7 +53,12 @@
                           CommandParameter="{Binding .}" />
                 <MenuItem Header="添加到歌单"
                           Command="{Binding ShowPlaylistDialogCommand}"
-                          CommandParameter="{Binding .}" />
+                          CommandParameter="{Binding .}"
+                          IsVisible="{Binding LocalFilePath, Converter={x:Static ObjectConverters.IsNull}}" />
+                <MenuItem Header="设置歌曲封面"
+                          Command="{Binding SetLocalCoverCommand}"
+                          CommandParameter="{Binding .}"
+                          IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsLocalPlaylist, FallbackValue=False}" />
 
                 <MenuItem Header="从歌单移除"
                           Command="{Binding RemoveFromPlaylistCommand}"
@@ -118,7 +123,12 @@
                                       CommandParameter="{Binding .}" />
                             <MenuItem Header="添加到歌单"
                                       Command="{Binding ShowPlaylistDialogCommand}"
-                                      CommandParameter="{Binding .}" />
+                                      CommandParameter="{Binding .}"
+                                      IsVisible="{Binding LocalFilePath, Converter={x:Static ObjectConverters.IsNull}}" />
+                            <MenuItem Header="设置歌曲封面"
+                                      Command="{Binding SetLocalCoverCommand}"
+                                      CommandParameter="{Binding .}"
+                                      IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsLocalPlaylist, FallbackValue=False}" />
 
                             <MenuItem Header="从歌单移除"
                                       Command="{Binding RemoveFromPlaylistCommand}"

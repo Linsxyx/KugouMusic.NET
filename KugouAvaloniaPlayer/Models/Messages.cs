@@ -13,6 +13,8 @@ public record NavigateToSingerMessage(SingerLite Singer);
 
 public record RemoveFromPlaylistMessage(SongItem Song);
 
+public record SetLocalSongCoverMessage(SongItem Song);
+
 public record AuthStateChangedMessage(bool IsLoggedIn);
 
 public record NavigatePageMessage(PageViewModelBase TargetPage);
