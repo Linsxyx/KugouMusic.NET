@@ -4,23 +4,34 @@ using Microsoft.AspNetCore.Mvc;
 namespace KgWebApi.Net.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("rank")]
 public class RankController(RankClient rankClient) : ControllerBase
 {
     /// <summary>
     ///     获取所有榜单
     /// </summary>
     [HttpGet("list")]
-    public async Task<IActionResult> GetRankList()
+    public async Task<IActionResult> GetRankList([FromQuery] int withsong = 1)
     {
-        var result = await rankClient.GetAllRanksAsync();
+        var result = await rankClient.GetAllRanksAsync(withsong);
+        return Ok(result);
+    }
+
+    [HttpGet("info")]
+    public async Task<IActionResult> GetRankInfo(
+        [FromQuery] int rankid,
+        [FromQuery(Name = "rank_cid")] int? rankCid = null,
+        [FromQuery(Name = "album_img")] int albumImg = 1,
+        [FromQuery] string? zone = null)
+    {
+        var result = await rankClient.GetRankInfoRawAsync(rankid, rankCid, albumImg, zone);
         return Ok(result);
     }
 
     /// <summary>
     ///     获取榜单歌曲
     /// </summary>
-    [HttpGet("songs")]
+    [HttpGet("audio")]
     public async Task<IActionResult> GetRankSongs(
         [FromQuery] int rankid,
         [FromQuery] int page = 1,

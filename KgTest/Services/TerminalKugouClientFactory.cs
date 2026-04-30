@@ -9,9 +9,10 @@ namespace KgTest.Services;
 internal sealed class TerminalKugouClients
 {
     public required KgSessionManager SessionManager { get; init; }
-    public required AuthClient Auth { get; init; }
-    public required DiscoveryClient Discovery { get; init; }
-    public required MusicClient Music { get; init; }
+    public required LoginClient Login { get; init; }
+    public required RecommendClient Recommend { get; init; }
+    public required SearchClient Search { get; init; }
+    public required SongClient Song { get; init; }
     public required PlaylistClient Playlist { get; init; }
     public required UserClient User { get; init; }
     public required LyricClient Lyric { get; init; }
@@ -33,13 +34,15 @@ internal static class TerminalKugouClientFactory
         var rawDiscovery = new RawDiscoveryApi(transport);
         var rawRank = new RawRankApi(transport);
         var rawAlbum = new RawAlbumApi(transport);
+        var rawSong = new RawSongApi(transport, sessionManager);
 
         return new TerminalKugouClients
         {
             SessionManager = sessionManager,
-            Auth = new AuthClient(rawLogin, sessionManager, NullLogger<AuthClient>.Instance),
-            Discovery = new DiscoveryClient(rawDiscovery, sessionManager),
-            Music = new MusicClient(rawSearch, sessionManager),
+            Login = new LoginClient(rawLogin, sessionManager, NullLogger<LoginClient>.Instance),
+            Recommend = new RecommendClient(rawDiscovery, sessionManager),
+            Search = new SearchClient(rawSearch, sessionManager),
+            Song = new SongClient(rawSong, rawSearch),
             Playlist = new PlaylistClient(rawPlaylist, sessionManager),
             User = new UserClient(rawUser, sessionManager),
             Lyric = new LyricClient(rawLyric),

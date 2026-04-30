@@ -26,6 +26,17 @@ public class RankClient(RawRankApi rawApi)
         return await rawApi.GetRankTopAsync();
     }
 
+    public Task<JsonElement> GetAllRanksRawAsync(int withSong = 1)
+    {
+        return rawApi.GetRankListAsync(withSong);
+    }
+
+    public Task<JsonElement> GetRankInfoRawAsync(int rankId, int? rankCid = null, int albumImg = 1,
+        string? zone = null)
+    {
+        return rawApi.GetRankInfoAsync(rankId, rankCid, albumImg, zone);
+    }
+
     /// <summary>
     ///     获取某个榜单的具体歌曲列表
     /// </summary>
@@ -39,6 +50,12 @@ public class RankClient(RawRankApi rawApi)
         var json = await rawApi.GetRankAudioAsync(rankId, rankCid, page, pageSize);
         var data = KgApiResponseParser.Parse<RankSongResponse>(json, AppJsonContext.Default.RankSongResponse);
         return data;
+    }
+
+    public Task<JsonElement> GetRankSongsRawAsync(int rankId, int page = 1, int pageSize = 30,
+        int? rankCid = null)
+    {
+        return rawApi.GetRankAudioAsync(rankId, rankCid, page, pageSize);
     }
 
     /// <summary>

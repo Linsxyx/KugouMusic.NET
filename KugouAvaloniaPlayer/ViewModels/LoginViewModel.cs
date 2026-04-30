@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class LoginViewModel(AuthClient authClient, DeviceClient deviceClient, ILogger<LoginViewModel> logger)
+public partial class LoginViewModel(LoginClient authClient, RegisterClient deviceClient, ILogger<LoginViewModel> logger)
     : ObservableObject
 {
     [ObservableProperty] private string _code = "";

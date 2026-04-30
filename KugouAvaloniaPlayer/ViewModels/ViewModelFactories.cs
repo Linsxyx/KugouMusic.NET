@@ -9,12 +9,12 @@ public interface ISingerViewModelFactory
     SingerViewModel Create(string authorId, string singerName);
 }
 
-public sealed class SingerViewModelFactory(MusicClient musicClient, ILogger<SingerViewModel> logger)
+public sealed class SingerViewModelFactory(ArtistClient artistClient, ILogger<SingerViewModel> logger)
     : ISingerViewModelFactory
 {
     public SingerViewModel Create(string authorId, string singerName)
     {
-        return new SingerViewModel(musicClient, logger, authorId, singerName);
+        return new SingerViewModel(artistClient, logger, authorId, singerName);
     }
 }
 

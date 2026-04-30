@@ -35,7 +35,13 @@ public class KgHttpTransport(HttpClient client) : IKgTransport
 
         if (request.Method == HttpMethod.Post)
         {
-            if (!string.IsNullOrEmpty(request.RawBody))
+            if (request.BinaryBody is { Length: > 0 })
+            {
+                msg.Content = new ByteArrayContent(request.BinaryBody);
+                msg.Content.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(request.ContentType);
+            }
+            else if (!string.IsNullOrEmpty(request.RawBody))
             {
                 msg.Content = new StringContent(request.RawBody, Encoding.UTF8, request.ContentType);
             }

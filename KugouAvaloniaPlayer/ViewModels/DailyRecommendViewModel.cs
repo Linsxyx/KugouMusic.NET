@@ -18,7 +18,7 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class DailyRecommendViewModel : PageViewModelBase
 {
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
-    private readonly DiscoveryClient _discoveryClient;
+    private readonly RecommendClient _discoveryClient;
     private readonly ILogger<DailyRecommendViewModel> _logger;
     private readonly PlayerViewModel _player;
     private readonly KgSessionManager _sessionManager;
@@ -33,7 +33,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     [ObservableProperty] private PersonalFmSongPoolId _selectedFmSongPoolId = PersonalFmSongPoolId.Taste;
 
     public DailyRecommendViewModel(
-        DiscoveryClient discoveryClient,
+        RecommendClient discoveryClient,
         PlayerViewModel player,
         KgSessionManager sessionManager,
         ISukiToastManager toastManager,

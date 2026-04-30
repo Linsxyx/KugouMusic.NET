@@ -56,7 +56,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         _clients = TerminalKugouClientFactory.Create();
         _data = new TerminalDataService(_clients);
         _lyrics = new TerminalLyricsService(_clients.Lyric);
-        _playback = new TerminalPlaybackService(_clients.Music, _lyrics, _settingsStore, _settings);
+        _playback = new TerminalPlaybackService(_clients.Song, _lyrics, _settingsStore, _settings);
     }
 
     public async Task RunAsync()
@@ -474,7 +474,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         _status = "正在获取二维码...";
         try
         {
-            var qr = await _clients.Auth.GetQrCodeAsync();
+            var qr = await _clients.Login.GetQrCodeAsync();
             if (qr == null || string.IsNullOrWhiteSpace(qr.Qrcode))
             {
                 _status = "二维码获取失败";
@@ -497,7 +497,7 @@ internal sealed class TerminalApp : IAsyncDisposable
                     return;
                 }
 
-                var status = await _clients.Auth.CheckQrStatusAsync(qr.Qrcode);
+                var status = await _clients.Login.CheckQrStatusAsync(qr.Qrcode);
                 if (status?.QrStatus == QrLoginStatus.Success)
                 {
                     _userName = status.Nickname ?? await _data.GetUserDisplayNameAsync();
@@ -529,10 +529,10 @@ internal sealed class TerminalApp : IAsyncDisposable
         try
         {
             var mobile = AnsiConsole.Ask<string>("[cyan]手机号[/]");
-            var send = await _clients.Auth.SendCodeAsync(mobile);
+            var send = await _clients.Login.SendCodeAsync(mobile);
             AnsiConsole.MarkupLine(send?.Status == 1 ? "[green]验证码已发送[/]" : "[yellow]验证码发送请求已提交，请留意手机[/]");
             var code = AnsiConsole.Ask<string>("[cyan]验证码[/]");
-            var login = await _clients.Auth.LoginByMobileAsync(mobile, code);
+            var login = await _clients.Login.LoginByMobileAsync(mobile, code);
             _status = login?.Status == 1
                 ? "短信登录成功"
                 : $"短信登录失败：{login?.GetExtraString("error_msg") ?? login?.ErrorCode.ToString() ?? "未知错误"}";
@@ -550,7 +550,7 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     private void Logout()
     {
-        _clients.Auth.LogOutAsync();
+        _clients.Login.LogOutAsync();
         _userName = "未登录";
         _status = "已退出登录";
     }

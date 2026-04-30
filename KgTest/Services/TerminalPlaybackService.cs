@@ -10,7 +10,7 @@ internal sealed class TerminalPlaybackService : IDisposable
     private const double FallbackMixDurationSec = 6.8;
     private const double FallbackMixEntrySec = 4.6;
     private const double PreloadWindowSec = 18.0;
-    private readonly MusicClient _musicClient;
+    private readonly SongClient _songClient;
     private readonly TerminalLyricsService _lyricsService;
     private readonly TerminalSettingsStore _settingsStore;
     private readonly TerminalAppSettings _settings;
@@ -34,12 +34,12 @@ internal sealed class TerminalPlaybackService : IDisposable
     private bool _isPreparingNextTrack;
 
     public TerminalPlaybackService(
-        MusicClient musicClient,
+        SongClient songClient,
         TerminalLyricsService lyricsService,
         TerminalSettingsStore settingsStore,
         TerminalAppSettings settings)
     {
-        _musicClient = musicClient;
+        _songClient = songClient;
         _lyricsService = lyricsService;
         _settingsStore = settingsStore;
         _settings = settings;
@@ -303,7 +303,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         ResetTransitionPipeline(cancelPreparedTrack: true);
         StatusMessage = $"正在获取播放地址：{song.Name}";
 
-        var playData = await _musicClient.GetPlayInfoAsync(song.Hash, _settings.MusicQuality);
+        var playData = await _songClient.GetPlayInfoAsync(song.Hash, _settings.MusicQuality);
         var url = playData?.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
         if (playData?.Status != 1 || string.IsNullOrWhiteSpace(url))
         {
@@ -376,7 +376,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         _isPreparingNextTrack = true;
         try
         {
-            var playData = await _musicClient.GetPlayInfoAsync(nextSong.Hash, _settings.MusicQuality);
+            var playData = await _songClient.GetPlayInfoAsync(nextSong.Hash, _settings.MusicQuality);
             var url = playData?.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
             if (requestVersion != _playVersion || string.IsNullOrWhiteSpace(url))
             {

@@ -32,7 +32,7 @@ public partial class MainWindowViewModel : ObservableObject
     private static readonly IBrush DefaultLyricBrush = new SolidColorBrush(Colors.White);
     private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
     private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
-    private readonly AuthClient _authClient;
+    private readonly LoginClient _authClient;
     private readonly IDesktopLyricWindowService _desktopLyricWindowService;
     private readonly DailyRecommendViewModel _dailyRecommendViewModel;
     private readonly ILogger<MainWindowViewModel> _logger;
@@ -83,7 +83,7 @@ public partial class MainWindowViewModel : ObservableObject
         PlayerViewModel player,
         ISukiDialogManager dialogManager,
         KgSessionManager sessionManager,
-        AuthClient authClient,
+        LoginClient authClient,
         UserClient userClient,
         ISingerViewModelFactory singerViewModelFactory,
         IDesktopLyricWindowService desktopLyricWindowService,

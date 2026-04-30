@@ -39,6 +39,77 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
         return await transport.SendAsync(request);
     }
 
+    public Task<JsonElement> GetPlaylistSongsNewAsync(string listId, string userid, string token, int page = 1,
+        int pageSize = 30)
+    {
+        var body = new JsonObject
+        {
+            ["listid"] = listId,
+            ["userid"] = userid,
+            ["area_code"] = 1,
+            ["show_relate_goods"] = 0,
+            ["pagesize"] = pageSize,
+            ["allplatform"] = 1,
+            ["show_cover"] = 1,
+            ["type"] = 0,
+            ["token"] = token,
+            ["page"] = page
+        };
+
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/v4/get_list_all_file",
+            Body = body,
+            SpecificRouter = "cloudlist.service.kugou.com",
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetSimilarPlaylistsAsync(string ids, string userid)
+    {
+        var clientTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var data = new JsonArray();
+        foreach (var id in ids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            data.Add(new JsonObject { ["global_collection_id"] = id });
+
+        var body = new JsonObject
+        {
+            ["appid"] = KuGouConfig.AppId,
+            ["clientver"] = KuGouConfig.ClientVer,
+            ["clienttime"] = clientTime,
+            ["key"] = KgSigner.CalcLoginKey(clientTime),
+            ["userid"] = userid,
+            ["ugc"] = 1,
+            ["show_list"] = 1,
+            ["need_songs"] = 1,
+            ["data"] = data
+        };
+
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/pubsongs/v1/kmr_get_similar_lists",
+            Body = body,
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetSoundEffectPlaylistsAsync(int page = 1, int pageSize = 30)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/pubsongs/v1/get_sound_effect_list",
+            Body = new JsonObject
+            {
+                ["page"] = page,
+                ["pagesize"] = pageSize
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
     /// <summary>
     ///     获取歌单详情信息
     /// </summary>

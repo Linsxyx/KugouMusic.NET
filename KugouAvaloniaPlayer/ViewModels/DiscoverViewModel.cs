@@ -43,7 +43,7 @@ public partial class DiscoverViewModel : PageViewModelBase
 {
     private const string DefaultCardCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
-    private readonly DiscoveryClient _discoveryClient;
+    private readonly RecommendClient _discoveryClient;
     private readonly ILogger<DiscoverViewModel> _logger;
     private readonly PlaylistClient _playlistClient;
     private readonly ISukiToastManager _toastManager;
@@ -63,7 +63,7 @@ public partial class DiscoverViewModel : PageViewModelBase
 
     public DiscoverViewModel(
         PlaylistClient playlistClient,
-        DiscoveryClient discoveryClient,
+        RecommendClient discoveryClient,
         ISukiToastManager toastManager,
         ILogger<DiscoverViewModel> logger)
     {

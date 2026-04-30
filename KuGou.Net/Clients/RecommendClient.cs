@@ -7,7 +7,7 @@ using KuGou.Net.util;
 
 namespace KuGou.Net.Clients;
 
-public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionManager)
+public class RecommendClient(RawDiscoveryApi rawApi, KgSessionManager sessionManager)
 {
     private string GetUserId()
     {
@@ -68,6 +68,52 @@ public class DiscoveryClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     public async Task<JsonElement> GetRecommendedStyleSongsAsync()
     {
         return await rawApi.GetRecommendStyleSongAsync();
+    }
+
+    public async Task<JsonElement> GetAiRecommendAsync(string? albumAudioIds = null)
+    {
+        var session = sessionManager.Session;
+        return await rawApi.GetAiRecommendAsync(GetUserId(), session.Mid, albumAudioIds);
+    }
+
+    public async Task<JsonElement> GetYuekuAsync()
+    {
+        return await rawApi.GetYuekuAsync();
+    }
+
+    public async Task<JsonElement> GetYuekuBannerAsync()
+    {
+        return await rawApi.GetYuekuBannerAsync(GetUserId());
+    }
+
+    public async Task<JsonElement> GetYuekuFmAsync()
+    {
+        return await rawApi.GetYuekuFmAsync();
+    }
+
+    public async Task<JsonElement> GetTopAlbumsAsync(int page = 1, int pageSize = 30)
+    {
+        return await rawApi.GetTopAlbumsAsync(sessionManager.Session.Token, page, pageSize);
+    }
+
+    public async Task<JsonElement> GetTopCardAsync(int cardId = 1)
+    {
+        return await rawApi.GetTopCardAsync(GetUserId(), sessionManager.Session.Mid, cardId);
+    }
+
+    public async Task<JsonElement> GetTopCardYouthAsync(int cardId = 3005, int pageSize = 30, string? tagId = null)
+    {
+        return await rawApi.GetTopCardYouthAsync(cardId, pageSize, tagId);
+    }
+
+    public async Task<JsonElement> GetTopIpAsync()
+    {
+        return await rawApi.GetTopIpAsync();
+    }
+
+    public async Task<JsonElement> GetPcDiantaiAsync()
+    {
+        return await rawApi.GetPcDiantaiAsync(GetUserId());
     }
     
     /// <summary>

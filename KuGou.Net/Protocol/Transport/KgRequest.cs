@@ -7,6 +7,7 @@ public enum SignatureType
     Default, // V3/V4 常规签名
     V5, // V5 获取播放链接专用
     Web, // 扫码登录等 Web 接口
+    Register, // 设备注册等注册接口
     None // 不签名
 }
 
@@ -26,6 +27,12 @@ public class KgRequest
     // 签名策略
     public SignatureType SignatureType { get; set; } = SignatureType.Default;
 
+    // 兼容参考项目 clearDefaultParams：只使用 Params 中显式给出的参数
+    public bool ClearDefaultParams { get; set; }
+
+    // 兼容参考项目 notSignature/notSign：保留默认参数，但不追加 signature
+    public bool NotSignature { get; set; }
+
     // 指定路由 (x-router header)，例如 "complexsearch.kugou.com"
     public string? SpecificRouter { get; set; }
 
@@ -39,8 +46,14 @@ public class KgRequest
     // 新增：支持原始字符串 Body (用于注册接口发送 Base64)
     public string? RawBody { get; set; }
 
+    // 支持二进制 Body，例如云盘接口发送 AES 后的 bytes
+    public byte[]? BinaryBody { get; set; }
+
     // 新增：自定义 Content-Type
     public string ContentType { get; set; } = "application/json";
 
     public Dictionary<string, string>? CustomHeaders { get; set; }
+
+    // 当前请求需要覆盖服务端 session 时使用，例如播放链接临时 dfid、userid/token/vipToken
+    public Dictionary<string, string>? SessionOverrides { get; set; }
 }

@@ -46,21 +46,36 @@ public class RawRankApi(IKgTransport transport)
     /// </summary>
     public async Task<JsonElement> GetRankListAsync(int? withsong = null)
     {
-        var body = new JsonObject
-        {
-            ["plat"] = 2,
-            ["withsong"] = withsong ?? 1,
-            ["parentid"] = 0
-        };
-
         var request = new KgRequest
         {
             Method = HttpMethod.Get,
             Path = "/ocean/v6/rank/list",
-            Body = body,
+            Params = new Dictionary<string, string>
+            {
+                ["plat"] = "2",
+                ["withsong"] = (withsong ?? 1).ToString(),
+                ["parentid"] = "0"
+            },
             SignatureType = SignatureType.Default
         };
         return await transport.SendAsync(request);
+    }
+
+    public Task<JsonElement> GetRankInfoAsync(int rankId, int? rankCid = null, int albumImg = 1, string? zone = null)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/ocean/v6/rank/info",
+            Params = new Dictionary<string, string>
+            {
+                ["rank_cid"] = (rankCid ?? 0).ToString(),
+                ["rankid"] = rankId.ToString(),
+                ["with_album_img"] = albumImg.ToString(),
+                ["zone"] = zone ?? ""
+            },
+            SignatureType = SignatureType.Default
+        });
     }
 
     /// <summary>
@@ -82,20 +97,18 @@ public class RawRankApi(IKgTransport transport)
     /// </summary>
     public async Task<JsonElement> GetRankVolAsync(int rankId, int? rankCid = null)
     {
-        var body = new JsonObject
-        {
-            ["rank_cid"] = rankCid ?? 0,
-            ["rank_id"] = rankId,
-            ["ranktype"] = 0,
-            ["type"] = 0,
-            ["plat"] = 2
-        };
-
         var request = new KgRequest
         {
             Method = HttpMethod.Get,
             Path = "/ocean/v6/rank/vol",
-            Body = body,
+            Params = new Dictionary<string, string>
+            {
+                ["rank_cid"] = (rankCid ?? 0).ToString(),
+                ["rank_id"] = rankId.ToString(),
+                ["ranktype"] = "0",
+                ["type"] = "0",
+                ["plat"] = "2"
+            },
             SignatureType = SignatureType.Default
         };
         return await transport.SendAsync(request);

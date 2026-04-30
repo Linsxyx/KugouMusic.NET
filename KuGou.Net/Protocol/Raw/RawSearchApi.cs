@@ -97,6 +97,110 @@ public class RawSearchApi(IKgTransport transport)
         return await transport.SendAsync(request);
     }
 
+    public Task<JsonElement> SearchDefaultAsync(string userId = "0", string vipType = "65530")
+    {
+        var body = new JsonObject
+        {
+            ["plat"] = 0,
+            ["userid"] = long.TryParse(userId, out var uid) ? uid : 0,
+            ["tags"] = "{}",
+            ["vip_type"] = vipType,
+            ["m_type"] = 0,
+            ["own_ads"] = new JsonObject(),
+            ["ability"] = "3",
+            ["sources"] = new JsonArray(),
+            ["bitmap"] = 2,
+            ["mode"] = "normal"
+        };
+
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/searchnofocus/v1/search_no_focus_word",
+            Params = new Dictionary<string, string> { ["clientver"] = "12329" },
+            Body = body,
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> SearchSuggestAsync(string keyword, int albumTipCount = 10, int correctTipCount = 10,
+        int mvTipCount = 10, int musicTipCount = 10)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/v2/getSearchTip",
+            Params = new Dictionary<string, string>
+            {
+                ["keyword"] = keyword,
+                ["AlbumTipCount"] = albumTipCount.ToString(),
+                ["CorrectTipCount"] = correctTipCount.ToString(),
+                ["MVTipCount"] = mvTipCount.ToString(),
+                ["MusicTipCount"] = musicTipCount.ToString(),
+                ["radiotip"] = "1"
+            },
+            SpecificRouter = "searchtip.kugou.com",
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> SearchMixedAsync(string keyword)
+    {
+        var time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/v3/search/mixed",
+            Params = new Dictionary<string, string>
+            {
+                ["ab_tag"] = "0",
+                ["ability"] = "511",
+                ["albumhide"] = "0",
+                ["apiver"] = "22",
+                ["area_code"] = "1",
+                ["clientver"] = "20125",
+                ["cursor"] = "0",
+                ["is_gpay"] = "0",
+                ["iscorrection"] = "1",
+                ["keyword"] = keyword,
+                ["nocollect"] = "0",
+                ["osversion"] = "16.5",
+                ["platform"] = "IOSFilter",
+                ["recver"] = "2",
+                ["req_ai"] = "1",
+                ["requestid"] = $"{KgUtils.Md5($"bdaa53d04e7475feb9024164a47032f9{time}")}_0",
+                ["search_ability"] = "3",
+                ["sec_aggre"] = "1",
+                ["sec_aggre_bitmap"] = "0",
+                ["style_type"] = "3",
+                ["tag"] = "em"
+            },
+            SpecificRouter = "complexsearch.kugou.com",
+            SignatureType = SignatureType.Default,
+            CustomHeaders = new Dictionary<string, string> { ["kg-clienttimems"] = time.ToString() }
+        });
+    }
+
+    public Task<JsonElement> SearchComplexAsync(string keyword, int page = 1, int pageSize = 30)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            BaseUrl = "https://complexsearch.kugou.com",
+            Path = "/v6/search/complex",
+            Params = new Dictionary<string, string>
+            {
+                ["platform"] = "AndroidFilter",
+                ["keyword"] = keyword,
+                ["page"] = page.ToString(),
+                ["pagesize"] = pageSize.ToString(),
+                ["cursor"] = "0"
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
 
     public async Task<JsonElement> GetSingerSongsAsync(
         string dfid,

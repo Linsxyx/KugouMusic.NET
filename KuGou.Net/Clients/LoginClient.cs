@@ -10,10 +10,10 @@ namespace KuGou.Net.Clients;
 /// <summary>
 ///     认证客户端 - 不直接处理 JsonElement，统一使用 KgApiResponseParser 和强类型模型
 /// </summary>
-public class AuthClient(
+public class LoginClient(
     RawLoginApi rawApi,
     KgSessionManager sessionManager,
-    ILogger<AuthClient> logger
+    ILogger<LoginClient> logger
 )
 {
     /// <summary>

@@ -7,12 +7,10 @@ namespace KgWebApi.Net.Controllers;
 ///     搜索相关API接口 - 使用新的KuGou.Net库
 /// </summary>
 [ApiController]
-[Route("[controller]")]
+[Route("search")]
 public class SearchController(
-    MusicClient musicClient,
-    ILogger<SearchController> logger,
-    LyricClient lyricClient,
-    AlbumClient albumIdClient)
+    SearchClient searchClient,
+    ILogger<SearchController> logger)
     : ControllerBase
 {
     /// <summary>
@@ -22,7 +20,9 @@ public class SearchController(
     [HttpGet]
     public async Task<IActionResult> Search(
         [FromQuery] string keywords = "",
-        [FromQuery] int page = 1)
+        [FromQuery] int page = 1,
+        [FromQuery] int pagesize = 30,
+        [FromQuery] string type = "song")
     {
         try
         {
@@ -30,7 +30,13 @@ public class SearchController(
 
             logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
-            var result = await musicClient.SearchAsync(keywords, page);
+            object? result = type switch
+            {
+                "special" => await searchClient.SearchSpecialAsync(keywords, page),
+                "album" => await searchClient.SearchAlbumAsync(keywords, page),
+                "song" => await searchClient.SearchAsync(keywords, page, type),
+                _ => await searchClient.SearchRawAsync(keywords, page, pagesize, type)
+            };
 
             return Ok(result);
         }
@@ -57,7 +63,7 @@ public class SearchController(
 
             logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
-            var result = await musicClient.SearchSpecialAsync(keywords, page);
+            var result = await searchClient.SearchSpecialAsync(keywords, page);
 
             return Ok(result);
         }
@@ -84,7 +90,7 @@ public class SearchController(
 
             logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
-            var result = await musicClient.SearchAlbumAsync(keywords, page);
+            var result = await searchClient.SearchAlbumAsync(keywords, page);
 
             return Ok(result);
         }
@@ -101,101 +107,55 @@ public class SearchController(
     }
 
     /// <summary>
-    ///     获取歌曲播放URL
-    ///     GET /search/playUrl?hash=xxx&quality=128
-    /// </summary>
-    [HttpGet("playUrl")]
-    public async Task<IActionResult> GetPlayUrl(
-        [FromQuery] string hash,
-        [FromQuery] string quality = "128")
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(hash))
-                return BadRequest(new { error = "歌曲Hash不能为空" });
-
-            logger.LogInformation("获取播放URL，Hash: {Hash}, Quality: {Quality}", hash, quality);
-
-            var result = await musicClient.GetPlayInfoAsync(hash, quality);
-
-            /*if (result == null)
-                return NotFound(new { error = "未找到播放信息" });*/
-
-            return Ok(result);
-        }
-        catch (TaskCanceledException)
-        {
-            logger.LogWarning("获取播放URL请求超时或取消");
-            return StatusCode(504, new { error = "请求超时" });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "获取播放URL异常，Hash: {Hash}", hash);
-            return StatusCode(500, new { error = $"内部服务器错误: {ex.Message}" });
-        }
-    }
-
-
-    [HttpGet("Lyric")]
-    public async Task<IActionResult> SearcLyric(
-        [FromQuery] string? hash,
-        [FromQuery] string? album_audio_id,
-        [FromQuery] string? keywords,
-        [FromQuery] string? man)
-    {
-        var result = await lyricClient.SearchLyricAsync(hash, album_audio_id, keywords, man);
-        return Ok(result);
-    }
-
-    [HttpPost("Lyric")]
-    public async Task<IActionResult> GetLyric(
-        [FromQuery] string id,
-        [FromQuery] string accesskey,
-        [FromQuery] string fmt = "krc",
-        [FromQuery] bool decode = true)
-    {
-        // 1. 获取原始数据 (包含解密后的 decodeContent 字符串)
-        var result = await lyricClient.GetLyricAsync(id, accesskey, fmt, decode);
-
-
-        return Ok(result);
-    }
-
-    /// <summary>
     ///     获取热搜
     /// </summary>
     [HttpGet("hot")]
     public async Task<IActionResult> GetHot()
     {
-        var result = await musicClient.GetSearchHotAsync();
+        var result = await searchClient.GetSearchHotAsync();
         return Ok(result);
     }
 
+    [HttpGet("default")]
+    public async Task<IActionResult> GetDefault()
+    {
+        var result = await searchClient.SearchDefaultRawAsync();
+        return Ok(result);
+    }
 
-    [HttpGet("singer/songs")]
-    public async Task<IActionResult> GetSingerSongs(
-        [FromQuery] string authorId,
+    [HttpGet("suggest")]
+    public async Task<IActionResult> GetSuggest(
+        [FromQuery] string keywords,
+        [FromQuery] int albumTipCount = 10,
+        [FromQuery] int correctTipCount = 10,
+        [FromQuery] int mvTipCount = 10,
+        [FromQuery] int musicTipCount = 10)
+    {
+        var result = await searchClient.SearchSuggestRawAsync(
+            keywords,
+            albumTipCount,
+            correctTipCount,
+            mvTipCount,
+            musicTipCount);
+        return Ok(result);
+    }
+
+    [HttpGet("mixed")]
+    public async Task<IActionResult> GetMixed([FromQuery] string keyword)
+    {
+        var result = await searchClient.SearchMixedRawAsync(keyword);
+        return Ok(result);
+    }
+
+    [HttpGet("complex")]
+    public async Task<IActionResult> GetComplex(
+        [FromQuery] string keywords,
         [FromQuery] int page = 1,
-        [FromQuery] string sort = "new")
+        [FromQuery] int pagesize = 30)
     {
-        var result = await musicClient.GetSingerSongsAsync(authorId, page, 30, sort);
+        var result = await searchClient.SearchComplexRawAsync(keywords, page, pagesize);
         return Ok(result);
     }
 
-    [HttpGet("singer/detail")]
-    public async Task<IActionResult> GetSingerdetail(
-        [FromQuery] string authorId)
-    {
-        var result = await musicClient.GetSingerDetailAsync(authorId);
-        return Ok(result);
-    }
 
-    [HttpGet("AlbumSong")]
-    public async Task<IActionResult> GetAlbumSong(
-        [FromQuery] string albumId,
-        [FromQuery] int page = 1)
-    {
-        var result = await albumIdClient.GetSongsAsync(albumId, page);
-        return Ok(result);
-    }
 }

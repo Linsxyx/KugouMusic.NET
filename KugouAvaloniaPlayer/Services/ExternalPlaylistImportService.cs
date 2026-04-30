@@ -65,7 +65,7 @@ public interface IExternalPlaylistImportService
 
 public sealed class ExternalPlaylistImportService(
     IEnumerable<IExternalPlaylistParseStrategy> strategies,
-    MusicClient musicClient,
+    SearchClient searchClient,
     PlaylistClient playlistClient,
     UserClient userClient,
     ILogger<ExternalPlaylistImportService> logger) : IExternalPlaylistImportService
@@ -142,7 +142,7 @@ public sealed class ExternalPlaylistImportService(
 
                 try
                 {
-                    var searchResult = await musicClient.SearchAsync(songName);
+                    var searchResult = await searchClient.SearchAsync(songName);
                     var first = searchResult.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.Hash));
                     if (first == null)
                     {

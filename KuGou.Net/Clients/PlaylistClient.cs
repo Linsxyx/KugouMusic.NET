@@ -154,4 +154,26 @@ public class PlaylistClient(RawPlaylistApi rawApi, KgSessionManager sessionManag
         var json = await rawApi.RemoveSongsFromPlaylistAsync(uid, token, targetListId, ids);
         return KgApiResponseParser.Parse<RemoveSongResponse>(json, AppJsonContext.Default.RemoveSongResponse);
     }
+
+    public Task<JsonElement> GetSongsRawAsync(string playlistId, int page = 1, int pageSize = 30)
+    {
+        var begin = Math.Max(0, (page - 1) * pageSize);
+        return rawApi.GetPlaylistSongsAsync(playlistId, begin, pageSize);
+    }
+
+    public Task<JsonElement> GetSongsNewRawAsync(string listId, int page = 1, int pageSize = 30)
+    {
+        var session = sessionManager.Session;
+        return rawApi.GetPlaylistSongsNewAsync(listId, session.UserId, session.Token, page, pageSize);
+    }
+
+    public Task<JsonElement> GetSimilarRawAsync(string ids)
+    {
+        return rawApi.GetSimilarPlaylistsAsync(ids, sessionManager.Session.UserId);
+    }
+
+    public Task<JsonElement> GetSoundEffectRawAsync(int page = 1, int pageSize = 30)
+    {
+        return rawApi.GetSoundEffectPlaylistsAsync(page, pageSize);
+    }
 }

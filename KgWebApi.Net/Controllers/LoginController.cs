@@ -7,13 +7,13 @@ namespace KgWebApi.Net.Controllers;
 ///     登录相关API接口 - 使用新的KuGou.Net库
 /// </summary>
 [ApiController]
-[Route("[controller]")]
-public class LoginController(AuthClient authClient, ILogger<LoginController> logger) : ControllerBase
+[Route("login")]
+public class LoginController(LoginClient loginClient, ILogger<LoginController> logger) : ControllerBase
 {
     /// <summary>
     ///     手机验证码登录
     /// </summary>
-    [HttpPost("mobile")]
+    [HttpPost("cellphone")]
     public async Task<IActionResult> LoginByMobile([FromBody] MobileLoginRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Mobile) || string.IsNullOrWhiteSpace(req.Code))
@@ -21,7 +21,7 @@ public class LoginController(AuthClient authClient, ILogger<LoginController> log
 
         try
         {
-            var result = await authClient.LoginByMobileAsync(req.Mobile, req.Code);
+            var result = await loginClient.LoginByMobileAsync(req.Mobile, req.Code);
             return Ok(result);
         }
         catch (Exception ex)
@@ -34,10 +34,10 @@ public class LoginController(AuthClient authClient, ILogger<LoginController> log
     /// <summary>
     ///     获取二维码 Key 和链接
     /// </summary>
-    [HttpGet("qrcode/key")]
+    [HttpGet("qr/key")]
     public async Task<IActionResult> GetQrKey()
     {
-        var result = await authClient.GetQrCodeAsync();
+        var result = await loginClient.GetQrCodeAsync();
 
         return Ok(result);
     }
@@ -46,12 +46,12 @@ public class LoginController(AuthClient authClient, ILogger<LoginController> log
     ///     检查二维码扫码状态
     /// </summary>
     /// <param name="key">二维码 Key</param>
-    [HttpGet("qrcode/check")]
+    [HttpGet("qr/check")]
     public async Task<IActionResult> CheckQrCode([FromQuery] string key)
     {
         if (string.IsNullOrWhiteSpace(key)) return BadRequest(new { status = 0, msg = "Key 不能为空" });
 
-        var result = await authClient.CheckQrStatusAsync(key);
+        var result = await loginClient.CheckQrStatusAsync(key);
 
         return Ok(result);
     }
@@ -59,10 +59,10 @@ public class LoginController(AuthClient authClient, ILogger<LoginController> log
     /// <summary>
     ///     刷新 Token
     /// </summary>
-    [HttpPost("refresh")]
+    [HttpPost("token")]
     public async Task<IActionResult> RefreshToken()
     {
-        var result = await authClient.RefreshSessionAsync();
+        var result = await loginClient.RefreshSessionAsync();
 
         return Ok(result);
     }
@@ -71,7 +71,7 @@ public class LoginController(AuthClient authClient, ILogger<LoginController> log
     [HttpPost("logout")]
     public Task<IActionResult> LogOut()
     {
-        authClient.LogOutAsync();
+        loginClient.LogOutAsync();
         return Task.FromResult<IActionResult>(Ok());
     }
 }

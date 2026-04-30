@@ -7,13 +7,13 @@ internal sealed class TerminalDataService(TerminalKugouClients clients)
 {
     public async Task<IReadOnlyList<TerminalSongItem>> SearchSongsAsync(string keyword)
     {
-        var songs = await clients.Music.SearchAsync(keyword);
+        var songs = await clients.Search.SearchAsync(keyword);
         return songs.Select(MapSongInfo).ToList();
     }
 
     public async Task<IReadOnlyList<TerminalPlaylistItem>> SearchPlaylistsAsync(string keyword)
     {
-        var playlists = await clients.Music.SearchSpecialAsync(keyword);
+        var playlists = await clients.Search.SearchSpecialAsync(keyword);
         return playlists?.Select(x => new TerminalPlaylistItem
         {
             Id = string.IsNullOrWhiteSpace(x.GlobalId) ? x.ListId.ToString() : x.GlobalId,
@@ -28,13 +28,13 @@ internal sealed class TerminalDataService(TerminalKugouClients clients)
 
     public async Task<IReadOnlyList<TerminalSongItem>> GetDailySongsAsync()
     {
-        var response = await clients.Discovery.GetRecommendedSongsAsync();
+        var response = await clients.Recommend.GetRecommendedSongsAsync();
         return response?.Songs.Select(MapDailySong).ToList() ?? [];
     }
 
     public async Task<IReadOnlyList<TerminalSongItem>> GetPersonalFmSongsAsync()
     {
-        var response = await clients.Discovery.GetPersonalRecommendFMAsync(mode: "normal", songPoolId: 0);
+        var response = await clients.Recommend.GetPersonalRecommendFMAsync(mode: "normal", songPoolId: 0);
         return response?.Songs.Select(MapPersonalFmSong).ToList() ?? [];
     }
 
@@ -47,7 +47,7 @@ internal sealed class TerminalDataService(TerminalKugouClients clients)
 
         try
         {
-            await clients.Discovery.GetPersonalRecommendFMAsync(
+            await clients.Recommend.GetPersonalRecommendFMAsync(
                 hash: song.Hash,
                 songid: song.AudioId > 0 ? song.AudioId.ToString() : null,
                 playtime: playtimeSeconds,
@@ -65,7 +65,7 @@ internal sealed class TerminalDataService(TerminalKugouClients clients)
 
     public async Task<IReadOnlyList<TerminalPlaylistItem>> GetDiscoverPlaylistsAsync(int categoryId = 0)
     {
-        var response = await clients.Discovery.GetRecommendedPlaylistsAsync(categoryId);
+        var response = await clients.Recommend.GetRecommendedPlaylistsAsync(categoryId);
         return response?.Playlists.Select(x => new TerminalPlaylistItem
         {
             Id = x.GlobalId,

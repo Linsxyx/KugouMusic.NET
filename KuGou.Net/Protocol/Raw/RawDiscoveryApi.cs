@@ -146,6 +146,280 @@ public class RawDiscoveryApi(IKgTransport transport)
         };
         return await transport.SendAsync(request);
     }
+
+    public async Task<JsonElement> GetAiRecommendAsync(
+        string userid,
+        string? mid,
+        string? albumAudioIds = null)
+    {
+        var clientTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var recommendSource = new JsonArray();
+
+        if (!string.IsNullOrWhiteSpace(albumAudioIds))
+        {
+            foreach (var id in albumAudioIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                if (long.TryParse(id, out var parsedId))
+                    recommendSource.Add(new JsonObject { ["ID"] = parsedId });
+        }
+
+        var body = new JsonObject
+        {
+            ["platform"] = "ios",
+            ["clientver"] = KuGouConfig.ClientVer,
+            ["clienttime"] = clientTime,
+            ["userid"] = userid,
+            ["client_playlist"] = new JsonArray(),
+            ["source_type"] = 2,
+            ["playlist_ver"] = 2,
+            ["area_code"] = 1,
+            ["appid"] = KuGouConfig.AppId,
+            ["key"] = KgSigner.CalcLoginKey(clientTime),
+            ["mid"] = string.IsNullOrWhiteSpace(mid) ? "-" : mid,
+            ["recommend_source"] = recommendSource
+        };
+
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/recommend",
+            Body = body,
+            SpecificRouter = "songlistairec.kugou.com",
+            ClearDefaultParams = true,
+            SignatureType = SignatureType.Default
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    public async Task<JsonElement> GetYuekuAsync()
+    {
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/v1/yueku/recommend_v2",
+            SpecificRouter = "service.mobile.kugou.com",
+            SignatureType = SignatureType.Default,
+            Params = new Dictionary<string, string>
+            {
+                ["operator"] = "7",
+                ["plat"] = "0",
+                ["type"] = "11",
+                ["area_code"] = "1",
+                ["req_multi"] = "1"
+            }
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    public async Task<JsonElement> GetYuekuBannerAsync(string userid)
+    {
+        var body = new JsonObject
+        {
+            ["plat"] = 0,
+            ["channel"] = 201,
+            ["operator"] = 7,
+            ["networktype"] = 2,
+            ["userid"] = userid,
+            ["vip_type"] = 0,
+            ["m_type"] = 0,
+            ["tags"] = new JsonArray(),
+            ["apiver"] = 5,
+            ["ability"] = 2,
+            ["mode"] = "normal"
+        };
+
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/ads.gateway/v3/listen_banner",
+            Body = body,
+            SignatureType = SignatureType.Default
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    public async Task<JsonElement> GetYuekuFmAsync()
+    {
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/v1/time_fm_info",
+            SpecificRouter = "fm.service.kugou.com",
+            SignatureType = SignatureType.Default,
+            Params = new Dictionary<string, string>
+            {
+                ["operator"] = "7",
+                ["plat"] = "0",
+                ["type"] = "11",
+                ["area_code"] = "1",
+                ["req_multi"] = "1"
+            }
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    public async Task<JsonElement> GetTopAlbumsAsync(string token, int page = 1, int pageSize = 30)
+    {
+        var body = new JsonObject
+        {
+            ["apiver"] = 20,
+            ["token"] = token,
+            ["page"] = page,
+            ["pagesize"] = pageSize,
+            ["withpriv"] = 1
+        };
+
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/musicadservice/v1/mobile_newalbum_sp",
+            Body = body,
+            SignatureType = SignatureType.Default
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    public async Task<JsonElement> GetTopCardAsync(
+        string userid,
+        string? mid,
+        int cardId = 1)
+    {
+        const string fakem = "60f7ebf1f812edbac3c63a7310001701760f";
+        var clientTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        var body = new JsonObject
+        {
+            ["appid"] = KuGouConfig.AppId,
+            ["clientver"] = KuGouConfig.ClientVer,
+            ["platform"] = "android",
+            ["clienttime"] = clientTime,
+            ["userid"] = userid,
+            ["key"] = KgSigner.CalcLoginKey(clientTime),
+            ["fakem"] = fakem,
+            ["area_code"] = 1,
+            ["mid"] = string.IsNullOrWhiteSpace(mid) ? "-" : mid,
+            ["uuid"] = "-",
+            ["client_playlist"] = new JsonArray(),
+            ["u_info"] = "a0c35cd40af564444b5584c2754dedec"
+        };
+
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/singlecardrec.service/v1/single_card_recommend",
+            Body = body,
+            SignatureType = SignatureType.Default,
+            Params = new Dictionary<string, string>
+            {
+                ["card_id"] = cardId.ToString(),
+                ["fakem"] = fakem,
+                ["area_code"] = "1",
+                ["platform"] = "ios"
+            }
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    public async Task<JsonElement> GetTopCardYouthAsync(
+        int cardId = 3005,
+        int pageSize = 30,
+        string? tagId = null)
+    {
+        var body = new JsonObject
+        {
+            ["tagid"] = tagId ?? string.Empty,
+            ["u_info"] = string.Empty,
+            ["source_mixsong"] = string.Empty
+        };
+
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/youth/v1/song/single_card_recommend",
+            Body = body,
+            SignatureType = SignatureType.Default,
+            Params = new Dictionary<string, string>
+            {
+                ["card_id"] = cardId.ToString(),
+                ["area_code"] = "1",
+                ["platform"] = "ops",
+                ["module_id"] = "1",
+                ["ver"] = "v2",
+                ["pagesize"] = pageSize.ToString()
+            }
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    public async Task<JsonElement> GetTopIpAsync()
+    {
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/v1/daily_recommend",
+            BaseUrl = "http://musicadservice.kugou.com",
+            Body = new JsonObject { ["tags"] = new JsonObject() },
+            SignatureType = SignatureType.Default,
+            Params = new Dictionary<string, string>
+            {
+                ["clientver"] = "12349",
+                ["area_code"] = "1"
+            }
+        };
+
+        var json = await transport.SendAsync(request);
+        return AddIpIdFromInnerUrl(json);
+    }
+
+    public async Task<JsonElement> GetPcDiantaiAsync(string userid)
+    {
+        var body = new JsonObject
+        {
+            ["isvip"] = 0,
+            ["userid"] = userid,
+            ["vipType"] = 0
+        };
+
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/v3/pc_diantai",
+            BaseUrl = "https://adservice.kugou.com",
+            Body = body,
+            SignatureType = SignatureType.Default
+        };
+
+        return await transport.SendAsync(request);
+    }
+
+    private static JsonElement AddIpIdFromInnerUrl(JsonElement json)
+    {
+        var node = JsonNode.Parse(json.GetRawText());
+        if (node?["status"]?.GetValue<int>() != 1) return json;
+
+        var list = node["data"]?["list"]?.AsArray();
+        if (list == null) return json;
+
+        foreach (var item in list)
+        {
+            var innerUrl = item?["extra"]?["inner_url"]?.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(innerUrl)) continue;
+
+            var index = innerUrl.LastIndexOf("ip_id", StringComparison.Ordinal);
+            if (index == -1) continue;
+
+            var ipIdText = innerUrl[(index + 6)..];
+            if (int.TryParse(ipIdText, out var ipId)) item!["extra"]!["ip_id"] = ipId;
+        }
+
+        return JsonSerializer.SerializeToElement(node);
+    }
     
     /// <summary>
     /// 获取私人推荐 (私人FM / 电台) 及 行为上报

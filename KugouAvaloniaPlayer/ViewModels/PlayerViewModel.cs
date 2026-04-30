@@ -32,7 +32,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private static readonly TimeSpan SeamlessVisualSwitchDelay = TimeSpan.FromSeconds(2);
     private const int TailTelemetryCapacity = 320;
     private static readonly TimeSpan AudioLoadTimeout = TimeSpan.FromSeconds(12);
-    private readonly DiscoveryClient _discoveryClient;
+    private readonly RecommendClient _discoveryClient;
     private readonly FavoritePlaylistService _favoriteService;
     private readonly ILogger<PlayerViewModel> _logger;
     private readonly LyricsService _lyricsService;
@@ -96,7 +96,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? _transitionWorkCancellation;
 
     public PlayerViewModel(
-        DiscoveryClient discoveryClient, ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
+        RecommendClient discoveryClient, ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
         PlaybackQueueManager queueManager, LyricsService lyricsService, FavoritePlaylistService favoriteService,
         ITransitionAnalysisService transitionAnalysisService, IPlaybackSourceResolver playbackSourceResolver,
         IPlaybackCoordinator playbackCoordinator)

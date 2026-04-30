@@ -41,6 +41,12 @@ public static class KgSigner
         return KgUtils.Md5(raw);
     }
 
+    public static string CalcCloudKey(string hash, int pid)
+    {
+        const string salt = "ebd1ac3134c880bda6a2194537843caa0162e2e7";
+        return KgUtils.Md5($"musicclound{hash}{pid}{salt}");
+    }
+
     public static string CalcWebQrSignature(Dictionary<string, string> paramsDict)
     {
         var sb = new StringBuilder();

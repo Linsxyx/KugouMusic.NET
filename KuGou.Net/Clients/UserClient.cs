@@ -99,6 +99,41 @@ public class UserClient(RawUserApi rawApi, KgSessionManager sessionManager)
         return await rawApi.GetFollowSingerListAsync(uid, token);
     }
 
+    public async Task<JsonElement?> GetCloudAsync(int page = 1, int pageSize = 30)
+    {
+        if (!IsLoggedIn()) return null;
+        var session = sessionManager.Session;
+        var mid = string.IsNullOrWhiteSpace(session.Mid) || session.Mid == "-"
+            ? KgUtils.CalcNewMid(session.Dfid)
+            : session.Mid;
+        return await rawApi.GetCloudAsync(session.UserId, session.Token, mid, page, pageSize);
+    }
+
+    public Task<JsonElement> GetCloudUrlAsync(string hash, string? albumAudioId = null, string? audioId = null,
+        string? name = null)
+    {
+        return rawApi.GetCloudUrlAsync(hash, albumAudioId, audioId, name);
+    }
+
+    public async Task<JsonElement?> GetFollowMessagesAsync(string artistId, int pageSize = 30)
+    {
+        if (!IsLoggedIn()) return null;
+        return await rawApi.GetFollowMessagesAsync(sessionManager.Session.UserId, artistId, pageSize);
+    }
+
+    public async Task<JsonElement?> GetCollectedVideosAsync(int page = 1, int pageSize = 30)
+    {
+        if (!IsLoggedIn()) return null;
+        var (uid, token) = GetAuth();
+        return await rawApi.GetCollectedVideosAsync(uid, token, page, pageSize);
+    }
+
+    public async Task<JsonElement?> GetLikedVideosAsync(int pageSize = 30)
+    {
+        if (!IsLoggedIn()) return null;
+        return await rawApi.GetLikedVideosAsync(sessionManager.Session.UserId, pageSize);
+    }
+
     // --- VIP 领取相关 ---
 
     public async Task<OneDayVipModel?> ReceiveOneDayVipAsync()

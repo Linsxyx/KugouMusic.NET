@@ -4,17 +4,17 @@ using Microsoft.AspNetCore.Mvc;
 namespace KgWebApi.Net.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("playlist")]
 public class PlayListController(PlaylistClient playlistClient) : ControllerBase
 {
     [HttpGet("detail")]
-    public async Task<IActionResult> GetDetail([FromQuery] string globalcollectionid)
+    public async Task<IActionResult> GetDetail([FromQuery(Name = "ids")] string ids)
     {
-        var result = await playlistClient.GetInfoAsync(globalcollectionid);
+        var result = await playlistClient.GetInfoAsync(ids);
         return Ok(result);
     }
 
-    [HttpGet("Tags")]
+    [HttpGet("tags")]
     public async Task<IActionResult> GetTags()
     {
         var result = await playlistClient.GetTagsAsync();
@@ -26,11 +26,35 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
 
     [HttpGet("track/all")]
     public async Task<IActionResult> GetDtrackAll(
-        [FromQuery] string globalcollectionid,
+        [FromQuery] string id,
         [FromQuery] int page = 1,
         [FromQuery] int pagesize = 30)
     {
-        var result = await playlistClient.GetSongsAsync(globalcollectionid, page, pagesize);
+        var result = await playlistClient.GetSongsAsync(id, page, pagesize);
+        return Ok(result);
+    }
+
+    [HttpGet("track/all/new")]
+    public async Task<IActionResult> GetTrackAllNew(
+        [FromQuery] string listid,
+        [FromQuery] int page = 1,
+        [FromQuery] int pagesize = 30)
+    {
+        var result = await playlistClient.GetSongsNewRawAsync(listid, page, pagesize);
+        return Ok(result);
+    }
+
+    [HttpGet("similar")]
+    public async Task<IActionResult> GetSimilar([FromQuery] string ids)
+    {
+        var result = await playlistClient.GetSimilarRawAsync(ids);
+        return Ok(result);
+    }
+
+    [HttpGet("effect")]
+    public async Task<IActionResult> GetEffect([FromQuery] int page = 1, [FromQuery] int pagesize = 30)
+    {
+        var result = await playlistClient.GetSoundEffectRawAsync(page, pagesize);
         return Ok(result);
     }
 
@@ -49,7 +73,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <summary>
     ///     新建歌单
     /// </summary>
-    [HttpPost("Create")]
+    [HttpPost("create")]
     public async Task<IActionResult> CreatePlaylist(
         [FromQuery] string name,
         [FromQuery(Name = "type")] long type = 0)

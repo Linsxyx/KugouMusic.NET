@@ -7,7 +7,7 @@ using KuGou.Net.util;
 
 namespace KuGou.Net.Clients;
 
-public class MusicClient(RawSearchApi rawApi, KgSessionManager sessionManager)
+public class SearchClient(RawSearchApi rawApi, KgSessionManager sessionManager)
 {
     public async Task<List<SongInfo>> SearchAsync(string keyword, int page = 1, string type = "song")
     {
@@ -20,16 +20,6 @@ public class MusicClient(RawSearchApi rawApi, KgSessionManager sessionManager)
         return data.Songs;
     }
 
-    public async Task<PlayUrlData?> GetPlayInfoAsync(string hash, string? quality = null)
-    {
-        var json = await rawApi.GetPlayUrlAsync(hash, quality);
-
-        var result = json.Deserialize(AppJsonContext.Default.PlayUrlData);
-
-        return result ?? new PlayUrlData { Status = 0 };
-    }
-
-
     public async Task<SearchHotResponse?> GetSearchHotAsync()
     {
         var json = await rawApi.SearchHotAsync();
@@ -41,33 +31,6 @@ public class MusicClient(RawSearchApi rawApi, KgSessionManager sessionManager)
 
         return data;
     }
-
-
-    public async Task<SingerAudioResponse?> GetSingerSongsAsync(
-        string authorId,
-        int page = 1,
-        int pageSize = 30,
-        string sort = "new")
-    {
-        var dfid = sessionManager.Session.Dfid;
-
-        var json = await rawApi.GetSingerSongsAsync(dfid, authorId, page, pageSize, sort);
-
-        var result = json.Deserialize(AppJsonContext.Default.SingerAudioResponse);
-        return result;
-    }
-
-    public async Task<SingerDetailResponse?> GetSingerDetailAsync(string authorId)
-    {
-        var json = await rawApi.GetSingerDetailAsync(authorId);
-
-        return KgApiResponseParser.Parse<SingerDetailResponse>(
-            json,
-            AppJsonContext.Default.SingerDetailResponse
-        );
-        ;
-    }
-
     public async Task<List<SearchPlaylistItem>?> SearchSpecialAsync(string keyword, int page = 1,
         string type = "special")
     {
@@ -90,5 +53,32 @@ public class MusicClient(RawSearchApi rawApi, KgSessionManager sessionManager)
         );
 
         return data?.Albums;
+    }
+
+    public Task<JsonElement> SearchRawAsync(string keyword, int page = 1, int pageSize = 30, string type = "song")
+    {
+        return rawApi.SearchAsync(keyword, page, pageSize, type);
+    }
+
+    public Task<JsonElement> SearchDefaultRawAsync()
+    {
+        var session = sessionManager.Session;
+        return rawApi.SearchDefaultAsync(session.UserId, session.VipType);
+    }
+
+    public Task<JsonElement> SearchSuggestRawAsync(string keyword, int albumTipCount = 10, int correctTipCount = 10,
+        int mvTipCount = 10, int musicTipCount = 10)
+    {
+        return rawApi.SearchSuggestAsync(keyword, albumTipCount, correctTipCount, mvTipCount, musicTipCount);
+    }
+
+    public Task<JsonElement> SearchMixedRawAsync(string keyword)
+    {
+        return rawApi.SearchMixedAsync(keyword);
+    }
+
+    public Task<JsonElement> SearchComplexRawAsync(string keyword, int page = 1, int pageSize = 30)
+    {
+        return rawApi.SearchComplexAsync(keyword, page, pageSize);
     }
 }

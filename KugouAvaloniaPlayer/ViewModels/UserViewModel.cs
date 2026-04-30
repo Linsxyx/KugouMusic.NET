@@ -42,7 +42,7 @@ public partial class UserViewModel : PageViewModelBase
     private const string LyricColorModeDefault = "默认";
     private const string LyricColorModeCustom = "自定义";
 
-    private readonly AuthClient _authClient;
+    private readonly LoginClient _authClient;
     private readonly HashSet<string> _availableLyricFonts;
     private readonly ISukiDialogManager _dialogManager;
     private readonly EqSettingsViewModel _eqSettingsViewModel;
@@ -86,7 +86,7 @@ public partial class UserViewModel : PageViewModelBase
     [ObservableProperty] private string _userName = "加载中...";
     [ObservableProperty] private string _vipStatus = "未开通";
 
-    public UserViewModel(PlayerViewModel player, UserClient userClient, AuthClient authClient,
+    public UserViewModel(PlayerViewModel player, UserClient userClient, LoginClient authClient,
         ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
         IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService)
     {

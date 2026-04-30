@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace KuGou.Net.Clients;
 
-public class DeviceClient(RawDeviceApi rawApi, KgSessionManager sessionManager, ILogger<DeviceClient> logger)
+public class RegisterClient(RawDeviceApi rawApi, KgSessionManager sessionManager, ILogger<RegisterClient> logger)
 {
     public async Task<bool> InitDeviceAsync()
     {

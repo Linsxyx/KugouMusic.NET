@@ -250,4 +250,140 @@ public class RawUserApi(IKgTransport transport)
         };
         return await transport.SendAsync(request);
     }
+
+    public async Task<JsonElement> GetCloudAsync(string userid, string token, string mid, int page = 1,
+        int pageSize = 30)
+    {
+        var clientTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var body = new JsonObject
+        {
+            ["page"] = page,
+            ["pagesize"] = pageSize,
+            ["getkmr"] = 1
+        };
+
+        var (aesStr, aesKey) = KgCrypto.PlaylistAesEncrypt(body);
+        var pPayload = new JsonObject
+        {
+            ["aes"] = aesKey,
+            ["uid"] = userid,
+            ["token"] = token
+        };
+        var p = KgCrypto.RsaEncryptPkcs1(JsonSerializer.Serialize(pPayload, AppJsonContext.Default.JsonObject))
+            .ToUpper();
+
+        var response = await transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            BaseUrl = "https://mcloudservice.kugou.com",
+            Path = "/v1/get_list",
+            Params = new Dictionary<string, string>
+            {
+                ["clienttime"] = clientTime.ToString(),
+                ["mid"] = mid,
+                ["key"] = KgSigner.CalcLoginKey(clientTime),
+                ["clientver"] = KuGouConfig.ClientVer,
+                ["appid"] = KuGouConfig.AppId,
+                ["p"] = p
+            },
+            BinaryBody = Convert.FromBase64String(aesStr),
+            ContentType = "application/octet-stream",
+            ClearDefaultParams = true,
+            NotSignature = true,
+            SignatureType = SignatureType.Default
+        });
+
+        if (response.ValueKind == JsonValueKind.Object &&
+            response.TryGetProperty("__raw_base64__", out var rawEl) &&
+            !string.IsNullOrWhiteSpace(rawEl.GetString()))
+        {
+            var decrypted = KgCrypto.PlaylistAesDecrypt(rawEl.GetString()!, aesKey);
+            using var doc = JsonDocument.Parse(decrypted);
+            return doc.RootElement.Clone();
+        }
+
+        return response;
+    }
+
+    public Task<JsonElement> GetCloudUrlAsync(string hash, string? albumAudioId = null, string? audioId = null,
+        string? name = null)
+    {
+        var normalizedHash = hash.ToLowerInvariant();
+        const int pid = 20026;
+
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/bsstrackercdngz/v2/query_musicclound_url",
+            Params = new Dictionary<string, string>
+            {
+                ["hash"] = normalizedHash,
+                ["ssa_flag"] = "is_fromtrack",
+                ["version"] = "20102",
+                ["ssl"] = "0",
+                ["album_audio_id"] = albumAudioId ?? "0",
+                ["pid"] = pid.ToString(),
+                ["audio_id"] = audioId ?? "0",
+                ["kv_id"] = "2",
+                ["key"] = KgSigner.CalcCloudKey(normalizedHash, pid),
+                ["bucket"] = "musicclound",
+                ["name"] = name ?? "",
+                ["with_res_tag"] = "0"
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetFollowMessagesAsync(string userid, string artistId, int pageSize = 30)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/msg.mobile/v3/msgtag/history",
+            Params = new Dictionary<string, string>
+            {
+                ["filter"] = "1",
+                ["maxid"] = "0",
+                ["pagesize"] = pageSize.ToString(),
+                ["tag"] = $"chat:{userid}_{artistId}"
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetCollectedVideosAsync(string userid, string token, int page = 1, int pageSize = 30)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/collectservice/v2/collect_list_mixvideo",
+            Params = new Dictionary<string, string> { ["plat"] = "1" },
+            Body = new JsonObject
+            {
+                ["userid"] = userid,
+                ["token"] = token,
+                ["page"] = page,
+                ["pagesize"] = pageSize
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetLikedVideosAsync(string userid, int pageSize = 30)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/m.comment.service/v1/get_user_like_video",
+            Params = new Dictionary<string, string>
+            {
+                ["kugouid"] = userid,
+                ["pagesize"] = pageSize.ToString(),
+                ["load_video_info"] = "1",
+                ["p"] = "1",
+                ["plat"] = "1"
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
 }

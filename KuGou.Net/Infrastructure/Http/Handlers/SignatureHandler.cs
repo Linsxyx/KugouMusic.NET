@@ -18,24 +18,32 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
         var timeStr = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
 
 
-        var currentDfid = kgReq.SpecificDfid ?? session.Dfid;
+        var currentDfid = kgReq.SessionOverrides?.GetValueOrDefault("dfid")
+                          ?? kgReq.SpecificDfid
+                          ?? session.Dfid;
         //var currentDfid = "-";
         var currentMid = KgUtils.CalcNewMid(currentDfid);
         var currentUuid = KgUtils.Md5(currentDfid + currentMid);
 
         var mergedParams = new Dictionary<string, string>(kgReq.Params);
 
-        mergedParams.TryAdd("appid", KuGouConfig.AppId);
-        mergedParams.TryAdd("clientver", KuGouConfig.ClientVer);
-        mergedParams.TryAdd("dfid", currentDfid);
-        mergedParams.TryAdd("mid", currentMid);
-        mergedParams.TryAdd("uuid", currentUuid);
-        if (!mergedParams.ContainsKey("userid")) mergedParams["userid"] = session.UserId;
+        var userId = kgReq.SessionOverrides?.GetValueOrDefault("userid") ?? session.UserId;
+        var token = kgReq.SessionOverrides?.GetValueOrDefault("token") ?? session.Token;
+
+        if (!kgReq.ClearDefaultParams)
+        {
+            mergedParams.TryAdd("appid", KuGouConfig.AppId);
+            mergedParams.TryAdd("clientver", KuGouConfig.ClientVer);
+            mergedParams.TryAdd("dfid", currentDfid);
+            mergedParams.TryAdd("mid", currentMid);
+            mergedParams.TryAdd("uuid", currentUuid);
+            if (!mergedParams.ContainsKey("userid")) mergedParams["userid"] = userId;
+        }
 
         mergedParams.TryAdd("clienttime", timeStr);
 
-        if (!mergedParams.ContainsKey("token") && !string.IsNullOrEmpty(session.Token))
-            mergedParams["token"] = session.Token;
+        if (!kgReq.ClearDefaultParams && !mergedParams.ContainsKey("token") && !string.IsNullOrEmpty(token))
+            mergedParams["token"] = token;
 
         if (kgReq.SignatureType == SignatureType.V5 && mergedParams.ContainsKey("hash"))
         {
@@ -48,18 +56,25 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
         {
             jsonBody = JsonSerializer.Serialize(kgReq.Body, AppJsonContext.Default.JsonObject);
 
-            request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+            request.Content = new StringContent(jsonBody, Encoding.UTF8, kgReq.ContentType);
         }
         else if (request.Method == HttpMethod.Post && !string.IsNullOrEmpty(kgReq.RawBody))
         {
             jsonBody = kgReq.RawBody;
         }
+        else if (request.Method == HttpMethod.Post && kgReq.BinaryBody is { Length: > 0 })
+        {
+            jsonBody = Convert.ToBase64String(kgReq.BinaryBody);
+        }
 
         var signature = "";
-        if (kgReq.SignatureType == SignatureType.Web)
+        if (kgReq.NotSignature || kgReq.SignatureType == SignatureType.None)
+            signature = "";
+        else if (kgReq.SignatureType == SignatureType.Web)
             signature = KgSigner.CalcWebQrSignature(mergedParams);
-        else if (kgReq.SignatureType != SignatureType.None)
-
+        else if (kgReq.SignatureType == SignatureType.Register)
+            signature = KgSigner.CalcPostSignature(mergedParams, jsonBody);
+        else
             signature = KgSigner.CalcPostSignature(mergedParams, jsonBody);
 
         if (!string.IsNullOrEmpty(signature)) mergedParams["signature"] = signature;

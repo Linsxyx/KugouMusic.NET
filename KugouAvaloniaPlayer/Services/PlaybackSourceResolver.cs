@@ -14,7 +14,7 @@ public interface IPlaybackSourceResolver
     Task<PlaybackSourceResult> ResolveAsync(SongItem song, string quality, CancellationToken cancellationToken);
 }
 
-public sealed class PlaybackSourceResolver(MusicClient musicClient, KgSessionManager sessionManager)
+public sealed class PlaybackSourceResolver(SongClient songClient, KgSessionManager sessionManager)
     : IPlaybackSourceResolver
 {
     public async Task<PlaybackSourceResult> ResolveAsync(
@@ -30,7 +30,7 @@ public sealed class PlaybackSourceResolver(MusicClient musicClient, KgSessionMan
             return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.LoginRequired);
 
         cancellationToken.ThrowIfCancellationRequested();
-        var playData = await musicClient.GetPlayInfoAsync(song.Hash, quality);
+        var playData = await songClient.GetPlayInfoAsync(song.Hash, quality);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (playData == null || playData.Status != 1)

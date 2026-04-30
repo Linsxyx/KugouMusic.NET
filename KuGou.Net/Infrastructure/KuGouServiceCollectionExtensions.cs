@@ -43,21 +43,37 @@ public static class KuGouServiceCollectionExtensions
         services.AddTransient<RawLyricApi>();
         services.AddTransient<RawRankApi>();
         services.AddTransient<RawAlbumApi>();
+        services.AddTransient<RawSongApi>();
+        services.AddTransient<RawArtistApi>();
+        services.AddTransient<RawCommentApi>();
+        services.AddTransient<RawFmApi>();
+        services.AddTransient<RawMediaCatalogApi>();
+        services.AddTransient<RawReportApi>();
 
         services.AddTransient<RawDiscoveryApi>();
 
 
-        services.AddTransient<DiscoveryClient>();
+        services.AddTransient<RecommendClient>();
 
 
         services.AddTransient<RankClient>();
-        services.AddTransient<MusicClient>();
-        services.AddTransient<AuthClient>();
+        services.AddTransient<SearchClient>();
+        services.AddTransient<LoginClient>();
         services.AddTransient<PlaylistClient>();
         services.AddTransient<UserClient>();
-        services.AddTransient<DeviceClient>();
+        services.AddTransient<RegisterClient>();
         services.AddTransient<LyricClient>();
         services.AddTransient<AlbumClient>();
+        services.AddTransient<SongClient>();
+        services.AddTransient<ArtistClient>();
+        services.AddTransient<CommentClient>();
+        services.AddTransient<FmClient>();
+        services.AddTransient<VideoClient>();
+        services.AddTransient<LongAudioClient>();
+        services.AddTransient<IpClient>();
+        services.AddTransient<SceneClient>();
+        services.AddTransient<ThemeClient>();
+        services.AddTransient<ReportClient>();
 
         return services;
     }

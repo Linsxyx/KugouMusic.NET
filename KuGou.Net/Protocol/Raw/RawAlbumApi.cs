@@ -7,11 +7,48 @@ namespace KuGou.Net.Protocol.Raw;
 
 public class RawAlbumApi(IKgTransport transport)
 {
+    public async Task<JsonElement> GetAlbumAsync(string albumIds, string? fields = null)
+    {
+        var clientTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var data = new JsonArray();
+        foreach (var id in albumIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            data.Add(new JsonObject
+            {
+                ["album_id"] = id,
+                ["album_name"] = "",
+                ["author_name"] = ""
+            });
+
+        var body = new JsonObject
+        {
+            ["appid"] = "3116",
+            ["clienttime"] = clientTime,
+            ["clientver"] = "11440",
+            ["data"] = data,
+            ["dfid"] = "-",
+            ["fields"] = fields ?? "",
+            ["key"] = KuGou.Net.util.KgSigner.CalcLoginKey(clientTime),
+            ["mid"] = "-"
+        };
+
+        var request = new KgRequest
+        {
+            Method = HttpMethod.Post,
+            BaseUrl = "http://kmr.service.kugou.com",
+            Path = "/v1/album",
+            Body = body,
+            SpecificRouter = "kmr.service.kugou.com",
+            SignatureType = SignatureType.Default
+        };
+
+        return await transport.SendAsync(request);
+    }
+
     public async Task<JsonElement> GetAlbumInfoAsync(string albumId)
     {
         var body = new JsonObject
         {
-            ["album_id"] = albumId,
+            ["data"] = new JsonArray(new JsonObject { ["album_id"] = albumId }),
             ["is_buy"] = 0,
             ["fields"] =
                 "album_id,album_name,publish_date,sizable_cover,intro,language,is_publish,heat,type,quality,authors,exclusive,author_name,trans_param"

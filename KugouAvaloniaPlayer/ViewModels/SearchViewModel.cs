@@ -15,7 +15,7 @@ using SukiUI.Toasts;
 namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class SearchViewModel(
-    MusicClient musicClient,
+    SearchClient searchClient,
     PlaylistClient playlistClient,
     AlbumClient albumClient,
     ISukiToastManager toastManager,
@@ -111,7 +111,7 @@ public partial class SearchViewModel(
         IsLoadingHot = true;
         try
         {
-            var response = await musicClient.GetSearchHotAsync();
+            var response = await searchClient.GetSearchHotAsync();
             HotCategories.Clear();
             CurrentHotKeywords.Clear();
 
@@ -197,14 +197,14 @@ public partial class SearchViewModel(
 
     private async Task SearchSongs()
     {
-        var results = await musicClient.SearchAsync(SearchKeyword);
+        var results = await searchClient.SearchAsync(SearchKeyword);
         foreach (var item in results)
             Songs.Add(ConvertSong(item));
     }
 
     private async Task SearchPlaylists()
     {
-        var results = await musicClient.SearchSpecialAsync(SearchKeyword);
+        var results = await searchClient.SearchSpecialAsync(SearchKeyword);
         if (results != null)
             foreach (var item in results)
                 Playlists.Add(item);
@@ -212,7 +212,7 @@ public partial class SearchViewModel(
 
     private async Task SearchAlbums()
     {
-        var results = await musicClient.SearchAlbumAsync(SearchKeyword);
+        var results = await searchClient.SearchAlbumAsync(SearchKeyword);
         if (results != null)
             foreach (var item in results)
                 Albums.Add(item);

@@ -4,13 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 namespace KgWebApi.Net.Controllers;
 
 [ApiController]
-[Route("[controller]")]
-public class RegisterController(DeviceClient deviceClient) : ControllerBase
+[Route("register")]
+public class RegisterController(RegisterClient registerClient) : ControllerBase
 {
-    [HttpGet("Dev")]
+    [HttpGet("dev")]
     public async Task<IActionResult> UserDetail()
     {
-        var result = await deviceClient.InitDeviceAsync();
+        var result = await registerClient.InitDeviceAsync();
         return Ok(result);
     }
 }

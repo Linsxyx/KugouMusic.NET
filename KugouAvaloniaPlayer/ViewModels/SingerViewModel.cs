@@ -12,7 +12,7 @@ public partial class SingerViewModel : PageViewModelBase
 {
     private readonly string _authorId;
     private readonly ILogger<SingerViewModel> _logger;
-    private readonly MusicClient _musicClient;
+    private readonly ArtistClient _artistClient;
 
     private int _currentPage = 1;
     [ObservableProperty] private string _currentSortText = "热门";
@@ -26,9 +26,9 @@ public partial class SingerViewModel : PageViewModelBase
     [ObservableProperty] private string _singerAvatar;
     [ObservableProperty] private string _singerName;
 
-    public SingerViewModel(MusicClient musicClient, ILogger<SingerViewModel> logger, string authorId, string singerName)
+    public SingerViewModel(ArtistClient artistClient, ILogger<SingerViewModel> logger, string authorId, string singerName)
     {
-        _musicClient = musicClient;
+        _artistClient = artistClient;
         _logger = logger;
         _authorId = authorId;
         _singerName = singerName;
@@ -47,7 +47,7 @@ public partial class SingerViewModel : PageViewModelBase
 
         try
         {
-            var json = await _musicClient.GetSingerDetailAsync(_authorId);
+            var json = await _artistClient.GetDetailAsync(_authorId);
 
             if (json != null && json.Status == 1)
                 SingerAvatar = string.IsNullOrWhiteSpace(json.Cover)
@@ -91,7 +91,7 @@ public partial class SingerViewModel : PageViewModelBase
         try
         {
             var sort = IsHotSort ? "hot" : "new";
-            var result = await _musicClient.GetSingerSongsAsync(
+            var result = await _artistClient.GetAudiosAsync(
                 _authorId, page, 100, sort);
 
             if (result?.Songs == null)
