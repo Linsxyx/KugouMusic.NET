@@ -13,6 +13,7 @@
 
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Blue" />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SukiSideMenuOverride.axaml" />
         <labs:ControlThemes />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SliderPlayer.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SegmentedStyles.axaml" />
@@ -29,6 +30,7 @@
         <converters:CloseBehaviorConverter x:Key="CloseBehaviorConverter" />
         <converters:SingerNameConverter x:Key="SingerNameConverter" />
         <converters:EnumEqualityConverter x:Key="EnumEqualityConverter" />
+        <converters:PlaylistSelectionConverter x:Key="PlaylistSelectionConverter" />
         <converters:PlaybackQualityDisplayConverter x:Key="PlaybackQualityDisplayConverter" />
         <converters:WordLiftTransformConverter x:Key="WordLiftTransformConverter" />
     </Application.Resources>

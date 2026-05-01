@@ -23,6 +23,7 @@
                 <TextBlock Grid.Column="1" Text="{Binding SelectedPlaylist.Name}" FontSize="28" FontWeight="Bold"
                            TextTrimming="CharacterEllipsis"
                            MaxWidth="600"
+                           Margin="16,0,0,0"
                            HorizontalAlignment="Left" VerticalAlignment="Center" />
                 <Button Grid.Column="2"
                         Command="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"

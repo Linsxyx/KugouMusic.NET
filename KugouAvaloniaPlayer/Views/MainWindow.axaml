@@ -19,6 +19,21 @@
                  CanFullScreen="True"
                  TitleBarVisibilityOnFullScreen="AutoHidden">
 
+    <suki:SukiWindow.RightWindowTitleBarControls>
+        <Button Width="34"
+                Height="34"
+                Padding="7"
+                Classes="Basic"
+                Cursor="Hand"
+                Command="{Binding NavigateToUserCommand}"
+                ToolTip.Tip="设置">
+            <Svg Path="/Assets/gear-svgrepo-com.svg"
+                 Width="20"
+                 Height="20"
+                 VerticalAlignment="Center" />
+        </Button>
+    </suki:SukiWindow.RightWindowTitleBarControls>
+
     <suki:SukiWindow.Styles>
         <!-- 遮罩层动画 -->
         <Style Selector="Border#QueueBackdrop">
@@ -50,6 +65,72 @@
             <Setter Property="IsVisible" Value="True" />
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransform" Value="translateY(0)" />
+        </Style>
+
+        <Style Selector="Button.SidebarPlaylistOption">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel Background="Transparent">
+                        <Border Name="OptionBackground"
+                                Background="{DynamicResource SukiPrimaryColorLow}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                Opacity="0">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </Border.Transitions>
+                        </Border>
+                        <Border Name="OptionAccent"
+                                Width="3"
+                                Margin="0,8,0,8"
+                                HorizontalAlignment="Left"
+                                Background="{DynamicResource SukiPrimaryColor}"
+                                CornerRadius="2"
+                                Opacity="0">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </Border.Transitions>
+                        </Border>
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.SidebarPlaylistOption:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        </Style>
+        <Style Selector="Button.SidebarPlaylistOption:pointerover /template/ Border#OptionBackground">
+            <Setter Property="Opacity" Value="0.55" />
+        </Style>
+        <Style Selector="Button.SidebarPlaylistOption:pressed /template/ Border#OptionBackground">
+            <Setter Property="Opacity" Value="0.75" />
+        </Style>
+        <Style Selector="Button.SidebarPlaylistOption.selected">
+            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
+        </Style>
+        <Style Selector="Button.SidebarPlaylistOption.selected /template/ Border#OptionBackground">
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="Button.SidebarPlaylistOption.selected /template/ Border#OptionAccent">
+            <Setter Property="Opacity" Value="1" />
         </Style>
     </suki:SukiWindow.Styles>
 
@@ -84,187 +165,152 @@
             </suki:SukiSideMenu.ItemTemplate>
 
             <suki:SukiSideMenu.FooterContent>
-                <StackPanel Margin="10,4,10,80" Spacing="15">
+                <StackPanel Margin="10,4,10,80" Spacing="10">
                     <Separator Margin="0,4,0,2" />
 
-                    <ScrollViewer MaxHeight="150" HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto">
-                        <TabControl>
-                            <TabItem Header="我的歌单" FontSize="12" FontWeight="SemiBold"
-                                     Foreground="{DynamicResource SukiLowText}" >
-                                <StackPanel Spacing="8">
-                                    <ItemsControl ItemsSource="{Binding SidebarOnlinePlaylists}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="vm:PlaylistItem">
-                                                <Border Height="40" CornerRadius="8" Padding="6,4">
-                                                    <Border.ContextMenu>
-                                                        <ContextMenu>
-                                                            <MenuItem Header="删除歌单"
-                                                                      Tag="{Binding .}"
-                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}"
-                                                                      CommandParameter="{Binding $self.Tag}" />
-                                                        </ContextMenu>
-                                                    </Border.ContextMenu>
-                                                    <Button Classes="Basic"
-                                                            Cursor="Hand"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                            CommandParameter="{Binding .}">
-                                                        <Grid ColumnDefinitions="32,*,Auto" VerticalAlignment="Center">
-                                                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
-                                                                    VerticalAlignment="Center">
-                                                                <controls:AsyncImage Source="{Binding Cover}"
-                                                                                     Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="1"
-                                                                       Margin="10,0,0,0"
-                                                                       Text="{Binding Name}"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       VerticalAlignment="Center"
-                                                                       Foreground="{DynamicResource SukiLowText}" />
-                                                            <!--<TextBlock Grid.Column="2"
-                                                                       Text="{Binding Count}"
-                                                                       Margin="10,0,0,0"
-                                                                       VerticalAlignment="Center"
-                                                                       Foreground="{DynamicResource SukiLowText}" />-->
-                                                        </Grid>
-                                                    </Button>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <ItemsControl ItemsSource="{Binding SidebarLocalPlaylists}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="vm:PlaylistItem">
-                                                <Border Height="40" CornerRadius="8" Padding="6,4">
-                                                    <Border.ContextMenu>
-                                                        <ContextMenu>
-                                                            <MenuItem Header="移除本地歌单"
-                                                                      Tag="{Binding .}"
-                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteLocalPlaylistCommand}"
-                                                                      CommandParameter="{Binding $self.Tag}" />
-                                                        </ContextMenu>
-                                                    </Border.ContextMenu>
-                                                    <Button Classes="Basic"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                            CommandParameter="{Binding .}">
-                                                        <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
-                                                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
-                                                                    VerticalAlignment="Center">
-                                                                <controls:AsyncImage Source="{Binding Cover}"
-                                                                                     Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="1"
-                                                                       Margin="10,0,0,0"
-                                                                       Text="{Binding Name}"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       VerticalAlignment="Center"
-                                                                       Foreground="{DynamicResource SukiLowText}" />
-                                                        </Grid>
-                                                    </Button>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <Button Height="36"
-                                            Classes="Basic"
-                                            Cursor="Hand"
-                                            HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Stretch">
-                                        <Button.Flyout>
-                                            <MenuFlyout Placement="Bottom">
-                                                <MenuItem Header="导入本地文件夹..."
-                                                          Command="{Binding PlaylistsViewModel.ImportLocalFolderCommand}" />
-                                                <MenuItem Header="导入其他平台歌单链接..."
-                                                          Command="{Binding PlaylistsViewModel.ImportExternalPlaylistCommand}" />
-                                                <MenuItem Header="新建歌单..."
-                                                          Command="{Binding PlaylistsViewModel.ShowCreatePlaylistDialogCommand}" />
-                                            </MenuFlyout>
-                                        </Button.Flyout>
-                                        <Grid ColumnDefinitions="28,*" VerticalAlignment="Center">
-                                            <Border Grid.Column="0"
-                                                    Width="20"
-                                                    Height="20"
-                                                    CornerRadius="4"
-                                                    VerticalAlignment="Center"
-                                                    Background="{DynamicResource SukiPrimaryColorLow}" />
-                                            <Svg Grid.Column="0"
-                                                 Path="/Assets/music-folder-8-svgrepo-com.svg"
-                                                 HorizontalAlignment="Center"
-                                                 VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="1"
-                                                       Margin="10,0,0,0"
-                                                       Text="新建歌单"
-                                                       VerticalAlignment="Center"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Foreground="{DynamicResource SukiLowText}" />
-                                        </Grid>
-                                    </Button>
-                                </StackPanel>
-                            </TabItem>
-                            <TabItem Header="收藏的专辑">
-                                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                                              VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding SidebarAlbumPlaylists}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="vm:PlaylistItem">
-                                                <Border Height="40" CornerRadius="8" Padding="6,4">
-                                                    <Border.ContextMenu>
-                                                        <ContextMenu>
-                                                            <MenuItem Header="取消收藏专辑"
-                                                                      Tag="{Binding .}"
-                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}"
-                                                                      CommandParameter="{Binding $self.Tag}" />
-                                                        </ContextMenu>
-                                                    </Border.ContextMenu>
-                                                    <Button Classes="Basic"
-                                                            Cursor="Hand"
-                                                            HorizontalContentAlignment="Stretch"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                            CommandParameter="{Binding .}">
-                                                        <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
-                                                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
-                                                                    VerticalAlignment="Center">
-                                                                <controls:AsyncImage Source="{Binding Cover}"
-                                                                                     Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="1"
-                                                                       Margin="10,0,0,0"
-                                                                       Text="{Binding Name}"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       VerticalAlignment="Center"
-                                                                       Foreground="{DynamicResource SukiLowText}" />
-                                                        </Grid>
-                                                    </Button>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
-                            </TabItem>
-                        </TabControl>
-                    </ScrollViewer>
-
-                    <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,8,0,0">
-                        <Button Classes="Basic"
-                                Cursor="Hand"
-                                HorizontalAlignment="Stretch"
-                                Command="{Binding NavigateToUserCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Svg Path="/Assets/gear-svgrepo-com.svg"
-                                     Width="25"
-                                     Height="25"
-                                     VerticalAlignment="Center" />
-                                <TextBlock Text="设置"
-                                           VerticalAlignment="Center"
-                                           Foreground="{DynamicResource SukiLowText}" />
+                    <TabControl>
+                        <TabItem Header="我的歌单" FontSize="12" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource SukiLowText}" >
+                            <StackPanel Spacing="8">
+                                <ItemsControl ItemsSource="{Binding SidebarOnlinePlaylists}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:PlaylistItem">
+                                            <Border Height="40" CornerRadius="8">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="删除歌单"
+                                                                  Tag="{Binding .}"
+                                                                  Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}"
+                                                                  CommandParameter="{Binding $self.Tag}" />
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <Button Classes="SidebarPlaylistOption"
+                                                        Classes.selected="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.SelectedPlaylist, Converter={StaticResource PlaylistSelectionConverter}, ConverterParameter={Binding .}}"
+                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                        CommandParameter="{Binding .}">
+                                                    <Grid ColumnDefinitions="32,*,Auto" VerticalAlignment="Center">
+                                                        <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
+                                                                VerticalAlignment="Center">
+                                                            <controls:AsyncImage Source="{Binding Cover}"
+                                                                                 Stretch="UniformToFill" />
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Margin="10,0,0,0"
+                                                                   Text="{Binding Name}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center" />
+                                                    </Grid>
+                                                </Button>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <ItemsControl ItemsSource="{Binding SidebarLocalPlaylists}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:PlaylistItem">
+                                            <Border Height="40" CornerRadius="8">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="移除本地歌单"
+                                                                  Tag="{Binding .}"
+                                                                  Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteLocalPlaylistCommand}"
+                                                                  CommandParameter="{Binding $self.Tag}" />
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <Button Classes="SidebarPlaylistOption"
+                                                        Classes.selected="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.SelectedPlaylist, Converter={StaticResource PlaylistSelectionConverter}, ConverterParameter={Binding .}}"
+                                                        Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                        CommandParameter="{Binding .}">
+                                                    <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
+                                                        <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
+                                                                VerticalAlignment="Center">
+                                                            <controls:AsyncImage Source="{Binding Cover}"
+                                                                                 Stretch="UniformToFill" />
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1"
+                                                                   Margin="10,0,0,0"
+                                                                   Text="{Binding Name}"
+                                                                   TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center" />
+                                                    </Grid>
+                                                </Button>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Height="36"
+                                        Classes="Basic"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch">
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="Bottom">
+                                            <MenuItem Header="导入本地文件夹..."
+                                                      Command="{Binding PlaylistsViewModel.ImportLocalFolderCommand}" />
+                                            <MenuItem Header="导入其他平台歌单链接..."
+                                                      Command="{Binding PlaylistsViewModel.ImportExternalPlaylistCommand}" />
+                                            <MenuItem Header="新建歌单..."
+                                                      Command="{Binding PlaylistsViewModel.ShowCreatePlaylistDialogCommand}" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                    <Grid ColumnDefinitions="28,*" VerticalAlignment="Center">
+                                        <Border Grid.Column="0"
+                                                Width="20"
+                                                Height="20"
+                                                CornerRadius="4"
+                                                VerticalAlignment="Center"
+                                                Background="{DynamicResource SukiPrimaryColorLow}" />
+                                        <Svg Grid.Column="0"
+                                             Path="/Assets/music-folder-8-svgrepo-com.svg"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1"
+                                                   Margin="10,0,0,0"
+                                                   Text="新建歌单"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource SukiLowText}" />
+                                    </Grid>
+                                </Button>
                             </StackPanel>
-                        </Button>
-                        <TextBlock Text="{Binding Version, StringFormat='v{0}'}"
-                                   HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource SukiLiquid2}" FontSize="10" />
-                    </StackPanel>
+                        </TabItem>
+                        <TabItem Header="收藏的专辑">
+                            <ItemsControl ItemsSource="{Binding SidebarAlbumPlaylists}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:PlaylistItem">
+                                        <Border Height="40" CornerRadius="8">
+                                            <Border.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="取消收藏专辑"
+                                                              Tag="{Binding .}"
+                                                              Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}"
+                                                              CommandParameter="{Binding $self.Tag}" />
+                                                </ContextMenu>
+                                            </Border.ContextMenu>
+                                            <Button Classes="SidebarPlaylistOption"
+                                                    Classes.selected="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.SelectedPlaylist, Converter={StaticResource PlaylistSelectionConverter}, ConverterParameter={Binding .}}"
+                                                    Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                    CommandParameter="{Binding .}">
+                                                <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
+                                                    <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
+                                                            VerticalAlignment="Center">
+                                                        <controls:AsyncImage Source="{Binding Cover}"
+                                                                             Stretch="UniformToFill" />
+                                                    </Border>
+                                                    <TextBlock Grid.Column="1"
+                                                               Margin="10,0,0,0"
+                                                               Text="{Binding Name}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" />
+                                                </Grid>
+                                            </Button>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </TabItem>
+                    </TabControl>
+
                 </StackPanel>
             </suki:SukiSideMenu.FooterContent>
         </suki:SukiSideMenu>

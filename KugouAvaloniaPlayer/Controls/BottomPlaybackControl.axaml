@@ -62,11 +62,13 @@
                             <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name, TargetNullValue='KA Music'}"
                                        FontWeight="SemiBold"
                                        FontSize="13"
-                                       MaxWidth="200" />
+                                       MaxWidth="200"
+                                       Foreground="{DynamicResource SukiText}" />
                             <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer, TargetNullValue='Ready'}"
                                        FontSize="11"
                                        Opacity="0.55"
-                                       MaxWidth="200" />
+                                       MaxWidth="200"
+                                       Foreground="{DynamicResource SukiLowText}" />
                         </StackPanel>
                     </Grid>
                 </Button>

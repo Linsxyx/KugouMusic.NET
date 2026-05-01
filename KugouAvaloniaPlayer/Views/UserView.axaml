@@ -609,6 +609,13 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
+
+                            <Separator Margin="0,6" />
+
+                            <TextBlock Text="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).Version, StringFormat='当前版本: v{0}'}"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource SukiLowText}"
+                                       HorizontalAlignment="Left" />
                         </StackPanel>
                     </suki:GlassCard>
 

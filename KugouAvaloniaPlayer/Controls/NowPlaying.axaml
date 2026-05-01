@@ -73,6 +73,20 @@
                     Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationLineForeground}" />
         </Style>
 
+        <Style Selector="Slider.NowPlayingSlider">
+            <Setter Property="Background" Value="#40FFFFFF" />
+            <Setter Property="Foreground" Value="#F2FFFFFF" />
+        </Style>
+
+        <Style Selector="Slider.NowPlayingSlider /template/ Thumb#thumb">
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#F2FFFFFF" />
+        </Style>
+
+        <Style Selector="Slider.NowPlayingSlider:pointerover /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+
         <Style Selector="Slider.NowPlayingVolume">
             <Setter Property="Background" Value="#40FFFFFF" />
             <Setter Property="Foreground" Value="#F2FFFFFF" />
@@ -135,7 +149,7 @@
                                  RenderTransformOrigin="0.5,0.5"
                                  RenderTransform="scale(1.12)">
                 <controls:AsyncImage.Effect>
-                    <BlurEffect Radius="100" />
+                    <BlurEffect Radius="180" />
                 </controls:AsyncImage.Effect>
             </controls:AsyncImage>
 
@@ -309,7 +323,7 @@
                                             Value="{Binding Player.CurrentPositionSeconds}"
                                             Margin="8,0" IsSnapToTickEnabled="False"
                                             HorizontalAlignment="Stretch"
-                                            Classes="Player" />
+                                            Classes="Player NowPlayingSlider" />
                                 </Grid>
                             </Grid>
 
