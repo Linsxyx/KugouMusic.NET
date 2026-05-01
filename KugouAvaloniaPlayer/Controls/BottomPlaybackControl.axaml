@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:local="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              x:Class="KugouAvaloniaPlayer.Controls.BottomPlaybackControl"
              x:DataType="vm:MainWindowViewModel">
@@ -59,15 +60,17 @@
                                     VerticalAlignment="Center"
                                     Margin="12,0,0,0"
                                     Spacing="4">
-                            <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name, TargetNullValue='KA Music'}"
-                                       FontWeight="SemiBold"
-                                       FontSize="13"
-                                       MaxWidth="200"
-                                       Foreground="{DynamicResource SukiText}" />
+                            <local:ScrollingTextBlock Text="{Binding Player.DisplayedPlayingSong.DisplayTitle, TargetNullValue='KA Music'}"
+                                                      Width="200"
+                                                      Height="18"
+                                                      FontWeight="SemiBold"
+                                                      FontSize="13"
+                                                      Foreground="{DynamicResource SukiText}" />
                             <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer, TargetNullValue='Ready'}"
                                        FontSize="11"
                                        Opacity="0.55"
-                                       MaxWidth="200"
+                                       Width="200"
+                                       TextTrimming="CharacterEllipsis"
                                        Foreground="{DynamicResource SukiLowText}" />
                         </StackPanel>
                     </Grid>

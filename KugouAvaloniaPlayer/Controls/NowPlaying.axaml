@@ -9,7 +9,7 @@
 
     <UserControl.Styles>
         <Style Selector="Grid#Root">
-            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="IsHitTestVisible" Value="False" />
             <Setter Property="Opacity" Value="0" />
             <Setter Property="RenderTransform" Value="translateY(200px)" />
             <Setter Property="Transitions">
@@ -20,7 +20,7 @@
             </Setter>
         </Style>
         <Style Selector="Grid#Root.open">
-            <Setter Property="IsVisible" Value="True" />
+            <Setter Property="IsHitTestVisible" Value="True" />
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransform" Value="translateY(0)" />
         </Style>

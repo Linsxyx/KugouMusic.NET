@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,6 +25,18 @@ public partial class SongItem : ObservableObject
     [ObservableProperty] private string _singer = "";
 
     public List<SingerLite> Singers { get; set; } = new();
+
+    public string DisplayTitle => NormalizeDisplayTitle(Name, Singer);
+
+    partial void OnNameChanged(string value)
+    {
+        OnPropertyChanged(nameof(DisplayTitle));
+    }
+
+    partial void OnSingerChanged(string value)
+    {
+        OnPropertyChanged(nameof(DisplayTitle));
+    }
 
     [RelayCommand]
     private void Play()
@@ -60,6 +73,28 @@ public partial class SongItem : ObservableObject
     private void SetLocalCover()
     {
         WeakReferenceMessenger.Default.Send(new SetLocalSongCoverMessage(this));
+    }
+
+    private static string NormalizeDisplayTitle(string name, string singer)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return string.Empty;
+
+        if (string.IsNullOrWhiteSpace(singer))
+            return name;
+
+        var trimmedName = name.Trim();
+        var trimmedSinger = singer.Trim();
+        var separators = new[] { " - ", "-", "–", "—", ":", "：" };
+
+        foreach (var separator in separators)
+        {
+            var prefix = trimmedSinger + separator;
+            if (trimmedName.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase))
+                return trimmedName[prefix.Length..].Trim();
+        }
+
+        return trimmedName;
     }
 }
 

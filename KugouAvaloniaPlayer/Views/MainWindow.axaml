@@ -168,11 +168,9 @@
                 <StackPanel Margin="10,4,10,80" Spacing="10">
                     <Separator Margin="0,4,0,2" />
 
-                    <ScrollViewer MaxHeight="150" HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto">
-                        <TabControl>
-                            <TabItem Header="我的歌单" FontSize="12" FontWeight="SemiBold"
-                                     Foreground="{DynamicResource SukiLowText}" >
+                    <TabControl>
+                        <TabItem Header="我的歌单" FontSize="12" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource SukiLowText}" >
                                 <StackPanel Spacing="8">
                                     <ItemsControl ItemsSource="{Binding SidebarOnlinePlaylists}">
                                         <ItemsControl.ItemTemplate>
@@ -279,8 +277,8 @@
                                         </Grid>
                                     </Button>
                                 </StackPanel>
-                            </TabItem>
-                            <TabItem Header="收藏的专辑">
+                        </TabItem>
+                        <TabItem Header="收藏的专辑">
                                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                               VerticalScrollBarVisibility="Auto">
                                     <ItemsControl ItemsSource="{Binding SidebarAlbumPlaylists}">
@@ -317,9 +315,8 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </ScrollViewer>
-                            </TabItem>
-                        </TabControl>
-                    </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
 
                 </StackPanel>
             </suki:SukiSideMenu.FooterContent>
