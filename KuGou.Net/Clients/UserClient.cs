@@ -150,4 +150,86 @@ public class UserClient(RawUserApi rawApi, KgSessionManager sessionManager)
         var json = await rawApi.UpgradeVipAsync(uid);
         return KgApiResponseParser.Parse<UpgradeVipModel>(json, AppJsonContext.Default.UpgradeVipModel);
     }
+
+    public Task<JsonElement> GetYouthChannelAllAsync(int page = 1, int pageSize = 30)
+    {
+        return rawApi.GetYouthChannelAllAsync(page, pageSize);
+    }
+
+    public Task<JsonElement> GetYouthChannelAmwayAsync(string globalCollectionId)
+    {
+        return rawApi.GetYouthChannelAmwayAsync(globalCollectionId);
+    }
+
+    public Task<JsonElement> GetYouthChannelDetailAsync(string globalCollectionIds)
+    {
+        return rawApi.GetYouthChannelDetailAsync(globalCollectionIds);
+    }
+
+    public Task<JsonElement> GetYouthChannelSimilarAsync(string channelId)
+    {
+        return rawApi.GetYouthChannelSimilarAsync(channelId, sessionManager.Session.VipType);
+    }
+
+    public Task<JsonElement> GetYouthChannelSongsAsync(string globalCollectionId, int page = 1, int pageSize = 30)
+    {
+        return rawApi.GetYouthChannelSongsAsync(globalCollectionId, page, pageSize);
+    }
+
+    public Task<JsonElement> GetYouthChannelSongDetailAsync(string globalCollectionId, string fileId)
+    {
+        return rawApi.GetYouthChannelSongDetailAsync(globalCollectionId, fileId);
+    }
+
+    public async Task<JsonElement?> SetYouthChannelSubscriptionAsync(string globalCollectionId, bool subscribe)
+    {
+        if (!IsLoggedIn()) return null;
+        return await rawApi.SetYouthChannelSubscriptionAsync(globalCollectionId, subscribe);
+    }
+
+    public async Task<JsonElement?> GetYouthDynamicAsync()
+    {
+        if (!IsLoggedIn()) return null;
+        return await rawApi.GetYouthDynamicAsync();
+    }
+
+    public async Task<JsonElement?> GetYouthRecentDynamicAsync()
+    {
+        if (!IsLoggedIn()) return null;
+        return await rawApi.GetYouthRecentDynamicAsync();
+    }
+
+    public async Task<JsonElement?> ReportYouthListenSongAsync(long mixSongId = 666075191)
+    {
+        if (!IsLoggedIn()) return null;
+        return await rawApi.ReportYouthListenSongAsync(mixSongId);
+    }
+
+    public Task<JsonElement> GetYouthUnionVipAsync()
+    {
+        return rawApi.GetYouthUnionVipAsync();
+    }
+
+    public Task<JsonElement> GetYouthUserSongsAsync(string? userid = null, int page = 1, int pageSize = 30, int type = 0)
+    {
+        var targetUserId = string.IsNullOrWhiteSpace(userid) ? sessionManager.Session.UserId : userid;
+        return rawApi.GetYouthUserSongsAsync(targetUserId, page, pageSize, type);
+    }
+
+    public async Task<JsonElement?> ReportYouthVipAdPlayAsync()
+    {
+        if (!IsLoggedIn()) return null;
+        return await rawApi.ReportYouthVipAdPlayAsync();
+    }
+
+    public Task<JsonElement> GetFavoriteCountAsync(string mixSongIds)
+    {
+        return rawApi.GetFavoriteCountAsync(mixSongIds);
+    }
+
+    public Task<JsonElement> GetServerNowAsync()
+    {
+        var session = sessionManager.Session;
+        return rawApi.GetServerNowAsync(session.UserId, session.Token);
+    }
 }

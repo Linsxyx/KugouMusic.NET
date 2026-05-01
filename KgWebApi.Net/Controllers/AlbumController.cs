@@ -7,6 +7,12 @@ namespace KgWebApi.Net.Controllers;
 [Route("album")]
 public class AlbumController(AlbumClient albumClient) : ControllerBase
 {
+    [HttpGet("shop")]
+    public async Task<IActionResult> GetAlbumShop()
+    {
+        return Ok(await albumClient.GetAlbumShopAsync());
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAlbum([FromQuery(Name = "album_id")] string albumId,
         [FromQuery] string? fields = null)

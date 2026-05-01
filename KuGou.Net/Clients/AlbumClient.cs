@@ -8,6 +8,11 @@ namespace KuGou.Net.Clients;
 
 public class AlbumClient(RawAlbumApi rawApi)
 {
+    public Task<JsonElement> GetAlbumShopAsync()
+    {
+        return rawApi.GetAlbumShopAsync();
+    }
+
     public async Task<List<AlbumSongItem>?> GetSongsAsync(string albumId, int page = 1, int pageSize = 30)
     {
         var json = await rawApi.GetAlbumSongAsync(albumId, page, pageSize);

@@ -114,6 +114,33 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         var res = await recommendClient.GetPcDiantaiAsync();
         return Ok(res);
     }
+
+    [HttpGet("brush")]
+    public async Task<IActionResult> GetBrush(
+        [FromQuery(Name = "song_pool_id")] int songPoolId = 0,
+        [FromQuery] string mode = "normal")
+    {
+        var res = await recommendClient.GetBrushAsync(songPoolId, mode);
+        return Ok(res);
+    }
+
+    [HttpPost("everyday/friend")]
+    public async Task<IActionResult> GetEverydayFriend()
+    {
+        var res = await recommendClient.GetEverydayFriendAsync();
+        return Ok(res);
+    }
+
+    [HttpPost("everyday/history")]
+    public async Task<IActionResult> GetEverydayHistory(
+        [FromQuery] string mode = "list",
+        [FromQuery] string platform = "ios",
+        [FromQuery(Name = "history_name")] string? historyName = null,
+        [FromQuery] string? date = null)
+    {
+        var res = await recommendClient.GetEverydayHistoryAsync(mode, platform, historyName, date);
+        return Ok(res);
+    }
     
     /// <summary>
     /// 获取私人FM推荐 / 上报电台播放行为

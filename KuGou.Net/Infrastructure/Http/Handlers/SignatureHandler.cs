@@ -40,7 +40,7 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
             if (!mergedParams.ContainsKey("userid")) mergedParams["userid"] = userId;
         }
 
-        mergedParams.TryAdd("clienttime", timeStr);
+        if (!kgReq.ClearDefaultParams) mergedParams.TryAdd("clienttime", timeStr);
 
         if (!kgReq.ClearDefaultParams && !mergedParams.ContainsKey("token") && !string.IsNullOrEmpty(token))
             mergedParams["token"] = token;
@@ -91,7 +91,8 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
         request.Headers.TryAddWithoutValidation("User-Agent", KuGouConfig.UserAgent);
         request.Headers.TryAddWithoutValidation("dfid", currentDfid);
         request.Headers.TryAddWithoutValidation("mid", currentMid);
-        request.Headers.TryAddWithoutValidation("clienttime", mergedParams["clienttime"]);
+        if (mergedParams.TryGetValue("clienttime", out var clientTime))
+            request.Headers.TryAddWithoutValidation("clienttime", clientTime);
 
         request.Headers.TryAddWithoutValidation("kg-rc", "1");
         request.Headers.TryAddWithoutValidation("kg-thash", "5d816a0");

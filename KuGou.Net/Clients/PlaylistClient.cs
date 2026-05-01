@@ -9,6 +9,31 @@ namespace KuGou.Net.Clients;
 
 public class PlaylistClient(RawPlaylistApi rawApi, KgSessionManager sessionManager)
 {
+    public Task<JsonElement> GetSheetCollectionAsync(int position = 2)
+    {
+        return rawApi.GetSheetCollectionAsync(position);
+    }
+
+    public Task<JsonElement> GetSheetCollectionDetailAsync(string collectionId, int page = 1)
+    {
+        return rawApi.GetSheetCollectionDetailAsync(collectionId, page);
+    }
+
+    public Task<JsonElement> GetSheetDetailAsync(string id, string source)
+    {
+        return rawApi.GetSheetDetailAsync(id, source);
+    }
+
+    public Task<JsonElement> GetSheetHotAsync(int opernType = 1)
+    {
+        return rawApi.GetSheetHotAsync(opernType);
+    }
+
+    public Task<JsonElement> GetSheetListAsync(string albumAudioId, int opernType = 0, int page = 1, int pageSize = 30)
+    {
+        return rawApi.GetSheetListAsync(albumAudioId, opernType, page, pageSize);
+    }
+
     /// <summary>
     ///     获取歌单内的歌曲列表
     /// </summary>

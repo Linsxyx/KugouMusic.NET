@@ -7,6 +7,44 @@ namespace KgWebApi.Net.Controllers;
 [Route("playlist")]
 public class PlayListController(PlaylistClient playlistClient) : ControllerBase
 {
+    [HttpGet("/sheet/collection")]
+    public async Task<IActionResult> GetSheetCollection([FromQuery] int position = 2)
+    {
+        return Ok(await playlistClient.GetSheetCollectionAsync(position));
+    }
+
+    [HttpGet("/sheet/collection/detail")]
+    public async Task<IActionResult> GetSheetCollectionDetail(
+        [FromQuery(Name = "collection_id")] string collectionId,
+        [FromQuery] int page = 1)
+    {
+        return Ok(await playlistClient.GetSheetCollectionDetailAsync(collectionId, page));
+    }
+
+    [HttpGet("/sheet/detail")]
+    public async Task<IActionResult> GetSheetDetail(
+        [FromQuery] string id,
+        [FromQuery] string source)
+    {
+        return Ok(await playlistClient.GetSheetDetailAsync(id, source));
+    }
+
+    [HttpGet("/sheet/hot")]
+    public async Task<IActionResult> GetSheetHot([FromQuery(Name = "opern_type")] int opernType = 1)
+    {
+        return Ok(await playlistClient.GetSheetHotAsync(opernType));
+    }
+
+    [HttpGet("/sheet/list")]
+    public async Task<IActionResult> GetSheetList(
+        [FromQuery(Name = "album_audio_id")] string albumAudioId,
+        [FromQuery(Name = "opern_type")] int opernType = 0,
+        [FromQuery] int page = 1,
+        [FromQuery] int pagesize = 30)
+    {
+        return Ok(await playlistClient.GetSheetListAsync(albumAudioId, opernType, page, pagesize));
+    }
+
     [HttpGet("detail")]
     public async Task<IActionResult> GetDetail([FromQuery(Name = "ids")] string ids)
     {

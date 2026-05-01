@@ -93,4 +93,18 @@ public class UserController(UserClient userClient) : ControllerBase
         var result = await userClient.GetLikedVideosAsync(pagesize);
         return Ok(result);
     }
+
+    [HttpGet("/favorite/count")]
+    public async Task<IActionResult> FavoriteCount([FromQuery] string mixsongids)
+    {
+        var result = await userClient.GetFavoriteCountAsync(mixsongids);
+        return Ok(result);
+    }
+
+    [HttpPost("/server/now")]
+    public async Task<IActionResult> ServerNow()
+    {
+        var result = await userClient.GetServerNowAsync();
+        return Ok(result);
+    }
 }

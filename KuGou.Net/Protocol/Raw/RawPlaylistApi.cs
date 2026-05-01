@@ -9,6 +9,85 @@ namespace KuGou.Net.Protocol.Raw;
 
 public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logger)
 {
+    public Task<JsonElement> GetSheetCollectionAsync(int position = 2)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/miniyueku/v1/opern_square/get_home_module_config",
+            Params = new Dictionary<string, string>
+            {
+                ["srcappid"] = "2919",
+                ["position"] = position.ToString()
+            },
+            SignatureType = SignatureType.Web
+        });
+    }
+
+    public Task<JsonElement> GetSheetCollectionDetailAsync(string collectionId, int page = 1)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/miniyueku/v1/opern_square/collection_detail",
+            Params = new Dictionary<string, string>
+            {
+                ["srcappid"] = "2919",
+                ["page"] = page.ToString(),
+                ["collection_id"] = collectionId
+            },
+            SignatureType = SignatureType.Web
+        });
+    }
+
+    public Task<JsonElement> GetSheetDetailAsync(string id, string source)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            BaseUrl = "https://miniyueku.kugou.com",
+            Path = "/v1/opern/detail",
+            Params = new Dictionary<string, string>
+            {
+                ["id"] = id,
+                ["source"] = source
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetSheetHotAsync(int opernType = 1)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/miniyueku/v1/opern_square/get_home_hot_opern",
+            Params = new Dictionary<string, string>
+            {
+                ["srcappid"] = "2919",
+                ["opern_type"] = opernType.ToString()
+            },
+            SignatureType = SignatureType.Web
+        });
+    }
+
+    public Task<JsonElement> GetSheetListAsync(string albumAudioId, int opernType = 0, int page = 1, int pageSize = 30)
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/miniyueku/v1/opern/list",
+            Params = new Dictionary<string, string>
+            {
+                ["album_audio_id"] = albumAudioId,
+                ["opern_type"] = opernType.ToString(),
+                ["page"] = page.ToString(),
+                ["pagesize"] = pageSize.ToString()
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
     /// <summary>
     ///     获取歌单内歌曲 (对应 /pubsongs/v2/get_other_list_file_nofilt)
     /// </summary>

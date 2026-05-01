@@ -7,6 +7,16 @@ namespace KuGou.Net.Protocol.Raw;
 
 public class RawAlbumApi(IKgTransport transport)
 {
+    public Task<JsonElement> GetAlbumShopAsync()
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Get,
+            Path = "/zhuanjidata/v3/album_shop_v2/get_classify_data",
+            SignatureType = SignatureType.Default
+        });
+    }
+
     public async Task<JsonElement> GetAlbumAsync(string albumIds, string? fields = null)
     {
         var clientTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();

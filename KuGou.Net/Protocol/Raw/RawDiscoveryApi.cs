@@ -484,4 +484,114 @@ public class RawDiscoveryApi(IKgTransport transport)
 
         return await transport.SendAsync(request);
     }
+
+    public Task<JsonElement> GetBrushAsync(string userid, string vipType, string? mid, int songPoolId = 0,
+        string mode = "normal")
+    {
+        var clientTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var personalRecommend = new JsonObject
+        {
+            ["userid"] = userid,
+            ["appid"] = KuGouConfig.AppId,
+            ["playlist_ver"] = 2,
+            ["clienttime"] = clientTime,
+            ["mid"] = string.IsNullOrWhiteSpace(mid) ? "-" : mid,
+            ["new_sync_point"] = clientTime,
+            ["module_id"] = 1,
+            ["action"] = "login",
+            ["vip_type"] = int.TryParse(vipType, out var parsedVipType) ? parsedVipType : 0,
+            ["vip_flags"] = 3,
+            ["recommend_source_locked"] = 0,
+            ["song_pool_id"] = songPoolId,
+            ["callerid"] = 0,
+            ["m_type"] = 1,
+            ["kguid"] = userid,
+            ["platform"] = "ios",
+            ["area_code"] = 1,
+            ["fakem"] = "ca981cfc583a4c37f28d2d49000013c16a0a",
+            ["clientver"] = 11850,
+            ["mode"] = mode,
+            ["active_swtich"] = "on",
+            ["key"] = KgSigner.CalcLoginKey(clientTime)
+        };
+
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/genesisapi/v1/newepoch_song_rec/feed",
+            Params = new Dictionary<string, string>
+            {
+                ["sort_type"] = "1",
+                ["platform"] = "ios",
+                ["page"] = "1",
+                ["content_ver"] = "4",
+                ["clientver"] = "11850"
+            },
+            Body = new JsonObject
+            {
+                ["behaviors"] = new JsonArray(),
+                ["abtest"] = new JsonObject
+                {
+                    ["abtest"] = new JsonObject
+                    {
+                        ["shuashua"] = new JsonObject { ["commentcard"] = 2 }
+                    }
+                },
+                ["personal_recommend_params"] = personalRecommend
+            },
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetEverydayFriendAsync()
+    {
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            BaseUrl = "https://acsing.service.kugou.com",
+            Path = "/sing7/relation/json/v3/friend_rec_by_using_song_list",
+            Params = new Dictionary<string, string>
+            {
+                ["channel"] = "130",
+                ["isteen"] = "0",
+                ["platform"] = "2",
+                ["usemkv"] = "1"
+            },
+            Body = new JsonObject
+            {
+                ["list"] = new JsonArray(new JsonObject
+                {
+                    ["user_id"] = 853927886,
+                    ["mixsong_ids"] = new JsonArray(290083753, 251724346, 571554587, 250126644, 208831644,
+                        40328518, 250504076, 581706850, 318347675, 585258401, 288481998, 407414475,
+                        28239430, 280584633, 291957521, 64556644, 243149863, 488725103, 32114153,
+                        39951172, 29019580, 40397606, 327507651, 32029382, 32218359, 340353127,
+                        276448762, 177071956, 100031397, 249251602)
+                })
+            },
+            CustomHeaders = new Dictionary<string, string> { ["pid"] = "126556797" },
+            SignatureType = SignatureType.Default
+        });
+    }
+
+    public Task<JsonElement> GetEverydayHistoryAsync(string mode = "list", string platform = "ios",
+        string? historyName = null, string? date = null)
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            ["mode"] = mode,
+            ["platform"] = platform
+        };
+        if (!string.IsNullOrWhiteSpace(historyName)) parameters["history_name"] = historyName;
+        if (!string.IsNullOrWhiteSpace(date)) parameters["date"] = date;
+
+        return transport.SendAsync(new KgRequest
+        {
+            Method = HttpMethod.Post,
+            Path = "/everyday/api/v1/get_history",
+            Params = parameters,
+            SpecificRouter = "everydayrec.service.kugou.com",
+            SignatureType = SignatureType.Default
+        });
+    }
 }

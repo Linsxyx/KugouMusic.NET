@@ -115,6 +115,23 @@ public class RecommendClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     {
         return await rawApi.GetPcDiantaiAsync(GetUserId());
     }
+
+    public Task<JsonElement> GetBrushAsync(int songPoolId = 0, string mode = "normal")
+    {
+        var session = sessionManager.Session;
+        return rawApi.GetBrushAsync(GetUserId(), session.VipType, session.Mid, songPoolId, mode);
+    }
+
+    public Task<JsonElement> GetEverydayFriendAsync()
+    {
+        return rawApi.GetEverydayFriendAsync();
+    }
+
+    public Task<JsonElement> GetEverydayHistoryAsync(string mode = "list", string platform = "ios",
+        string? historyName = null, string? date = null)
+    {
+        return rawApi.GetEverydayHistoryAsync(mode, platform, historyName, date);
+    }
     
     /// <summary>
     /// 获取私人推荐音乐 (私人电台) / 听歌行为上报
