@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
+using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using Microsoft.Extensions.Logging;
 using SimpleAudio;
 using SukiUI.Toasts;
@@ -39,6 +40,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private readonly DispatcherTimer _playbackTimer;
     private readonly IPlaybackCoordinator _playbackCoordinator;
     private readonly IPlaybackSourceResolver _playbackSourceResolver;
+    private readonly ISystemMediaSessionService _systemMediaSessionService;
 
     private readonly DualTrackAudioPlayer _player;
     private readonly SemaphoreSlim _playSongLock = new(1, 1);
@@ -99,7 +101,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         RecommendClient discoveryClient, ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
         PlaybackQueueManager queueManager, LyricsService lyricsService, FavoritePlaylistService favoriteService,
         ITransitionAnalysisService transitionAnalysisService, IPlaybackSourceResolver playbackSourceResolver,
-        IPlaybackCoordinator playbackCoordinator)
+        IPlaybackCoordinator playbackCoordinator, ISystemMediaSessionService systemMediaSessionService)
     {
         _discoveryClient = discoveryClient;
         _toastManager = toastManager;
@@ -110,6 +112,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _transitionAnalysisService = transitionAnalysisService;
         _playbackSourceResolver = playbackSourceResolver;
         _playbackCoordinator = playbackCoordinator;
+        _systemMediaSessionService = systemMediaSessionService;
 
         _player = playbackCoordinator.Player;
         _player.PlaybackEnded += OnPlaybackEnded;

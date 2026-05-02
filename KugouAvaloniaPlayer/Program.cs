@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Avalonia;
+using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using Velopack;
 
 namespace KugouAvaloniaPlayer;
@@ -15,6 +16,9 @@ internal sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+#if KUGOU_WINDOWS
+        WindowsAppIdentity.Register();
+#endif
         var velopack = VelopackApp.Build();
 
         velopack.Run();

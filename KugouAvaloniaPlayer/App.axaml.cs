@@ -7,6 +7,7 @@ using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
+using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,7 @@ public partial class App : Application
         collection.AddSingleton<IDesktopLyricMousePassthroughService, DesktopLyricMousePassthroughService>();
         collection.AddSingleton<IDesktopLyricWindowService, DesktopLyricWindowService>();
         collection.AddSingleton<IGlobalShortcutService, GlobalShortcutService>();
+        collection.AddSingleton<ISystemMediaSessionService, SystemMediaSessionService>();
         collection.AddSingleton<IFolderPickerService, FolderPickerService>();
         collection.AddSingleton<IGitHubReleaseService, GitHubReleaseService>();
 
@@ -95,12 +97,14 @@ public partial class App : Application
             desktop.MainWindow = mainWindow;
 
             var globalShortcutService = services.GetRequiredService<IGlobalShortcutService>();
+            var systemMediaSessionService = services.GetRequiredService<ISystemMediaSessionService>();
 
             void InitializeGlobalShortcuts(object? _, EventArgs __)
             {
                 mainWindow.Opened -= InitializeGlobalShortcuts;
                 globalShortcutService.Initialize(mainWindow);
                 globalShortcutService.LoadFromSettings(SettingsManager.Settings.GlobalShortcuts);
+                systemMediaSessionService.Initialize(mainWindow, playerVm);
             }
 
             mainWindow.Opened += InitializeGlobalShortcuts;
@@ -109,6 +113,7 @@ public partial class App : Application
             desktop.Exit += (s, e) =>
             {
                 globalShortcutService.UnregisterAll();
+                systemMediaSessionService.Shutdown();
                 ShutdownTrayIcon();
                 SimpleAudioPlayer.Free();
                 _serviceProvider?.Dispose();

@@ -61,6 +61,8 @@ public partial class PlayerViewModel
 
     partial void OnCurrentPositionSecondsChanged(double value)
     {
+        _systemMediaSessionService.UpdateTimeline(value, TotalDurationSeconds);
+
         if (Math.Abs(value - _player.GetPosition().TotalSeconds) < 0.5)
             return;
 
@@ -82,6 +84,18 @@ public partial class PlayerViewModel
     partial void OnDisplayedPlayingSongChanged(SongItem? value)
     {
         BeginNowPlayingSongTransition();
+        _ = _systemMediaSessionService.UpdateSongAsync(value);
+        _systemMediaSessionService.UpdateTimeline(CurrentPositionSeconds, TotalDurationSeconds);
+    }
+
+    partial void OnIsPlayingAudioChanged(bool value)
+    {
+        _systemMediaSessionService.UpdatePlaybackState(value);
+    }
+
+    partial void OnTotalDurationSecondsChanged(double value)
+    {
+        _systemMediaSessionService.UpdateTimeline(CurrentPositionSeconds, value);
     }
 
     partial void OnMusicQualityChanged(string value)
