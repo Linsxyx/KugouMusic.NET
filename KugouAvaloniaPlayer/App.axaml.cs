@@ -60,6 +60,7 @@ public partial class App : Application
         collection.AddSingleton<ISystemMediaSessionService, SystemMediaSessionService>();
         collection.AddSingleton<IFolderPickerService, FolderPickerService>();
         collection.AddSingleton<IGitHubReleaseService, GitHubReleaseService>();
+        collection.AddSingleton<IAppUpdateService, AppUpdateService>();
 
         SettingsManager.Load();
 

@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Collections;
-using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -20,10 +19,7 @@ using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SukiUI.Dialogs;
-using SukiUI.Enums;
 using SukiUI.Toasts;
-using Velopack;
-using Velopack.Sources;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -33,6 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
     private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
     private readonly LoginClient _authClient;
+    private readonly IAppUpdateService _appUpdateService;
     private readonly IDesktopLyricWindowService _desktopLyricWindowService;
     private readonly DailyRecommendViewModel _dailyRecommendViewModel;
     private readonly ILogger<MainWindowViewModel> _logger;
@@ -86,6 +83,7 @@ public partial class MainWindowViewModel : ObservableObject
         LoginClient authClient,
         UserClient userClient,
         ISingerViewModelFactory singerViewModelFactory,
+        IAppUpdateService appUpdateService,
         IDesktopLyricWindowService desktopLyricWindowService,
         ILoginDialogService loginDialogService,
         INavigationService navigationService,
@@ -104,6 +102,7 @@ public partial class MainWindowViewModel : ObservableObject
         _dailyRecommendViewModel = dailyRecommendViewModel;
         _userClient = userClient;
         var singerViewModelFactory1 = singerViewModelFactory;
+        _appUpdateService = appUpdateService;
         _desktopLyricWindowService = desktopLyricWindowService;
         _loginDialogService = loginDialogService;
         _navigationService = navigationService;
@@ -185,7 +184,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             await LoadLocalSessionOrLogin();
             await GetDailyRecommendations();
-            if (SettingsManager.Settings.AutoCheckUpdate) await CheckForUpdatesAsync();
+            if (SettingsManager.Settings.AutoCheckUpdate) await _appUpdateService.CheckForUpdatesAsync();
         });
     }
 
@@ -398,8 +397,19 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OnCheckForUpdateRequested()
     {
-        _ = Task.Run(() => CheckForUpdatesAsync(true))
-            .ContinueWith(_ => Dispatcher.UIThread.Post(() => _userViewModel.SetCheckingUpdateState(false)));
+        _ = CheckForUpdatesFromUserAsync();
+    }
+
+    private async Task CheckForUpdatesFromUserAsync()
+    {
+        try
+        {
+            await _appUpdateService.CheckForUpdatesAsync(true);
+        }
+        finally
+        {
+            Dispatcher.UIThread.Post(() => _userViewModel.SetCheckingUpdateState(false));
+        }
     }
 
     [RelayCommand]
@@ -648,161 +658,4 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-
-    private async Task CheckForUpdatesAsync(bool showNoUpdateToast = false)
-    {
-        try
-        {
-            var repoUrl = "https://github.com/Linsxyx/KugouMusic.NET";
-            var updateManager = new UpdateManager(new GithubSource(repoUrl, null, false));
-
-
-            if (!updateManager.IsInstalled)
-            {
-                _logger.LogInformation("未通过 Velopack 安装，跳过更新检查。");
-                if (showNoUpdateToast)
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        ToastManager.CreateToast()
-                            .OfType(NotificationType.Information)
-                            .WithTitle("检查更新")
-                            .WithContent("应用未通过安装包安装，无法自动更新。")
-                            .Dismiss().After(TimeSpan.FromSeconds(3))
-                            .Queue();
-                    });
-                return;
-            }
-
-            var newVersion = await updateManager.CheckForUpdatesAsync();
-            if (newVersion == null)
-            {
-                _logger.LogInformation("当前已是最新版本。");
-                if (showNoUpdateToast)
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        ToastManager.CreateToast()
-                            .OfType(NotificationType.Success)
-                            .WithTitle("检查更新")
-                            .WithContent("当前已是最新版本。")
-                            .Dismiss().After(TimeSpan.FromSeconds(3))
-                            .Queue();
-                    });
-                return;
-            }
-
-            Dispatcher.UIThread.Post(() => ShowActionToast(updateManager, newVersion));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"检查更新失败: {ex.Message}");
-            if (showNoUpdateToast)
-                Dispatcher.UIThread.Post(() =>
-                {
-                    ToastManager.CreateToast()
-                        .OfType(NotificationType.Error)
-                        .WithTitle("检查更新失败")
-                        .WithContent(ex.Message)
-                        .Dismiss().After(TimeSpan.FromSeconds(4))
-                        .Queue();
-                });
-        }
-    }
-
-// 弹出发现更新的 Toast
-    private void ShowActionToast(UpdateManager updateManager, UpdateInfo newVersion)
-    {
-        ToastManager.CreateToast()
-            .WithTitle("发现新版本")
-            .WithContent($"版本 {newVersion.TargetFullRelease.Version} 现已发布，详细可在设置”更新与关于“中查看，是否立即更新？")
-            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Standard)
-            .WithActionButton("立即更新", toast => { _ = ShowUpdatingToastAndDownloadAsync(updateManager, newVersion); },
-                true, SukiButtonStyles.Standard)
-            .Queue();
-    }
-
-    private async Task ShowUpdatingToastAndDownloadAsync(UpdateManager updateManager, UpdateInfo newVersion)
-    {
-        var progress = new ProgressBar { Value = 0, ShowProgressText = true, Minimum = 0, Maximum = 100 };
-        ISukiToast? toast = null;
-
-        var hideButton = new Button
-        {
-            Content = "x",
-            Width = 24,
-            Height = 24,
-            Padding = new Thickness(0),
-            HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top
-        };
-        ToolTip.SetTip(hideButton, "后台继续下载");
-
-        hideButton.Click += (_, _) =>
-        {
-            if (toast is not null)
-                ToastManager.Dismiss(toast);
-        };
-
-        var progressContent = new Grid
-        {
-            RowDefinitions = new RowDefinitions("Auto,Auto"),
-            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            RowSpacing = 8
-        };
-        progressContent.Children.Add(new TextBlock
-        {
-            Text = "下载会在后台继续进行。",
-            Opacity = 0.72,
-            VerticalAlignment = VerticalAlignment.Center
-        });
-        progressContent.Children.Add(hideButton);
-        Grid.SetColumn(hideButton, 1);
-        progressContent.Children.Add(progress);
-        Grid.SetRow(progress, 1);
-        Grid.SetColumnSpan(progress, 2);
-
-        toast = ToastManager.CreateToast()
-            .WithTitle("正在下载更新...")
-            .WithContent(progressContent)
-            .Queue();
-
-        try
-        {
-            await Task.Run(async () =>
-            {
-                await updateManager.DownloadUpdatesAsync(newVersion,
-                    percentage => { Dispatcher.UIThread.Post(() => { progress.Value = percentage; }); });
-            });
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                ToastManager.Dismiss(toast);
-                ShowReadyToRestartToast(updateManager, newVersion);
-            });
-        }
-        catch (Exception ex)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                ToastManager.Dismiss(toast);
-                ToastManager.CreateToast()
-                    .OfType(NotificationType.Error)
-                    .WithTitle("更新下载失败")
-                    .WithContent(ex.Message)
-                    .Dismiss().After(TimeSpan.FromSeconds(4))
-                    .Queue();
-            });
-        }
-    }
-
-    private void ShowReadyToRestartToast(UpdateManager updateManager, UpdateInfo newVersion)
-    {
-        ToastManager.CreateToast()
-            .OfType(NotificationType.Success)
-            .WithTitle("更新就绪")
-            .WithContent("新版本已下载完毕，重启软件即可应用更新。")
-            .WithActionButton("稍后", _ => { }, true, SukiButtonStyles.Standard)
-            .WithActionButton("立即重启", _ => { updateManager.ApplyUpdatesAndRestart(newVersion); }, true,
-                SukiButtonStyles.Standard)
-            .Queue();
-    }
 }

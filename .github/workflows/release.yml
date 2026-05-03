@@ -325,6 +325,43 @@ jobs:
 
           ls -lah ./release_files
 
+      - name: Prepare Gitee update package
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          mkdir -p ./gitee_release_files
+
+          copy_required() {
+            local source_file="$1"
+            local target_dir="$2"
+
+            if [[ ! -f "$source_file" ]]; then
+              echo "Missing required Gitee update file: $source_file"
+              exit 1
+            fi
+
+            cp "$source_file" "$target_dir/"
+          }
+
+          copy_required "./release_files/releases.win.json" ./gitee_release_files
+          copy_required "./release_files/releases.linux.json" ./gitee_release_files
+          copy_required "./release_files/releases.osx.json" ./gitee_release_files
+          copy_required "./release_files/RELEASES" ./gitee_release_files
+          copy_required "./release_files/RELEASES-osx" ./gitee_release_files
+          copy_required "./release_files/RELEASES-linux" ./gitee_release_files
+          copy_required "./release_files/KugouAvaloniaPlayer-${VERSION}-full.nupkg" ./gitee_release_files
+          copy_required "./release_files/KugouAvaloniaPlayer-${VERSION}-linux-full.nupkg" ./gitee_release_files
+          copy_required "./release_files/KugouAvaloniaPlayer-${VERSION}-osx-full.nupkg" ./gitee_release_files
+
+          ls -lah ./gitee_release_files
+          zip -r ./gitee-release-files.zip ./gitee_release_files
+
+      - name: Upload Gitee update package
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitee-update-files
+          path: ./gitee-release-files.zip
+
       - name: Extract latest changelog from README
         shell: bash
         run: |
