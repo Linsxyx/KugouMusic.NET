@@ -27,6 +27,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     private int _fmPreviewRequestVersion;
 
     [ObservableProperty] private SongItem? _currentFmPreviewSong;
+    [ObservableProperty] private bool _isDailyRecommendationsLoading;
     [ObservableProperty] private bool _isFmActive;
     [ObservableProperty] private bool _isFmLoading;
     [ObservableProperty] private PersonalFmMode _selectedFmMode = PersonalFmMode.Peak;
@@ -58,6 +59,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
 
     public override string DisplayName => "每日推荐";
     public override string Icon => "/Assets/Radio.svg";
+    public string DailyRecommendSubtitle => "今天为你精选的好音乐";
 
     public AvaloniaList<SongItem> Songs { get; } = new();
     public AvaloniaList<SongItem> PersonalFmSongs { get; } = new();
@@ -81,6 +83,8 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     public bool ShowCompactFmPreview => ShowFmSongs && PersonalFmSongs.Count > 1;
     public bool IsFmPlaying => IsFmActive && _player.IsPlayingAudio;
     public string FmCardTitle => PersonalFmPresentation.GetTitle(SelectedFmMode);
+    public string FmModeShortLabel => PersonalFmPresentation.GetModeLabel(SelectedFmMode);
+    public string FmSongPoolButtonText => SelectedFmSongPoolId == PersonalFmSongPoolId.Style ? "风格" : "口味";
     public string FmCardTagline => $"{PersonalFmPresentation.GetModeLabel(SelectedFmMode)} · {PersonalFmPresentation.GetSongPoolLabel(SelectedFmSongPoolId)}";
 
     public string FmCardSubtitle
@@ -207,6 +211,35 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     }
 
     [RelayCommand]
+    private async Task CyclePersonalFmMode()
+    {
+        if (IsFmLoading)
+            return;
+
+        SelectedFmMode = SelectedFmMode switch
+        {
+            PersonalFmMode.Peak => PersonalFmMode.Normal,
+            PersonalFmMode.Normal => PersonalFmMode.Small,
+            _ => PersonalFmMode.Peak
+        };
+
+        await LoadPersonalFmPreviewAsync(IsFmActive, true);
+    }
+
+    [RelayCommand]
+    private async Task TogglePersonalFmSongPool()
+    {
+        if (IsFmLoading)
+            return;
+
+        SelectedFmSongPoolId = SelectedFmSongPoolId == PersonalFmSongPoolId.Taste
+            ? PersonalFmSongPoolId.Style
+            : PersonalFmSongPoolId.Taste;
+
+        await LoadPersonalFmPreviewAsync(IsFmActive, true);
+    }
+
+    [RelayCommand]
     private async Task PlayPersonalFm()
     {
         if (!CanUsePersonalFm)
@@ -269,6 +302,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     private async Task LoadDailyRecommendationsAsync()
     {
         _logger.LogInformation("正在获取每日推荐...");
+        IsDailyRecommendationsLoading = true;
         try
         {
             var response = await _discoveryClient.GetRecommendedSongsAsync();
@@ -293,6 +327,10 @@ public partial class DailyRecommendViewModel : PageViewModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "获取每日推荐失败");
+        }
+        finally
+        {
+            IsDailyRecommendationsLoading = false;
         }
     }
 
@@ -413,6 +451,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     partial void OnSelectedFmModeChanged(PersonalFmMode value)
     {
         OnPropertyChanged(nameof(FmCardTitle));
+        OnPropertyChanged(nameof(FmModeShortLabel));
         OnPropertyChanged(nameof(FmCardTagline));
         OnPropertyChanged(nameof(FmCardSubtitle));
         OnPropertyChanged(nameof(FmStatusCaption));
@@ -420,6 +459,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
 
     partial void OnSelectedFmSongPoolIdChanged(PersonalFmSongPoolId value)
     {
+        OnPropertyChanged(nameof(FmSongPoolButtonText));
         OnPropertyChanged(nameof(FmCardTagline));
         OnPropertyChanged(nameof(FmCardSubtitle));
     }
