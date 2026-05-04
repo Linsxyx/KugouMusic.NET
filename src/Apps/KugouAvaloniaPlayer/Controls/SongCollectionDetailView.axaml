@@ -8,44 +8,85 @@
              x:Class="KugouAvaloniaPlayer.Controls.SongCollectionDetailView"
              x:Name="Root">
 
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="CollectionHeroOverlayTop">#100B1D42</Color>
+                    <Color x:Key="CollectionHeroOverlayMid">#180B1D42</Color>
+                    <Color x:Key="CollectionHeroOverlayBottom">#300B1D42</Color>
+                    <Color x:Key="CollectionHeroFadeStart">#00FFFFFF</Color>
+                    <Color x:Key="CollectionHeroFadeMid">#28FFFFFF</Color>
+                    <Color x:Key="CollectionHeroFadeEnd">#F6FFFFFF</Color>
+                    <SolidColorBrush x:Key="CollectionPanelBackgroundBrush" Color="#F6FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionTableHeadingBrush" Color="#6D78A0" />
+                    <SolidColorBrush x:Key="CollectionCoverBorderBrush" Color="#70FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionCoverBackgroundBrush" Color="#28FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionHeroIconButtonBrush" Color="#2AFFFFFF" />
+                    <SolidColorBrush x:Key="CollectionHeroIconButtonHoverBrush" Color="#40FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionHeroButtonBorderBrush" Color="#58FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionHeroActionBrush" Color="#24FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionHeroActionHoverBrush" Color="#38FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionHeroActionBorderBrush" Color="#50FFFFFF" />
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="CollectionHeroOverlayTop">#24101B35</Color>
+                    <Color x:Key="CollectionHeroOverlayMid">#34101B35</Color>
+                    <Color x:Key="CollectionHeroOverlayBottom">#68101B35</Color>
+                    <Color x:Key="CollectionHeroFadeStart">#0012192A</Color>
+                    <Color x:Key="CollectionHeroFadeMid">#A012192A</Color>
+                    <Color x:Key="CollectionHeroFadeEnd">#FF12192A</Color>
+                    <SolidColorBrush x:Key="CollectionPanelBackgroundBrush" Color="#FF12192A" />
+                    <SolidColorBrush x:Key="CollectionTableHeadingBrush" Color="#9CA8C6" />
+                    <SolidColorBrush x:Key="CollectionCoverBorderBrush" Color="#66FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionCoverBackgroundBrush" Color="#242A3550" />
+                    <SolidColorBrush x:Key="CollectionHeroIconButtonBrush" Color="#30000000" />
+                    <SolidColorBrush x:Key="CollectionHeroIconButtonHoverBrush" Color="#4A000000" />
+                    <SolidColorBrush x:Key="CollectionHeroButtonBorderBrush" Color="#34FFFFFF" />
+                    <SolidColorBrush x:Key="CollectionHeroActionBrush" Color="#2A000000" />
+                    <SolidColorBrush x:Key="CollectionHeroActionHoverBrush" Color="#44000000" />
+                    <SolidColorBrush x:Key="CollectionHeroActionBorderBrush" Color="#30FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
     <UserControl.Styles>
-        <Style Selector="Border.CollectionPanel">
-            <Setter Property="BoxShadow" Value="0 10 30 0 #100B1D42" />
-        </Style>
         <Style Selector="Button.HeroIconButton">
             <Setter Property="Width" Value="42" />
             <Setter Property="Height" Value="42" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="CornerRadius" Value="21" />
-            <Setter Property="Background" Value="#2AFFFFFF" />
-            <Setter Property="BorderBrush" Value="#58FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource CollectionHeroIconButtonBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CollectionHeroButtonBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
         <Style Selector="Button.HeroIconButton:pointerover">
-            <Setter Property="Background" Value="#40FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource CollectionHeroIconButtonHoverBrush}" />
         </Style>
         <Style Selector="Button.HeroPrimaryButton">
             <Setter Property="MinHeight" Value="44" />
             <Setter Property="Padding" Value="18,0" />
             <Setter Property="CornerRadius" Value="22" />
-            <Setter Property="Background" Value="#6C5CFF" />
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <Style Selector="Button.HeroPrimaryButton:pointerover">
-            <Setter Property="Background" Value="#796BFF" />
+            <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="ContentControl#HeroActions Button">
             <Setter Property="MinHeight" Value="42" />
             <Setter Property="Padding" Value="14,0" />
             <Setter Property="CornerRadius" Value="21" />
-            <Setter Property="Background" Value="#24FFFFFF" />
-            <Setter Property="BorderBrush" Value="#50FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource CollectionHeroActionBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CollectionHeroActionBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style Selector="ContentControl#HeroActions Button:pointerover">
-            <Setter Property="Background" Value="#38FFFFFF" />
+            <Setter Property="Background" Value="{DynamicResource CollectionHeroActionHoverBrush}" />
         </Style>
         <Style Selector="ContentControl#HeroActions Button TextBlock">
             <Setter Property="Foreground" Value="White" />
@@ -56,44 +97,46 @@
         <Style Selector="TextBlock.TableHeading">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#6D78A0" />
+            <Setter Property="Foreground" Value="{DynamicResource CollectionTableHeadingBrush}" />
         </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto,*"
           Margin="{Binding #Root.HeaderMargin}">
-        <Border Grid.Row="0"
-                MinHeight="160"
-                CornerRadius="22,22,0,0"
-                ClipToBounds="True"
-                Background="{DynamicResource SukiPrimaryColorLow}">
-            <Grid ClipToBounds="True">
-                <controls:AsyncImage Source="{Binding #Root.HeroBackground}"
-                                     Margin="0,-106,0,0"
-                                     Stretch="UniformToFill" />
-                <Border>
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                            <GradientStop Color="#260B1D42" Offset="0" />
-                            <GradientStop Color="#3A0B1D42" Offset="0.55" />
-                            <GradientStop Color="#700B1D42" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.Background>
-                </Border>
-                <Border VerticalAlignment="Bottom"
-                        Height="70">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                            <GradientStop Color="#00FFFFFF" Offset="0" />
-                            <GradientStop Color="#55FFFFFF" Offset="0.58" />
-                            <GradientStop Color="#F6FFFFFF" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.Background>
-                </Border>
+        <Grid Grid.Row="0"
+              Height="188"
+              ClipToBounds="False">
+            <Border CornerRadius="22,22,0,0"
+                    ClipToBounds="True"
+                    Background="{DynamicResource SukiPrimaryColorLow}">
+                <Grid>
+                    <controls:AsyncImage Source="{Binding #Root.CurrentHeroBackground}"
+                                         Stretch="UniformToFill" />
+                    <Border>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                <GradientStop Color="{DynamicResource CollectionHeroOverlayTop}" Offset="0" />
+                                <GradientStop Color="{DynamicResource CollectionHeroOverlayMid}" Offset="0.62" />
+                                <GradientStop Color="{DynamicResource CollectionHeroOverlayBottom}" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Border VerticalAlignment="Bottom"
+                            Height="76">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                <GradientStop Color="{DynamicResource CollectionHeroFadeStart}" Offset="0" />
+                                <GradientStop Color="{DynamicResource CollectionHeroFadeMid}" Offset="0.56" />
+                                <GradientStop Color="{DynamicResource CollectionHeroFadeEnd}" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                </Grid>
+            </Border>
 
-                <Grid ColumnDefinitions="Auto,*"
-                      RowDefinitions="Auto,*"
-                      Margin="28,18,28,18">
+            <Grid ColumnDefinitions="Auto,*"
+                  RowDefinitions="Auto,*"
+                  Margin="28,20,28,18">
                     <Button Grid.Column="1"
                             Command="{Binding #Root.BackCommand}"
                             Classes="Basic HeroIconButton"
@@ -107,15 +150,15 @@
                                   Height="22" />
                     </Button>
 
-                    <Border Grid.RowSpan="2"
-                            Width="176"
-                            Height="176"
+                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                            Width="164"
+                            Height="164"
                             CornerRadius="16"
                             ClipToBounds="True"
                             VerticalAlignment="Top"
-                            BorderBrush="#70FFFFFF"
+                            BorderBrush="{DynamicResource CollectionCoverBorderBrush}"
                             BorderThickness="2"
-                            Background="#28FFFFFF">
+                            Background="{DynamicResource CollectionCoverBackgroundBrush}">
                         <controls:AsyncImage Source="{Binding #Root.Cover}" Stretch="UniformToFill" />
                     </Border>
 
@@ -129,42 +172,46 @@
                                    FontWeight="Bold"
                                    Foreground="White"
                                    TextTrimming="CharacterEllipsis"
-                                   MaxWidth="{Binding #Root.TitleMaxWidth}" />
+                                   MaxWidth="{Binding #Root.TitleMaxWidth}" 
+                                   Margin="-300,0,0,0"/>
                         <TextBlock Text="{Binding #Root.Subtitle}"
                                    IsVisible="{Binding #Root.HasSubtitle}"
                                    FontSize="14"
                                    Foreground="#DCE5FF"
                                    TextTrimming="CharacterEllipsis"
-                                   MaxWidth="{Binding #Root.TitleMaxWidth}" />
+                                   MaxWidth="{Binding #Root.TitleMaxWidth}"
+                                   Margin="-300,0,0,0"/>
 
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="12"
+                              MaxWidth="{Binding #Root.TitleMaxWidth}">
                             <Button Classes="HeroPrimaryButton"
                                     Command="{Binding #Root.PlayFirstSongCommand}"
-                                    Cursor="Hand">
+                                    Cursor="Hand"
+                                    Margin="-150,0,0,0">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="16" Height="16" />
                                     <TextBlock Text="播放全部" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
 
-                            <ContentControl Name="HeroActions"
+                            <ContentControl Grid.Column="2"
+                                            Name="HeroActions"
                                             Content="{Binding #Root.Actions}"
                                             IsVisible="{Binding #Root.HasActions}"
+                                            HorizontalAlignment="Right"
                                             VerticalAlignment="Center" />
-                        </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </Grid>
             </Grid>
-        </Border>
 
         <Border Grid.Row="1"
                 Classes="CollectionPanel"
                 Margin="{Binding #Root.ListMargin}"
                 Padding="22,16,22,0"
                 CornerRadius="18"
-                Background="#F6FFFFFF"
-                RenderTransform="translateY(-30px)">
+                Background="{DynamicResource CollectionPanelBackgroundBrush}">
             <Grid RowDefinitions="Auto,*">
                 <Grid ColumnDefinitions="*,150,80,150"
                       Margin="70,0,16,8">

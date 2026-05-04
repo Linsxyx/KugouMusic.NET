@@ -126,8 +126,7 @@
             IsLoadingMore="{Binding IsLoadingMoreSongs}">
             <localControls:SongCollectionDetailView.Actions>
                 <Button Command="{Binding CollectPlaylistCommand}"
-                        Classes="Standard Icon"
-                        ToolTip.Tip="收藏">
+                        Classes="Basic">
                     <PathIcon Data="{x:Static suki:Icons.Star}" />
                 </Button>
             </localControls:SongCollectionDetailView.Actions>

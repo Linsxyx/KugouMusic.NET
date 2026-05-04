@@ -3,8 +3,10 @@ using System.Linq;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Styling;
 using CommunityToolkit.Mvvm.Input;
 using KugouAvaloniaPlayer.ViewModels;
+using SukiUI;
 
 namespace KugouAvaloniaPlayer.Controls;
 
@@ -14,8 +16,21 @@ public partial class SongCollectionDetailView : UserControl
         AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(Cover));
 
     public static readonly StyledProperty<string> HeroBackgroundProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, string>(nameof(HeroBackground), string.Empty);
+
+    public static readonly StyledProperty<string> LightHeroBackgroundProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string>(
-            nameof(HeroBackground),
+            nameof(LightHeroBackground),
+            "avares://KugouAvaloniaPlayer/Assets/light.png");
+
+    public static readonly StyledProperty<string> NightHeroBackgroundProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, string>(
+            nameof(NightHeroBackground),
+            "avares://KugouAvaloniaPlayer/Assets/night.png");
+
+    public static readonly StyledProperty<string> CurrentHeroBackgroundProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, string>(
+            nameof(CurrentHeroBackground),
             "avares://KugouAvaloniaPlayer/Assets/light.png");
 
     public static readonly StyledProperty<string?> TitleProperty =
@@ -79,6 +94,7 @@ public partial class SongCollectionDetailView : UserControl
     {
         PlayFirstSongCommand = new RelayCommand(PlayFirstSong);
         InitializeComponent();
+        UpdateCurrentHeroBackground();
     }
 
     public ICommand PlayFirstSongCommand { get; }
@@ -93,6 +109,24 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(HeroBackgroundProperty);
         set => SetValue(HeroBackgroundProperty, value);
+    }
+
+    public string LightHeroBackground
+    {
+        get => GetValue(LightHeroBackgroundProperty);
+        set => SetValue(LightHeroBackgroundProperty, value);
+    }
+
+    public string NightHeroBackground
+    {
+        get => GetValue(NightHeroBackgroundProperty);
+        set => SetValue(NightHeroBackgroundProperty, value);
+    }
+
+    public string CurrentHeroBackground
+    {
+        get => GetValue(CurrentHeroBackgroundProperty);
+        private set => SetValue(CurrentHeroBackgroundProperty, value);
     }
 
     public string? Title
@@ -221,6 +255,24 @@ public partial class SongCollectionDetailView : UserControl
 
         if (change.Property == PlayFirstCommandProperty)
             HasPlayFirstCommand = change.NewValue is not null;
+
+        if (change.Property == HeroBackgroundProperty ||
+            change.Property == LightHeroBackgroundProperty ||
+            change.Property == NightHeroBackgroundProperty)
+            UpdateCurrentHeroBackground();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        SukiTheme.GetInstance().PropertyChanged += OnSukiThemePropertyChanged;
+        UpdateCurrentHeroBackground();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        SukiTheme.GetInstance().PropertyChanged -= OnSukiThemePropertyChanged;
+        base.OnDetachedFromVisualTree(e);
     }
 
     private void PlayFirstSong()
@@ -234,5 +286,23 @@ public partial class SongCollectionDetailView : UserControl
         var firstSong = Songs?.OfType<SongItem>().FirstOrDefault();
         if (firstSong?.PlayCommand.CanExecute(null) == true)
             firstSong.PlayCommand.Execute(null);
+    }
+
+    private void OnSukiThemePropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        UpdateCurrentHeroBackground();
+    }
+
+    private void UpdateCurrentHeroBackground()
+    {
+        if (!string.IsNullOrWhiteSpace(HeroBackground))
+        {
+            CurrentHeroBackground = HeroBackground;
+            return;
+        }
+
+        CurrentHeroBackground = SukiTheme.GetInstance().ActiveBaseTheme == ThemeVariant.Dark
+            ? NightHeroBackground
+            : LightHeroBackground;
     }
 }

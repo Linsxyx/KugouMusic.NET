@@ -7,6 +7,26 @@
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              x:Class="KugouAvaloniaPlayer.Views.SingerView"
              x:DataType="vm:SingerViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.SortToggleButton">
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="MinWidth" Value="94" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Background" Value="#2E000000" />
+            <Setter Property="BorderBrush" Value="#38FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.SortToggleButton:pointerover">
+            <Setter Property="Background" Value="#48000000" />
+        </Style>
+        <Style Selector="Button.SortToggleButton TextBlock">
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </UserControl.Styles>
+
     <suki:GlassCard Margin="15" Padding="20">
         <localControls:SongCollectionDetailView
             Cover="{Binding SingerAvatar}"
@@ -21,9 +41,14 @@
             ListPadding="0,0,0,50"
             TitleFontSize="24">
             <localControls:SongCollectionDetailView.Actions>
-                <Button Command="{Binding ToggleSortCommand}" Classes="Basic" Cursor="Hand">
-                    <TextBlock Text="{Binding CurrentSortText}"
-                               Foreground="{DynamicResource SukiLowText}" />
+                <Button Command="{Binding ToggleSortCommand}"
+                        Classes="SortToggleButton"
+                        Cursor="Hand"
+                        Margin="500,0,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Svg Path="/Assets/FormatList.svg" Width="16" Height="16" />
+                        <TextBlock Text="{Binding CurrentSortText}" VerticalAlignment="Center" />
+                    </StackPanel>
                 </Button>
             </localControls:SongCollectionDetailView.Actions>
         </localControls:SongCollectionDetailView>
