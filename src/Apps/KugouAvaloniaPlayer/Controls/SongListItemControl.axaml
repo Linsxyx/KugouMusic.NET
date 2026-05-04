@@ -91,7 +91,7 @@
             </StackPanel>
 
             <TextBlock Grid.Column="2" Text="{Binding AlbumName}" VerticalAlignment="Center"
-                       Foreground="{DynamicResource SukiLowText}"
+                       Foreground="{DynamicResource SukiLiquid2}"
                        TextTrimming="CharacterEllipsis" />
 
             <TextBlock Grid.Column="3"

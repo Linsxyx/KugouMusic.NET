@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           CLEAN_VERSION=${GITHUB_REF_NAME#v}
-          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+          dotnet publish ./src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
             -c Release \
             "-p:BUILD_VERSION=$CLEAN_VERSION" \
             -r ${{ matrix.rid }} \
@@ -64,10 +64,10 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
 
           EXE_NAME="KugouAvaloniaPlayer"
-          ICON_PATH="./KugouAvaloniaPlayer/Assets/Test.png"
+          ICON_PATH="./src/Apps/KugouAvaloniaPlayer/Assets/Test.png"
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             EXE_NAME="KugouAvaloniaPlayer.exe"
-            ICON_PATH="./KugouAvaloniaPlayer/Assets/Test.ico"
+            ICON_PATH="./src/Apps/KugouAvaloniaPlayer/Assets/Test.ico"
           fi
 
           vpk pack \
@@ -131,7 +131,7 @@ jobs:
         shell: bash
         run: |
           ICONSET_DIR="./dist/AppIcon.iconset"
-          SOURCE_PNG="./KugouAvaloniaPlayer/Assets/Test.png"
+          SOURCE_PNG="./src/Apps/KugouAvaloniaPlayer/Assets/Test.png"
           ICNS_PATH="./dist/KugouAvaloniaPlayer.icns"
 
           mkdir -p "$ICONSET_DIR"
@@ -152,7 +152,7 @@ jobs:
       - name: Publish macOS files
         shell: bash
         run: |
-          dotnet publish ./KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+          dotnet publish ./src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
             -c Release \
             "-p:BUILD_VERSION=$VERSION" \
             -r "$RID" \

@@ -1,7 +1,10 @@
 using System.Collections;
+using System.Linq;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.Input;
+using KugouAvaloniaPlayer.ViewModels;
 
 namespace KugouAvaloniaPlayer.Controls;
 
@@ -9,6 +12,11 @@ public partial class SongCollectionDetailView : UserControl
 {
     public static readonly StyledProperty<string?> CoverProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(Cover));
+
+    public static readonly StyledProperty<string> HeroBackgroundProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, string>(
+            nameof(HeroBackground),
+            "avares://KugouAvaloniaPlayer/Assets/light.png");
 
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(Title));
@@ -27,6 +35,12 @@ public partial class SongCollectionDetailView : UserControl
 
     public static readonly StyledProperty<ICommand?> BackCommandProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(BackCommand));
+
+    public static readonly StyledProperty<ICommand?> PlayFirstCommandProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(PlayFirstCommand));
+
+    public static readonly StyledProperty<bool> HasPlayFirstCommandProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasPlayFirstCommand));
 
     public static readonly StyledProperty<bool> IsLoadingMoreProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(IsLoadingMore));
@@ -63,13 +77,22 @@ public partial class SongCollectionDetailView : UserControl
 
     public SongCollectionDetailView()
     {
+        PlayFirstSongCommand = new RelayCommand(PlayFirstSong);
         InitializeComponent();
     }
+
+    public ICommand PlayFirstSongCommand { get; }
 
     public string? Cover
     {
         get => GetValue(CoverProperty);
         set => SetValue(CoverProperty, value);
+    }
+
+    public string HeroBackground
+    {
+        get => GetValue(HeroBackgroundProperty);
+        set => SetValue(HeroBackgroundProperty, value);
     }
 
     public string? Title
@@ -106,6 +129,18 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(BackCommandProperty);
         set => SetValue(BackCommandProperty, value);
+    }
+
+    public ICommand? PlayFirstCommand
+    {
+        get => GetValue(PlayFirstCommandProperty);
+        set => SetValue(PlayFirstCommandProperty, value);
+    }
+
+    public bool HasPlayFirstCommand
+    {
+        get => GetValue(HasPlayFirstCommandProperty);
+        private set => SetValue(HasPlayFirstCommandProperty, value);
     }
 
     public bool IsLoadingMore
@@ -183,5 +218,21 @@ public partial class SongCollectionDetailView : UserControl
 
         if (change.Property == ActionsProperty)
             HasActions = change.NewValue is not null;
+
+        if (change.Property == PlayFirstCommandProperty)
+            HasPlayFirstCommand = change.NewValue is not null;
+    }
+
+    private void PlayFirstSong()
+    {
+        if (PlayFirstCommand?.CanExecute(null) == true)
+        {
+            PlayFirstCommand.Execute(null);
+            return;
+        }
+
+        var firstSong = Songs?.OfType<SongItem>().FirstOrDefault();
+        if (firstSong?.PlayCommand.CanExecute(null) == true)
+            firstSong.PlayCommand.Execute(null);
     }
 }

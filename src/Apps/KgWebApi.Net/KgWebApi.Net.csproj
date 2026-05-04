@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\KuGou.Net\KuGou.Net.csproj"/>
+        <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>
 
 </Project>
