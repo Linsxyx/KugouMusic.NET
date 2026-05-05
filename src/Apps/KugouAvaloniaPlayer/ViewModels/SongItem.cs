@@ -10,21 +10,41 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class SongItem : ObservableObject
 {
-    [ObservableProperty] private string _albumId = "";
-    [ObservableProperty] private string _albumName = "";
-    [ObservableProperty] private long _audioId;
-    [ObservableProperty] private string? _cover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
-    [ObservableProperty] private double _durationSeconds;
-    [ObservableProperty] private long _fileId; // 用于从歌单中删除歌曲
+    [ObservableProperty]
+    public partial string AlbumId { get; set; } = "";
 
-    [ObservableProperty] private string _hash = "";
+    [ObservableProperty]
+    public partial string AlbumName { get; set; } = "";
 
-    [ObservableProperty] private bool _isPlaying;
-    [ObservableProperty] private string? _localFilePath;
-    [ObservableProperty] private string _name = "";
-    [ObservableProperty] private SongPlaybackSource _playbackSource = SongPlaybackSource.Default;
-    [ObservableProperty] private string _singer = "";
+    [ObservableProperty]
+    public partial long AudioId { get; set; }
 
+    [ObservableProperty]
+    public partial string? Cover { get; set; } = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
+
+    [ObservableProperty]
+    public partial double DurationSeconds { get; set; }
+
+    [ObservableProperty]
+    public partial long FileId { get; set; }
+
+    [ObservableProperty]
+    public partial string Hash { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool IsPlaying { get; set; }
+
+    [ObservableProperty]
+    public partial string? LocalFilePath { get; set; }
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = "";
+
+    [ObservableProperty]
+    public partial SongPlaybackSource PlaybackSource { get; set; } = SongPlaybackSource.Default;
+
+    [ObservableProperty]
+    public partial string Singer { get; set; } = "";
     public List<SingerLite> Singers { get; set; } = new();
 
     public string DisplayTitle => NormalizeDisplayTitle(Name, Singer);
@@ -101,13 +121,27 @@ public partial class SongItem : ObservableObject
 
 public partial class PlaylistItem : ObservableObject
 {
-    [ObservableProperty] private int _count;
-    [ObservableProperty] private string _cover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
-    [ObservableProperty] private string _id = "";
-    [ObservableProperty] private long _listId; // 用于删除歌单的数字 ID
-    [ObservableProperty] private string? _localPath;
-    [ObservableProperty] private string _name = "";
-    [ObservableProperty] private string _subtitle = "";
+    [ObservableProperty]
+    public partial int Count { get; set; }
 
-    [ObservableProperty] private PlaylistType _type;
+    [ObservableProperty]
+    public partial string Cover { get; set; } = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
+
+    [ObservableProperty]
+    public partial string Id { get; set; } = "";
+
+    [ObservableProperty]
+    public partial long ListId { get; set; }
+
+    [ObservableProperty]
+    public partial string? LocalPath { get; set; }
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string Subtitle { get; set; } = "";
+
+    [ObservableProperty]
+    public partial PlaylistType Type { get; set; }
 }

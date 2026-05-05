@@ -53,48 +53,96 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private string? _analysisFailureSongKey;
     private bool _autoTransitionStarted;
     private CancellationTokenSource? _delayedVisualSwitchCancellation;
-    [ObservableProperty] private SongItem? _displayedPlayingSong;
+    [ObservableProperty]
+    public partial SongItem? DisplayedPlayingSong { get; set; }
+
     private bool _isDelayingVisualSwitch;
     private int _lyricsLoadVersion;
 
     private int _consecutiveFailures;
 
-    [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
-    [ObservableProperty] private int _currentLyricIndex = -1;
-    [ObservableProperty] private string _currentLyricText = "---";
-    [ObservableProperty] private string _currentLyricTrans = "";
-    [ObservableProperty] private LyricLineViewModel? _nextLyricLine;
-    [ObservableProperty] private SongItem? _currentPlayingSong;
-    [ObservableProperty] private double _currentPositionSeconds;
+    [ObservableProperty]
+    public partial LyricLineViewModel? CurrentLyricLine { get; set; }
+
+    [ObservableProperty]
+    public partial int CurrentLyricIndex { get; set; } = -1;
+
+    [ObservableProperty]
+    public partial string CurrentLyricText { get; set; } = "---";
+
+    [ObservableProperty]
+    public partial string CurrentLyricTrans { get; set; } = "";
+
+    [ObservableProperty]
+    public partial LyricLineViewModel? NextLyricLine { get; set; }
+
+    [ObservableProperty]
+    public partial SongItem? CurrentPlayingSong { get; set; }
+
+    [ObservableProperty]
+    public partial double CurrentPositionSeconds { get; set; }
+
     private int _disposeState;
     private bool _isAnalyzingTransition;
-    [ObservableProperty] private bool _isBuffering;
-    [ObservableProperty] private bool _isDraggingProgress;
-    [ObservableProperty] private bool _isLiked;
-    [ObservableProperty] private bool _isNowPlayingVisualizerEnabled;
-    [ObservableProperty] private bool _isPlayingAudio;
+    [ObservableProperty]
+    public partial bool IsBuffering { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDraggingProgress { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLiked { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsNowPlayingVisualizerEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsPlayingAudio { get; set; }
+
     private bool _isPreparingNextTrack;
-    [ObservableProperty] private bool _isSeamlessTransitionEnabled;
-    [ObservableProperty] private bool _isSwitchingQuality;
+    [ObservableProperty]
+    public partial bool IsSeamlessTransitionEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSwitchingQuality { get; set; }
+
     private bool _isSyncingQualitySelection;
     private CancellationTokenSource? _loadCancellation;
-    [ObservableProperty] private string _musicQuality = "128";
-    [ObservableProperty] private double _nowPlayingArtworkOpacity = 1;
-    [ObservableProperty] private double _nowPlayingArtworkTranslateY;
-    [ObservableProperty] private double _nowPlayingLyricsOpacity = 1;
-    [ObservableProperty] private double _nowPlayingLyricsTranslateY;
-    [ObservableProperty] private float _musicVolume = 0.8f;
+    [ObservableProperty]
+    public partial string MusicQuality { get; set; } = "128";
+
+    [ObservableProperty]
+    public partial double NowPlayingArtworkOpacity { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial double NowPlayingArtworkTranslateY { get; set; }
+
+    [ObservableProperty]
+    public partial double NowPlayingLyricsOpacity { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial double NowPlayingLyricsTranslateY { get; set; }
+
+    [ObservableProperty]
+    public partial float MusicVolume { get; set; } = 0.8f;
+
     private TransitionProfile? _pendingTransitionProfile;
     private SongItem? _pendingTransitionSong;
-    [ObservableProperty] private string? _preparedNextCover;
+    [ObservableProperty]
+    public partial string? PreparedNextCover { get; set; }
+
     private int _playRequestVersion;
     private bool _preparedNextIsLocal;
     private SongItem? _preparedNextSong;
     private string? _preparedNextSource;
     private PreparedTrack? _preparedNextTrack;
     private string? _prepareFailureSongKey;
-    [ObservableProperty] private string _qualitySelection = "128";
-    [ObservableProperty] private double _totalDurationSeconds;
+    [ObservableProperty]
+    public partial string QualitySelection { get; set; } = "128";
+
+    [ObservableProperty]
+    public partial double TotalDurationSeconds { get; set; }
+
     private CancellationTokenSource? _transitionWorkCancellation;
 
     public PlayerViewModel(

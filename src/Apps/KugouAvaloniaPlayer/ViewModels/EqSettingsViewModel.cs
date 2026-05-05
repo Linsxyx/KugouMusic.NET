@@ -8,8 +8,8 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class EqBandViewModel(EqSettingsViewModel owner) : ObservableObject
 {
-    [ObservableProperty] private float _value;
-
+    [ObservableProperty]
+    public partial float Value { get; set; }
     public string Frequency { get; init; } = "";
     public int Index { get; init; }
 

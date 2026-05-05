@@ -13,9 +13,14 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class RankItem : ObservableObject
 {
-    [ObservableProperty] private string _cover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
-    [ObservableProperty] private string _name = "";
-    [ObservableProperty] private long _rankId;
+    [ObservableProperty]
+    public partial string Cover { get; set; } = "avares://KugouAvaloniaPlayer/Assets/Default.png";
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = "";
+
+    [ObservableProperty]
+    public partial long RankId { get; set; }
 }
 
 public partial class RankViewModel : PageViewModelBase
@@ -27,10 +32,14 @@ public partial class RankViewModel : PageViewModelBase
 
     private int _currentPage = 1;
     private bool _hasMoreSongs = true;
-    [ObservableProperty] private bool _isLoadingMore;
+    [ObservableProperty]
+    public partial bool IsLoadingMore { get; set; }
 
-    [ObservableProperty] private bool _isShowingSongs;
-    [ObservableProperty] private RankItem? _selectedRank;
+    [ObservableProperty]
+    public partial bool IsShowingSongs { get; set; }
+
+    [ObservableProperty]
+    public partial RankItem? SelectedRank { get; set; }
 
     public RankViewModel(RankClient rankClient, ISukiToastManager toastManager, ILogger<RankViewModel> logger)
     {

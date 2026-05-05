@@ -10,7 +10,7 @@
         Height="48"
         CanResize="False"
         ShowInTaskbar="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         Topmost="True"
         WindowStartupLocation="Manual"
         TransparencyLevelHint="Transparent"

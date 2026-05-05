@@ -19,14 +19,22 @@ public enum DetailType
 
 public partial class SearchHotTagItem : ObservableObject
 {
-    [ObservableProperty] private int _index;
-    [ObservableProperty] private string _keyword = "";
-    [ObservableProperty] private string _reason = "";
+    [ObservableProperty]
+    public partial int Index { get; set; }
+
+    [ObservableProperty]
+    public partial string Keyword { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string Reason { get; set; } = "";
 }
 
 public partial class SearchHotTagGroup : ObservableObject
 {
-    [ObservableProperty] private int _index;
-    [ObservableProperty] private string _name = "";
+    [ObservableProperty]
+    public partial int Index { get; set; }
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = "";
     public AvaloniaList<SearchHotTagItem> Keywords { get; } = new();
 }

@@ -39,17 +39,22 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
     private int _currentPage = 1;
     private bool _hasMoreSongs = true;
-    [ObservableProperty] private bool _isImportingExternalPlaylist;
-    private bool _isLikePlaylistLocalMode;
-    [ObservableProperty] private bool _isLoadingMore;
+    [ObservableProperty]
+    public partial bool IsImportingExternalPlaylist { get; set; }
 
-    [ObservableProperty] private bool _isShowingSongs;
+    private bool _isLikePlaylistLocalMode;
+    [ObservableProperty]
+    public partial bool IsLoadingMore { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsShowingSongs { get; set; }
+
     private CancellationTokenSource? _refreshPlaylistsCts;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOnlinePlaylist))]
     [NotifyPropertyChangedFor(nameof(IsLocalPlaylist))]
-    private PlaylistItem? _selectedPlaylist;
+    public partial PlaylistItem? SelectedPlaylist { get; set; }
 
     public MyPlaylistsViewModel(
         UserClient userClient,

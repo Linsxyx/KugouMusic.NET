@@ -51,40 +51,92 @@ public partial class UserViewModel : PageViewModelBase
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
 
-    [ObservableProperty] private bool _autoCheckUpdate;
+    [ObservableProperty]
+    public partial bool AutoCheckUpdate { get; set; }
+    [ObservableProperty]
+    public partial string DesktopLyricColorHexInput { get; set; } = "#FFFFFFFF";
+    [ObservableProperty]
+    public partial string DesktopSelectedLyricColorMode { get; set; } = LyricColorModeDefault;
+    [ObservableProperty]
+    public partial string DesktopSelectedLyricColorTarget { get; set; } = LyricTargetMain;
+    [ObservableProperty] 
+    public partial string? DesktopSelectedLyricFontFamily{ get; set; }
+    [ObservableProperty]
+    public partial string DesktopSelectedLyricFontMode { get; set; } = LyricColorModeDefault;
 
-    [ObservableProperty] private string _desktopLyricColorHexInput = "#FFFFFFFF";
-    [ObservableProperty] private string _desktopSelectedLyricColorMode = LyricColorModeDefault;
-    [ObservableProperty] private string _desktopSelectedLyricColorTarget = LyricTargetMain;
-    [ObservableProperty] private string? _desktopSelectedLyricFontFamily;
-    [ObservableProperty] private string _desktopSelectedLyricFontMode = LyricColorModeDefault;
-    [ObservableProperty] private bool _desktopLyricDoubleLineEnabled;
-    [ObservableProperty] private bool _enableLegacyWordLyricEffect;
-    [ObservableProperty] private bool _enableGlobalShortcuts;
-    [ObservableProperty] private bool _enableNowPlayingVisualizer;
-    [ObservableProperty] private bool _enableSeamlessTransition;
-    [ObservableProperty] private bool _enableSurround;
-    [ObservableProperty] private bool _isCheckingUpdate;
-    [ObservableProperty] private bool _isLoadingReleaseNotes;
+    [ObservableProperty]
+    public partial bool DesktopLyricDoubleLineEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool EnableLegacyWordLyricEffect { get; set; }
+
+    [ObservableProperty]
+    public partial bool EnableGlobalShortcuts { get; set; }
+
+    [ObservableProperty]
+    public partial bool EnableNowPlayingVisualizer { get; set; }
+
+    [ObservableProperty] 
+    public partial bool EnableSeamlessTransition { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool EnableSurround { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsCheckingUpdate { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoadingReleaseNotes { get; set; }
+
     private bool _isInitializingLyricColorEditor;
     private bool _isInitializingLyricFontEditor;
-    [ObservableProperty] private bool _isLoading = true;
-    [ObservableProperty] private string _playPageLyricColorHexInput = "#FFFFFFFF";
-    [ObservableProperty] private double _playPageLyricFontSize = 26;
-    [ObservableProperty] private string _playPageSelectedLyricAlignment = LyricAlignmentCenter;
-    [ObservableProperty] private string _playPageSelectedLyricColorMode = LyricColorModeDefault;
-    [ObservableProperty] private string _playPageSelectedLyricColorTarget = LyricTargetMain;
-    [ObservableProperty] private string? _playPageSelectedLyricFontFamily;
-    [ObservableProperty] private string _playPageSelectedLyricFontMode = LyricColorModeDefault;
-    [ObservableProperty] private string _releaseNotesStatus = "正在加载最近版本发布说明...";
+    [ObservableProperty]
+    public partial bool IsLoading { get; set; } = true;
 
-    [ObservableProperty] private CloseBehavior _selectedCloseBehavior;
-    [ObservableProperty] private string _selectedEQPreset;
-    [ObservableProperty] private string _selectedSettingsSection = SettingsSectionGeneral;
-    [ObservableProperty] private string? _userAvatar;
-    [ObservableProperty] private string _userId = "";
-    [ObservableProperty] private string _userName = "加载中...";
-    [ObservableProperty] private string _vipStatus = "未开通";
+    [ObservableProperty]
+    public partial string PlayPageLyricColorHexInput { get; set; } = "#FFFFFFFF";
+
+    [ObservableProperty]
+    public partial double PlayPageLyricFontSize { get; set; } = 26;
+
+    [ObservableProperty]
+    public partial string PlayPageSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
+
+    [ObservableProperty]
+    public partial string PlayPageSelectedLyricColorMode { get; set; } = LyricColorModeDefault;
+
+    [ObservableProperty]
+    public partial string PlayPageSelectedLyricColorTarget { get; set; } = LyricTargetMain;
+
+    [ObservableProperty]
+    public partial string? PlayPageSelectedLyricFontFamily { get; set; }
+
+    [ObservableProperty]
+    public partial string PlayPageSelectedLyricFontMode { get; set; } = LyricColorModeDefault;
+
+    [ObservableProperty]
+    public partial string ReleaseNotesStatus { get; set; } = "正在加载最近版本发布说明...";
+
+    [ObservableProperty]
+    public partial CloseBehavior SelectedCloseBehavior { get; set; }
+
+    [ObservableProperty]
+    public partial string SelectedEQPreset { get; set; }
+
+    [ObservableProperty]
+    public partial string SelectedSettingsSection { get; set; } = SettingsSectionGeneral;
+
+    [ObservableProperty]
+    public partial string? UserAvatar { get; set; }
+
+    [ObservableProperty]
+    public partial string UserId { get; set; }
+
+    [ObservableProperty]
+    public partial string UserName { get; set; } = "加载中...";
+
+    [ObservableProperty]
+    public partial string VipStatus { get; set; } = "未开通";
 
     public UserViewModel(PlayerViewModel player, UserClient userClient, LoginClient authClient,
         ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
@@ -611,8 +663,7 @@ public partial class UserViewModel : PageViewModelBase
         DesktopSelectedLyricFontMode = SettingsManager.Settings.DesktopLyricUseCustomFont
             ? LyricColorModeCustom
             : LyricColorModeDefault;
-        DesktopSelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.DesktopLyricCustomFontFamily)
-                                         ?? LyricFontFamilyOptions.FirstOrDefault();
+        DesktopSelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.DesktopLyricCustomFontFamily);
 
         _isInitializingLyricFontEditor = false;
         OnPropertyChanged(nameof(IsDesktopLyricFontCustomMode));
@@ -625,8 +676,7 @@ public partial class UserViewModel : PageViewModelBase
         PlayPageSelectedLyricFontMode = SettingsManager.Settings.PlayPageLyricUseCustomFont
             ? LyricColorModeCustom
             : LyricColorModeDefault;
-        PlayPageSelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.PlayPageLyricCustomFontFamily)
-                                          ?? LyricFontFamilyOptions.FirstOrDefault();
+        PlayPageSelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.PlayPageLyricCustomFontFamily);
 
         _isInitializingLyricFontEditor = false;
         OnPropertyChanged(nameof(IsPlayPageLyricFontCustomMode));

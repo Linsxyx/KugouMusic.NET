@@ -33,20 +33,40 @@ public partial class SearchViewModel(
     // 用于收藏歌单的信息
     private string _currentPlaylistGlobalId = "";
     private string _currentPlaylistName = "";
-    [ObservableProperty] private SearchType _currentSearchType = SearchType.Song;
-    [ObservableProperty] private string? _detailCover;
-    [ObservableProperty] private string? _detailSubTitle;
-    [ObservableProperty] private string? _detailTitle;
+    [ObservableProperty]
+    public partial SearchType CurrentSearchType { get; set; } = SearchType.Song;
+
+    [ObservableProperty]
+    public partial string? DetailCover { get; set; }
+
+    [ObservableProperty]
+    public partial string? DetailSubTitle { get; set; }
+
+    [ObservableProperty]
+    public partial string? DetailTitle { get; set; }
+
     private bool _hasMoreDetails = true;
-    [ObservableProperty] private bool _hasSearched;
-    [ObservableProperty] private bool _isLoadingHot;
-    [ObservableProperty] private bool _isLoadingMoreDetails;
+    [ObservableProperty]
+    public partial bool HasSearched { get; set; }
 
-    [ObservableProperty] private bool _isSearching;
+    [ObservableProperty]
+    public partial bool IsLoadingHot { get; set; }
 
-    [ObservableProperty] private bool _isShowingDetail;
-    [ObservableProperty] private string _searchKeyword = "";
-    [ObservableProperty] private int _selectedHotMainIndex;
+    [ObservableProperty]
+    public partial bool IsLoadingMoreDetails { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSearching { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsShowingDetail { get; set; }
+
+    [ObservableProperty]
+    public partial string SearchKeyword { get; set; } = "";
+
+    [ObservableProperty]
+    public partial int SelectedHotMainIndex { get; set; }
+
     private bool _suppressHotSelectionChanged;
 
     public override string DisplayName => "搜索";

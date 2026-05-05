@@ -124,7 +124,7 @@ public class AppSettings
     public string PlayPageLyricCustomTranslationColor { get; set; } = "#CCFFFFFF";
     public bool PlayPageLyricUseCustomFont { get; set; }
     public string PlayPageLyricCustomFontFamily { get; set; } = string.Empty;
-    public LyricAlignmentOption PlayPageLyricAlignment { get; set; } = LyricAlignmentOption.Center;
+    public LyricAlignmentOption PlayPageLyricAlignment { get; set; } = LyricAlignmentOption.Left;
     public double PlayPageLyricFontSize { get; set; } = 33;
     public bool EnableLegacyWordLyricEffect { get; set; }
 

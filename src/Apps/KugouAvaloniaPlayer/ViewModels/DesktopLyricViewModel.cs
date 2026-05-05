@@ -24,29 +24,67 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
     private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
     private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
 
-    [ObservableProperty] private double _fontSize = 30;
+    [ObservableProperty]
+    public partial double FontSize { get; set; } = 30;
 
-    [ObservableProperty] private bool _isLocked;
-    [ObservableProperty] private bool _isControlBarExpanded;
-    [ObservableProperty] private bool _isControlHotspotHovered;
-    [ObservableProperty] private bool _isCollapsedLockIconHovered;
-    [ObservableProperty] private bool _enableLegacyWordLyricEffect;
-    [ObservableProperty] private bool _isTranslationVisible = true;
-    [ObservableProperty] private bool _isDoubleLineEnabled;
+    [ObservableProperty]
+    public partial bool IsLocked { get; set; }
 
-    [ObservableProperty] private FontFamily? _lyricFontFamily;
-    [ObservableProperty] private IBrush _lyricForeground = DefaultLyricBrush;
-    [ObservableProperty] private double _translationFontSize = 18;
-    [ObservableProperty] private IBrush _translationLineForeground = DefaultTranslationLineBrush;
-    [ObservableProperty] private IBrush _translationWordForeground = DefaultTranslationWordBrush;
-    [ObservableProperty] private LyricLineViewModel? _topLyricLine;
-    [ObservableProperty] private LyricLineViewModel? _bottomLyricLine;
-    [ObservableProperty] private bool _isTopLyricLineCurrent;
-    [ObservableProperty] private bool _isBottomLyricLineCurrent;
-    [ObservableProperty] private double _topLaneOpacity = 1;
-    [ObservableProperty] private double _bottomLaneOpacity = 1;
-    [ObservableProperty] private double _topLaneTranslateY;
-    [ObservableProperty] private double _bottomLaneTranslateY;
+    [ObservableProperty]
+    public partial bool IsControlBarExpanded { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsControlHotspotHovered { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsCollapsedLockIconHovered { get; set; }
+
+    [ObservableProperty]
+    public partial bool EnableLegacyWordLyricEffect { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsTranslationVisible { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsDoubleLineEnabled { get; set; }
+
+    [ObservableProperty] public partial FontFamily LyricFontFamily { get; set; } = FontFamily.Default;
+
+    [ObservableProperty]
+    public partial IBrush LyricForeground { get; set; } = DefaultLyricBrush;
+
+    [ObservableProperty]
+    public partial double TranslationFontSize { get; set; } = 18;
+
+    [ObservableProperty]
+    public partial IBrush TranslationLineForeground { get; set; } = DefaultTranslationLineBrush;
+
+    [ObservableProperty]
+    public partial IBrush TranslationWordForeground { get; set; } = DefaultTranslationWordBrush;
+
+    [ObservableProperty]
+    public partial LyricLineViewModel? TopLyricLine { get; set; }
+
+    [ObservableProperty]
+    public partial LyricLineViewModel? BottomLyricLine { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsTopLyricLineCurrent { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsBottomLyricLineCurrent { get; set; }
+
+    [ObservableProperty]
+    public partial double TopLaneOpacity { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial double BottomLaneOpacity { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial double TopLaneTranslateY { get; set; }
+
+    [ObservableProperty]
+    public partial double BottomLaneTranslateY { get; set; }
 
     private CancellationTokenSource? _topLaneAnimationCancellation;
     private CancellationTokenSource? _bottomLaneAnimationCancellation;
@@ -446,13 +484,13 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
     {
         if (!useCustomFont || string.IsNullOrWhiteSpace(fontFamilyName))
         {
-            LyricFontFamily = null;
+            LyricFontFamily = FontFamily.Default;
             return;
         }
 
         LyricFontFamily = IsSystemFontInstalled(fontFamilyName)
             ? new FontFamily(fontFamilyName)
-            : null;
+            : FontFamily.Default;
     }
 
     private static bool IsSystemFontInstalled(string fontFamilyName)

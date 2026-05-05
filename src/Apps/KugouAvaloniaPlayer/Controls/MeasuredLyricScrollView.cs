@@ -45,6 +45,9 @@ public class MeasuredLyricScrollView : ItemsControl
 
     public static readonly StyledProperty<double> ActiveAnchorRatioProperty =
         AvaloniaProperty.Register<MeasuredLyricScrollView, double>(nameof(ActiveAnchorRatio), 0.35);
+
+    public static readonly StyledProperty<double> EdgeFadeRatioProperty =
+        AvaloniaProperty.Register<MeasuredLyricScrollView, double>(nameof(EdgeFadeRatio), 0.15);
     
     public static readonly StyledProperty<bool> EnableScaleProperty =
         AvaloniaProperty.Register<MeasuredLyricScrollView, bool>(nameof(EnableScale), true);
@@ -113,6 +116,12 @@ public class MeasuredLyricScrollView : ItemsControl
         get => GetValue(ActiveAnchorRatioProperty);
         set => SetValue(ActiveAnchorRatioProperty, value);
     }
+
+    public double EdgeFadeRatio
+    {
+        get => GetValue(EdgeFadeRatioProperty);
+        set => SetValue(EdgeFadeRatioProperty, value);
+    }
     
     public bool EnableScale
     {
@@ -155,7 +164,8 @@ public class MeasuredLyricScrollView : ItemsControl
         if (change.Property == BoundsProperty ||
             change.Property == LineSpacingProperty ||
             change.Property == ScrollDurationProperty ||
-            change.Property == ActiveAnchorRatioProperty)
+            change.Property == ActiveAnchorRatioProperty ||
+            change.Property == EdgeFadeRatioProperty)
         {
             QueueLayoutUpdate();
             return;
@@ -308,6 +318,9 @@ public class MeasuredLyricScrollView : ItemsControl
                 targetOpacity = 0.72;
             else
                 targetOpacity = Math.Clamp(0.58 - (distance - 3) * 0.10, 0.16, 1.0);
+
+            targetOpacity *= CalculateEdgeFadeFactor(targetTop, height);
+
             double targetScale = 1.0;
             if (EnableScale && distance > 0)
                 targetScale = InactiveScale;
@@ -318,6 +331,23 @@ public class MeasuredLyricScrollView : ItemsControl
         TrimStaleStates(_activeContainers);
         _isFirstLayoutPass = false;
         EnsureAnimationFrameRunning();
+    }
+
+    private double CalculateEdgeFadeFactor(double top, double height)
+    {
+        var fadeLength = Bounds.Height * Math.Clamp(EdgeFadeRatio, 0, 0.45);
+        if (fadeLength <= 0)
+            return 1;
+
+        var center = top + height / 2;
+        var topFactor = SmoothStep(Math.Clamp(center / fadeLength, 0, 1));
+        var bottomFactor = SmoothStep(Math.Clamp((Bounds.Height - center) / fadeLength, 0, 1));
+        return Math.Min(topFactor, bottomFactor);
+    }
+
+    private static double SmoothStep(double value)
+    {
+        return value * value * (3 - 2 * value);
     }
 
     private void EnsureLayoutBuffers(int itemCount)

@@ -15,14 +15,6 @@
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="{TemplateBinding CornerRadius}">
-                    <Border.OpacityMask>
-                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                            <GradientStop Color="#00FFFFFF" Offset="0" />
-                            <GradientStop Color="#FFFFFFFF" Offset="0.13" />
-                            <GradientStop Color="#FFFFFFFF" Offset="0.84" />
-                            <GradientStop Color="#00FFFFFF" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.OpacityMask>
                     <ItemsPresenter>
                         <ItemsPresenter.ItemsPanel>
                             <ItemsPanelTemplate>

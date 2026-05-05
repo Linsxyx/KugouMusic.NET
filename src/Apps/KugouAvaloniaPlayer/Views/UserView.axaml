@@ -365,7 +365,7 @@
                                                     BorderBrush="{DynamicResource SukiBorder}"
                                                     Background="{Binding DesktopLyricColorPreviewBrush}" />
                                             <TextBox Grid.Column="1"
-                                                     Watermark="#FFFFFFFF"
+                                                     PlaceholderText="#FFFFFFFF"
                                                      Text="{Binding DesktopLyricColorHexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                             <Button Grid.Column="2"
                                                     Command="{Binding ApplyDesktopLyricColorHexCommand}"
@@ -478,7 +478,7 @@
                                                     BorderBrush="{DynamicResource SukiBorder}"
                                                     Background="{Binding PlayPageLyricColorPreviewBrush}" />
                                             <TextBox Grid.Column="1"
-                                                     Watermark="#FFFFFFFF"
+                                                     PlaceholderText="#FFFFFFFF"
                                                      Text="{Binding PlayPageLyricColorHexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                             <Button Grid.Column="2"
                                                     Command="{Binding ApplyPlayPageLyricColorHexCommand}"

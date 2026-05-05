@@ -15,24 +15,34 @@ public partial class SingerViewModel : PageViewModelBase
     private readonly ArtistClient _artistClient;
 
     private int _currentPage = 1;
-    [ObservableProperty] private string _currentSortText = "热门";
+    [ObservableProperty]
+    public partial string CurrentSortText { get; set; } = "热门";
+
     private bool _hasMoreSongs = true;
 
     // 最新/热门切换
-    [ObservableProperty] private bool _isHotSort = true;
+    [ObservableProperty]
+    public partial bool IsHotSort { get; set; } = true;
 
-    [ObservableProperty] private bool _isLoading;
-    [ObservableProperty] private bool _isLoadingMore;
-    [ObservableProperty] private string _singerAvatar;
-    [ObservableProperty] private string _singerName;
+    [ObservableProperty]
+    public partial bool IsLoading { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoadingMore { get; set; }
+
+    [ObservableProperty]
+    public partial string SingerAvatar { get; set; }
+
+    [ObservableProperty]
+    public partial string SingerName { get; set; }
 
     public SingerViewModel(ArtistClient artistClient, ILogger<SingerViewModel> logger, string authorId, string singerName)
     {
         _artistClient = artistClient;
         _logger = logger;
         _authorId = authorId;
-        _singerName = singerName;
-        _singerAvatar = "avares://KugouAvaloniaPlayer/Assets/default_singer.png";
+        SingerName = singerName;
+        SingerAvatar = "avares://KugouAvaloniaPlayer/Assets/default_singer.png";
         _ = LoadSongsAsync();
     }
 

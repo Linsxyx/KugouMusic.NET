@@ -26,12 +26,23 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     private CancellationTokenSource? _fmPreviewLoadCancellation;
     private int _fmPreviewRequestVersion;
 
-    [ObservableProperty] private SongItem? _currentFmPreviewSong;
-    [ObservableProperty] private bool _isDailyRecommendationsLoading;
-    [ObservableProperty] private bool _isFmActive;
-    [ObservableProperty] private bool _isFmLoading;
-    [ObservableProperty] private PersonalFmMode _selectedFmMode = PersonalFmMode.Peak;
-    [ObservableProperty] private PersonalFmSongPoolId _selectedFmSongPoolId = PersonalFmSongPoolId.Taste;
+    [ObservableProperty]
+    public partial SongItem? CurrentFmPreviewSong { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDailyRecommendationsLoading { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsFmActive { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsFmLoading { get; set; }
+
+    [ObservableProperty]
+    public partial PersonalFmMode SelectedFmMode { get; set; } = PersonalFmMode.Peak;
+
+    [ObservableProperty]
+    public partial PersonalFmSongPoolId SelectedFmSongPoolId { get; set; } = PersonalFmSongPoolId.Taste;
 
     public DailyRecommendViewModel(
         RecommendClient discoveryClient,

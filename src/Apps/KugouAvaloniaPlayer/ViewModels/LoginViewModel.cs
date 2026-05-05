@@ -15,20 +15,37 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class LoginViewModel(LoginClient authClient, RegisterClient deviceClient, ILogger<LoginViewModel> logger)
     : ObservableObject
 {
-    [ObservableProperty] private string _code = "";
-    [ObservableProperty] private int _countdown;
-    [ObservableProperty] private bool _isLoggingIn;
-    [ObservableProperty] private bool _isQrExpired;
+    [ObservableProperty]
+    public partial string Code { get; set; } = "";
 
-    [ObservableProperty] private bool _isQrLoginSelected;
-    [ObservableProperty] private bool _isSendingCode;
-    [ObservableProperty] private string _mobile = "";
-    [ObservableProperty] private string? _qrCodeImageUrl;
+    [ObservableProperty]
+    public partial int Countdown { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoggingIn { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsQrExpired { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsQrLoginSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSendingCode { get; set; }
+
+    [ObservableProperty]
+    public partial string Mobile { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string? QrCodeImageUrl { get; set; }
 
     private string? _qrCodeKey;
     private CancellationTokenSource? _qrPollingCts;
-    [ObservableProperty] private string _qrStatusMessage = "请使用酷狗音乐概念版App扫码";
-    [ObservableProperty] private string _statusMessage = "";
+    [ObservableProperty]
+    public partial string QrStatusMessage { get; set; } = "请使用酷狗音乐概念版App扫码";
+
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = "";
 
     partial void OnIsQrLoginSelectedChanged(bool value)
     {
@@ -39,7 +56,7 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
     }
 
     [RelayCommand]
-    public async Task RefreshQrCode()
+    private async Task RefreshQrCode()
     {
         StopQrPolling();
         QrStatusMessage = "正在获取二维码...";

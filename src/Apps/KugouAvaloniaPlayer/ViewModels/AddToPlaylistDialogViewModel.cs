@@ -14,9 +14,14 @@ public partial class AddToPlaylistDialogViewModel : ObservableObject
     private readonly Func<PlaylistDialogPlaylistItemViewModel, Task> _confirmAction;
     private readonly Action _cancelAction;
 
-    [ObservableProperty] private string? _filterText;
-    [ObservableProperty] private bool _isSubmitting;
-    [ObservableProperty] private PlaylistDialogPlaylistItemViewModel? _selectedPlaylist;
+    [ObservableProperty]
+    public partial string? FilterText { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSubmitting { get; set; }
+
+    [ObservableProperty]
+    public partial PlaylistDialogPlaylistItemViewModel? SelectedPlaylist { get; set; }
 
     public AddToPlaylistDialogViewModel(
         string songName,
@@ -123,8 +128,8 @@ public partial class AddToPlaylistDialogViewModel : ObservableObject
 
 public partial class PlaylistDialogPlaylistItemViewModel : ObservableObject
 {
-    [ObservableProperty] private bool _isSelected;
-
+    [ObservableProperty]
+    public partial bool IsSelected { get; set; }
     public required string Name { get; init; }
     public required string ListId { get; init; }
     public required string Cover { get; init; }

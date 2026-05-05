@@ -63,7 +63,7 @@
             <Grid Row="1"
                   ColumnDefinitions="*,Auto"
                   Margin="0,0,0,16">
-                <TextBox Watermark="搜索歌单"
+                <TextBox PlaceholderText="搜索歌单"
                          Text="{Binding FilterText}"
                          Width="320" />
 

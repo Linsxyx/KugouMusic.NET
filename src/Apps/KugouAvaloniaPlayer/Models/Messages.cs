@@ -17,7 +17,7 @@ public record SetLocalSongCoverMessage(SongItem Song);
 
 public record AuthStateChangedMessage(bool IsLoggedIn);
 
-public record NavigatePageMessage(PageViewModelBase TargetPage);
+public abstract record NavigatePageMessage(PageViewModelBase TargetPage);
 
 public record RequestNavigateBackMessage;
 

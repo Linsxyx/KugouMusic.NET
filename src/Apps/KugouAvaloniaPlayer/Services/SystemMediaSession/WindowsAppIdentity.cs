@@ -7,7 +7,7 @@ namespace KugouAvaloniaPlayer.Services.SystemMediaSession;
 
 internal static class WindowsAppIdentity
 {
-    public const string AppUserModelId = "KugouAvaloniaPlayer";
+    private const string AppUserModelId = "KugouAvaloniaPlayer";
     private const string ShortcutFileName = "KugouAvaloniaPlayer.lnk";
     private const string DisplayName = "KA Music";
 

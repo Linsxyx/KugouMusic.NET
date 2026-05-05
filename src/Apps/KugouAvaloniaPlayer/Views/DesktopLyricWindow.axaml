@@ -11,7 +11,7 @@
         Title="DesktopLyric"
         Width="1024"
         Height="{Binding WindowHeight}"
-        SystemDecorations="None"
+        WindowDecorations="None"
         Background="Transparent"
         TransparencyLevelHint="Transparent"
         Topmost="True"

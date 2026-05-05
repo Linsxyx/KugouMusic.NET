@@ -9,13 +9,20 @@ public partial class GlobalShortcutItemViewModel(GlobalShortcutAction action, st
 {
     private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#D92D20"));
     private static readonly IBrush InfoBrush = new SolidColorBrush(Color.Parse("#667085"));
-    [ObservableProperty] private bool _hasError;
-    [ObservableProperty] private bool _isRecording;
+    [ObservableProperty]
+    public partial bool HasError { get; set; }
 
-    [ObservableProperty] private string _shortcutText = "未设置";
-    [ObservableProperty] private IBrush _statusForeground = InfoBrush;
-    [ObservableProperty] private string? _statusMessage;
+    [ObservableProperty]
+    public partial bool IsRecording { get; set; }
 
+    [ObservableProperty]
+    public partial string ShortcutText { get; set; } = "未设置";
+
+    [ObservableProperty]
+    public partial IBrush StatusForeground { get; set; } = InfoBrush;
+
+    [ObservableProperty]
+    public partial string? StatusMessage { get; set; }
     public GlobalShortcutAction Action { get; } = action;
     public string DisplayName { get; } = displayName;
 

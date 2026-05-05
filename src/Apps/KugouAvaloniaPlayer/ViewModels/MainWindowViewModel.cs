@@ -4,7 +4,6 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
 using Avalonia.Layout;
@@ -40,40 +39,70 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
 
-    [ObservableProperty] private PageViewModelBase _activePage;
-    [ObservableProperty] private LyricLineViewModel? _currentLyricLine;
+    [ObservableProperty]
+    public partial PageViewModelBase ActivePage { get; set; }
 
-    [ObservableProperty] private bool _isDesktopLyricEnabled;
+    [ObservableProperty]
+    public partial LyricLineViewModel? CurrentLyricLine { get; set; }
 
-    [ObservableProperty] private bool _isLoggedIn;
+    [ObservableProperty]
+    public partial bool IsDesktopLyricEnabled { get; set; }
 
-    [ObservableProperty] private bool _enableLegacyWordLyricEffect;
-    [ObservableProperty] private bool _isNowPlayingOpen;
-    [ObservableProperty] private bool _isNowPlayingVolumeVisible;
-    [ObservableProperty] private bool _isQueuePaneOpen;
+    [ObservableProperty]
+    public partial bool IsLoggedIn { get; set; }
+
+    [ObservableProperty]
+    public partial bool EnableLegacyWordLyricEffect { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsNowPlayingOpen { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsNowPlayingVolumeVisible { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsQueuePaneOpen { get; set; }
+
     private bool _isUpdatingActivePageFromNavigation;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNowPlayingPrimaryLyricVisible))]
     [NotifyPropertyChangedFor(nameof(IsNowPlayingTranslationVisible))]
     [NotifyPropertyChangedFor(nameof(IsNowPlayingRomanizationVisible))]
-    private NowPlayingLyricDisplayMode _nowPlayingLyricDisplayMode = NowPlayingLyricDisplayMode.LyricsWithTranslation;
+    public partial NowPlayingLyricDisplayMode NowPlayingLyricDisplayMode { get; set; } = NowPlayingLyricDisplayMode.LyricsWithTranslation;
 
-    [ObservableProperty] private FontFamily? _nowPlayingLyricFontFamily;
-    [ObservableProperty] private double _nowPlayingLyricFontSize = 26;
-    [ObservableProperty] private IBrush _nowPlayingLyricForeground = DefaultLyricBrush;
-    [ObservableProperty] private HorizontalAlignment _nowPlayingLyricHorizontalAlignment = HorizontalAlignment.Center;
-    [ObservableProperty] private TextAlignment _nowPlayingLyricTextAlignment = TextAlignment.Center;
-    [ObservableProperty] private double _nowPlayingTranslationFontSize = 16;
-    [ObservableProperty] private IBrush _nowPlayingTranslationLineForeground = DefaultTranslationLineBrush;
-    [ObservableProperty] private IBrush _nowPlayingTranslationWordForeground = DefaultTranslationWordBrush;
+    [ObservableProperty] 
+    public partial FontFamily NowPlayingLyricFontFamily { get; set; } = FontFamily.Default;
 
-    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
-    private string _searchKeyword = "";
+    [ObservableProperty]
+    public partial double NowPlayingLyricFontSize { get; set; } = 26;
 
-    [ObservableProperty] private string? _userAvatar;
+    [ObservableProperty]
+    public partial IBrush NowPlayingLyricForeground { get; set; } = DefaultLyricBrush;
 
-    [ObservableProperty] private string _userName = "未登录";
+    [ObservableProperty]
+    public partial HorizontalAlignment NowPlayingLyricHorizontalAlignment { get; set; } = HorizontalAlignment.Center;
+
+    [ObservableProperty]
+    public partial TextAlignment NowPlayingLyricTextAlignment { get; set; } = TextAlignment.Center;
+
+    [ObservableProperty]
+    public partial double NowPlayingTranslationFontSize { get; set; } = 16;
+
+    [ObservableProperty]
+    public partial IBrush NowPlayingTranslationLineForeground { get; set; } = DefaultTranslationLineBrush;
+
+    [ObservableProperty]
+    public partial IBrush NowPlayingTranslationWordForeground { get; set; } = DefaultTranslationWordBrush;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
+    public partial string SearchKeyword { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string? UserAvatar { get; set; }
+
+    [ObservableProperty]
+    public partial string UserName { get; set; } = "未登录";
 
     public MainWindowViewModel(
         ISukiToastManager toastManager,
@@ -528,7 +557,7 @@ public partial class MainWindowViewModel : ObservableObject
 
 
     [RelayCommand]
-    public void NavigateBack()
+    private void NavigateBack()
     {
         if (_navigationService.TryGoBack())
             return;
@@ -577,13 +606,13 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (!useCustomFont || string.IsNullOrWhiteSpace(fontFamilyName))
         {
-            NowPlayingLyricFontFamily = null;
+            NowPlayingLyricFontFamily = FontFamily.Default;
             return;
         }
 
         NowPlayingLyricFontFamily = IsSystemFontInstalled(fontFamilyName)
             ? new FontFamily(fontFamilyName)
-            : null;
+            : FontFamily.Default;
     }
 
     private void ApplyNowPlayingAlignmentSettings(LyricAlignmentOption alignment)

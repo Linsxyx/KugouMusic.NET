@@ -52,14 +52,14 @@
         <StackPanel IsVisible="{Binding !IsQrLoginSelected}" Spacing="15" Margin="0,10">
             <!-- 手机号输入 -->
             <TextBox Text="{Binding Mobile}"
-                     Watermark="手机号"
+                     PlaceholderText="手机号"
                      MaxLength="11" />
 
             <!-- 验证码输入 + 发送按钮 -->
             <Grid ColumnDefinitions="*, Auto">
                 <TextBox Grid.Column="0"
                          Text="{Binding Code}"
-                         Watermark="验证码"
+                         PlaceholderText="验证码"
                          MaxLength="6" />
                 <Button Grid.Column="1"
                         Classes="Basic"

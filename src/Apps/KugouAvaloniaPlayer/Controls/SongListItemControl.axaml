@@ -6,7 +6,7 @@
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="60"
-             Name="RootWindow"
+             Name="Root"
              x:Class="KugouAvaloniaPlayer.Controls.SongListItemControl"
              x:DataType="vm:SongItem">
 
@@ -35,37 +35,30 @@
     </UserControl.Styles>
 
     <Border Name="ItemShell" CornerRadius="14" Padding="6" Margin="0,2">
-        <Border.ContextMenu>
-            <ContextMenu>
+        <Border.ContextFlyout>
+            <MenuFlyout>
                 <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
                     <MenuItem.Styles>
                         <Style Selector="MenuItem > MenuItem">
                             <Setter Property="Header"
                                     Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
                             <Setter Property="Command"
-                                    Value="{Binding #RootWindow.((vm:SongItem)DataContext).ViewSingerCommand}" />
+                                    Value="{Binding #Root.((vm:SongItem)DataContext).ViewSingerCommand}" />
                             <Setter Property="CommandParameter" Value="{Binding .}" />
                         </Style>
                     </MenuItem.Styles>
                 </MenuItem>
+
                 <MenuItem Header="下一首播放"
                           Command="{Binding AddToNextCommand}"
                           CommandParameter="{Binding .}" />
+
                 <MenuItem Header="添加到歌单"
                           Command="{Binding ShowPlaylistDialogCommand}"
                           CommandParameter="{Binding .}"
                           IsVisible="{Binding LocalFilePath, Converter={x:Static ObjectConverters.IsNull}}" />
-                <MenuItem Header="设置歌曲封面"
-                          Command="{Binding SetLocalCoverCommand}"
-                          CommandParameter="{Binding .}"
-                          IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsLocalPlaylist, FallbackValue=False}" />
-
-                <MenuItem Header="从歌单移除"
-                          Command="{Binding RemoveFromPlaylistCommand}"
-                          CommandParameter="{Binding .}"
-                          IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsOnlinePlaylist, FallbackValue=False}" />
-            </ContextMenu>
-        </Border.ContextMenu>
+            </MenuFlyout>
+        </Border.ContextFlyout>
 
         <Grid ColumnDefinitions="Auto, *, 150, 80, 150"
               Background="Transparent"
@@ -83,16 +76,16 @@
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0" Spacing="3">
-                <TextBlock Text="{Binding Name}" FontWeight="DemiBold" TextTrimming="CharacterEllipsis"
+                <TextBlock Text="{Binding Name}" FontWeight="Bold" TextTrimming="CharacterEllipsis"
                            Foreground="{DynamicResource SukiLowText}" />
-                <TextBlock Text="{Binding Singer}" FontSize="12"
+                <TextBlock Text="{Binding Singer}" FontSize="12" FontWeight="ExtraLight"
                            Foreground="{DynamicResource SukiLiquid2}"
                            TextTrimming="CharacterEllipsis" />
             </StackPanel>
 
             <TextBlock Grid.Column="2" Text="{Binding AlbumName}" VerticalAlignment="Center"
                        Foreground="{DynamicResource SukiLiquid2}"
-                       TextTrimming="CharacterEllipsis" />
+                       TextTrimming="CharacterEllipsis" FontWeight="ExtraLight"/>
 
             <TextBlock Grid.Column="3"
                        Text="{Binding DurationSeconds,Converter={StaticResource SecondsToTimeConverter}}"
@@ -107,27 +100,33 @@
                     <Svg Path="/Assets/Play-2.svg" Width="15" Height="15" />
                 </Button>
 
-                <Button Cursor="Hand" Classes="Basic" ToolTip.Tip="更多操作">
-                    <Button.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                <Button Cursor="Hand" x:Name="MoreButton"
+                        Classes="Basic"
+                        ToolTip.Tip="更多操作"
+                        Click="MoreButton_OnClick">
+                    <FlyoutBase.AttachedFlyout>
+                        <MenuFlyout  Placement="BottomEdgeAlignedRight">
                             <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
                                 <MenuItem.Styles>
-                                    <Style Selector="MenuItem> MenuItem">
+                                    <Style Selector="MenuItem > MenuItem">
                                         <Setter Property="Header"
                                                 Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
                                         <Setter Property="Command"
-                                                Value="{Binding $parent[MenuItem].((vm:SongItem)DataContext).ViewSingerCommand}" />
+                                                Value="{Binding #Root.((vm:SongItem)DataContext).ViewSingerCommand}" />
                                         <Setter Property="CommandParameter" Value="{Binding .}" />
                                     </Style>
                                 </MenuItem.Styles>
                             </MenuItem>
+
                             <MenuItem Header="下一首播放"
                                       Command="{Binding AddToNextCommand}"
                                       CommandParameter="{Binding .}" />
+
                             <MenuItem Header="添加到歌单"
                                       Command="{Binding ShowPlaylistDialogCommand}"
                                       CommandParameter="{Binding .}"
                                       IsVisible="{Binding LocalFilePath, Converter={x:Static ObjectConverters.IsNull}}" />
+
                             <MenuItem Header="设置歌曲封面"
                                       Command="{Binding SetLocalCoverCommand}"
                                       CommandParameter="{Binding .}"
@@ -138,7 +137,8 @@
                                       CommandParameter="{Binding .}"
                                       IsVisible="{Binding $parent[UserControl;1].((vm:MyPlaylistsViewModel)DataContext).IsOnlinePlaylist, FallbackValue=False}" />
                         </MenuFlyout>
-                    </Button.Flyout>
+                    </FlyoutBase.AttachedFlyout>
+
                     <Svg Path="/Assets/More.svg" Width="25" Height="25" />
                 </Button>
             </StackPanel>

@@ -153,7 +153,7 @@
 
             <suki:SukiSideMenu.ItemTemplate>
                 <DataTemplate DataType="vm:PageViewModelBase">
-                    <suki:SukiSideMenuItem Header="{Binding DisplayName}">
+                    <suki:SukiSideMenuItem Header="{Binding DisplayName}" FontFamily="Default">
                         <suki:SukiSideMenuItem.Icon>
                             <Svg Path="{Binding Icon}" VerticalAlignment="Center" HorizontalAlignment="Center" />
                         </suki:SukiSideMenuItem.Icon>
@@ -275,7 +275,8 @@
                                     </Button>
                                 </StackPanel>
                         </TabItem>
-                        <TabItem Header="收藏的专辑">
+                        <TabItem Header="收藏的专辑" FontSize="12" FontWeight="SemiBold"
+                                 Foreground="{DynamicResource SukiLowText}">
                                 <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                                               VerticalScrollBarVisibility="Auto">
                                     <ItemsControl ItemsSource="{Binding SidebarAlbumPlaylists}">

@@ -20,7 +20,7 @@ public partial class PlayerViewModel
 
     public event Action? PersonalFmStateChanged;
 
-    public bool IsPersonalFmSessionActive => _personalFmSession.IsActive && _personalFmSession.CurrentSong != null;
+    public bool IsPersonalFmSessionActive => _personalFmSession is { IsActive: true, CurrentSong: not null };
     public PersonalFmMode CurrentPersonalFmMode => _personalFmSession.Mode;
     public PersonalFmSongPoolId CurrentPersonalFmSongPoolId => _personalFmSession.SongPoolId;
 

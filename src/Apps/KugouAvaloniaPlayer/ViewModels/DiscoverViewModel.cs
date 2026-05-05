@@ -16,27 +16,48 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class PlaylistTag : ObservableObject
 {
-    [ObservableProperty] private int _index;
-    [ObservableProperty] private int _tagId;
-    [ObservableProperty] private string _tagName = "";
+    [ObservableProperty]
+    public partial int Index { get; set; }
+
+    [ObservableProperty]
+    public partial int TagId { get; set; }
+
+    [ObservableProperty]
+    public partial string TagName { get; set; } = "";
 }
 
 public partial class PlaylistTagGroup : ObservableObject
 {
-    [ObservableProperty] private int _index;
-    [ObservableProperty] private int _tagId;
-    [ObservableProperty] private string _tagName = "";
+    [ObservableProperty]
+    public partial int Index { get; set; }
+
+    [ObservableProperty]
+    public partial int TagId { get; set; }
+
+    [ObservableProperty]
+    public partial string TagName { get; set; } = "";
     public AvaloniaList<PlaylistTag> Son { get; } = new();
 }
 
 public partial class DiscoverPlaylist : ObservableObject
 {
-    [ObservableProperty] private string _cover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
-    [ObservableProperty] private string _creatorName = "";
-    [ObservableProperty] private string _globalId = "";
-    [ObservableProperty] private string _id = "";
-    [ObservableProperty] private string _name = "";
-    [ObservableProperty] private long _playCount;
+    [ObservableProperty]
+    public partial string Cover { get; set; } = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
+
+    [ObservableProperty]
+    public partial string CreatorName { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string GlobalId { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string Id { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = "";
+
+    [ObservableProperty]
+    public partial long PlayCount { get; set; }
 }
 
 public partial class DiscoverViewModel : PageViewModelBase
@@ -48,16 +69,26 @@ public partial class DiscoverViewModel : PageViewModelBase
     private readonly PlaylistClient _playlistClient;
     private readonly ISukiToastManager _toastManager;
     private bool _hasMoreSongs = true;
-    [ObservableProperty] private bool _isLoading;
-    [ObservableProperty] private bool _isLoadingMoreSongs;
+    [ObservableProperty]
+    public partial bool IsLoading { get; set; }
 
-    [ObservableProperty] private bool _isShowingSongs;
+    [ObservableProperty]
+    public partial bool IsLoadingMoreSongs { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsShowingSongs { get; set; }
 
     private int _playlistLoadVersion;
 
-    [ObservableProperty] private int _selectedMainIndex;
-    [ObservableProperty] private DiscoverPlaylist? _selectedPlaylist;
-    [ObservableProperty] private int _selectedSubIndex;
+    [ObservableProperty]
+    public partial int SelectedMainIndex { get; set; }
+
+    [ObservableProperty]
+    public partial DiscoverPlaylist? SelectedPlaylist { get; set; }
+
+    [ObservableProperty]
+    public partial int SelectedSubIndex { get; set; }
+
     private int _songPage = 1;
     private bool _suppressSelectionChanged;
 
