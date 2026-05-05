@@ -269,6 +269,11 @@ public partial class MainWindowViewModel : ObservableObject
                 IsLoggedIn = true;
                 await LoadUserInfo();
                 _logger.LogInformation($"已加载本地用户: {session.UserId}");
+#if DEBUG
+                var defaultFontFamily = FontFamily.Default;
+                string defaultFontName = defaultFontFamily.Name;
+                _logger.LogInformation($"字体为{defaultFontName}");
+#endif
                 _ = Task.Run(async () =>
                 {
                     try

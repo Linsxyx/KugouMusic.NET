@@ -24,9 +24,9 @@
                     <Color x:Key="DailyHeroFadeEnd">#F6FFFFFF</Color>
                     <SolidColorBrush x:Key="DailyPanelBackgroundBrush" Color="#F6FFFFFF" />
                     <SolidColorBrush x:Key="DailyTableHeadingBrush" Color="#6D78A0" />
-                    <SolidColorBrush x:Key="DailyHeroActionBrush" Color="#24FFFFFF" />
-                    <SolidColorBrush x:Key="DailyHeroActionHoverBrush" Color="#38FFFFFF" />
-                    <SolidColorBrush x:Key="DailyHeroActionBorderBrush" Color="#50FFFFFF" />
+                    <SolidColorBrush x:Key="DailyHeroActionBrush" Color="#78101B35" />
+                    <SolidColorBrush x:Key="DailyHeroActionHoverBrush" Color="#9018273E" />
+                    <SolidColorBrush x:Key="DailyHeroActionBorderBrush" Color="#78FFFFFF" />
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Dark">
@@ -66,6 +66,7 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="18" />
             <Setter Property="Padding" Value="16" />
+            <Setter Property="BoxShadow" Value="0 18 42 0 #30050A24" />
         </Style>
         <Style Selector="Button.fm-glass-icon">
             <Setter Property="Background" Value="#18FFFFFF" />
@@ -199,8 +200,7 @@
                                                 Width="28"
                                                 Height="28"
                                                 IsEnabled="{Binding CanEditFmConfiguration}"
-                                                Command="{Binding CyclePersonalFmModeCommand}"
-                                                ToolTip.Tip="切换 FM 模式">
+                                                Command="{Binding CyclePersonalFmModeCommand}">
                                             <Svg Path="/Assets/switch-up.svg"
                                                  Css="path { stroke: white; }"
                                                  Width="15"
@@ -249,17 +249,18 @@
                                 </StackPanel>
 
                                 <Grid Grid.Column="1"
-                                      Width="100"
-                                      Height="100"
+                                      Width="75"
+                                      Height="75"
                                       HorizontalAlignment="Right"
                                       VerticalAlignment="Top">
                                     <Ellipse Width="92"
                                              Height="92"
+                                             Margin="-1,-1,0,0"
                                              Fill="#22FFFFFF"
                                              HorizontalAlignment="Center"
                                              VerticalAlignment="Center" />
-                                    <Border Width="82"
-                                            Height="82"
+                                    <Border Width="75"
+                                            Height="75"
                                             CornerRadius="999"
                                             BorderBrush="#B8FFFFFF"
                                             BorderThickness="2"
@@ -273,10 +274,10 @@
                                     <Button Classes="fm-play-fab"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Bottom"
-                                            Margin="0,0,2,2"
+                                            Margin="60,80,0,0"
+                                            Padding="2,2,-2,0"
                                             IsVisible="{Binding ShowFmControls}"
-                                            Command="{Binding PlayPersonalFmCommand}"
-                                            ToolTip.Tip="播放/暂停私人 FM">
+                                            Command="{Binding PlayPersonalFmCommand}">
                                         <Svg Path="{Binding FmPlayIconPath}"
                                              Css="path { fill: #806BFF; }"
                                              Width="18"
