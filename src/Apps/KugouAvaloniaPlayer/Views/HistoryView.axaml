@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="KugouAvaloniaPlayer.Views.HistoryView"
+             x:DataType="vm:HistoryViewModel">
+
+    <Grid Margin="15">
+        <localControls:SongCollectionDetailView
+            Cover="avares://KugouAvaloniaPlayer/Assets/default_listcard.png"
+            HeroBackground="avares://KugouAvaloniaPlayer/Assets/night.png"
+            Title="{Binding DisplayName}"
+            Subtitle="{Binding Subtitle}"
+            Songs="{Binding Songs}"
+            PlayFirstCommand="{Binding PlayFirstCommand}"
+            BackCommand="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
+            ListMargin="0">
+            <localControls:SongCollectionDetailView.Actions>
+                <Button Command="{Binding ClearHistoryCommand}"
+                        Classes="Basic"
+                        ToolTip.Tip="清空播放历史"
+                        Cursor="Hand">
+                    <Svg Path="/Assets/trash-svgrepo-com.svg" Width="22" Height="22" />
+                </Button>
+            </localControls:SongCollectionDetailView.Actions>
+        </localControls:SongCollectionDetailView>
+    </Grid>
+</UserControl>

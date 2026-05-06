@@ -35,6 +35,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private static readonly TimeSpan AudioLoadTimeout = TimeSpan.FromSeconds(12);
     private readonly RecommendClient _discoveryClient;
     private readonly FavoritePlaylistService _favoriteService;
+    private readonly PlaybackHistoryService _historyService;
     private readonly ILogger<PlayerViewModel> _logger;
     private readonly LyricsService _lyricsService;
     private readonly DispatcherTimer _playbackTimer;
@@ -148,6 +149,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     public PlayerViewModel(
         RecommendClient discoveryClient, ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
         PlaybackQueueManager queueManager, LyricsService lyricsService, FavoritePlaylistService favoriteService,
+        PlaybackHistoryService historyService,
         ITransitionAnalysisService transitionAnalysisService, IPlaybackSourceResolver playbackSourceResolver,
         IPlaybackCoordinator playbackCoordinator, ISystemMediaSessionService systemMediaSessionService)
     {
@@ -157,6 +159,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _queueManager = queueManager;
         _lyricsService = lyricsService;
         _favoriteService = favoriteService;
+        _historyService = historyService;
         _transitionAnalysisService = transitionAnalysisService;
         _playbackSourceResolver = playbackSourceResolver;
         _playbackCoordinator = playbackCoordinator;
@@ -293,6 +296,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                     song.DurationSeconds > 0 ? song.DurationSeconds : _player.GetDuration().TotalSeconds;
                 _playbackTimer.Start();
                 CurrentLyricText = "歌词加载中...";
+                _ = _historyService.RecordPlayedAsync(song);
                 _ = EnsurePreparedNextTrackAsync(requestVersion, currentLoadCts.Token);
             }
             else

@@ -71,21 +71,24 @@ public partial class App : Application
         collection.AddTransient<UserViewModel>();
         collection.AddTransient<MainWindowViewModel>();
         collection.AddTransient<DailyRecommendViewModel>();
+        collection.AddTransient<HistoryViewModel>();
         collection.AddTransient<DiscoverViewModel>();
         collection.AddTransient<MyPlaylistsViewModel>();
         collection.AddTransient<EqSettingsViewModel>();
         collection.AddTransient<ISingerViewModelFactory, SingerViewModelFactory>();
+        collection.AddTransient<RankViewModel>();
+        
         collection.AddSingleton<IDesktopLyricViewModelFactory, DesktopLyricViewModelFactory>();
-
         collection.AddSingleton<PlaybackQueueManager>();
         collection.AddSingleton<LyricsService>();
         collection.AddSingleton<FavoritePlaylistService>();
+        collection.AddSingleton<PlaybackHistoryService>();
         collection.AddSingleton<IPlaybackSourceResolver, PlaybackSourceResolver>();
         collection.AddSingleton<IPlaybackCoordinator, PlaybackCoordinator>();
         collection.AddSingleton<ITransitionAnalysisService, ManagedBassTransitionAnalysisService>();
         collection.AddSingleton<PlayerViewModel>();
 
-        collection.AddTransient<RankViewModel>();
+        
 
         _serviceProvider = collection.BuildServiceProvider();
         var services = _serviceProvider;

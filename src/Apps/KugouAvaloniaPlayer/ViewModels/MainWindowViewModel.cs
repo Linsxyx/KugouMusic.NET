@@ -121,6 +121,7 @@ public partial class MainWindowViewModel : ObservableObject
         UserViewModel userViewModel,
         RankViewModel rankViewModel,
         DailyRecommendViewModel dailyRecommendViewModel,
+        HistoryViewModel historyViewModel,
         DiscoverViewModel discoverViewModel,
         MyPlaylistsViewModel myPlaylistsViewModel,
         ILogger<MainWindowViewModel> logger)
@@ -149,6 +150,7 @@ public partial class MainWindowViewModel : ObservableObject
         ToastManager = toastManager;
 
         Pages.Add(_dailyRecommendViewModel);
+        Pages.Add(historyViewModel);
         Pages.Add(discoverViewModel);
         Pages.Add(rankViewModel);
         Pages.Add(_searchViewModel);
@@ -692,6 +694,8 @@ public partial class MainWindowViewModel : ObservableObject
                 currentSongList = singerVm.Songs;
             else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)
                 currentSongList = rankVm.SelectedRankSongs;
+            else if (ActivePage is HistoryViewModel historyVm)
+                currentSongList = historyVm.Songs;
 
             await Player.PlaySongAsync(song, currentSongList);
         }
