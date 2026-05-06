@@ -189,7 +189,7 @@ public partial class MainWindowViewModel : ObservableObject
         });
 
         WeakReferenceMessenger.Default.Register<NavigatePageMessage>(this,
-            (_, m) => { _navigationService.Push(m.TargetPage); });
+            (_, m) => { NavigateToPage(m.TargetPage); });
 
         WeakReferenceMessenger.Default.Register<RequestNavigateBackMessage>(this, (_, _) => { NavigateBack(); });
         WeakReferenceMessenger.Default.Register<LyricStyleSettingsChangedMessage>(this, (_, message) =>
@@ -255,8 +255,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (_isUpdatingActivePageFromNavigation)
             return;
 
-        if (_navigationService.CurrentPage != value)
-            _navigationService.Push(value);
+        NavigateToPage(value);
     }
 
     private void OnNavigationCurrentPageChanged(PageViewModelBase? page)
@@ -278,6 +277,20 @@ public partial class MainWindowViewModel : ObservableObject
             ActivePage = page;
             _isUpdatingActivePageFromNavigation = false;
         });
+    }
+
+    private void NavigateToPage(PageViewModelBase page)
+    {
+        if (_navigationService.CurrentPage == page)
+            return;
+
+        if (Pages.Contains(page))
+        {
+            _navigationService.ReplaceRoot(page);
+            return;
+        }
+
+        _navigationService.Push(page);
     }
 
 
@@ -458,7 +471,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (IsLoggedIn)
             _ = _userViewModel.LoadUserInfoAsync();
 
-        _navigationService.Push(_userViewModel);
+        NavigateToPage(_userViewModel);
     }
 
     [RelayCommand]
@@ -472,7 +485,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(SearchKeyword)) return;
 
-        _navigationService.Push(_searchViewModel);
+        NavigateToPage(_searchViewModel);
 
         await _searchViewModel.SearchAsync(SearchKeyword);
     }
@@ -487,7 +500,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (item == null || item.Type == PlaylistType.AddButton) return;
 
-        _navigationService.Push(PlaylistsViewModel);
+        NavigateToPage(PlaylistsViewModel);
         await PlaylistsViewModel.OpenPlaylistCommand.ExecuteAsync(item);
     }
 
