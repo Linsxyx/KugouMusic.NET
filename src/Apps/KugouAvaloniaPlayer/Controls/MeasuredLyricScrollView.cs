@@ -17,12 +17,12 @@ public class MeasuredLyricScrollView : ItemsControl
     private const int StaggerStepMs = 20;
     private const int EntranceStepMs = 12;
     private const double EntranceRiseOffset = 48;
-    private const double BaseSpringStiffness = 0.063;
-    private const double BaseSpringDamping = 0.72;
-    private const double BaseScrollDurationMs = 420;
+    private const double BaseSpringStiffness = 0.075;
+    private const double BaseSpringDamping = 0.76;
+    private const double BaseScrollDurationMs = 256;
     private const double ManualOffsetReturnStiffness = 0.052;
     private const double ManualOffsetReturnDamping = 0.78;
-    private const double OpacityResponse = 18.0;
+    private const double OpacityResponse = 9.0;
     private const double SettleTopThreshold = 0.22;
     private const double SettleVelocityThreshold = 0.12;
     private const double SettleManualOffsetThreshold = 0.35;

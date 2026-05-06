@@ -28,13 +28,13 @@ public partial class LyricMotionDebugSettings : ObservableObject
     public partial double EntranceRiseOffset { get; set; } = 48;
 
     [ObservableProperty]
-    public partial double BaseSpringStiffness { get; set; } = 0.063;
+    public partial double BaseSpringStiffness { get; set; } = 0.075;
 
     [ObservableProperty]
-    public partial double BaseSpringDamping { get; set; } = 0.72;
+    public partial double BaseSpringDamping { get; set; } = 0.76;
 
     [ObservableProperty]
-    public partial double BaseScrollDurationMs { get; set; } = 420;
+    public partial double BaseScrollDurationMs { get; set; } = 256;
 
     [ObservableProperty]
     public partial double ManualOffsetReturnStiffness { get; set; } = 0.052;
@@ -43,7 +43,7 @@ public partial class LyricMotionDebugSettings : ObservableObject
     public partial double ManualOffsetReturnDamping { get; set; } = 0.78;
 
     [ObservableProperty]
-    public partial double OpacityResponse { get; set; } = 18.0;
+    public partial double OpacityResponse { get; set; } = 9.0;
 
     [ObservableProperty]
     public partial double SettleTopThreshold { get; set; } = 0.22;

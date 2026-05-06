@@ -20,16 +20,9 @@
             LoadMoreCommand="{Binding LoadMoreCommand}"
             BackCommand="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
             IsLoadingMore="{Binding IsLoadingMore}"
-            ListMargin="0">
-            <localControls:SongCollectionDetailView.Actions>
-                <Button Command="{Binding EditLocalPlaylistCommand}"
-                        Classes="Basic"
-                        IsVisible="{Binding IsLocalPlaylist}"
-                        ToolTip.Tip="编辑本地歌单"
-                        Cursor="Hand">
-                    <Svg Path="/Assets/Editor.svg" Width="25" Height="25" />
-                </Button>
-            </localControls:SongCollectionDetailView.Actions>
-        </localControls:SongCollectionDetailView>
+            ListMargin="0"
+            HeroActionCommand="{Binding EditLocalPlaylistCommand}"
+            HeroActionSvgPath="/Assets/Editor.svg"
+            HeroActionIsVisible="{Binding IsLocalPlaylist}" />
     </Grid>
 </UserControl>

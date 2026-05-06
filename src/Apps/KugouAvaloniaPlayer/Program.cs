@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading;
 using Avalonia;
+#if KUGOU_WINDOWS
 using KugouAvaloniaPlayer.Services.SystemMediaSession;
+#endif
 using Velopack;
 
 namespace KugouAvaloniaPlayer;

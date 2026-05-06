@@ -76,7 +76,7 @@
         <Style Selector="Button.HeroPrimaryButton:pointerover">
             <Setter Property="Background" Value="Transparent" />
         </Style>
-        <Style Selector="ContentControl#HeroActions Button">
+        <Style Selector="Button.HeroActionButton">
             <Setter Property="MinHeight" Value="42" />
             <Setter Property="Padding" Value="14,0" />
             <Setter Property="CornerRadius" Value="21" />
@@ -85,13 +85,14 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Foreground" Value="White" />
         </Style>
-        <Style Selector="ContentControl#HeroActions Button:pointerover">
+        <Style Selector="Button.HeroActionButton:pointerover">
             <Setter Property="Background" Value="{DynamicResource CollectionHeroActionHoverBrush}" />
         </Style>
-        <Style Selector="ContentControl#HeroActions Button TextBlock">
+        <Style Selector="Button.HeroActionButton TextBlock">
             <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style Selector="ContentControl#HeroActions Button PathIcon">
+        <Style Selector="Button.HeroActionButton PathIcon">
             <Setter Property="Foreground" Value="White" />
         </Style>
         <Style Selector="TextBlock.TableHeading">
@@ -135,10 +136,76 @@
             </Border>
 
             <Grid ColumnDefinitions="Auto,*"
-                  RowDefinitions="Auto,*"
                   Margin="28,20,28,18">
-                    <Button Grid.Column="1"
-                            Command="{Binding #Root.BackCommand}"
+                <Border Grid.Column="0"
+                        Width="164"
+                        Height="164"
+                        CornerRadius="16"
+                        ClipToBounds="True"
+                        VerticalAlignment="Top"
+                        BorderBrush="{DynamicResource CollectionCoverBorderBrush}"
+                        BorderThickness="2"
+                        Background="{DynamicResource CollectionCoverBackgroundBrush}">
+                    <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.Cover}" Stretch="UniformToFill" />
+                </Border>
+
+                <Grid Grid.Column="1"
+                      Margin="24,0,0,0">
+                    <StackPanel Margin="0,6,54,0"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Spacing="10">
+                        <TextBlock Text="{Binding #Root.Title}"
+                                   FontSize="{Binding #Root.TitleFontSize}"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="{Binding #Root.TitleMaxWidth}" />
+                        <TextBlock Text="{Binding #Root.Subtitle}"
+                                   IsVisible="{Binding #Root.HasSubtitle}"
+                                   FontSize="14"
+                                   Foreground="#DCE5FF"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="{Binding #Root.TitleMaxWidth}" />
+
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                              ColumnSpacing="12"
+                              HorizontalAlignment="Left"
+                              MaxWidth="{Binding #Root.TitleMaxWidth}">
+                            <Button Classes="HeroPrimaryButton"
+                                    Command="{Binding #Root.PlayFirstSongCommand}"
+                                    Cursor="Hand">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="16" Height="16" />
+                                    <TextBlock Text="播放全部" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Grid.Column="2"
+                                    Classes="HeroActionButton"
+                                    Command="{Binding #Root.HeroActionCommand}"
+                                    IsVisible="{Binding #Root.HasHeroAction}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Cursor="Hand">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Svg Path="{Binding #Root.HeroActionSvgPath}"
+                                         Width="16"
+                                         Height="16"
+                                         IsVisible="{Binding #Root.HasHeroActionSvgPath}" />
+                                    <PathIcon Data="{Binding #Root.HeroActionIconData}"
+                                              Width="16"
+                                              Height="16"
+                                              IsVisible="{Binding #Root.HasHeroActionIconData}" />
+                                    <TextBlock Text="{Binding #Root.HeroActionText}"
+                                               IsVisible="{Binding #Root.HasHeroActionText}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <Button Command="{Binding #Root.BackCommand}"
                             Classes="Basic HeroIconButton"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top"
@@ -149,62 +216,9 @@
                                   Width="22"
                                   Height="22" />
                     </Button>
-
-                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                            Width="164"
-                            Height="164"
-                            CornerRadius="16"
-                            ClipToBounds="True"
-                            VerticalAlignment="Top"
-                            BorderBrush="{DynamicResource CollectionCoverBorderBrush}"
-                            BorderThickness="2"
-                            Background="{DynamicResource CollectionCoverBackgroundBrush}">
-                        <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.Cover}" Stretch="UniformToFill" />
-                    </Border>
-
-                    <StackPanel Grid.Column="1"
-                                Grid.Row="0"
-                                Margin="24,6,54,0"
-                                VerticalAlignment="Top"
-                                Spacing="10">
-                        <TextBlock Text="{Binding #Root.Title}"
-                                   FontSize="{Binding #Root.TitleFontSize}"
-                                   FontWeight="Bold"
-                                   Foreground="White"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxWidth="{Binding #Root.TitleMaxWidth}" 
-                                   Margin="-300,0,0,0"/>
-                        <TextBlock Text="{Binding #Root.Subtitle}"
-                                   IsVisible="{Binding #Root.HasSubtitle}"
-                                   FontSize="14"
-                                   Foreground="#DCE5FF"
-                                   TextTrimming="CharacterEllipsis"
-                                   MaxWidth="{Binding #Root.TitleMaxWidth}"
-                                   Margin="-300,0,0,0"/>
-
-                        <Grid ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="12"
-                              MaxWidth="{Binding #Root.TitleMaxWidth}">
-                            <Button Classes="HeroPrimaryButton"
-                                    Command="{Binding #Root.PlayFirstSongCommand}"
-                                    Cursor="Hand"
-                                    Margin="-150,0,0,0">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="16" Height="16" />
-                                    <TextBlock Text="播放全部" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </Button>
-
-                            <ContentControl Grid.Column="2"
-                                            Name="HeroActions"
-                                            Content="{Binding #Root.Actions}"
-                                            IsVisible="{Binding #Root.HasActions}"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center" />
-                        </Grid>
-                    </StackPanel>
                 </Grid>
             </Grid>
+        </Grid>
 
         <Border Grid.Row="1"
                 Classes="CollectionPanel"

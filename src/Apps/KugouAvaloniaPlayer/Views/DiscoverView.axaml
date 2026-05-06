@@ -123,13 +123,8 @@
             Songs="{Binding SelectedPlaylistSongs}"
             LoadMoreCommand="{Binding LoadMoreSongsCommand}"
             BackCommand="{Binding GoBackCommand}"
-            IsLoadingMore="{Binding IsLoadingMoreSongs}">
-            <localControls:SongCollectionDetailView.Actions>
-                <Button Command="{Binding CollectPlaylistCommand}"
-                        Classes="Basic">
-                    <PathIcon Data="{x:Static suki:Icons.Star}" />
-                </Button>
-            </localControls:SongCollectionDetailView.Actions>
-        </localControls:SongCollectionDetailView>
+            IsLoadingMore="{Binding IsLoadingMoreSongs}"
+            HeroActionCommand="{Binding CollectPlaylistCommand}"
+            HeroActionIconData="{x:Static suki:Icons.Star}" />
     </Grid>
 </UserControl>

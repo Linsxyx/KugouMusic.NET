@@ -18,15 +18,8 @@
             Songs="{Binding Songs}"
             PlayFirstCommand="{Binding PlayFirstCommand}"
             BackCommand="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
-            ListMargin="0">
-            <localControls:SongCollectionDetailView.Actions>
-                <Button Command="{Binding ClearHistoryCommand}"
-                        Classes="Basic"
-                        ToolTip.Tip="清空播放历史"
-                        Cursor="Hand">
-                    <Svg Path="/Assets/trash-svgrepo-com.svg" Width="22" Height="22" />
-                </Button>
-            </localControls:SongCollectionDetailView.Actions>
-        </localControls:SongCollectionDetailView>
+            ListMargin="0"
+            HeroActionCommand="{Binding ClearHistoryCommand}"
+            HeroActionSvgPath="/Assets/trash-svgrepo-com.svg" />
     </Grid>
 </UserControl>

@@ -255,16 +255,10 @@
                         IsLoadingMore="{Binding IsLoadingMoreDetails}"
                         LoadingMoreText="加载更多..."
                         ListPadding="0,0,0,50"
-                        TitleFontSize="24">
-                        <localControls:SongCollectionDetailView.Actions>
-                            <Button Command="{Binding CollectPlaylistCommand}"
-                                    IsVisible="{Binding CanCollectDetail}"
-                                    Classes="Standard Icon"
-                                    ToolTip.Tip="收藏">
-                                <PathIcon Data="{x:Static suki:Icons.Star}" />
-                            </Button>
-                        </localControls:SongCollectionDetailView.Actions>
-                    </localControls:SongCollectionDetailView>
+                        TitleFontSize="24"
+                        HeroActionCommand="{Binding CollectPlaylistCommand}"
+                        HeroActionIconData="{x:Static suki:Icons.Star}"
+                        HeroActionIsVisible="{Binding CanCollectDetail}" />
                 </Grid>
             </Grid>
         </Grid>

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.Input;
 using KugouAvaloniaPlayer.ViewModels;
@@ -69,11 +70,32 @@ public partial class SongCollectionDetailView : UserControl
     public static readonly StyledProperty<string> LoadingMoreTextProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string>(nameof(LoadingMoreText), "正在加载歌曲...");
 
-    public static readonly StyledProperty<object?> ActionsProperty =
-        AvaloniaProperty.Register<SongCollectionDetailView, object?>(nameof(Actions));
+    public static readonly StyledProperty<ICommand?> HeroActionCommandProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(HeroActionCommand));
 
-    public static readonly StyledProperty<bool> HasActionsProperty =
-        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasActions));
+    public static readonly StyledProperty<string?> HeroActionTextProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(HeroActionText));
+
+    public static readonly StyledProperty<string?> HeroActionSvgPathProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(HeroActionSvgPath));
+
+    public static readonly StyledProperty<Geometry?> HeroActionIconDataProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, Geometry?>(nameof(HeroActionIconData));
+
+    public static readonly StyledProperty<bool> HeroActionIsVisibleProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HeroActionIsVisible), true);
+
+    public static readonly StyledProperty<bool> HasHeroActionProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasHeroAction));
+
+    public static readonly StyledProperty<bool> HasHeroActionTextProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasHeroActionText));
+
+    public static readonly StyledProperty<bool> HasHeroActionSvgPathProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasHeroActionSvgPath));
+
+    public static readonly StyledProperty<bool> HasHeroActionIconDataProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasHeroActionIconData));
 
     public static readonly StyledProperty<Thickness> HeaderMarginProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, Thickness>(nameof(HeaderMargin), new Thickness(0));
@@ -201,16 +223,58 @@ public partial class SongCollectionDetailView : UserControl
         set => SetValue(LoadingMoreTextProperty, value);
     }
 
-    public object? Actions
+    public ICommand? HeroActionCommand
     {
-        get => GetValue(ActionsProperty);
-        set => SetValue(ActionsProperty, value);
+        get => GetValue(HeroActionCommandProperty);
+        set => SetValue(HeroActionCommandProperty, value);
     }
 
-    public bool HasActions
+    public string? HeroActionText
     {
-        get => GetValue(HasActionsProperty);
-        private set => SetValue(HasActionsProperty, value);
+        get => GetValue(HeroActionTextProperty);
+        set => SetValue(HeroActionTextProperty, value);
+    }
+
+    public string? HeroActionSvgPath
+    {
+        get => GetValue(HeroActionSvgPathProperty);
+        set => SetValue(HeroActionSvgPathProperty, value);
+    }
+
+    public Geometry? HeroActionIconData
+    {
+        get => GetValue(HeroActionIconDataProperty);
+        set => SetValue(HeroActionIconDataProperty, value);
+    }
+
+    public bool HeroActionIsVisible
+    {
+        get => GetValue(HeroActionIsVisibleProperty);
+        set => SetValue(HeroActionIsVisibleProperty, value);
+    }
+
+    public bool HasHeroAction
+    {
+        get => GetValue(HasHeroActionProperty);
+        private set => SetValue(HasHeroActionProperty, value);
+    }
+
+    public bool HasHeroActionText
+    {
+        get => GetValue(HasHeroActionTextProperty);
+        private set => SetValue(HasHeroActionTextProperty, value);
+    }
+
+    public bool HasHeroActionSvgPath
+    {
+        get => GetValue(HasHeroActionSvgPathProperty);
+        private set => SetValue(HasHeroActionSvgPathProperty, value);
+    }
+
+    public bool HasHeroActionIconData
+    {
+        get => GetValue(HasHeroActionIconDataProperty);
+        private set => SetValue(HasHeroActionIconDataProperty, value);
     }
 
     public Thickness HeaderMargin
@@ -250,8 +314,12 @@ public partial class SongCollectionDetailView : UserControl
         if (change.Property == SubtitleProperty)
             HasSubtitle = !string.IsNullOrWhiteSpace(change.NewValue as string);
 
-        if (change.Property == ActionsProperty)
-            HasActions = change.NewValue is not null;
+        if (change.Property == HeroActionCommandProperty ||
+            change.Property == HeroActionTextProperty ||
+            change.Property == HeroActionSvgPathProperty ||
+            change.Property == HeroActionIconDataProperty ||
+            change.Property == HeroActionIsVisibleProperty)
+            UpdateHeroActionState();
 
         if (change.Property == PlayFirstCommandProperty)
             HasPlayFirstCommand = change.NewValue is not null;
@@ -286,6 +354,18 @@ public partial class SongCollectionDetailView : UserControl
         var firstSong = Songs?.OfType<SongItem>().FirstOrDefault();
         if (firstSong?.PlayCommand.CanExecute(null) == true)
             firstSong.PlayCommand.Execute(null);
+    }
+
+    private void UpdateHeroActionState()
+    {
+        HasHeroActionText = !string.IsNullOrWhiteSpace(HeroActionText);
+        HasHeroActionSvgPath = !string.IsNullOrWhiteSpace(HeroActionSvgPath);
+        HasHeroActionIconData = HeroActionIconData is not null;
+        HasHeroAction = HeroActionIsVisible &&
+                        (HeroActionCommand is not null ||
+                         HasHeroActionText ||
+                         HasHeroActionSvgPath ||
+                         HasHeroActionIconData);
     }
 
     private void OnSukiThemePropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
