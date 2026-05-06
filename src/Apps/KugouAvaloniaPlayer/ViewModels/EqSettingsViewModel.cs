@@ -45,6 +45,15 @@ public partial class EqSettingsViewModel : ObservableObject
 
     public ObservableCollection<EqBandViewModel> Bands { get; } = new();
 
+    public void ReloadFromSettings()
+    {
+        var savedGains = SettingsManager.Settings.CustomEqGains;
+        _isInitializing = true;
+        for (var i = 0; i < Bands.Count; i++)
+            Bands[i].Value = i < savedGains.Length ? savedGains[i] : 0;
+        _isInitializing = false;
+    }
+
     public void OnBandChanged()
     {
         if (_isInitializing) return;

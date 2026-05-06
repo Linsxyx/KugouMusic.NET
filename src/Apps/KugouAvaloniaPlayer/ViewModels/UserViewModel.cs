@@ -51,6 +51,8 @@ public partial class UserViewModel : PageViewModelBase
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
 
+    private bool _isApplyingSettingsSnapshot;
+
     [ObservableProperty]
     public partial bool AutoCheckUpdate { get; set; }
     [ObservableProperty]
@@ -387,18 +389,24 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnSelectedCloseBehaviorChanged(CloseBehavior value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.CloseBehavior = value;
         SettingsManager.Save();
     }
 
     partial void OnAutoCheckUpdateChanged(bool value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.AutoCheckUpdate = value;
         SettingsManager.Save();
     }
 
     partial void OnEnableGlobalShortcutsChanged(bool value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         if (ShortcutItems == null)
             return;
 
@@ -418,6 +426,8 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnSelectedEQPresetChanged(string value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.EQPreset = value;
         SettingsManager.Save();
         Player.UpdateAudioEffects(value, EnableSurround);
@@ -425,6 +435,8 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnEnableSurroundChanged(bool value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.EnableSurround = value;
         SettingsManager.Save();
         Player.UpdateAudioEffects(SelectedEQPreset, value);
@@ -432,6 +444,8 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnEnableSeamlessTransitionChanged(bool value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.EnableSeamlessTransition = value;
         SettingsManager.Save();
         Player.SetSeamlessTransitionEnabled(value);
@@ -439,6 +453,8 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnEnableNowPlayingVisualizerChanged(bool value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.EnableNowPlayingVisualizer = value;
         SettingsManager.Save();
         Player.SetNowPlayingVisualizerEnabled(value);
@@ -446,6 +462,8 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnEnableLegacyWordLyricEffectChanged(bool value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.EnableLegacyWordLyricEffect = value;
         SettingsManager.Save();
         NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
@@ -454,6 +472,8 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnDesktopLyricDoubleLineEnabledChanged(bool value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.DesktopLyricDoubleLineEnabled = value;
         SettingsManager.Save();
         WeakReferenceMessenger.Default.Send(new DesktopLyricDoubleLineChangedMessage(value));
@@ -569,6 +589,8 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnPlayPageSelectedLyricAlignmentChanged(string value)
     {
+        if (_isApplyingSettingsSnapshot) return;
+
         SettingsManager.Settings.PlayPageLyricAlignment = ParseAlignment(value);
         SettingsManager.Save();
         NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
@@ -576,6 +598,12 @@ public partial class UserViewModel : PageViewModelBase
 
     partial void OnPlayPageLyricFontSizeChanged(double value)
     {
+        if (_isApplyingSettingsSnapshot)
+        {
+            OnPropertyChanged(nameof(PlayPageLyricFontSizeDisplay));
+            return;
+        }
+
         var clamped = Math.Clamp(value, 18, 42);
         if (Math.Abs(clamped - value) > double.Epsilon)
         {
@@ -606,6 +634,67 @@ public partial class UserViewModel : PageViewModelBase
             .WithContent(eqSettings)
             .WithActionButton("确定", _ => { }, true)
             .TryShow();
+    }
+
+    [RelayCommand]
+    private void ResetAllSettings()
+    {
+        _dialogManager.CreateDialog()
+            .WithTitle("重置设置")
+            .WithContent("确认要一键重置所有设置吗？这会将设置恢复为默认值，但不会清除本地音乐记录。")
+            .WithActionButton("取消", _ => { }, true, "Standard")
+            .WithActionButton("确认", _ =>
+            {
+                SettingsManager.ResetSettings();
+                ApplySettingsSnapshot();
+            }, true)
+            .TryShow();
+    }
+
+    private void ApplySettingsSnapshot()
+    {
+        StopRecording(true);
+
+        _isApplyingSettingsSnapshot = true;
+        try
+        {
+            SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
+            AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
+            EnableGlobalShortcuts = SettingsManager.Settings.GlobalShortcuts.EnableGlobalShortcuts;
+            SelectedEQPreset = Array.Exists(EQPresetOptions, x => x == SettingsManager.Settings.EQPreset)
+                ? SettingsManager.Settings.EQPreset
+                : "原声";
+            EnableSurround = SettingsManager.Settings.EnableSurround;
+            EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
+            EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
+            EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
+            DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
+
+            LoadDesktopLyricColorEditorFromSettings();
+            LoadDesktopLyricFontEditorFromSettings();
+            LoadPlayPageLyricColorEditorFromSettings();
+            LoadPlayPageLyricFontEditorFromSettings();
+            LoadPlayPageLyricAlignmentFromSettings();
+        }
+        finally
+        {
+            _isApplyingSettingsSnapshot = false;
+        }
+
+        Player.MusicQuality = SettingsManager.Settings.MusicQuality;
+        Player.UpdateAudioEffects(SelectedEQPreset, EnableSurround);
+        Player.SetSeamlessTransitionEnabled(EnableSeamlessTransition);
+        Player.SetNowPlayingVisualizerEnabled(EnableNowPlayingVisualizer);
+        _eqSettingsViewModel.ReloadFromSettings();
+
+        var shortcutApplyResult = _globalShortcutService.TryApplySettings(SettingsManager.Settings.GlobalShortcuts);
+        RefreshShortcutTexts();
+        ApplyRegistrationResults(shortcutApplyResult.Results);
+
+        NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
+        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        WeakReferenceMessenger.Default.Send(
+            new DesktopLyricDoubleLineChangedMessage(SettingsManager.Settings.DesktopLyricDoubleLineEnabled));
     }
 
     private void LoadDesktopLyricColorEditorFromSettings()

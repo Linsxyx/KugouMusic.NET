@@ -101,7 +101,7 @@ public class AppSettings
 
     public bool EnableSurround { get; set; }
 
-    public bool EnableSeamlessTransition { get; set; }
+    public bool EnableSeamlessTransition { get; set; } = true;
 
     public bool EnableNowPlayingVisualizer { get; set; }
 

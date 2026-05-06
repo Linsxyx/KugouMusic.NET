@@ -70,4 +70,22 @@ public static class SettingsManager
             //Console.WriteLine($"[SettingsManager] 保存配置文件失败: {ex.Message}");
         }
     }
+
+    public static void ResetSettings()
+    {
+        try
+        {
+            var localFolders = Settings.LocalMusicFolders;
+            var localMetas = Settings.LocalPlaylistMetas;
+            Settings = new AppSettings
+            {
+                LocalMusicFolders = localFolders,
+                LocalPlaylistMetas = localMetas
+            };
+            Save();
+        }
+        catch (Exception)
+        {
+        }
+    }
 }

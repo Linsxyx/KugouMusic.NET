@@ -134,6 +134,31 @@
                         </StackPanel>
                     </suki:GlassCard>
 
+                    <suki:GlassCard IsOpaque="True" Padding="14" IsVisible="{Binding IsGeneralSection}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="重置与清理"
+                                       FontWeight="SemiBold"
+                                       FontSize="16" />
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
+                                    <TextBlock Text="一键重置" FontWeight="DemiBold" Foreground="{DynamicResource SukiRed}" />
+                                    <TextBlock Text="一键恢复所有设置为默认值 (不清除本地音乐记录)"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <Button Grid.Column="1"
+                                        Classes="Basic"
+                                        Command="{Binding ResetAllSettingsCommand}"
+                                        MinWidth="120">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="重置所有设置" Foreground="{DynamicResource SukiRed}" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </suki:GlassCard>
+
                     <suki:GlassCard IsOpaque="True" Padding="14" IsVisible="{Binding IsPlaybackSection}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="播放与音效"
