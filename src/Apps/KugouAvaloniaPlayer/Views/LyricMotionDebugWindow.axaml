@@ -1,0 +1,183 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:KugouAvaloniaPlayer.Controls"
+        x:Class="KugouAvaloniaPlayer.Views.LyricMotionDebugWindow"
+        x:DataType="controls:LyricMotionDebugSettings"
+        Title="歌词动效调参"
+        Width="560"
+        Height="720"
+        MinWidth="500"
+        MinHeight="560"
+        Topmost="True"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.SectionTitle">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,16,0,4" />
+        </Style>
+
+        <Style Selector="Grid.ParamRow">
+            <Setter Property="MinHeight" Value="38" />
+        </Style>
+
+        <Style Selector="TextBlock.ParamName">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <Style Selector="TextBlock.ParamValue">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="FontFamily" Value="Consolas" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel Margin="18">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <StackPanel Spacing="3">
+                <TextBlock Text="MeasuredLyricScrollView" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="Ctrl+Shift+L 打开；滑动后立刻生效，关闭窗口不会重置参数。"
+                           Opacity="0.68" />
+            </StackPanel>
+
+            <Button Grid.Column="1"
+                    Content="恢复默认"
+                    Command="{Binding ResetCommand}"
+                    VerticalAlignment="Center" />
+        </Grid>
+
+        <ScrollViewer>
+            <StackPanel Spacing="8">
+                <TextBlock Classes="SectionTitle" Text="延迟" />
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="StaggerRange" />
+                    <Slider Grid.Column="1" Minimum="0" Maximum="30" TickFrequency="1"
+                            Value="{Binding StaggerRange, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding StaggerRangeValue}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="StaggerStepMs" />
+                    <Slider Grid.Column="1" Minimum="0" Maximum="80" TickFrequency="1"
+                            Value="{Binding StaggerStepMs, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding StaggerStepMs, StringFormat='{}{0:0} ms'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="EntranceStepMs" />
+                    <Slider Grid.Column="1" Minimum="0" Maximum="80" TickFrequency="1"
+                            Value="{Binding EntranceStepMs, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding EntranceStepMs, StringFormat='{}{0:0} ms'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="EntranceRiseOffset" />
+                    <Slider Grid.Column="1" Minimum="0" Maximum="140" TickFrequency="1"
+                            Value="{Binding EntranceRiseOffset, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding EntranceRiseOffset, StringFormat='{}{0:0}px'}" />
+                </Grid>
+
+                <TextBlock Classes="SectionTitle" Text="主滚动弹簧" />
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="BaseSpringStiffness" />
+                    <Slider Grid.Column="1" Minimum="0.005" Maximum="0.18" TickFrequency="0.001"
+                            Value="{Binding BaseSpringStiffness, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding BaseSpringStiffness, StringFormat='{}{0:0.000}'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="BaseSpringDamping" />
+                    <Slider Grid.Column="1" Minimum="0.35" Maximum="0.96" TickFrequency="0.01"
+                            Value="{Binding BaseSpringDamping, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding BaseSpringDamping, StringFormat='{}{0:0.00}'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="BaseScrollDurationMs" />
+                    <Slider Grid.Column="1" Minimum="120" Maximum="900" TickFrequency="10"
+                            Value="{Binding BaseScrollDurationMs, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding BaseScrollDurationMs, StringFormat='{}{0:0} ms'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="OpacityResponse" />
+                    <Slider Grid.Column="1" Minimum="1" Maximum="45" TickFrequency="0.5"
+                            Value="{Binding OpacityResponse, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding OpacityResponse, StringFormat='{}{0:0.0}'}" />
+                </Grid>
+
+                <TextBlock Classes="SectionTitle" Text="手动滚动回弹" />
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="ManualOffsetReturnStiffness" />
+                    <Slider Grid.Column="1" Minimum="0.005" Maximum="0.18" TickFrequency="0.001"
+                            Value="{Binding ManualOffsetReturnStiffness, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding ManualOffsetReturnStiffness, StringFormat='{}{0:0.000}'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="ManualOffsetReturnDamping" />
+                    <Slider Grid.Column="1" Minimum="0.35" Maximum="0.96" TickFrequency="0.01"
+                            Value="{Binding ManualOffsetReturnDamping, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding ManualOffsetReturnDamping, StringFormat='{}{0:0.00}'}" />
+                </Grid>
+
+                <TextBlock Classes="SectionTitle" Text="停止阈值" />
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="SettleTopThreshold" />
+                    <Slider Grid.Column="1" Minimum="0.01" Maximum="2" TickFrequency="0.01"
+                            Value="{Binding SettleTopThreshold, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding SettleTopThreshold, StringFormat='{}{0:0.00}'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="SettleVelocityThreshold" />
+                    <Slider Grid.Column="1" Minimum="0.01" Maximum="1.5" TickFrequency="0.01"
+                            Value="{Binding SettleVelocityThreshold, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding SettleVelocityThreshold, StringFormat='{}{0:0.00}'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="SettleManualOffsetThreshold" />
+                    <Slider Grid.Column="1" Minimum="0.01" Maximum="2" TickFrequency="0.01"
+                            Value="{Binding SettleManualOffsetThreshold, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding SettleManualOffsetThreshold, StringFormat='{}{0:0.00}'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="SettleManualVelocityThreshold" />
+                    <Slider Grid.Column="1" Minimum="0.01" Maximum="1.5" TickFrequency="0.01"
+                            Value="{Binding SettleManualVelocityThreshold, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding SettleManualVelocityThreshold, StringFormat='{}{0:0.00}'}" />
+                </Grid>
+
+                <Grid Classes="ParamRow" ColumnDefinitions="210,*,74" ColumnSpacing="12">
+                    <TextBlock Classes="ParamName" Text="SettleOpacityThreshold" />
+                    <Slider Grid.Column="1" Minimum="0.001" Maximum="0.05" TickFrequency="0.001"
+                            Value="{Binding SettleOpacityThreshold, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="2" Classes="ParamValue"
+                               Text="{Binding SettleOpacityThreshold, StringFormat='{}{0:0.000}'}" />
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

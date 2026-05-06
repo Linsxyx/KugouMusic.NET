@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Threading;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -233,6 +232,7 @@ public sealed partial class GlobalShortcutService(
     PlayerViewModel playerViewModel,
     IDesktopLyricWindowService desktopLyricWindowService,
     IMainWindowService mainWindowService,
+    IUiDispatcherService uiDispatcher,
     ILogger<GlobalShortcutService> logger)
     : IGlobalShortcutService
 {
@@ -399,7 +399,7 @@ public sealed partial class GlobalShortcutService(
 
     private void DispatchAction(GlobalShortcutAction action)
     {
-        Dispatcher.UIThread.Post(() =>
+        uiDispatcher.RunOrPost(() =>
         {
             switch (action)
             {

@@ -196,6 +196,8 @@ PublishScripts/
 *.nupkg
 # NuGet Symbol Packages
 *.snupkg
+!local-nuget/
+!local-nuget/*.nupkg
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
 # except build/, which is used as an MSBuild target.
@@ -213,6 +215,9 @@ csx/
 # Microsoft Azure Emulator
 ecf/
 rcf/
+
+# External source checkouts used only to build local patched packages.
+external/
 
 # Windows Store app package directories and files
 AppPackages/

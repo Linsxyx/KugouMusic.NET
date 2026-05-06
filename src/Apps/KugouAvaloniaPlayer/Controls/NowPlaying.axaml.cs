@@ -52,7 +52,7 @@ public partial class NowPlaying : UserControl
             _mainWindowViewModel?.IsNowPlayingOpen != true)
             return;
 
-        Dispatcher.UIThread.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
+        Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
     }
 
     private void OnLyricLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -60,6 +60,6 @@ public partial class NowPlaying : UserControl
         if (_mainWindowViewModel?.IsNowPlayingOpen != true || _playerViewModel?.LyricLines.Count <= 0)
             return;
 
-        Dispatcher.UIThread.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
+        Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
     }
 }

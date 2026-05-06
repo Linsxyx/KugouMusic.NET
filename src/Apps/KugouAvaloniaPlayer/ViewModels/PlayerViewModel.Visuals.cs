@@ -75,13 +75,11 @@ public partial class PlayerViewModel
             if (cancellationToken.IsCancellationRequested || CurrentPlayingSong != song)
                 return;
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (cancellationToken.IsCancellationRequested || CurrentPlayingSong != song)
-                    return;
+            await Dispatcher.UIThread.Resume();
+            if (cancellationToken.IsCancellationRequested || CurrentPlayingSong != song)
+                return;
 
-                DisplayedPlayingSong = song;
-            });
+            DisplayedPlayingSong = song;
 
             _isDelayingVisualSwitch = false;
             StartLyricsLoad(song, isLocal);

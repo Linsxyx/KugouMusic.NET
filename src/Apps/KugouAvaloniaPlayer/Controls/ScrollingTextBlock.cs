@@ -33,6 +33,10 @@ public class ScrollingTextBlock : Control
     private readonly DispatcherTimer _timer;
     private DateTime _lastTick;
     private double _offset;
+    
+    private FormattedText? _cachedFormattedText;
+    private double _cachedTextWidth;
+    private double _cachedTextHeight;
 
     static ScrollingTextBlock()
     {
@@ -110,45 +114,75 @@ public class ScrollingTextBlock : Control
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-
+        
         if (change.Property == TextProperty ||
             change.Property == FontSizeProperty ||
             change.Property == FontFamilyProperty ||
             change.Property == FontWeightProperty ||
-            change.Property == FontStyleProperty)
+            change.Property == FontStyleProperty ||
+            change.Property == ForegroundProperty)
         {
+            _cachedFormattedText = null;
             _offset = 0;
-            InvalidateVisual();
         }
+    }
+    
+    private FormattedText? GetOrUpdateFormattedText()
+    {
+        if (string.IsNullOrEmpty(Text))
+            return null;
+
+        if (_cachedFormattedText == null)
+        {
+            var typeface = new Typeface(
+                FontFamily ?? FontFamily.Default,
+                FontStyle,
+                FontWeight,
+                FontStretch.Normal);
+
+            _cachedFormattedText = new FormattedText(
+                Text,
+                CultureInfo.CurrentUICulture,
+                FlowDirection.LeftToRight,
+                typeface,
+                FontSize,
+                Foreground);
+
+            _cachedTextWidth = _cachedFormattedText.WidthIncludingTrailingWhitespace;
+            _cachedTextHeight = _cachedFormattedText.Height;
+        }
+
+        return _cachedFormattedText;
     }
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var formattedText = CreateFormattedText();
+        var formattedText = GetOrUpdateFormattedText();
+        if (formattedText == null)
+            return new Size(0, 0);
+
         return new Size(
-            Math.Min(Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace), availableSize.Width),
-            Math.Ceiling(formattedText.Height));
+            Math.Min(Math.Ceiling(_cachedTextWidth), availableSize.Width),
+            Math.Ceiling(_cachedTextHeight));
     }
 
     public override void Render(DrawingContext context)
     {
-        var text = Text;
-        if (string.IsNullOrEmpty(text))
+        var formattedText = GetOrUpdateFormattedText();
+        if (formattedText == null)
             return;
 
-        var formattedText = CreateFormattedText();
-        var textWidth = formattedText.WidthIncludingTrailingWhitespace;
-        var originY = Math.Max(0, (Bounds.Height - formattedText.Height) / 2);
+        var originY = Math.Max(0, (Bounds.Height - _cachedTextHeight) / 2);
 
         using (context.PushClip(new Rect(Bounds.Size)))
         {
-            if (textWidth <= Bounds.Width || Bounds.Width <= 0)
+            if (_cachedTextWidth <= Bounds.Width || Bounds.Width <= 0)
             {
                 context.DrawText(formattedText, new Point(0, originY));
                 return;
             }
 
-            var cycleWidth = textWidth + DefaultGap;
+            var cycleWidth = _cachedTextWidth + DefaultGap;
             var x = -(_offset % cycleWidth);
             context.DrawText(formattedText, new Point(x, originY));
             context.DrawText(formattedText, new Point(x + cycleWidth, originY));
@@ -160,9 +194,8 @@ public class ScrollingTextBlock : Control
         var now = DateTime.UtcNow;
         var elapsedSeconds = Math.Min(0.1, (now - _lastTick).TotalSeconds);
         _lastTick = now;
-
-        var formattedText = CreateFormattedText();
-        if (formattedText.WidthIncludingTrailingWhitespace > Bounds.Width && Bounds.Width > 0)
+        
+        if (_cachedFormattedText != null && _cachedTextWidth > Bounds.Width && Bounds.Width > 0)
         {
             _offset += elapsedSeconds * DefaultSpeed;
             InvalidateVisual();
@@ -172,22 +205,5 @@ public class ScrollingTextBlock : Control
             _offset = 0;
             InvalidateVisual();
         }
-    }
-
-    private FormattedText CreateFormattedText()
-    {
-        var typeface = new Typeface(
-            FontFamily ?? FontFamily.Default,
-            FontStyle,
-            FontWeight,
-            FontStretch.Normal);
-
-        return new FormattedText(
-            Text ?? string.Empty,
-            CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight,
-            typeface,
-            FontSize,
-            Foreground);
     }
 }

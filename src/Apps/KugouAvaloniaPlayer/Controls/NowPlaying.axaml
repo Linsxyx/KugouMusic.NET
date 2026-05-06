@@ -149,7 +149,7 @@
                                  RenderTransformOrigin="0.5,0.5"
                                  RenderTransform="scale(1.12)">
                 <Image.Effect>
-                    <BlurEffect Radius="180" />
+                    <BlurEffect Radius="40" />
                 </Image.Effect>
             </Image>
 

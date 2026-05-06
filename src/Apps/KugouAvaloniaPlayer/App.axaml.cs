@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using KuGou.Net.Infrastructure;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Services;
@@ -45,8 +46,11 @@ public partial class App : Application
         collection.AddSingleton<ISessionPersistence, KugouSessionPersistence>();
         collection.AddKuGouSdk();
 
+        var uiDispatcher = Dispatcher.CurrentDispatcher;
+
         collection.AddSingleton<ISukiToastManager, SukiToastManager>();
         collection.AddSingleton<ISukiDialogManager, SukiDialogManager>();
+        collection.AddSingleton<IUiDispatcherService>(new UiDispatcherService(uiDispatcher));
         collection.AddSingleton<ICreatePlaylistDialogService, CreatePlaylistDialogService>();
         collection.AddSingleton<IExternalPlaylistParseStrategy, NeteasePlaylistParseStrategy>();
         collection.AddSingleton<IExternalPlaylistParseStrategy, QqMusicPlaylistParseStrategy>();

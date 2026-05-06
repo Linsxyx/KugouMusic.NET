@@ -12,6 +12,7 @@ namespace KugouAvaloniaPlayer.Controls;
 
 public class MeasuredLyricScrollView : ItemsControl
 {
+#if !DEBUG
     private const int StaggerRange = 10;
     private const int StaggerStepMs = 20;
     private const int EntranceStepMs = 12;
@@ -27,8 +28,12 @@ public class MeasuredLyricScrollView : ItemsControl
     private const double SettleManualOffsetThreshold = 0.35;
     private const double SettleManualVelocityThreshold = 0.2;
     private const double SettleOpacityThreshold = 0.008;
+#endif
 
     private const double DefaultEstimatedLineHeight = 72;
+#if DEBUG
+    private static LyricMotionDebugSettings MotionSettings => LyricMotionDebugSettings.Instance;
+#endif
     
     public static readonly StyledProperty<object?> ActiveItemProperty =
         AvaloniaProperty.Register<MeasuredLyricScrollView, object?>(nameof(ActiveItem));
@@ -69,6 +74,9 @@ public class MeasuredLyricScrollView : ItemsControl
     private bool _hasLastFrameTimestamp;
     private bool _isFirstLayoutPass = true;
     private bool _isManualOffsetReturning;
+#if DEBUG
+    private bool _isMotionSettingsHooked;
+#endif
     private bool _isUserScrolling;
     private bool _layoutUpdateQueued;
     private TimeSpan _lastFrameTimestamp;
@@ -83,6 +91,9 @@ public class MeasuredLyricScrollView : ItemsControl
         _userScrollResetTimer.Tick += OnUserScrollTimeout;
 
         LayoutUpdated += OnLayoutUpdated;
+#if DEBUG
+        HookMotionSettings();
+#endif
     }
 
     protected override Type StyleKeyOverride => typeof(MeasuredLyricScrollView);
@@ -135,6 +146,14 @@ public class MeasuredLyricScrollView : ItemsControl
         set => SetValue(InactiveScaleProperty, value);
     }
 
+#if DEBUG
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        HookMotionSettings();
+    }
+#endif
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
@@ -142,6 +161,9 @@ public class MeasuredLyricScrollView : ItemsControl
         _animationFrameQueued = false;
         _hasLastFrameTimestamp = false;
         _userScrollResetTimer.Stop();
+#if DEBUG
+        UnhookMotionSettings();
+#endif
         UnhookCollectionChanged();
     }
 
@@ -203,13 +225,41 @@ public class MeasuredLyricScrollView : ItemsControl
         e.Handled = true;
     }
 
+#if DEBUG
+    private void OnMotionSettingsChanged(object? sender, EventArgs e)
+    {
+        QueueLayoutUpdate();
+        EnsureAnimationFrameRunning();
+    }
+
+    private void HookMotionSettings()
+    {
+        if (_isMotionSettingsHooked) return;
+
+        MotionSettings.SettingsChanged += OnMotionSettingsChanged;
+        _isMotionSettingsHooked = true;
+    }
+
+    private void UnhookMotionSettings()
+    {
+        if (!_isMotionSettingsHooked) return;
+
+        MotionSettings.SettingsChanged -= OnMotionSettingsChanged;
+        _isMotionSettingsHooked = false;
+    }
+#endif
+
     private void OnUserScrollTimeout(object? sender, EventArgs e)
     {
         _userScrollResetTimer.Stop();
         _isUserScrolling = false;
         _lockedActiveIndex = null;
         _manualOffsetTarget = 0;
+#if DEBUG
+        _isManualOffsetReturning = Math.Abs(_manualOffset) > MotionSettings.SettleManualOffsetThreshold;
+#else
         _isManualOffsetReturning = Math.Abs(_manualOffset) > SettleManualOffsetThreshold;
+#endif
 
         if (_deferredActiveItemUpdate)
             _deferredActiveItemUpdate = false;
@@ -254,7 +304,7 @@ public class MeasuredLyricScrollView : ItemsControl
         if (_layoutUpdateQueued) return;
 
         _layoutUpdateQueued = true;
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.Post(() =>
         {
             _layoutUpdateQueued = false;
             ApplyMeasuredLayout();
@@ -374,16 +424,27 @@ public class MeasuredLyricScrollView : ItemsControl
     private static TimeSpan GetEntranceDelay(int index, int activeIndex)
     {
         var distance = Math.Abs(index - activeIndex);
+#if DEBUG
+        return TimeSpan.FromMilliseconds(Math.Min(220, distance * MotionSettings.EntranceStepMs));
+#else
         return TimeSpan.FromMilliseconds(Math.Min(220, distance * EntranceStepMs));
+#endif
     }
 
     private static TimeSpan GetTopTransitionDelay(int index, int activeIndex)
     {
         var delta = index - activeIndex;
+#if DEBUG
+        if (Math.Abs(delta) > MotionSettings.StaggerRangeValue)
+            return TimeSpan.Zero;
+
+        var delayMs = (MotionSettings.StaggerRangeValue + delta) * MotionSettings.StaggerStepMs;
+#else
         if (Math.Abs(delta) > StaggerRange)
             return TimeSpan.Zero;
 
         var delayMs = (StaggerRange + delta) * StaggerStepMs;
+#endif
         return TimeSpan.FromMilliseconds(Math.Max(0, delayMs));
     }
 
@@ -419,9 +480,15 @@ public class MeasuredLyricScrollView : ItemsControl
 
         if (!state.IsInitialized)
         {
+#if DEBUG
+            state.CurrentTop = isEntrance
+                ? targetTop + MotionSettings.EntranceRiseOffset + Math.Abs(index - activeIndex) * 8
+                : targetTop;
+#else
             state.CurrentTop = isEntrance
                 ? targetTop + EntranceRiseOffset + Math.Abs(index - activeIndex) * 8
                 : targetTop;
+#endif
             state.Velocity = 0;
             state.CurrentOpacity = isEntrance ? 0 : targetOpacity;
             state.IsInitialized = true;
@@ -466,7 +533,7 @@ public class MeasuredLyricScrollView : ItemsControl
         InvalidateMeasure();
         InvalidateArrange();
         QueueLayoutUpdate();
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.Post(() =>
         {
             InvalidateMeasure();
             InvalidateArrange();
@@ -516,10 +583,17 @@ public class MeasuredLyricScrollView : ItemsControl
 
         var dt = Math.Clamp(elapsed.TotalSeconds, 1d / 240d, 1d / 20d);
         var frameFactor = dt * 60d;
+#if DEBUG
+        var durationFactor = Math.Clamp(MotionSettings.BaseScrollDurationMs / Math.Max(120, ScrollDuration.TotalMilliseconds), 0.55, 2.2);
+        var springStiffness = MotionSettings.BaseSpringStiffness * durationFactor * durationFactor;
+        var springDamping = Math.Pow(MotionSettings.BaseSpringDamping, durationFactor);
+        var opacityFactor = 1 - Math.Exp(-MotionSettings.OpacityResponse * dt);
+#else
         var durationFactor = Math.Clamp(BaseScrollDurationMs / Math.Max(120, ScrollDuration.TotalMilliseconds), 0.55, 2.2);
         var springStiffness = BaseSpringStiffness * durationFactor * durationFactor;
         var springDamping = Math.Pow(BaseSpringDamping, durationFactor);
         var opacityFactor = 1 - Math.Exp(-OpacityResponse * dt);
+#endif
         var hasActiveMotion = UpdateManualOffset(frameFactor);
         if (hasActiveMotion)
             ApplyMeasuredLayout();
@@ -535,8 +609,13 @@ public class MeasuredLyricScrollView : ItemsControl
             state.Velocity *= Math.Pow(springDamping, frameFactor);
             state.CurrentTop += state.Velocity * frameFactor;
 
+#if DEBUG
+            if (Math.Abs(state.TargetTop - state.CurrentTop) <= MotionSettings.SettleTopThreshold &&
+                Math.Abs(state.Velocity) <= MotionSettings.SettleVelocityThreshold)
+#else
             if (Math.Abs(state.TargetTop - state.CurrentTop) <= SettleTopThreshold &&
                 Math.Abs(state.Velocity) <= SettleVelocityThreshold)
+#endif
             {
                 state.CurrentTop = state.TargetTop;
                 state.Velocity = 0;
@@ -547,7 +626,11 @@ public class MeasuredLyricScrollView : ItemsControl
             }
 
             state.CurrentOpacity += (state.TargetOpacity - state.CurrentOpacity) * opacityFactor;
+#if DEBUG
+            if (Math.Abs(state.TargetOpacity - state.CurrentOpacity) <= MotionSettings.SettleOpacityThreshold)
+#else
             if (Math.Abs(state.TargetOpacity - state.CurrentOpacity) <= SettleOpacityThreshold)
+#endif
             {
                 state.CurrentOpacity = state.TargetOpacity;
             }
@@ -603,12 +686,22 @@ public class MeasuredLyricScrollView : ItemsControl
         if (!_isManualOffsetReturning) return false;
 
         var displacement = _manualOffsetTarget - _manualOffset;
+#if DEBUG
+        _manualOffsetVelocity += displacement * MotionSettings.ManualOffsetReturnStiffness * frameFactor;
+        _manualOffsetVelocity *= Math.Pow(MotionSettings.ManualOffsetReturnDamping, frameFactor);
+#else
         _manualOffsetVelocity += displacement * ManualOffsetReturnStiffness * frameFactor;
         _manualOffsetVelocity *= Math.Pow(ManualOffsetReturnDamping, frameFactor);
+#endif
         _manualOffset += _manualOffsetVelocity * frameFactor;
 
+#if DEBUG
+        if (Math.Abs(_manualOffsetTarget - _manualOffset) <= MotionSettings.SettleManualOffsetThreshold &&
+            Math.Abs(_manualOffsetVelocity) <= MotionSettings.SettleManualVelocityThreshold)
+#else
         if (Math.Abs(_manualOffsetTarget - _manualOffset) <= SettleManualOffsetThreshold &&
             Math.Abs(_manualOffsetVelocity) <= SettleManualVelocityThreshold)
+#endif
         {
             _manualOffset = _manualOffsetTarget;
             _manualOffsetVelocity = 0;

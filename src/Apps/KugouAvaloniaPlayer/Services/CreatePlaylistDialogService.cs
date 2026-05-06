@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
 using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.Services;
@@ -21,7 +20,8 @@ public sealed record LocalPlaylistEditResult(string Name, string? CoverPath);
 
 public sealed class CreatePlaylistDialogService(
     ISukiDialogManager dialogManager,
-    IFolderPickerService folderPickerService) : ICreatePlaylistDialogService
+    IFolderPickerService folderPickerService,
+    IUiDispatcherService uiDispatcher) : ICreatePlaylistDialogService
 {
     public Task<string?> PromptPlaylistNameAsync(string? defaultValue = null)
     {
@@ -57,10 +57,7 @@ public sealed class CreatePlaylistDialogService(
                 .TryShow();
         }
 
-        if (Dispatcher.UIThread.CheckAccess())
-            ShowDialog();
-        else
-            Dispatcher.UIThread.Post(ShowDialog);
+        uiDispatcher.RunOrPost(ShowDialog);
 
         return tcs.Task;
     }
@@ -130,10 +127,7 @@ public sealed class CreatePlaylistDialogService(
                 .TryShow();
         }
 
-        if (Dispatcher.UIThread.CheckAccess())
-            ShowDialog();
-        else
-            Dispatcher.UIThread.Post(ShowDialog);
+        uiDispatcher.RunOrPost(ShowDialog);
 
         return tcs.Task;
     }

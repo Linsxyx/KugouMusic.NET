@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
-using Avalonia.Threading;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
@@ -28,6 +27,7 @@ public partial class FavoritePlaylistService(
     KgSessionManager sessionManager,
     ISukiToastManager toastManager,
     ISukiDialogManager dialogManager,
+    IUiDispatcherService uiDispatcher,
     ILogger<FavoritePlaylistService> logger)
 {
     private const string LikeListIdForAction = "2";
@@ -730,10 +730,7 @@ partial class FavoritePlaylistService
                 .TryShow();
         }
 
-        if (Dispatcher.UIThread.CheckAccess())
-            Show();
-        else
-            Dispatcher.UIThread.Post(Show);
+        uiDispatcher.RunOrPost(Show);
     }
 
     private void ShowProgressDialog(string title, string message)
@@ -784,10 +781,7 @@ partial class FavoritePlaylistService
             dialogManager.DismissDialog();
         }
 
-        if (Dispatcher.UIThread.CheckAccess())
-            Dismiss();
-        else
-            Dispatcher.UIThread.Post(Dismiss);
+        uiDispatcher.RunOrPost(Dismiss);
     }
 
     private void ShowToast(NotificationType type, string title, string content)

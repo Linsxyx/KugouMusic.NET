@@ -3,7 +3,6 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Threading;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
@@ -30,7 +29,7 @@ public interface IMainWindowService
     void ShowMainWindow();
 }
 
-public sealed class LoginDialogService(ISukiDialogManager dialogManager) : ILoginDialogService
+public sealed class LoginDialogService(ISukiDialogManager dialogManager, IUiDispatcherService uiDispatcher) : ILoginDialogService
 {
     public void ShowLoginDialog(LoginViewModel loginViewModel)
     {
@@ -47,16 +46,14 @@ public sealed class LoginDialogService(ISukiDialogManager dialogManager) : ILogi
                 .TryShow();
         };
 
-        if (Dispatcher.UIThread.CheckAccess())
-            showAction();
-        else
-            Dispatcher.UIThread.Post(showAction);
+        uiDispatcher.RunOrPost(showAction);
     }
 }
 
 public sealed class DesktopLyricWindowService(
     IDesktopLyricViewModelFactory desktopLyricViewModelFactory,
-    IDesktopLyricMousePassthroughService desktopLyricMousePassthroughService)
+    IDesktopLyricMousePassthroughService desktopLyricMousePassthroughService,
+    IUiDispatcherService uiDispatcher)
     : IDesktopLyricWindowService
 {
     private const int CollapsedIconSize = 40;
@@ -71,18 +68,12 @@ public sealed class DesktopLyricWindowService(
 
     public void Toggle()
     {
-        if (Dispatcher.UIThread.CheckAccess())
-            ToggleCore();
-        else
-            Dispatcher.UIThread.Post(ToggleCore);
+        uiDispatcher.RunOrPost(ToggleCore);
     }
 
     public void Close()
     {
-        if (Dispatcher.UIThread.CheckAccess())
-            CloseCore();
-        else
-            Dispatcher.UIThread.Post(CloseCore);
+        uiDispatcher.RunOrPost(CloseCore);
     }
 
     private void ToggleCore()
