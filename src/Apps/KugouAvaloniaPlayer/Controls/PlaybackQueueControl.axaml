@@ -3,6 +3,7 @@
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              x:Class="KugouAvaloniaPlayer.Controls.PlaybackQueueControl"
+             Name="Root"
              x:DataType="vm:MainWindowViewModel">
 
     <UserControl.Resources>
@@ -240,13 +241,14 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:SongItem">
 
-                        <Grid ColumnDefinitions="Auto, *, Auto"
+                        <Grid x:Name="QueueItemRoot"
+                              ColumnDefinitions="Auto, *, Auto"
                               Height="50"
                               Margin="4,0"
-                              behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}">
+                              behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}">
 
-                            <Grid.ContextMenu>
-                                <ContextMenu>
+                            <Grid.ContextFlyout>
+                                <MenuFlyout>
                                     <MenuItem Header="下一首播放"
                                               Command="{Binding AddToNextCommand}"
                                               CommandParameter="{Binding .}" />
@@ -256,7 +258,7 @@
                                                 <Setter Property="Header"
                                                         Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
                                                 <Setter Property="Command"
-                                                        Value="{Binding $parent[MenuItem].((vm:SongItem)DataContext).ViewSingerCommand}" />
+                                                        Value="{Binding #QueueItemRoot.((vm:SongItem)DataContext).ViewSingerCommand}" />
                                                 <Setter Property="CommandParameter" Value="{Binding .}" />
                                             </Style>
                                         </MenuItem.Styles>
@@ -266,10 +268,10 @@
                                               CommandParameter="{Binding .}" />
 
                                     <MenuItem Header="从队列移除"
-                                              Command="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
+                                              Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
                                               CommandParameter="{Binding .}" />
-                                </ContextMenu>
-                            </Grid.ContextMenu>
+                                </MenuFlyout>
+                            </Grid.ContextFlyout>
 
                             <Panel Grid.Column="0"
                                    Width="28"
@@ -318,14 +320,14 @@
                                 <!-- 播放按钮 -->
                                 <Button Classes="Basic"
                                         ToolTip.Tip="播放"
-                                        Command="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
+                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
                                         CommandParameter="{Binding .}"
                                         Foreground="{DynamicResource SukiLowText}">
                                     <Svg Path="/Assets/Play-2.svg" Width="10" Height="10" />
                                 </Button>
                                 <Button Classes="Basic"
                                         ToolTip.Tip="移除"
-                                        Command="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
+                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
                                         CommandParameter="{Binding .}">
                                     <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource SukiText}" />
                                 </Button>
