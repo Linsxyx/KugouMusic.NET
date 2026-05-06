@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="KugouAvaloniaPlayer.App"
              xmlns:local="using:KugouAvaloniaPlayer"
-             xmlns:labs="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:converters="clr-namespace:KugouAvaloniaPlayer.Converters"
              RequestedThemeVariant="Default">
@@ -14,7 +13,6 @@
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Blue" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SukiSideMenuOverride.axaml" />
-        <labs:ControlThemes />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SliderPlayer.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SegmentedStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/GorgeousThemeSwitch.axaml" />

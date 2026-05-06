@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Controls.AddToPlaylistDialog"
              x:Name="DialogRoot"
              x:DataType="vm:AddToPlaylistDialogViewModel">
@@ -39,7 +39,7 @@
                         CornerRadius="16"
                         ClipToBounds="True"
                         Background="{DynamicResource SukiPrimaryColorLow}">
-                    <controls:AsyncImage Source="{Binding SongCover}"
+                    <Image asyncImageLoader:ImageLoader.Source="{Binding SongCover}"
                                          Stretch="UniformToFill" />
                 </Border>
 
@@ -128,7 +128,7 @@
                                                     ClipToBounds="True"
                                                     Background="{DynamicResource SukiPrimaryColor0}"
                                                     VerticalAlignment="Center">
-                                                <controls:AsyncImage Source="{Binding Cover}"
+                                                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
                                                                      Stretch="UniformToFill" />
                                             </Border>
 

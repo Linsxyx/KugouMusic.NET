@@ -3,7 +3,7 @@
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models"
@@ -731,7 +731,7 @@
                                         CornerRadius="28"
                                         ClipToBounds="True"
                                         Background="#E0E0E0">
-                                    <controls:AsyncImage Source="{Binding UserAvatar}"
+                                    <Image asyncImageLoader:ImageLoader.Source="{Binding UserAvatar}"
                                                          Stretch="UniformToFill" />
                                 </Border>
 

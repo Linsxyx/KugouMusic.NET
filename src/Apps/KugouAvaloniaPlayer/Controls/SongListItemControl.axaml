@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="60"
              Name="Root"
              x:Class="KugouAvaloniaPlayer.Controls.SongListItemControl"
@@ -72,7 +72,7 @@
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="5" Opacity="0.3" OffsetX="1" OffsetY="1" />
                 </Border.Effect>
-                <controls:AsyncImage Source="{Binding Cover}" Stretch="UniformToFill" />
+                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}" Stretch="UniformToFill" />
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0" Spacing="3">

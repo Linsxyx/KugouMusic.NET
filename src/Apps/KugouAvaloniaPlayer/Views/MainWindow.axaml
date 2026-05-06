@@ -5,7 +5,7 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:suki="https://github.com/kikipoulet/SukiUI"
                  xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
-                 xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+                 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
                  xmlns:localControls="clr-namespace:KugouAvaloniaPlayer.Controls"
                  mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
                  x:Class="KugouAvaloniaPlayer.Views.MainWindow"
@@ -188,7 +188,7 @@
                                                         <Grid ColumnDefinitions="32,*,Auto" VerticalAlignment="Center">
                                                             <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
                                                                     VerticalAlignment="Center">
-                                                                <controls:AsyncImage Source="{Binding Cover}"
+                                                                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
                                                                                      Stretch="UniformToFill" />
                                                             </Border>
                                                             <TextBlock Grid.Column="1"
@@ -225,7 +225,7 @@
                                                         <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
                                                             <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
                                                                     VerticalAlignment="Center">
-                                                                <controls:AsyncImage Source="{Binding Cover}"
+                                                                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
                                                                                      Stretch="UniformToFill" />
                                                             </Border>
                                                             <TextBlock Grid.Column="1"
@@ -298,7 +298,7 @@
                                                         <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
                                                             <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
                                                                     VerticalAlignment="Center">
-                                                                <controls:AsyncImage Source="{Binding Cover}"
+                                                                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
                                                                                      Stretch="UniformToFill" />
                                                             </Border>
                                                             <TextBlock Grid.Column="1"

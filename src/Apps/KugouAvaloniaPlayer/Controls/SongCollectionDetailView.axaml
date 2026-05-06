@@ -3,7 +3,7 @@
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              x:Class="KugouAvaloniaPlayer.Controls.SongCollectionDetailView"
              x:Name="Root">
@@ -110,7 +110,7 @@
                     ClipToBounds="True"
                     Background="{DynamicResource SukiPrimaryColorLow}">
                 <Grid>
-                    <controls:AsyncImage Source="{Binding #Root.CurrentHeroBackground}"
+                    <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.CurrentHeroBackground}"
                                          Stretch="UniformToFill" />
                     <Border>
                         <Border.Background>
@@ -159,7 +159,7 @@
                             BorderBrush="{DynamicResource CollectionCoverBorderBrush}"
                             BorderThickness="2"
                             Background="{DynamicResource CollectionCoverBackgroundBrush}">
-                        <controls:AsyncImage Source="{Binding #Root.Cover}" Stretch="UniformToFill" />
+                        <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.Cover}" Stretch="UniformToFill" />
                     </Border>
 
                     <StackPanel Grid.Column="1"

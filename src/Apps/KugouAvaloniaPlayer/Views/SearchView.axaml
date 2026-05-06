@@ -5,7 +5,7 @@
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:models1="clr-namespace:KugouAvaloniaPlayer.Models"
              x:Class="KugouAvaloniaPlayer.Views.SearchView"
              x:Name="SearchRoot"

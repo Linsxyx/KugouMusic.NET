@@ -34,9 +34,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="AsyncImageLoader.Avalonia" Version="3.8.0" />
         <PackageReference Include="Avalonia" Version="12.0.2"/>
         <PackageReference Include="Avalonia.Desktop" Version="12.0.2"/>
-        <PackageReference Include="Avalonia.Labs.Controls" Version="12.0.2"/>
         <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.2"/>
         <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.2"/>
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
@@ -53,7 +53,7 @@
         <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0"/>
         <PackageReference Include="TagLibSharp" Version="2.3.0"/>
         <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0"/>
-        <PackageReference Include="Velopack" Version="0.0.1298"/>
+        <PackageReference Include="Velopack" Version="0.0.1589-ga2c5a97" />
         <ProjectReference Include="..\..\..\external\SukiUI-pr598\SukiUI\SukiUI.csproj"/>
     </ItemGroup>
 

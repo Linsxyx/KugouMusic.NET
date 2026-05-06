@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Controls.MediaCard"
              x:Name="Root">
 
@@ -61,7 +61,7 @@
                     <!-- 封面图 -->
                     <Border CornerRadius="14,14,14,14" ClipToBounds="True"
                             Background="{DynamicResource SukiPrimaryColorLow}">
-                        <controls:AsyncImage Source="{Binding #Root.Cover}"
+                        <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.Cover}"
                                              Stretch="UniformToFill"
                                              HorizontalAlignment="Center"
                                              VerticalAlignment="Center" />

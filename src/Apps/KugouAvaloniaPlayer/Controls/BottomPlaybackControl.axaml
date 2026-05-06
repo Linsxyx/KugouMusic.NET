@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:local="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              x:Class="KugouAvaloniaPlayer.Controls.BottomPlaybackControl"
@@ -53,7 +53,7 @@
                                 ClipToBounds="True"
                                 Width="48"
                                 Height="48">
-                            <controls:AsyncImage Source="{Binding Player.DisplayedPlayingSong.Cover}"
+                            <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}"
                                                  Stretch="UniformToFill" />
                         </Border>
                         <StackPanel Grid.Column="1"

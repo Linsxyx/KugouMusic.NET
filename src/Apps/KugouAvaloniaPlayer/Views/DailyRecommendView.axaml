@@ -5,7 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
              x:Class="KugouAvaloniaPlayer.Views.DailyRecommendView"
              x:Name="DailyRecommendRoot"
@@ -128,7 +128,7 @@
                         ClipToBounds="True"
                         Background="{DynamicResource SukiPrimaryColorLow}">
                     <Grid>
-                        <controls:AsyncImage Source="{DynamicResource DailyRecommendHeroBackground}"
+                        <Image asyncImageLoader:ImageLoader.Source="{DynamicResource DailyRecommendHeroBackground}"
                                              Stretch="UniformToFill" />
                         <Border>
                             <Border.Background>
@@ -268,7 +268,7 @@
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Background="#20FFFFFF">
-                                        <controls:AsyncImage Source="{Binding CurrentFmPreviewSong.Cover, FallbackValue=avares://KugouAvaloniaPlayer/Assets/Default.png, TargetNullValue=avares://KugouAvaloniaPlayer/Assets/Default.png}"
+                                        <Image asyncImageLoader:ImageLoader.Source="{Binding CurrentFmPreviewSong.Cover, FallbackValue=avares://KugouAvaloniaPlayer/Assets/Default.png, TargetNullValue=avares://KugouAvaloniaPlayer/Assets/Default.png}"
                                                              Stretch="UniformToFill" />
                                     </Border>
                                     <Button Classes="fm-play-fab"

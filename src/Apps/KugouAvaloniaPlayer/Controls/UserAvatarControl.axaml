@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Controls.UserAvatarControl"
              x:DataType="vm:MainWindowViewModel">
 
@@ -25,7 +25,7 @@
                         CornerRadius="26"
                         ClipToBounds="True"
                         Background="#E0E0E0">
-                    <controls:AsyncImage Source="{Binding UserAvatar}"
+                    <Image asyncImageLoader:ImageLoader.Source="{Binding UserAvatar}"
                                          Stretch="UniformToFill" />
                 </Border>
                 <TextBlock Text="{Binding UserName}"

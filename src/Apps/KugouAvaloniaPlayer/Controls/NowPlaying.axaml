@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:controls1="clr-namespace:KugouAvaloniaPlayer.Controls"
              x:Class="KugouAvaloniaPlayer.Controls.NowPlaying"
@@ -136,7 +136,7 @@
           VerticalAlignment="Stretch"
           ClipToBounds="True">
         <Panel>
-            <controls:AsyncImage Source="{Binding Player.PreparedNextCover}"
+            <Image asyncImageLoader:ImageLoader.Source="{Binding Player.PreparedNextCover}"
                                  Width="1"
                                  Height="1"
                                  Opacity="0"
@@ -144,14 +144,14 @@
                                  HorizontalAlignment="Left"
                                  VerticalAlignment="Top" />
             <Border Background="#FF000000" />
-            <controls:AsyncImage Source="{Binding Player.DisplayedPlayingSong.Cover}"
+            <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}"
                                  Stretch="UniformToFill"
                                  RenderTransformOrigin="0.5,0.5"
                                  RenderTransform="scale(1.12)">
-                <controls:AsyncImage.Effect>
+                <Image.Effect>
                     <BlurEffect Radius="180" />
-                </controls:AsyncImage.Effect>
-            </controls:AsyncImage>
+                </Image.Effect>
+            </Image>
 
             <Grid IsHitTestVisible="False"
                   IsVisible="{Binding Player.IsNowPlayingVisualizerEnabled}"
@@ -245,7 +245,7 @@
                     </StackPanel.RenderTransform>
                     <suki:GlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
                                     MinHeight="220" MaxWidth="350" MaxHeight="350">
-                        <controls:AsyncImage Source="{Binding Player.DisplayedPlayingSong.Cover}" Stretch="UniformToFill" />
+                        <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}" Stretch="UniformToFill" />
                     </suki:GlassCard>
 
                     <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">

@@ -4,7 +4,7 @@
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
-             xmlns:controls="clr-namespace:Avalonia.Labs.Controls;assembly=Avalonia.Labs.Controls"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Views.SingerView"
              x:DataType="vm:SingerViewModel">
     <UserControl.Styles>
