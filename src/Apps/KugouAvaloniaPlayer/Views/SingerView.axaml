@@ -7,7 +7,7 @@
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Views.SingerView"
              x:DataType="vm:SingerViewModel">
-    <suki:GlassCard Margin="15" Padding="20">
+    <Grid Margin="15">
         <localControls:SongCollectionDetailView
             Cover="{Binding SingerAvatar}"
             Title="{Binding SingerName}"
@@ -23,5 +23,5 @@
             HeroActionCommand="{Binding ToggleSortCommand}"
             HeroActionSvgPath="/Assets/FormatList.svg"
             HeroActionText="{Binding CurrentSortText}" />
-    </suki:GlassCard>
+    </Grid>
 </UserControl>

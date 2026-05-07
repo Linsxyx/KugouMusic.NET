@@ -98,9 +98,23 @@ public partial class PlayerViewModel
     }
 
     [RelayCommand]
+    private void ToggleRepeatOneMode()
+    {
+        _queueManager.ToggleRepeatOne(CurrentPlayingSong);
+        OnPlaybackModeChanged();
+    }
+
+    [RelayCommand]
     private void ToggleShuffleMode()
     {
         _queueManager.ToggleShuffle(CurrentPlayingSong);
+        OnPlaybackModeChanged();
+    }
+
+    private void OnPlaybackModeChanged()
+    {
+        ResetTransitionPipeline(true);
+        OnPropertyChanged(nameof(IsRepeatOneMode));
         OnPropertyChanged(nameof(IsShuffleMode));
     }
 
@@ -155,6 +169,12 @@ public partial class PlayerViewModel
         if (IsPersonalFmSessionActive)
         {
             Dispatcher.UIThread.Post(async () => await PlayNextPersonalFmAsync(true));
+            return;
+        }
+
+        if (IsRepeatOneMode)
+        {
+            Dispatcher.UIThread.Post(async () => await PlaySongAsync(CurrentPlayingSong));
             return;
         }
 

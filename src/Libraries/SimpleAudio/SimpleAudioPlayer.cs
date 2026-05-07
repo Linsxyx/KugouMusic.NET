@@ -150,6 +150,7 @@ public partial class SimpleAudioPlayer
         }
 
         Bass.PluginLoad(GetBassPluginName("bassflac"));
+        Bass.PluginLoad(GetBassPluginName("bassdsd"));
         if (!OperatingSystem.IsMacOS())
         {
             Bass.PluginLoad(GetBassPluginName("bass_aac"));

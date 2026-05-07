@@ -13,6 +13,7 @@ public class PlaybackQueueManager
     public AvaloniaList<SongItem> PlaybackQueue { get; } = new();
     public List<SongItem> OriginalQueue { get; } = new();
 
+    public bool IsRepeatOneMode { get; private set; }
     public bool IsShuffleMode { get; private set; }
 
     /// <summary>
@@ -122,10 +123,32 @@ public class PlaybackQueueManager
         OriginalQueue.Clear();
     }
 
+    public bool ToggleRepeatOne(SongItem? currentSong)
+    {
+        IsRepeatOneMode = !IsRepeatOneMode;
+        if (IsRepeatOneMode && IsShuffleMode)
+            SetShuffleMode(false, currentSong);
+
+        return IsRepeatOneMode;
+    }
+
     public bool ToggleShuffle(SongItem? currentSong)
     {
-        IsShuffleMode = !IsShuffleMode;
-        if (PlaybackQueue.Count == 0) return IsShuffleMode;
+        SetShuffleMode(!IsShuffleMode, currentSong);
+        if (IsShuffleMode)
+            IsRepeatOneMode = false;
+
+        return IsShuffleMode;
+    }
+
+    private void SetShuffleMode(bool value, SongItem? currentSong)
+    {
+        if (IsShuffleMode == value)
+            return;
+
+        IsShuffleMode = value;
+        if (PlaybackQueue.Count == 0)
+            return;
 
         if (IsShuffleMode)
         {
@@ -144,11 +167,14 @@ public class PlaybackQueueManager
         }
         else
         {
-            if (OriginalQueue.Count != PlaybackQueue.Count) OriginalQueue.Clear(); // 安全防御
+            if (OriginalQueue.Count != PlaybackQueue.Count)
+            {
+                OriginalQueue.Clear();
+                OriginalQueue.AddRange(PlaybackQueue);
+            }
+
             PlaybackQueue.Clear();
             PlaybackQueue.AddRange(OriginalQueue);
         }
-
-        return IsShuffleMode;
     }
 }

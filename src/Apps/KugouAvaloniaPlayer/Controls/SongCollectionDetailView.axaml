@@ -18,7 +18,6 @@
                     <Color x:Key="CollectionHeroFadeStart">#00FFFFFF</Color>
                     <Color x:Key="CollectionHeroFadeMid">#28FFFFFF</Color>
                     <Color x:Key="CollectionHeroFadeEnd">#F6FFFFFF</Color>
-                    <SolidColorBrush x:Key="CollectionPanelBackgroundBrush" Color="#F6FFFFFF" />
                     <SolidColorBrush x:Key="CollectionTableHeadingBrush" Color="#6D78A0" />
                     <SolidColorBrush x:Key="CollectionCoverBorderBrush" Color="#70FFFFFF" />
                     <SolidColorBrush x:Key="CollectionCoverBackgroundBrush" Color="#28FFFFFF" />
@@ -37,7 +36,6 @@
                     <Color x:Key="CollectionHeroFadeStart">#0012192A</Color>
                     <Color x:Key="CollectionHeroFadeMid">#A012192A</Color>
                     <Color x:Key="CollectionHeroFadeEnd">#FF12192A</Color>
-                    <SolidColorBrush x:Key="CollectionPanelBackgroundBrush" Color="#FF12192A" />
                     <SolidColorBrush x:Key="CollectionTableHeadingBrush" Color="#9CA8C6" />
                     <SolidColorBrush x:Key="CollectionCoverBorderBrush" Color="#66FFFFFF" />
                     <SolidColorBrush x:Key="CollectionCoverBackgroundBrush" Color="#242A3550" />
@@ -220,12 +218,11 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="1"
-                Classes="CollectionPanel"
-                Margin="{Binding #Root.ListMargin}"
-                Padding="22,16,22,0"
-                CornerRadius="18"
-                Background="{DynamicResource CollectionPanelBackgroundBrush}">
+        <suki:GlassCard Grid.Row="1"
+                        Classes="CollectionPanel"
+                        Margin="{Binding #Root.ListMargin}"
+                        Padding="22,16,22,0"
+                        CornerRadius="18">
             <Grid RowDefinitions="Auto,*">
                 <Grid ColumnDefinitions="*,150,80,150"
                       Margin="70,0,16,8">
@@ -276,6 +273,6 @@
                     </StackPanel>
                 </Grid>
             </Grid>
-        </Border>
+        </suki:GlassCard>
     </Grid>
 </UserControl>

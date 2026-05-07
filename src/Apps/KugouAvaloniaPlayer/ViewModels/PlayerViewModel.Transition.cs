@@ -86,7 +86,13 @@ public partial class PlayerViewModel
         if (IsPersonalFmSessionActive)
             return GetUpcomingPersonalFmSong();
 
-        if (CurrentPlayingSong == null || _queueManager.PlaybackQueue.Count <= 1)
+        if (CurrentPlayingSong == null)
+            return null;
+
+        if (IsRepeatOneMode)
+            return CurrentPlayingSong;
+
+        if (_queueManager.PlaybackQueue.Count <= 1)
             return null;
 
         var nextSong = _queueManager.GetNext(CurrentPlayingSong);
@@ -254,6 +260,7 @@ public partial class PlayerViewModel
         TotalDurationSeconds = CurrentPlayingSong.DurationSeconds > 0
             ? CurrentPlayingSong.DurationSeconds
             : _player.GetDuration().TotalSeconds;
+        _ = _historyService.RecordPlayedAsync(CurrentPlayingSong);
         BeginDelayedVisualSwitch(CurrentPlayingSong, _preparedNextIsLocal);
         ResetTailTelemetry();
         _pendingTransitionProfile = null;

@@ -6,6 +6,10 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+        <DefineConstants>$(DefineConstants);SIMPLEAUDIO_WINDOWS</DefineConstants>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="ManagedBass" Version="4.1.0-prerelease" />
         <PackageReference Include="ManagedBass.Fx" Version="4.1.0-prerelease" />

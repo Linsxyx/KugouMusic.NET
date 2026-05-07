@@ -197,6 +197,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     public string[] QualityOptions { get; } = ["128", "320", "flac", "high"];
     public int DisplayPlaybackQueueCount => DisplayPlaybackQueue.Count;
 
+    public bool IsRepeatOneMode => _queueManager.IsRepeatOneMode;
     public bool IsShuffleMode => _queueManager.IsShuffleMode;
 
     public void Dispose()

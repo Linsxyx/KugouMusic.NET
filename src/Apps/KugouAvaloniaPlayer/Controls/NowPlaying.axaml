@@ -267,14 +267,15 @@
                                          Height="20"
                                          Opacity="0.85" />
                                 </Button>
-                                <Button Cursor="Hand" Command="{Binding Player.ToggleShuffleModeCommand}"
+                                <Button Cursor="Hand" Command="{Binding Player.ToggleRepeatOneModeCommand}"
                                         Classes="Basic">
-                                    <StackPanel>
-                                        <Svg Path="/Assets/shuffle-svgrepo-com.svg" Css="path { fill: white; }"
-                                             Width="20" Height="20" IsVisible="{Binding Player.IsShuffleMode}" />
-                                        <Svg Path="/Assets/repeat-svgrepo-com.svg" Css="path { fill: white; }"
-                                             Width="20" Height="20" IsVisible="{Binding !Player.IsShuffleMode}" />
-                                    </StackPanel>
+                                    <Panel>
+                                        <Svg Path="/Assets/repeat-one.svg" Css="path { fill: white; }"
+                                             Width="20" Height="20" IsVisible="{Binding Player.IsRepeatOneMode}" />
+                                        <Svg Path="/Assets/repeat-one.svg" Css="path { fill: white; }"
+                                             Width="20" Height="20" Opacity="0.45"
+                                             IsVisible="{Binding !Player.IsRepeatOneMode}" />
+                                    </Panel>
                                 </Button>
                                 <Button Cursor="Hand" Command="{Binding Player.PlayPreviousCommand}" Classes="Basic"
                                         ToolTip.Tip="上一首">
@@ -296,6 +297,16 @@
                                         ToolTip.Tip="下一首">
                                     <Svg Path="/Assets/next-svgrepo-com.svg" Css="path { fill: white; }" Width="18"
                                          Height="18" />
+                                </Button>
+                                <Button Cursor="Hand" Command="{Binding Player.ToggleShuffleModeCommand}"
+                                        Classes="Basic">
+                                    <Panel>
+                                        <Svg Path="/Assets/shuffle-svgrepo-com.svg" Css="path { fill: white; }"
+                                             Width="20" Height="20" IsVisible="{Binding Player.IsShuffleMode}" />
+                                        <Svg Path="/Assets/shuffle-svgrepo-com.svg" Css="path { fill: white; }"
+                                             Width="20" Height="20" Opacity="0.45"
+                                             IsVisible="{Binding !Player.IsShuffleMode}" />
+                                    </Panel>
                                 </Button>
                                 <Button Cursor="Hand" Command="{Binding Player.ToggleLikeCommand}"
                                         Classes="Basic"

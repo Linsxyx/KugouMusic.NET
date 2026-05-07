@@ -250,6 +250,23 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Spacing="16">
+                        <Button Command="{Binding Player.ToggleRepeatOneModeCommand}"
+                                Classes="Basic">
+                            <Panel>
+                                <Svg Path="/Assets/repeat-one.svg"
+                                     Width="18"
+                                     Height="18"
+                                     Css="path { fill: white; }"
+                                     IsVisible="{Binding Player.IsRepeatOneMode}" />
+                                <Svg Path="/Assets/repeat-one.svg"
+                                     Width="18"
+                                     Height="18"
+                                     Css="path { fill: white; }"
+                                     Opacity="0.45"
+                                     IsVisible="{Binding !Player.IsRepeatOneMode}" />
+                            </Panel>
+                        </Button>
+
                         <Button Command="{Binding Player.PlayPreviousCommand}" Classes="Basic">
                             <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="White" />
                         </Button>
@@ -281,10 +298,11 @@
                                      Height="18"
                                      Css="path { fill: white; }"
                                      IsVisible="{Binding Player.IsShuffleMode}" />
-                                <Svg Path="/Assets/repeat-svgrepo-com.svg"
+                                <Svg Path="/Assets/shuffle-svgrepo-com.svg"
                                      Width="18"
                                      Height="18"
                                      Css="path { fill: white; }"
+                                     Opacity="0.45"
                                      IsVisible="{Binding !Player.IsShuffleMode}" />
                             </Panel>
                         </Button>

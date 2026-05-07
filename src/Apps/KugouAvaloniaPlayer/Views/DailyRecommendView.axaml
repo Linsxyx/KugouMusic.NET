@@ -22,7 +22,6 @@
                     <Color x:Key="DailyHeroFadeStart">#00FFFFFF</Color>
                     <Color x:Key="DailyHeroFadeMid">#28FFFFFF</Color>
                     <Color x:Key="DailyHeroFadeEnd">#F6FFFFFF</Color>
-                    <SolidColorBrush x:Key="DailyPanelBackgroundBrush" Color="#F6FFFFFF" />
                     <SolidColorBrush x:Key="DailyTableHeadingBrush" Color="#6D78A0" />
                     <SolidColorBrush x:Key="DailyHeroActionBrush" Color="#78101B35" />
                     <SolidColorBrush x:Key="DailyHeroActionHoverBrush" Color="#9018273E" />
@@ -37,7 +36,6 @@
                     <Color x:Key="DailyHeroFadeStart">#0012192A</Color>
                     <Color x:Key="DailyHeroFadeMid">#A012192A</Color>
                     <Color x:Key="DailyHeroFadeEnd">#FF12192A</Color>
-                    <SolidColorBrush x:Key="DailyPanelBackgroundBrush" Color="#FF12192A" />
                     <SolidColorBrush x:Key="DailyTableHeadingBrush" Color="#9CA8C6" />
                     <SolidColorBrush x:Key="DailyHeroActionBrush" Color="#2A000000" />
                     <SolidColorBrush x:Key="DailyHeroActionHoverBrush" Color="#44000000" />
@@ -119,7 +117,7 @@
         </Style>
     </UserControl.Styles>
 
-    <suki:GlassCard Margin="15" Padding="0" CornerRadius="16">
+    <Grid Margin="15">
         <Grid RowDefinitions="Auto,*">
             <Grid Grid.Row="0"
                   Height="188"
@@ -320,11 +318,10 @@
                 </Grid>
             </Grid>
 
-            <Border Grid.Row="1"
-                    Margin="0,15,0,0"
-                    Padding="22,16,22,0"
-                    CornerRadius="18"
-                    Background="{DynamicResource DailyPanelBackgroundBrush}">
+            <suki:GlassCard Grid.Row="1"
+                            Margin="0,15,0,0"
+                            Padding="22,16,22,0"
+                            CornerRadius="18">
                 <Grid RowDefinitions="Auto,*">
                     <Grid ColumnDefinitions="*,150,80,150"
                           Margin="70,0,16,8">
@@ -362,7 +359,7 @@
                         </StackPanel>
                     </Grid>
                 </Grid>
-            </Border>
+            </suki:GlassCard>
         </Grid>
-    </suki:GlassCard>
+    </Grid>
 </UserControl>

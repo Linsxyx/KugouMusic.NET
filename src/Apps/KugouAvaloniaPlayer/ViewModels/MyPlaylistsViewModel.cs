@@ -27,6 +27,17 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
+    private static readonly HashSet<string> SupportedLocalAudioExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp3",
+        ".flac",
+        ".wav",
+        ".ogg",
+        ".m4a",
+        ".dsf",
+        ".dff"
+    };
+
     private readonly ICreatePlaylistDialogService _createPlaylistDialogService;
     private readonly IExternalPlaylistImportService _externalPlaylistImportService;
     private readonly FavoritePlaylistService _favoritePlaylistService;
@@ -404,12 +415,11 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         await Task.Run(() =>
         {
             if (!Directory.Exists(path)) return;
-            var supportedExtensions = new[] { ".mp3", ".flac", ".wav", ".ogg", ".m4a" };
 
             try
             {
                 var files = Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
-                    .Where(f => supportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    .Where(f => SupportedLocalAudioExtensions.Contains(Path.GetExtension(f)))
                     .ToList();
 
                 var tempList = new List<SongItem>();
