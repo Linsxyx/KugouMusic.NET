@@ -304,6 +304,7 @@ jobs:
           mkdir -p ./release_files
 
           cp ./all_artifacts/releases-windows-x64/*.exe ./release_files/KugouAvaloniaPlayer-win-x64.exe 2>/dev/null || true
+          cp ./all_artifacts/releases-windows-x64/*.zip ./release_files/KugouAvaloniaPlayer-win-x64.zip 2>/dev/null || true
           cp ./all_artifacts/releases-linux-x64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage 2>/dev/null || true
           cp ./all_artifacts/releases-linux-arm64/*.tar.gz ./release_files/KugouAvaloniaPlayer-linux-arm64.tar.gz 2>/dev/null || true
 

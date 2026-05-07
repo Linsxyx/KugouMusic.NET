@@ -50,15 +50,11 @@
 
 ### 主界面
 
-每日推荐、歌单推荐、排行榜、搜索歌曲。
+每日推荐、私人FM。
 
-![主界面](docs/images/main.gif)
+![主界面](docs/images/main.png)
 
-### 搜索
 
-搜索歌曲、歌单、专辑。
-
-![搜索页面](docs/images/search.gif)
 
 ### 桌面歌词
 
@@ -66,11 +62,6 @@ Apple Music风味的滚动歌词，支持在线歌词和本地歌词，歌词浮
 
 ![歌词界面](docs/images/lyrics.gif)
 
-### 设置与播放体验
-
-播放器设置、音效与常用行为都有独立入口。
-
-![设置页面](docs/images/Setting.gif)
 
 ## 下载与平台支持
 
@@ -176,6 +167,25 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 当前支持在线 KRC，以及本地 `KRC`、`LRC`、`VTT` 歌词。
 
 
+## 计划更新
+- 计划支持接入Emby或Jellyfin
+
+## 更新日志
+
+完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
+
+### v2.0.0
+- 全面美化页面，可自定义背景图片
+- 优化歌词动效
+- 本地记录播放历史
+- 本地播放支持DSD
+
+### v1.3.3
+- 支持Windows控制中心以及其他的平台的系统媒体会话支持
+- 歌词写真页面加上了关闭动效
+- 当歌曲名超出宽度的时候滚动显示
+- 侧边栏菜单优化
+
 ## 开发者入口
 
 这个仓库不只有播放器本体，也包含围绕酷狗能力做的几个底层项目。
@@ -233,30 +243,6 @@ KugouMusic.NET
 │     └─ KuGou.Net.Native      # Native AOT 导出层
 └─ docs/images           # README 截图资源
 ```
-
-## 计划更新
-
-下一次更新计划：
-
-- 升级到 Avalonia 12
-
-## 更新日志
-
-完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
-
-### v1.3.3
-- 支持Windows控制中心以及其他的平台的系统媒体会话支持
-- 歌词写真页面加上了关闭动效
-- 当歌曲名超出宽度的时候滚动显示
-- 侧边栏菜单优化
-
-### v1.3.2
-- 优化了歌单页面封面和标题的间距
-- 优化了侧边菜单栏逻辑
-- 优化了歌词写真页面播放进度条颜色
-- 优化了设置按钮位置到顶部控制栏
-- 更新默认图片
-
 ## 👍 灵感来源
 
 - [KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)
