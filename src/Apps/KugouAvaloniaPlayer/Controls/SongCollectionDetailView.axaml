@@ -110,7 +110,8 @@
                     Background="{DynamicResource SukiPrimaryColorLow}">
                 <Grid>
                     <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.CurrentHeroBackground}"
-                                         Stretch="UniformToFill" />
+                           IsVisible="{DynamicResource KugouHeroBackgroundImageVisible}"
+                           Stretch="UniformToFill" />
                     <Border>
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -120,7 +121,8 @@
                             </LinearGradientBrush>
                         </Border.Background>
                     </Border>
-                    <Border VerticalAlignment="Bottom"
+                    <Border IsVisible="{DynamicResource KugouHeroBackgroundImageVisible}"
+                            VerticalAlignment="Bottom"
                             Height="76">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">

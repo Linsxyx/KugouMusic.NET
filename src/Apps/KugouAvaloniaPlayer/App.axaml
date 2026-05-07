@@ -32,6 +32,7 @@
         <converters:PlaylistSelectionConverter x:Key="PlaylistSelectionConverter" />
         <converters:PlaybackQualityDisplayConverter x:Key="PlaybackQualityDisplayConverter" />
         <converters:WordLiftTransformConverter x:Key="WordLiftTransformConverter" />
+        <x:Boolean x:Key="KugouHeroBackgroundImageVisible">True</x:Boolean>
         <SolidColorBrush x:Key="KugouCustomBackgroundBrush" Color="Transparent" />
     </Application.Resources>
 

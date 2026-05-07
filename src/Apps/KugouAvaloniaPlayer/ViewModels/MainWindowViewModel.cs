@@ -241,26 +241,37 @@ public partial class MainWindowViewModel : ObservableObject
 
     private static void UpdateCustomBackgroundBrush(bool useCustomImage, string? path, double opacity)
     {
-        var brush = CreateCustomBackgroundBrush(useCustomImage, path, opacity);
+        var brush = CreateCustomBackgroundBrush(useCustomImage, path, opacity, out var hasCustomImage);
         Dispatcher.UIThread.Post(() =>
         {
             if (Avalonia.Application.Current is { } app)
+            {
                 app.Resources["KugouCustomBackgroundBrush"] = brush;
+                app.Resources["KugouHeroBackgroundImageVisible"] = !hasCustomImage;
+            }
         });
     }
 
-    private static IBrush CreateCustomBackgroundBrush(bool useCustomImage, string? path, double opacity)
+    private static IBrush CreateCustomBackgroundBrush(
+        bool useCustomImage,
+        string? path,
+        double opacity,
+        out bool hasCustomImage)
     {
+        hasCustomImage = false;
+
         if (!useCustomImage || string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
             return Brushes.Transparent;
 
         try
         {
-            return new ImageBrush(new Bitmap(path))
+            var brush = new ImageBrush(new Bitmap(path))
             {
                 Stretch = Stretch.UniformToFill,
                 Opacity = opacity
             };
+            hasCustomImage = true;
+            return brush;
         }
         catch
         {
