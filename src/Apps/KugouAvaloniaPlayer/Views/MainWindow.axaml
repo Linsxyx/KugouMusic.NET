@@ -136,7 +136,6 @@
     </suki:SukiWindow.LogoContent>-->
 
     <Grid Name="MainGrid">
-
         <suki:SukiSideMenu
             ItemsSource="{Binding Pages}"
             SelectedItem="{Binding ActivePage}"

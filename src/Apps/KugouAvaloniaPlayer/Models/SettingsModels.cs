@@ -96,6 +96,9 @@ public class AppSettings
     public List<string> LocalMusicFolders { get; set; } = new();
     public Dictionary<string, LocalPlaylistMeta> LocalPlaylistMetas { get; set; } = new();
     public bool AutoCheckUpdate { get; set; } = true;
+    public bool UseCustomBackgroundImage { get; set; }
+    public string? CustomBackgroundImagePath { get; set; }
+    public double CustomBackgroundImageOpacity { get; set; } = 0.35;
 
     public string EQPreset { get; set; } = "原声";
 

@@ -37,6 +37,11 @@ public record LyricStyleSettingsChangedMessage(
 
 public record DesktopLyricDoubleLineChangedMessage(bool IsEnabled);
 
+public record AppBackgroundSettingsChangedMessage(
+    bool UseCustomImage,
+    string? CustomImagePath,
+    double CustomImageOpacity);
+
 public enum LyricSettingsScope
 {
     Desktop,

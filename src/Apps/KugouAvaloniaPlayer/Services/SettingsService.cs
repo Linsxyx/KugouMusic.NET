@@ -46,6 +46,7 @@ public static class SettingsManager
                 Settings.LocalMusicFolders ??= new List<string>();
                 Settings.LocalPlaylistMetas ??= new Dictionary<string, LocalPlaylistMeta>();
                 Settings.GlobalShortcuts ??= new GlobalShortcutSettings();
+                Settings.CustomBackgroundImageOpacity = Math.Clamp(Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
             }
         }
         catch (Exception)

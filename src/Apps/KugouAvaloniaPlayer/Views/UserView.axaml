@@ -114,6 +114,45 @@
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                 <StackPanel>
+                                    <TextBlock Text="自定义背景图" FontWeight="DemiBold" />
+                                    <TextBlock Text="{Binding CustomBackgroundImageStatus}"
+                                               MaxWidth="420"
+                                               FontSize="12"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <ToggleSwitch IsChecked="{Binding UseCustomBackgroundImage, Mode=TwoWay}" />
+                                    <Button Classes="Basic"
+                                            Command="{Binding PickCustomBackgroundImageCommand}"
+                                            MinWidth="88">
+                                        <TextBlock Text="选择图片" />
+                                    </Button>
+                                    <Button Classes="Basic"
+                                            Command="{Binding ClearCustomBackgroundImageCommand}"
+                                            MinWidth="72">
+                                        <TextBlock Text="清除" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
+                                    <TextBlock Text="图片透明度" FontWeight="DemiBold" />
+                                    <TextBlock Text="{Binding CustomBackgroundImageOpacityDisplay}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <Slider Grid.Column="1"
+                                        Width="220"
+                                        Minimum="0.1"
+                                        Maximum="1"
+                                        TickFrequency="0.05"
+                                        Value="{Binding CustomBackgroundImageOpacity, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
                                     <TextBlock Text="关闭主面板时" FontWeight="DemiBold" />
                                     <TextBlock Text="选择点击关闭按钮时的行为"
                                                FontSize="12"

@@ -8,6 +8,7 @@ using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -159,6 +160,10 @@ public partial class MainWindowViewModel : ObservableObject
         ActivePage = _dailyRecommendViewModel;
         IsDesktopLyricEnabled = _desktopLyricWindowService.IsOpen;
         EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
+        ApplyCustomBackgroundImage(
+            SettingsManager.Settings.UseCustomBackgroundImage,
+            SettingsManager.Settings.CustomBackgroundImagePath,
+            SettingsManager.Settings.CustomBackgroundImageOpacity);
         ApplyNowPlayingLyricStyleSettings(
             SettingsManager.Settings.PlayPageLyricUseCustomMainColor,
             SettingsManager.Settings.PlayPageLyricCustomMainColor,
@@ -210,6 +215,13 @@ public partial class MainWindowViewModel : ObservableObject
                 message.FontSize);
             EnableLegacyWordLyricEffect = message.EnableLegacyWordLyricEffect;
         });
+        WeakReferenceMessenger.Default.Register<AppBackgroundSettingsChangedMessage>(this, (_, message) =>
+        {
+            ApplyCustomBackgroundImage(
+                message.UseCustomImage,
+                message.CustomImagePath,
+                message.CustomImageOpacity);
+        });
 
         Task.Run(async () =>
         {
@@ -217,6 +229,43 @@ public partial class MainWindowViewModel : ObservableObject
             await GetDailyRecommendations();
             if (SettingsManager.Settings.AutoCheckUpdate) await _appUpdateService.CheckForUpdatesAsync();
         });
+    }
+
+    private static void ApplyCustomBackgroundImage(
+        bool useCustomImage,
+        string? customImagePath,
+        double customImageOpacity)
+    {
+        UpdateCustomBackgroundBrush(useCustomImage, customImagePath, Math.Clamp(customImageOpacity, 0.1, 1.0));
+    }
+
+    private static void UpdateCustomBackgroundBrush(bool useCustomImage, string? path, double opacity)
+    {
+        var brush = CreateCustomBackgroundBrush(useCustomImage, path, opacity);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (Avalonia.Application.Current is { } app)
+                app.Resources["KugouCustomBackgroundBrush"] = brush;
+        });
+    }
+
+    private static IBrush CreateCustomBackgroundBrush(bool useCustomImage, string? path, double opacity)
+    {
+        if (!useCustomImage || string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+            return Brushes.Transparent;
+
+        try
+        {
+            return new ImageBrush(new Bitmap(path))
+            {
+                Stretch = Stretch.UniformToFill,
+                Opacity = opacity
+            };
+        }
+        catch
+        {
+            return Brushes.Transparent;
+        }
     }
 
     public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";

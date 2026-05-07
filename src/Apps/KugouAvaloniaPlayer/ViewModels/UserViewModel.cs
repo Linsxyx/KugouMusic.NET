@@ -47,6 +47,7 @@ public partial class UserViewModel : PageViewModelBase
     private readonly ISukiDialogManager _dialogManager;
     private readonly EqSettingsViewModel _eqSettingsViewModel;
     private readonly IGlobalShortcutService _globalShortcutService;
+    private readonly IFolderPickerService _folderPickerService;
     private readonly IGitHubReleaseService _releaseService;
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
@@ -55,6 +56,15 @@ public partial class UserViewModel : PageViewModelBase
 
     [ObservableProperty]
     public partial bool AutoCheckUpdate { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomBackgroundImageStatus))]
+    public partial bool UseCustomBackgroundImage { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomBackgroundImageStatus))]
+    public partial string? CustomBackgroundImagePath { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomBackgroundImageOpacityDisplay))]
+    public partial double CustomBackgroundImageOpacity { get; set; } = 0.35;
     [ObservableProperty]
     public partial string DesktopLyricColorHexInput { get; set; } = "#FFFFFFFF";
     [ObservableProperty]
@@ -142,7 +152,8 @@ public partial class UserViewModel : PageViewModelBase
 
     public UserViewModel(PlayerViewModel player, UserClient userClient, LoginClient authClient,
         ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
-        IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService)
+        IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService,
+        IFolderPickerService folderPickerService)
     {
         _userClient = userClient;
         _authClient = authClient;
@@ -151,10 +162,14 @@ public partial class UserViewModel : PageViewModelBase
         _sessionManager = sessionManager;
         _globalShortcutService = globalShortcutService;
         _releaseService = releaseService;
+        _folderPickerService = folderPickerService;
 
         Player = player;
         SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
         AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
+        UseCustomBackgroundImage = SettingsManager.Settings.UseCustomBackgroundImage;
+        CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
+        CustomBackgroundImageOpacity = Math.Clamp(SettingsManager.Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
         EnableGlobalShortcuts = SettingsManager.Settings.GlobalShortcuts.EnableGlobalShortcuts;
         EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
 
@@ -252,6 +267,11 @@ public partial class UserViewModel : PageViewModelBase
         new SolidColorBrush(ParseColorOrDefault(PlayPageLyricColorHexInput, Colors.Transparent));
 
     public string PlayPageLyricFontSizeDisplay => $"{Math.Round(PlayPageLyricFontSize):0}pt";
+    public string CustomBackgroundImageOpacityDisplay => $"{Math.Round(CustomBackgroundImageOpacity * 100):0}%";
+    public string CustomBackgroundImageStatus =>
+        string.IsNullOrWhiteSpace(CustomBackgroundImagePath)
+            ? "未选择图片"
+            : CustomBackgroundImagePath;
 
     public bool IsDarkMode
     {
@@ -401,6 +421,30 @@ public partial class UserViewModel : PageViewModelBase
 
         SettingsManager.Settings.AutoCheckUpdate = value;
         SettingsManager.Save();
+    }
+
+    partial void OnUseCustomBackgroundImageChanged(bool value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.UseCustomBackgroundImage = value;
+        SaveAndNotifyBackgroundSettings();
+    }
+
+    partial void OnCustomBackgroundImageOpacityChanged(double value)
+    {
+        OnPropertyChanged(nameof(CustomBackgroundImageOpacityDisplay));
+        if (_isApplyingSettingsSnapshot) return;
+
+        var clamped = Math.Clamp(value, 0.1, 1.0);
+        if (Math.Abs(clamped - value) > double.Epsilon)
+        {
+            CustomBackgroundImageOpacity = clamped;
+            return;
+        }
+
+        SettingsManager.Settings.CustomBackgroundImageOpacity = clamped;
+        SaveAndNotifyBackgroundSettings();
     }
 
     partial void OnEnableGlobalShortcutsChanged(bool value)
@@ -637,6 +681,29 @@ public partial class UserViewModel : PageViewModelBase
     }
 
     [RelayCommand]
+    private async Task PickCustomBackgroundImage()
+    {
+        var path = await _folderPickerService.PickSingleImageFileAsync("选择自定义背景图");
+        if (string.IsNullOrWhiteSpace(path)) return;
+
+        CustomBackgroundImagePath = path;
+        UseCustomBackgroundImage = true;
+        SettingsManager.Settings.CustomBackgroundImagePath = path;
+        SettingsManager.Settings.UseCustomBackgroundImage = true;
+        SaveAndNotifyBackgroundSettings();
+    }
+
+    [RelayCommand]
+    private void ClearCustomBackgroundImage()
+    {
+        CustomBackgroundImagePath = null;
+        UseCustomBackgroundImage = false;
+        SettingsManager.Settings.CustomBackgroundImagePath = null;
+        SettingsManager.Settings.UseCustomBackgroundImage = false;
+        SaveAndNotifyBackgroundSettings();
+    }
+
+    [RelayCommand]
     private void ResetAllSettings()
     {
         _dialogManager.CreateDialog()
@@ -660,6 +727,9 @@ public partial class UserViewModel : PageViewModelBase
         {
             SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
             AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
+            UseCustomBackgroundImage = SettingsManager.Settings.UseCustomBackgroundImage;
+            CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
+            CustomBackgroundImageOpacity = Math.Clamp(SettingsManager.Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
             EnableGlobalShortcuts = SettingsManager.Settings.GlobalShortcuts.EnableGlobalShortcuts;
             SelectedEQPreset = Array.Exists(EQPresetOptions, x => x == SettingsManager.Settings.EQPreset)
                 ? SettingsManager.Settings.EQPreset
@@ -693,8 +763,23 @@ public partial class UserViewModel : PageViewModelBase
 
         NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
         NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        NotifyBackgroundSettingsChanged();
         WeakReferenceMessenger.Default.Send(
             new DesktopLyricDoubleLineChangedMessage(SettingsManager.Settings.DesktopLyricDoubleLineEnabled));
+    }
+
+    private static void SaveAndNotifyBackgroundSettings()
+    {
+        SettingsManager.Save();
+        NotifyBackgroundSettingsChanged();
+    }
+
+    private static void NotifyBackgroundSettingsChanged()
+    {
+        WeakReferenceMessenger.Default.Send(new AppBackgroundSettingsChangedMessage(
+            SettingsManager.Settings.UseCustomBackgroundImage,
+            SettingsManager.Settings.CustomBackgroundImagePath,
+            SettingsManager.Settings.CustomBackgroundImageOpacity));
     }
 
     private void LoadDesktopLyricColorEditorFromSettings()

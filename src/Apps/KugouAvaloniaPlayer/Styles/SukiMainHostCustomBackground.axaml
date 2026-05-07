@@ -1,0 +1,61 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:suki="https://github.com/kikipoulet/SukiUI">
+
+    <Style Selector="suki|SukiMainHost">
+        <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="Transparent"
+                        ClipToBounds="True"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                    <Grid IsHitTestVisible="True">
+                        <Panel Name="PART_Root">
+                            <suki:SukiBackground Name="PART_Background"
+                                                 Margin="-150"
+                                                 AnimationEnabled="{TemplateBinding BackgroundAnimationEnabled}"
+                                                 ForceSoftwareRendering="{TemplateBinding BackgroundForceSoftwareRendering}"
+                                                 ShaderCode="{TemplateBinding BackgroundShaderCode}"
+                                                 ShaderFile="{TemplateBinding BackgroundShaderFile}"
+                                                 Style="{TemplateBinding BackgroundStyle}"
+                                                 TransitionTime="{TemplateBinding BackgroundTransitionTime}"
+                                                 TransitionsEnabled="{TemplateBinding BackgroundTransitionsEnabled}" />
+
+                            <Border Background="White"
+                                    IsHitTestVisible="False"
+                                    IsVisible="{DynamicResource IsLight}"
+                                    Opacity="0.1" />
+
+                            <Border Background="{DynamicResource KugouCustomBackgroundBrush}"
+                                    IsHitTestVisible="False" />
+
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                              Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Background="{TemplateBinding Background}"
+                                              BackgroundSizing="{TemplateBinding BackgroundSizing}"
+                                              BorderBrush="{TemplateBinding BorderBrush}"
+                                              BorderThickness="{TemplateBinding BorderThickness}"
+                                              ClipToBounds="True"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              CornerRadius="{TemplateBinding CornerRadius}"
+                                              IsHitTestVisible="True" />
+                        </Panel>
+
+                        <ItemsControl ZIndex="1"
+                                      ItemsSource="{Binding Hosts, RelativeSource={RelativeSource AncestorType={x:Type suki:SukiMainHost}}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Panel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+</Styles>
