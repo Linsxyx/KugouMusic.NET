@@ -91,7 +91,12 @@ public class GlobalShortcutSettings
 
 public class AppSettings
 {
+    public const string ThemeDefault = "Default";
+    public const string ThemeDark = "Dark";
+    public const string ThemeLight = "Light";
+
     public CloseBehavior CloseBehavior { get; set; } = CloseBehavior.MinimizeToTray;
+    public string AppTheme { get; set; } = ThemeDefault;
     public string MusicQuality { get; set; } = "128";
     public List<string> LocalMusicFolders { get; set; } = new();
     public Dictionary<string, LocalPlaylistMeta> LocalPlaylistMetas { get; set; } = new();

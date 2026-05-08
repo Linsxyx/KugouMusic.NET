@@ -73,30 +73,6 @@
                     Value="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).NowPlayingTranslationLineForeground}" />
         </Style>
 
-        <Style Selector="Slider.NowPlayingSlider">
-            <Setter Property="Background" Value="#40FFFFFF" />
-            <Setter Property="Foreground" Value="#F2FFFFFF" />
-        </Style>
-
-        <Style Selector="Slider.NowPlayingSlider /template/ Thumb#thumb">
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="#F2FFFFFF" />
-        </Style>
-
-        <Style Selector="Slider.NowPlayingSlider:pointerover /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-
-        <Style Selector="Slider.NowPlayingVolume">
-            <Setter Property="Background" Value="#40FFFFFF" />
-            <Setter Property="Foreground" Value="#F2FFFFFF" />
-            <Setter Property="MinHeight" Value="24" />
-        </Style>
-
-        <Style Selector="Slider.NowPlayingVolume:pointerover /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-
         <Style Selector="Border.VisualizerBar">
             <Setter Property="Width" Value="10" />
             <Setter Property="CornerRadius" Value="999" />
@@ -334,7 +310,7 @@
                                             Value="{Binding Player.CurrentPositionSeconds}"
                                             Margin="8,0" IsSnapToTickEnabled="False"
                                             HorizontalAlignment="Stretch"
-                                            Classes="Player NowPlayingSlider" />
+                                            Classes="Player PlayerDark" />
                                 </Grid>
                             </Grid>
 
@@ -356,7 +332,7 @@
                                         Maximum="1"
                                         Value="{Binding Player.MusicVolume}"
                                         Margin="10,0"
-                                        Classes="Player NowPlayingVolume"
+                                        Classes="Player PlayerLight PlayerCompact"
                                         HorizontalAlignment="Stretch" />
                                 <Svg Grid.Column="2"
                                      Path="/Assets/VolumeUp.svg"

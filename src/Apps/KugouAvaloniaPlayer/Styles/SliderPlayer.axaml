@@ -1,11 +1,39 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#DDDDDD" />
+                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#444450" />
+                    <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#444450" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#40FFFFFF" />
+                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#F2FFFFFF" />
+                    <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#F2FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <SolidColorBrush x:Key="PlayerSliderLightTrackBrush" Color="#DDDDDD" />
+            <SolidColorBrush x:Key="PlayerSliderLightFillBrush" Color="#444450" />
+            <SolidColorBrush x:Key="PlayerSliderLightThumbBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderLightThumbBorderBrush" Color="#444450" />
+            <SolidColorBrush x:Key="PlayerSliderDarkTrackBrush" Color="#40FFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderDarkFillBrush" Color="#F2FFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderDarkThumbBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderDarkThumbBorderBrush" Color="#F2FFFFFF" />
+        </ResourceDictionary>
+    </Styles.Resources>
+
     <!-- 定义样式类 "Modern" -->
     <Style Selector="Slider.Player">
         <!-- 基础属性设置 -->
-        <Setter Property="Background" Value="#ddd" /> <!-- 轨道背景色 -->
-        <Setter Property="Foreground" Value="#444450" /> <!-- 进度条颜色 (主色) -->
+        <Setter Property="Background" Value="{DynamicResource PlayerSliderTrackBrush}" /> <!-- 轨道背景色 -->
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSliderFillBrush}" /> <!-- 进度条颜色 (主色) -->
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="MinHeight" Value="30" /> <!-- 增加点击区域高度，对应CSS的::before扩大点击范围 -->
 
@@ -67,8 +95,8 @@
                             <Track.Thumb>
                                 <Thumb Name="thumb"
                                        Width="12" Height="12"
-                                       Background="#ffffff"
-                                       BorderBrush="{TemplateBinding Foreground}"
+                                       Background="{DynamicResource PlayerSliderThumbBrush}"
+                                       BorderBrush="{DynamicResource PlayerSliderThumbBorderBrush}"
                                        BorderThickness="2"
                                        DataContext="{TemplateBinding Value}"> <!-- DataContext workaround if needed -->
                                     <Thumb.Template>
@@ -86,6 +114,30 @@
                 </DataValidationErrors>
             </ControlTemplate>
         </Setter>
+    </Style>
+
+    <Style Selector="Slider.Player.PlayerLight">
+        <Setter Property="Background" Value="{StaticResource PlayerSliderLightTrackBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PlayerSliderLightFillBrush}" />
+    </Style>
+
+    <Style Selector="Slider.Player.PlayerLight /template/ Thumb#thumb">
+        <Setter Property="Background" Value="{StaticResource PlayerSliderLightThumbBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PlayerSliderLightThumbBorderBrush}" />
+    </Style>
+
+    <Style Selector="Slider.Player.PlayerDark">
+        <Setter Property="Background" Value="{StaticResource PlayerSliderDarkTrackBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource PlayerSliderDarkFillBrush}" />
+    </Style>
+
+    <Style Selector="Slider.Player.PlayerDark /template/ Thumb#thumb">
+        <Setter Property="Background" Value="{StaticResource PlayerSliderDarkThumbBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource PlayerSliderDarkThumbBorderBrush}" />
+    </Style>
+
+    <Style Selector="Slider.Player.PlayerCompact">
+        <Setter Property="MinHeight" Value="24" />
     </Style>
 
     <!-- 默认 Thumb 样式：透明，设置过渡动画 -->
@@ -114,6 +166,10 @@
 
     <Style Selector="Slider.Player:pointerover /template/ RepeatButton#PART_DecreaseButton">
         <Setter Property="Opacity" Value="0.8" />
+    </Style>
+
+    <Style Selector="Slider.Player.PlayerDark:pointerover /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Opacity" Value="1" />
     </Style>
 
 </Styles>

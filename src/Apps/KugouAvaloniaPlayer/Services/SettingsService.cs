@@ -46,6 +46,7 @@ public static class SettingsManager
                 Settings.LocalMusicFolders ??= new List<string>();
                 Settings.LocalPlaylistMetas ??= new Dictionary<string, LocalPlaylistMeta>();
                 Settings.GlobalShortcuts ??= new GlobalShortcutSettings();
+                Settings.AppTheme = NormalizeAppTheme(Settings.AppTheme);
                 Settings.CustomBackgroundImageOpacity = Math.Clamp(Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
             }
         }
@@ -70,6 +71,16 @@ public static class SettingsManager
         {
             //Console.WriteLine($"[SettingsManager] 保存配置文件失败: {ex.Message}");
         }
+    }
+
+    private static string NormalizeAppTheme(string? theme)
+    {
+        return theme switch
+        {
+            AppSettings.ThemeDark => AppSettings.ThemeDark,
+            AppSettings.ThemeLight => AppSettings.ThemeLight,
+            _ => AppSettings.ThemeDefault
+        };
     }
 
     public static void ResetSettings()

@@ -140,6 +140,7 @@
                 <Border Grid.Column="0"
                         Width="164"
                         Height="164"
+                        IsVisible="{Binding #Root.ShowCover}"
                         CornerRadius="16"
                         ClipToBounds="True"
                         VerticalAlignment="Top"

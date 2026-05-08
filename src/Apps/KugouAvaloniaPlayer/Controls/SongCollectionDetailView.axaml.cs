@@ -16,6 +16,9 @@ public partial class SongCollectionDetailView : UserControl
     public static readonly StyledProperty<string?> CoverProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(Cover));
 
+    public static readonly StyledProperty<bool> ShowCoverProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(ShowCover), true);
+
     public static readonly StyledProperty<string> HeroBackgroundProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string>(nameof(HeroBackground), string.Empty);
 
@@ -125,6 +128,12 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(CoverProperty);
         set => SetValue(CoverProperty, value);
+    }
+
+    public bool ShowCover
+    {
+        get => GetValue(ShowCoverProperty);
+        set => SetValue(ShowCoverProperty, value);
     }
 
     public string HeroBackground

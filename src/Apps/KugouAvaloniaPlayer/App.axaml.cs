@@ -2,9 +2,11 @@ using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using KuGou.Net.Infrastructure;
 using KuGou.Net.Protocol.Session;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
@@ -14,6 +16,7 @@ using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SimpleAudio;
+using SukiUI;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
@@ -67,6 +70,7 @@ public partial class App : Application
         collection.AddSingleton<IAppUpdateService, AppUpdateService>();
 
         SettingsManager.Load();
+        ApplySavedTheme();
 
         // 注册 ViewModels
         collection.AddTransient<LoginViewModel>();
@@ -132,5 +136,18 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static void ApplySavedTheme()
+    {
+        var theme = SettingsManager.Settings.AppTheme switch
+        {
+            AppSettings.ThemeDark => ThemeVariant.Dark,
+            AppSettings.ThemeLight => ThemeVariant.Light,
+            _ => null
+        };
+
+        if (theme != null)
+            SukiTheme.GetInstance().ChangeBaseTheme(theme);
     }
 }

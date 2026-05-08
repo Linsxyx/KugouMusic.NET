@@ -279,6 +279,8 @@ public partial class UserViewModel : PageViewModelBase
         set
         {
             SukiTheme.GetInstance().ChangeBaseTheme(value ? ThemeVariant.Dark : ThemeVariant.Light);
+            SettingsManager.Settings.AppTheme = value ? AppSettings.ThemeDark : AppSettings.ThemeLight;
+            SettingsManager.Save();
             OnPropertyChanged();
         }
     }
@@ -766,6 +768,7 @@ public partial class UserViewModel : PageViewModelBase
         NotifyBackgroundSettingsChanged();
         WeakReferenceMessenger.Default.Send(
             new DesktopLyricDoubleLineChangedMessage(SettingsManager.Settings.DesktopLyricDoubleLineEnabled));
+        OnPropertyChanged(nameof(IsDarkMode));
     }
 
     private static void SaveAndNotifyBackgroundSettings()

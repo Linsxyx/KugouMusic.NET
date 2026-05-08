@@ -159,15 +159,28 @@ public class KaraokeGradientTextBlock : Control
         var unplayedBrush = CreateOpacityBrush(Foreground, UnplayedOpacity);
         var formattedText = CreateFormattedText(Bounds.Width, unplayedBrush);
         var origin = new Point(0, Math.Max(0, (Bounds.Height - formattedText.Height) / 2));
-        context.DrawText(formattedText, origin);
 
         var progress = Math.Clamp(Progress, 0, 1);
         if (progress <= 0)
+        {
+            context.DrawText(formattedText, origin);
             return;
+        }
 
         var clipWidth = Math.Max(0, Bounds.Width * progress);
         if (clipWidth <= 0)
+        {
+            context.DrawText(formattedText, origin);
             return;
+        }
+
+        if (clipWidth < Bounds.Width)
+        {
+            using (context.PushClip(new Rect(clipWidth, 0, Bounds.Width - clipWidth, Bounds.Height)))
+            {
+                context.DrawText(formattedText, origin);
+            }
+        }
 
         formattedText.SetForegroundBrush(CreatePlayedBrush());
         using (context.PushClip(new Rect(0, 0, clipWidth, Bounds.Height)))

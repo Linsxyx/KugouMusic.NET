@@ -11,7 +11,7 @@
 
     <Grid Margin="15">
         <localControls:SongCollectionDetailView
-            Cover="avares://KugouAvaloniaPlayer/Assets/default_listcard.png"
+            ShowCover="False"
             Title="{Binding DisplayName}"
             Subtitle="{Binding Subtitle}"
             Songs="{Binding Songs}"
