@@ -196,6 +196,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     public AvaloniaList<AudioVisualizerBarViewModel> NowPlayingVisualizerBars { get; } = CreateVisualizerBars();
     public string[] QualityOptions { get; } = ["128", "320", "flac", "high"];
     public int DisplayPlaybackQueueCount => DisplayPlaybackQueue.Count;
+    public bool HasDisplayPlaybackQueue => DisplayPlaybackQueue.Count > 0;
 
     public bool IsRepeatOneMode => _queueManager.IsRepeatOneMode;
     public bool IsShuffleMode => _queueManager.IsShuffleMode;

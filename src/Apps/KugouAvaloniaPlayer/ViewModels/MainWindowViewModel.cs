@@ -64,6 +64,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsQueuePaneOpen { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsMiniPlayerOpaque { get; set; } = true;
+
     private bool _isUpdatingActivePageFromNavigation;
 
     [ObservableProperty]
@@ -231,15 +234,16 @@ public partial class MainWindowViewModel : ObservableObject
         });
     }
 
-    private static void ApplyCustomBackgroundImage(
+    private void ApplyCustomBackgroundImage(
         bool useCustomImage,
         string? customImagePath,
         double customImageOpacity)
     {
-        UpdateCustomBackgroundBrush(useCustomImage, customImagePath, Math.Clamp(customImageOpacity, 0.1, 1.0));
+        var hasCustomImage = UpdateCustomBackgroundBrush(useCustomImage, customImagePath, Math.Clamp(customImageOpacity, 0.1, 1.0));
+        IsMiniPlayerOpaque = !hasCustomImage;
     }
 
-    private static void UpdateCustomBackgroundBrush(bool useCustomImage, string? path, double opacity)
+    private static bool UpdateCustomBackgroundBrush(bool useCustomImage, string? path, double opacity)
     {
         var brush = CreateCustomBackgroundBrush(useCustomImage, path, opacity, out var hasCustomImage);
         Dispatcher.UIThread.Post(() =>
@@ -250,6 +254,8 @@ public partial class MainWindowViewModel : ObservableObject
                 app.Resources["KugouHeroBackgroundImageVisible"] = !hasCustomImage;
             }
         });
+
+        return hasCustomImage;
     }
 
     private static IBrush CreateCustomBackgroundBrush(

@@ -36,7 +36,7 @@
                         CornerRadius="18"
                         Classes.hidden="{Binding IsNowPlayingOpen}"
                         Height="72"
-                        IsOpaque="True">
+                        IsOpaque="{Binding IsMiniPlayerOpaque, FallbackValue=True}">
 
             <Grid ColumnDefinitions="*, Auto, *">
 
@@ -50,6 +50,7 @@
                             Classes="Basic"
                             Padding="0"
                             Cursor="Hand"
+                            IsVisible="{Binding Player.HasDisplayPlaybackQueue}"
                             VerticalAlignment="Center">
                         <Grid ColumnDefinitions="Auto, Auto">
                             <Border CornerRadius="10"
@@ -85,6 +86,7 @@
                             ToolTip.Tip="添加到我喜欢"
                             Width="32"
                             Height="32"
+                            IsVisible="{Binding Player.HasDisplayPlaybackQueue}"
                             VerticalAlignment="Center">
                         <Panel>
                             <Svg Path="/Assets/FavoriteBorder.svg"

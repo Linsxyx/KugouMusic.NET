@@ -29,6 +29,7 @@ public partial class PlayerViewModel
                 DisplayPlaybackQueue.AddRange(_queueManager.PlaybackQueue);
 
             OnPropertyChanged(nameof(DisplayPlaybackQueueCount));
+            OnPropertyChanged(nameof(HasDisplayPlaybackQueue));
         }
 
         if (Dispatcher.UIThread.CheckAccess())
