@@ -57,6 +57,15 @@ jobs:
           find ./publish -type d -name '*.dSYM' -prune -exec rm -rf {} +
           find ./publish -type f \( -name '*.pdb' -o -name '*.dbg' \) -delete
 
+      - name: Download previous Velopack release
+        if: ${{ matrix.rid != 'linux-arm64' }}
+        shell: bash
+        run: |
+          vpk download github \
+            --repoUrl "https://github.com/${{ github.repository }}" \
+            --token "${{ secrets.GITHUB_TOKEN }}" \
+            -o ./releases || true
+
       - name: Pack with Velopack
         if: ${{ matrix.rid != 'linux-arm64' }}
         shell: bash
@@ -77,6 +86,8 @@ jobs:
             -e "$EXE_NAME" \
             -i "$ICON_PATH" \
             -o ./releases
+
+          find ./releases -type f -name '*.nupkg' ! -name "KugouAvaloniaPlayer-${VERSION}-*.nupkg" -delete
 
       - name: Create linux-arm64 archive (no auto-update)
         if: ${{ matrix.rid == 'linux-arm64' }}
@@ -263,6 +274,15 @@ jobs:
           spctl -a -vv -t install "./releases/${APP_NAME}-${RID}-unsigned.pkg" || true
           pkgutil --check-signature "./releases/${APP_NAME}-${RID}-unsigned.pkg" || true
 
+      - name: Download previous Velopack release
+        if: ${{ matrix.rid == 'osx-arm64' }}
+        shell: bash
+        run: |
+          vpk download github \
+            --repoUrl "https://github.com/${{ github.repository }}" \
+            --token "${{ secrets.GITHUB_TOKEN }}" \
+            -o ./releases || true
+
       - name: Pack with Velopack (macOS)
         if: ${{ matrix.rid == 'osx-arm64' }}
         shell: bash
@@ -274,6 +294,8 @@ jobs:
             -e "$APP_NAME" \
             -i ./dist/KugouAvaloniaPlayer.icns \
             -o ./releases
+
+          find ./releases -type f -name '*.nupkg' ! -name "${APP_NAME}-${VERSION}-*.nupkg" -delete
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -350,9 +372,15 @@ jobs:
           copy_required "./release_files/RELEASES" ./gitee_release_files
           copy_required "./release_files/RELEASES-osx" ./gitee_release_files
           copy_required "./release_files/RELEASES-linux" ./gitee_release_files
-          copy_required "./release_files/KugouAvaloniaPlayer-${VERSION}-full.nupkg" ./gitee_release_files
-          copy_required "./release_files/KugouAvaloniaPlayer-${VERSION}-linux-full.nupkg" ./gitee_release_files
-          copy_required "./release_files/KugouAvaloniaPlayer-${VERSION}-osx-full.nupkg" ./gitee_release_files
+
+          shopt -s nullglob
+          update_packages=(./release_files/KugouAvaloniaPlayer-"${VERSION}"-*.nupkg)
+          if [[ ${#update_packages[@]} -eq 0 ]]; then
+            echo "Missing required Gitee update packages for version: ${VERSION}"
+            exit 1
+          fi
+
+          cp "${update_packages[@]}" ./gitee_release_files/
 
           ls -lah ./gitee_release_files
           zip -r ./gitee-release-files.zip ./gitee_release_files
@@ -382,6 +410,19 @@ jobs:
             } > RELEASE_NOTES.md
           fi
 
+          {
+            echo "## 下载"
+            echo
+            echo "- Windows: [KugouAvaloniaPlayer-win-x64.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-x64.exe)"
+            echo "- Linux x64: [KugouAvaloniaPlayer-linux-x64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-x64.AppImage)"
+            echo "- Linux arm64: [KugouAvaloniaPlayer-linux-arm64.tar.gz](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-arm64.tar.gz)"
+            echo "- macOS Apple Silicon: [KugouAvaloniaPlayer-mac-arm64.app.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-arm64.app.zip)"
+            echo "- macOS Intel: [KugouAvaloniaPlayer-mac-x64.app.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-x64.app.zip)"
+            echo
+            cat RELEASE_NOTES.md
+          } > RELEASE_NOTES_WITH_DOWNLOADS.md
+          mv RELEASE_NOTES_WITH_DOWNLOADS.md RELEASE_NOTES.md
+
           echo "==== RELEASE_NOTES.md ===="
           cat RELEASE_NOTES.md
 
@@ -389,6 +430,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          files: ./release_files/*
+          preserve_order: true
+          files: |
+            ./release_files/KugouAvaloniaPlayer-win-x64.exe
+            ./release_files/KugouAvaloniaPlayer-win-x64.zip
+            ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage
+            ./release_files/KugouAvaloniaPlayer-linux-arm64.tar.gz
+            ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip
+            ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip
+            ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg
+            ./release_files/*.nupkg
+            ./release_files/RELEASES*
+            ./release_files/releases.*.json
           body_path: RELEASE_NOTES.md
           token: ${{ secrets.GITHUB_TOKEN }}
