@@ -97,6 +97,7 @@ public sealed partial class GitHubReleaseService(
             return "该版本暂未填写发布说明。";
 
         var text = body.Replace("\r\n", "\n").Replace('\r', '\n');
+        text = ExtractReleaseNotesText(text);
         text = MarkdownImageRegex().Replace(text, string.Empty);
         text = MarkdownLinkRegex().Replace(text, "$1");
         text = MarkdownDecorationRegex().Replace(text, string.Empty);
@@ -104,6 +105,9 @@ public sealed partial class GitHubReleaseService(
         var lines = new List<string>();
         foreach (var rawLine in text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
+            if (IsDownloadLine(rawLine))
+                continue;
+
             var line = rawLine.TrimStart('#', '-', '*', '+', ' ', '\t');
             if (string.IsNullOrWhiteSpace(line))
                 continue;
@@ -117,6 +121,82 @@ public sealed partial class GitHubReleaseService(
         return string.IsNullOrWhiteSpace(summary) ? "该版本暂未填写发布说明。" : summary;
     }
 
+    private static string ExtractReleaseNotesText(string body)
+    {
+        var changelogSection = ExtractNamedSection(body, ChangelogHeadingRegex());
+        if (!string.IsNullOrWhiteSpace(changelogSection))
+            return changelogSection;
+
+        return RemoveDownloadBlocks(body);
+    }
+
+    private static string ExtractNamedSection(string body, Regex headingRegex)
+    {
+        var lines = body.Split('\n');
+        var sectionLines = new List<string>();
+        var inSection = false;
+        var sectionLevel = 0;
+
+        foreach (var rawLine in lines)
+        {
+            var heading = MarkdownHeadingRegex().Match(rawLine);
+            if (!inSection)
+            {
+                if (!heading.Success || !headingRegex.IsMatch(heading.Groups["title"].Value))
+                    continue;
+
+                inSection = true;
+                sectionLevel = heading.Groups["marks"].Value.Length;
+                continue;
+            }
+
+            if (heading.Success && heading.Groups["marks"].Value.Length <= sectionLevel)
+                break;
+
+            sectionLines.Add(rawLine);
+        }
+
+        return string.Join('\n', sectionLines);
+    }
+
+    private static string RemoveDownloadBlocks(string body)
+    {
+        var lines = new List<string>();
+        var skippingDownloadBlock = false;
+
+        foreach (var rawLine in body.Split('\n'))
+        {
+            var heading = MarkdownHeadingRegex().Match(rawLine);
+            if (heading.Success)
+            {
+                skippingDownloadBlock = DownloadHeadingRegex().IsMatch(heading.Groups["title"].Value);
+                if (skippingDownloadBlock)
+                    continue;
+            }
+
+            if (skippingDownloadBlock)
+            {
+                if (string.IsNullOrWhiteSpace(rawLine) || IsDownloadLine(rawLine))
+                    continue;
+
+                skippingDownloadBlock = false;
+            }
+
+            lines.Add(rawLine);
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    private static bool IsDownloadLine(string line)
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            return false;
+
+        return DownloadLineRegex().IsMatch(trimmed);
+    }
+
     [GeneratedRegex(@"!\[[^\]]*\]\([^)]+\)", RegexOptions.Compiled)]
     private static partial Regex MarkdownImageRegex();
 
@@ -125,4 +205,16 @@ public sealed partial class GitHubReleaseService(
 
     [GeneratedRegex(@"[`*_>]", RegexOptions.Compiled)]
     private static partial Regex MarkdownDecorationRegex();
+
+    [GeneratedRegex(@"^(?<marks>#{1,6})\s+(?<title>.+?)\s*$", RegexOptions.Compiled)]
+    private static partial Regex MarkdownHeadingRegex();
+
+    [GeneratedRegex(@"^(更新日志|更新内容|changelog|release\s+notes)$", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex ChangelogHeadingRegex();
+
+    [GeneratedRegex(@"^(下载|downloads?|assets?|安装包|安装文件)$", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex DownloadHeadingRegex();
+
+    [GeneratedRegex(@"^[-*+]\s*(windows|linux|macos|mac|osx|download|下载|安装包)[^:：]*[:：]\s*(\[.+?\]\(.+?\)|https?://\S+|.+\.(exe|zip|appimage|pkg|tar\.gz|nupkg))\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex DownloadLineRegex();
 }

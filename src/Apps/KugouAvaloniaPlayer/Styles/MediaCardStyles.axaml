@@ -1,0 +1,18 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <Style Selector="Button.MediaCardButton">
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" />
+            </Transitions>
+        </Setter>
+        <Setter Property="RenderTransform" Value="scale(1)" />
+    </Style>
+
+    <Style Selector="Button.MediaCardButton:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.03)" />
+    </Style>
+
+    <Style Selector="Button.MediaCardButton:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.97)" />
+    </Style>
+</Styles>

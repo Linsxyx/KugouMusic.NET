@@ -42,6 +42,7 @@
     <ItemGroup>
         <PackageReference Include="AsyncImageLoader.Avalonia" Version="3.8.0" />
         <PackageReference Include="Avalonia" Version="12.0.2"/>
+        <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
         <PackageReference Include="Avalonia.Desktop" Version="12.0.2"/>
         <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.2"/>
         <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.2"/>

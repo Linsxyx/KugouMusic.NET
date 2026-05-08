@@ -10,18 +10,18 @@
              x:DataType="vm:DiscoverViewModel">
 
     <UserControl.Styles>
-        <Style Selector="ItemsControl.MainTagList ContentPresenter">
+        <Style Selector="ItemsRepeater.MainTagList ContentPresenter">
             <Setter Property="Margin" Value="0,0,6,0" />
         </Style>
-        <Style Selector="ItemsControl.MainTagList TextBlock">
+        <Style Selector="ItemsRepeater.MainTagList TextBlock">
             <Setter Property="FontSize" Value="15" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
-        <Style Selector="ItemsControl.SubTagList ContentPresenter">
+        <Style Selector="ItemsRepeater.SubTagList ContentPresenter">
             <Setter Property="Margin" Value="0,0,6,0" />
         </Style>
-        <Style Selector="ItemsControl.SubTagList TextBlock">
+        <Style Selector="ItemsRepeater.SubTagList TextBlock">
             <Setter Property="FontSize" Value="14" />
         </Style>
     </UserControl.Styles>
@@ -38,14 +38,12 @@
             <StackPanel Grid.Row="1" Spacing="15" Margin="0,0,0,12">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled">
-                    <ItemsControl Classes="MainTagList"
-                                  ItemsSource="{Binding Categories}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
+                    <ItemsRepeater Classes="MainTagList"
+                                   ItemsSource="{Binding Categories}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Orientation="Horizontal" Spacing="6" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate DataType="vm:PlaylistTagGroup">
                                 <RadioButton Classes="Segmented"
                                              GroupName="MainTags"
@@ -55,20 +53,18 @@
                                     <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
                                 </RadioButton>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
                 </ScrollViewer>
 
                 <ScrollViewer HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled">
-                    <ItemsControl Classes="SubTagList"
-                                  ItemsSource="{Binding CurrentSubCategories}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
+                    <ItemsRepeater Classes="SubTagList"
+                                   ItemsSource="{Binding CurrentSubCategories}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Orientation="Horizontal" Spacing="6" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate DataType="vm:PlaylistTag">
                                 <RadioButton Classes="Segmented"
                                              GroupName="SubTags"
@@ -78,8 +74,8 @@
                                     <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
                                 </RadioButton>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
                 </ScrollViewer>
             </StackPanel>
 
@@ -95,13 +91,14 @@
                 </StackPanel>
 
                 <ScrollViewer IsVisible="{Binding !IsLoading}" Padding="0,0,0,-50">
-                    <ItemsControl ItemsSource="{Binding Playlists}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
+                    <ItemsRepeater ItemsSource="{Binding Playlists}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout MinItemWidth="184"
+                                               MinItemHeight="236"
+                                               MinColumnSpacing="0"
+                                               MinRowSpacing="0" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate DataType="vm:DiscoverPlaylist">
                                 <localControls:MediaCard Cover="{Binding Cover}"
                                                          Title="{Binding Name}"
@@ -109,8 +106,8 @@
                                                          Command="{Binding #DiscoverRoot.((vm:DiscoverViewModel)DataContext).OpenPlaylistCommand}"
                                                          CommandParameter="{Binding .}" />
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
                 </ScrollViewer>
             </Grid>
         </Grid>

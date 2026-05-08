@@ -19,22 +19,23 @@
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" Padding="0,0,0,-50">
-                <ItemsControl ItemsSource="{Binding Ranks}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+                <ItemsRepeater ItemsSource="{Binding Ranks}">
+                    <ItemsRepeater.Layout>
+                        <UniformGridLayout MinItemWidth="184"
+                                           MinItemHeight="236"
+                                           MinColumnSpacing="0"
+                                           MinRowSpacing="0" />
+                    </ItemsRepeater.Layout>
 
-                    <ItemsControl.ItemTemplate>
+                    <ItemsRepeater.ItemTemplate>
                         <DataTemplate DataType="vm:RankItem">
                             <localControls:MediaCard Cover="{Binding Cover}"
                                                      Title="{Binding Name}"
                                                      Command="{Binding #RankRoot.((vm:RankViewModel)DataContext).OpenRankCommand}"
                                                      CommandParameter="{Binding .}" />
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
             </ScrollViewer>
         </Grid>
 

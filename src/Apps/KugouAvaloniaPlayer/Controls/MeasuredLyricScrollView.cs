@@ -31,6 +31,9 @@ public class MeasuredLyricScrollView : ItemsControl
 #endif
 
     private const double DefaultEstimatedLineHeight = 72;
+    private const double VisualTopUpdateThreshold = 0.05;
+    private const double VisualOpacityUpdateThreshold = 0.002;
+    private const double VisualScaleUpdateThreshold = 0.0005;
 #if DEBUG
     private static LyricMotionDebugSettings MotionSettings => LyricMotionDebugSettings.Instance;
 #endif
@@ -198,6 +201,20 @@ public class MeasuredLyricScrollView : ItemsControl
             HookCollectionChanged(change.NewValue);
             ResetFirstLayoutState();
             QueueLayoutUpdate();
+            return;
+        }
+
+        if (change.Property == IsVisibleProperty)
+        {
+            if (IsVisible)
+            {
+                QueueLayoutUpdate();
+                EnsureAnimationFrameRunning();
+            }
+            else
+            {
+                StopAnimationFrames();
+            }
         }
     }
 
@@ -314,6 +331,7 @@ public class MeasuredLyricScrollView : ItemsControl
     private void ApplyMeasuredLayout()
     {
         if (ItemCount == 0 || Bounds.Height <= 0 || Bounds.Width <= 0) return;
+        if (!ShouldRunAnimationFrames()) return;
 
         var activeIndex = _isUserScrolling
             ? _lockedActiveIndex ?? GetActiveIndex()
@@ -567,7 +585,7 @@ public class MeasuredLyricScrollView : ItemsControl
     {
         _animationFrameQueued = false;
 
-        if (TopLevel.GetTopLevel(this) == null)
+        if (!ShouldRunAnimationFrames())
         {
             _hasLastFrameTimestamp = false;
             return;
@@ -664,6 +682,7 @@ public class MeasuredLyricScrollView : ItemsControl
     private void EnsureAnimationFrameRunning()
     {
         if (_isUserScrolling || (_springStates.Count == 0 && !_isManualOffsetReturning)) return;
+        if (!ShouldRunAnimationFrames()) return;
 
         if (_animationFrameQueued) return;
 
@@ -679,6 +698,20 @@ public class MeasuredLyricScrollView : ItemsControl
 
         _animationFrameQueued = true;
         topLevel.RequestAnimationFrame(OnAnimationFrame);
+    }
+
+    private bool ShouldRunAnimationFrames()
+    {
+        return IsEffectivelyVisible &&
+               Bounds.Height > 0 &&
+               Bounds.Width > 0 &&
+               TopLevel.GetTopLevel(this) != null;
+    }
+
+    private void StopAnimationFrames()
+    {
+        _animationFrameQueued = false;
+        _hasLastFrameTimestamp = false;
     }
 
     private bool UpdateManualOffset(double frameFactor)
@@ -731,10 +764,33 @@ public class MeasuredLyricScrollView : ItemsControl
     {
         state.EnsureTransform(container);
 
-        state.TranslateTransform!.Y = state.CurrentTop;
-        state.ScaleTransform!.ScaleX = state.CurrentScale;
-        state.ScaleTransform.ScaleY = state.CurrentScale;
-        container.Opacity = state.CurrentOpacity;
+        var topChanged = !state.HasAppliedVisualState ||
+                         Math.Abs(state.LastAppliedTop - state.CurrentTop) > VisualTopUpdateThreshold;
+        var scaleChanged = !state.HasAppliedVisualState ||
+                           Math.Abs(state.LastAppliedScale - state.CurrentScale) > VisualScaleUpdateThreshold;
+        var opacityChanged = !state.HasAppliedVisualState ||
+                             Math.Abs(state.LastAppliedOpacity - state.CurrentOpacity) > VisualOpacityUpdateThreshold;
+
+        if (topChanged)
+        {
+            state.TranslateTransform!.Y = state.CurrentTop;
+            state.LastAppliedTop = state.CurrentTop;
+        }
+
+        if (scaleChanged)
+        {
+            state.ScaleTransform!.ScaleX = state.CurrentScale;
+            state.ScaleTransform.ScaleY = state.CurrentScale;
+            state.LastAppliedScale = state.CurrentScale;
+        }
+
+        if (opacityChanged)
+        {
+            container.Opacity = state.CurrentOpacity;
+            state.LastAppliedOpacity = state.CurrentOpacity;
+        }
+
+        state.HasAppliedVisualState = true;
     }
 
     private sealed class SpringState
@@ -756,6 +812,11 @@ public class MeasuredLyricScrollView : ItemsControl
         public double TargetScale = 1.0;
 
         public double Velocity;
+
+        public bool HasAppliedVisualState;
+        public double LastAppliedOpacity;
+        public double LastAppliedScale = 1.0;
+        public double LastAppliedTop;
 
         public TranslateTransform? TranslateTransform;
         public ScaleTransform? ScaleTransform;

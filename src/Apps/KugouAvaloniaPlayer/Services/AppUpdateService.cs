@@ -61,6 +61,12 @@ public sealed class AppUpdateService(
 
             var checkedCandidates = await CheckAllSourcesAsync(candidates);
             var updateSources = SelectBestVersionSources(checkedCandidates);
+            logger.LogInformation("可用更新源选择结果: {Sources}",
+                updateSources.Count == 0
+                    ? "无"
+                    : string.Join("; ", updateSources.Select(source =>
+                        $"{source.SourceName}({source.UpdateInfo.TargetFullRelease.Version}, Priority={source.Priority})")));
+
             if (updateSources.Count == 0)
             {
                 logger.LogInformation("当前已是最新版本。");
@@ -105,6 +111,8 @@ public sealed class AppUpdateService(
                 logger.LogInformation("{SourceName} 更新源检查完成，版本: {Version}",
                     candidate.SourceName,
                     updateInfo?.TargetFullRelease.Version.ToString() ?? "无更新");
+                if (updateInfo is not null)
+                    LogUpdateInfo(candidate.SourceName, updateInfo);
 
                 return new CheckedUpdateSource(
                     candidate.SourceName,
@@ -222,12 +230,28 @@ public sealed class AppUpdateService(
                     logger.LogInformation("开始从 {SourceName} 下载更新 {Version}。",
                         updateSource.SourceName,
                         updateSource.UpdateInfo.TargetFullRelease.Version);
+                    LogUpdateInfo(updateSource.SourceName, updateSource.UpdateInfo);
 
                     await Task.Run(async () =>
                     {
+                        var lastLoggedProgress = -10;
                         await updateSource.UpdateManager.DownloadUpdatesAsync(updateSource.UpdateInfo,
-                            percentage => { Dispatcher.UIThread.Post(() => { progress.Value = percentage; }); });
+                            percentage =>
+                            {
+                                if (percentage == 100 || percentage >= lastLoggedProgress + 10)
+                                {
+                                    lastLoggedProgress = percentage;
+                                    logger.LogInformation("{SourceName} 更新下载进度: {Progress}%。",
+                                        updateSource.SourceName,
+                                        percentage);
+                                }
+
+                                Dispatcher.UIThread.Post(() => { progress.Value = percentage; });
+                            });
                     });
+                    logger.LogInformation("从 {SourceName} 下载更新完成: {Package}。",
+                        updateSource.SourceName,
+                        updateSource.UpdateInfo.TargetFullRelease.FileName);
 
                     Dispatcher.UIThread.Post(() =>
                     {
@@ -239,7 +263,9 @@ public sealed class AppUpdateService(
                 catch (Exception ex)
                 {
                     lastException = ex;
-                    logger.LogWarning(ex, "从 {SourceName} 下载更新失败。", updateSource.SourceName);
+                    logger.LogWarning(ex, "从 {SourceName} 下载更新失败。更新包信息: {UpdateInfo}",
+                        updateSource.SourceName,
+                        DescribeUpdateInfo(updateSource.UpdateInfo));
                     Dispatcher.UIThread.Post(() =>
                     {
                         sourceStatusText.Text = $"{updateSource.SourceName} 下载失败，正在尝试其他更新源。";
@@ -262,6 +288,48 @@ public sealed class AppUpdateService(
                     .Queue();
             });
         }
+    }
+
+    private void LogUpdateInfo(string sourceName, UpdateInfo updateInfo)
+    {
+        logger.LogInformation(
+            "{SourceName} 更新包详情: Target={Target}; Base={Base}; Deltas={DeltaCount}; DeltaList={DeltaList}; IsDowngrade={IsDowngrade}",
+            sourceName,
+            FormatAsset(updateInfo.TargetFullRelease),
+            updateInfo.BaseRelease is null ? "null" : FormatAsset(updateInfo.BaseRelease),
+            updateInfo.DeltasToTarget.Length,
+            updateInfo.DeltasToTarget.Length == 0
+                ? "无"
+                : string.Join(" -> ", updateInfo.DeltasToTarget.Select(FormatAsset)),
+            updateInfo.IsDowngrade);
+    }
+
+    private static string DescribeUpdateInfo(UpdateInfo updateInfo)
+    {
+        return $"Target={FormatAsset(updateInfo.TargetFullRelease)}; " +
+               $"Base={(updateInfo.BaseRelease is null ? "null" : FormatAsset(updateInfo.BaseRelease))}; " +
+               $"Deltas={updateInfo.DeltasToTarget.Length}; " +
+               $"DeltaList={(updateInfo.DeltasToTarget.Length == 0 ? "无" : string.Join(" -> ", updateInfo.DeltasToTarget.Select(FormatAsset)))}; " +
+               $"IsDowngrade={updateInfo.IsDowngrade}";
+    }
+
+    private static string FormatAsset(VelopackAsset asset)
+    {
+        return $"{asset.FileName} [{asset.Type}, v{asset.Version}, {FormatBytes(asset.Size)}, sha256={asset.SHA256}]";
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)bytes;
+        var unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.Length - 1)
+        {
+            value /= 1024;
+            unitIndex++;
+        }
+
+        return $"{value:0.##} {units[unitIndex]}";
     }
 
     private void ShowReadyToRestartToast(UpdateManager updateManager, UpdateInfo newVersion)

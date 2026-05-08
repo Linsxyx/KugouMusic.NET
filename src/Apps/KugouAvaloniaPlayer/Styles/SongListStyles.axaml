@@ -40,4 +40,29 @@
     <Style Selector="ListBox.SongList > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="Transparent" />
     </Style>
+
+    <Style Selector="Border.SongListItemShell">
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.SongListItemShell:pointerover">
+        <Setter Property="RenderTransform" Value="scale(1.01)" />
+    </Style>
+
+    <Style Selector="Border.SongListHoverOverlay">
+        <Setter Property="Opacity" Value="0" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.SongListItemShell:pointerover Border.SongListHoverOverlay">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
 </Styles>
