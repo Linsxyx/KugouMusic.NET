@@ -32,11 +32,9 @@ public partial class FavoritePlaylistService(
 {
     private const string LikeListIdForAction = "2";
     private const int CacheSchemaVersion = 2;
+    private const int AddToPlaylistDialogPageSize = 100;
     private static readonly TimeSpan LoadPlaylistDialogTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan AddSongToPlaylistTimeout = TimeSpan.FromSeconds(12);
-    private const string DefaultPlaylistCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
-    private const string LikePlaylistCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
-
     private readonly Dictionary<string, int> _hashToFileId = new();
     private readonly SemaphoreSlim _addToPlaylistDialogLock = new(1, 1);
     private readonly SemaphoreSlim _likeCacheLoadLock = new(1, 1);
@@ -250,7 +248,7 @@ public partial class FavoritePlaylistService(
         try
         {
             var playlists = await WaitWithTimeoutAsync(
-                userClient.GetPlaylistsAsync(),
+                userClient.GetPlaylistsAsync(1, AddToPlaylistDialogPageSize),
                 LoadPlaylistDialogTimeout,
                 "加载歌单超时，请检查网络后重试。");
 
@@ -274,7 +272,9 @@ public partial class FavoritePlaylistService(
                 song.Name,
                 song.Singer,
                 song.Cover,
-                onlinePlaylists.Select(ToPlaylistDialogItem),
+                onlinePlaylists.Select(AddToPlaylistDialogViewModel.ToPlaylistDialogItem),
+                userClient.GetPlaylistsAsync,
+                playlists.ListCount > playlists.Playlists.Count,
                 async selectedPlaylist =>
                 {
                     DismissDialog();
@@ -705,20 +705,6 @@ partial class FavoritePlaylistService
         {
             throw new TimeoutException(message, ex);
         }
-    }
-
-    private PlaylistDialogPlaylistItemViewModel ToPlaylistDialogItem(UserPlaylistItem item)
-    {
-        return new PlaylistDialogPlaylistItemViewModel
-        {
-            Name = item.Name,
-            ListId = item.ListId.ToString(),
-            SongCount = item.Count,
-            IsLikedPlaylist = item.ListId == 2,
-            Cover = string.IsNullOrWhiteSpace(item.Pic)
-                ? item.ListId == 2 ? LikePlaylistCover : DefaultPlaylistCover
-                : item.Pic
-        };
     }
 
     private void ShowDialog(Control content)

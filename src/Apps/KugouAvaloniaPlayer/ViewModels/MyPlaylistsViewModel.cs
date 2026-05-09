@@ -26,6 +26,8 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class MyPlaylistsViewModel : PageViewModelBase
 {
+    private const int UserPlaylistPageSize = 100;
+    private const int MaxUserPlaylistPages = 200;
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
@@ -161,7 +163,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         if (!_userClient.IsLoggedIn())
             return;
 
-        var onlinePlaylists = await _userClient.GetPlaylistsAsync();
+        var onlinePlaylists = await LoadAllOnlinePlaylistsAsync();
         if (onlinePlaylists is not null && onlinePlaylists.Status == 1)
         {
             var onlineItems = new List<PlaylistItem>();
@@ -192,6 +194,41 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                 _logger.LogInformation("歌单列表远端失败，已从本地缓存兜底显示“我喜欢”。 source={Source}", cachedLike.Source);
             }
         }
+    }
+
+    private async Task<UserPlaylistResponse?> LoadAllOnlinePlaylistsAsync()
+    {
+        UserPlaylistResponse? result = null;
+
+        for (var page = 1; page <= MaxUserPlaylistPages; page++)
+        {
+            var data = await _userClient.GetPlaylistsAsync(page, UserPlaylistPageSize);
+            if (data is null)
+                return result;
+
+            result ??= data with { Playlists = new List<UserPlaylistItem>() };
+
+            if (data.Status != 1)
+            {
+                result.Status = data.Status;
+                result.ErrorCode = data.ErrorCode;
+                return result;
+            }
+
+            if (data.Playlists.Count == 0)
+                break;
+
+            result.Playlists.AddRange(data.Playlists);
+            result.ListCount = Math.Max(result.ListCount, data.ListCount);
+
+            if (data.ListCount > 0 && result.Playlists.Count >= data.ListCount)
+                break;
+
+            if (data.Playlists.Count < UserPlaylistPageSize)
+                break;
+        }
+
+        return result;
     }
 
     [RelayCommand]

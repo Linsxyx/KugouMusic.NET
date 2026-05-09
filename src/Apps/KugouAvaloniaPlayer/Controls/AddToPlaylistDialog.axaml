@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Controls.AddToPlaylistDialog"
              x:Name="DialogRoot"
@@ -24,6 +25,21 @@
 
         <Style Selector="Button.PlaylistCard:pointerover Border.Chrome">
             <Setter Property="Background" Value="{DynamicResource SukiPrimaryColor1}" />
+        </Style>
+
+        <Style Selector="ListBox.PlaylistPickerList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+
+        <Style Selector="ListBox.PlaylistPickerList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
     </UserControl.Styles>
 
@@ -94,21 +110,23 @@
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer IsVisible="{Binding HasFilteredPlaylists}"
-                              MaxHeight="360"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <ItemsRepeater ItemsSource="{Binding FilteredPlaylists}">
-                        <ItemsRepeater.Layout>
-                            <UniformGridLayout MinItemWidth="240"
-                                               MinItemHeight="112"
-                                               MinColumnSpacing="0"
-                                               MinRowSpacing="0" />
-                        </ItemsRepeater.Layout>
-                        <ItemsRepeater.ItemTemplate>
+                <Grid IsVisible="{Binding HasFilteredPlaylists}">
+                    <ListBox Classes="PlaylistPickerList"
+                             MaxHeight="360"
+                             SelectionMode="Single"
+                             ItemsSource="{Binding FilteredPlaylists}"
+                             behaviors:InteractionBehaviors.ScrollNearBottomCommand="{Binding LoadMorePlaylistsCommand}"
+                             behaviors:InteractionBehaviors.ScrollNearBottomThreshold="120">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
                             <DataTemplate DataType="vm:PlaylistDialogPlaylistItemViewModel">
                                 <Button Classes="PlaylistCard"
-                                        Width="224"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
                                         Height="102"
                                         Command="{Binding #DialogRoot.((vm:AddToPlaylistDialogViewModel)DataContext).SelectPlaylistCommand}"
                                         CommandParameter="{Binding .}">
@@ -163,9 +181,24 @@
                                     </Grid>
                                 </Button>
                             </DataTemplate>
-                        </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
-                </ScrollViewer>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Padding="12,8"
+                            CornerRadius="999"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom"
+                            Background="{DynamicResource SukiBackground}"
+                            IsVisible="{Binding IsLoadingMorePlaylists}">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8">
+                            <suki:Loading Width="14"
+                                          Height="14" />
+                            <TextBlock Text="正在加载更多歌单..."
+                                       Foreground="{DynamicResource SukiLowText}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Grid>
 
             <Grid Row="3"

@@ -250,7 +250,7 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 Spacing="16">
-                        <Button Command="{Binding Player.ToggleRepeatOneModeCommand}"
+                        <!--<Button Command="{Binding Player.ToggleRepeatOneModeCommand}"
                                 Classes="Basic">
                             <Panel>
                                 <Svg Path="/Assets/repeat-one.svg"
@@ -265,7 +265,7 @@
                                      Opacity="0.45"
                                      IsVisible="{Binding !Player.IsRepeatOneMode}" />
                             </Panel>
-                        </Button>
+                        </Button>-->
 
                         <Button Command="{Binding Player.PlayPreviousCommand}" Classes="Basic">
                             <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="White" />
@@ -290,7 +290,7 @@
                             <PathIcon Data="{x:Static suki:Icons.ChevronRight}" Foreground="White" />
                         </Button>
 
-                        <Button Command="{Binding Player.ToggleShuffleModeCommand}"
+                        <!--<Button Command="{Binding Player.ToggleShuffleModeCommand}"
                                 Classes="Basic">
                             <Panel>
                                 <Svg Path="/Assets/shuffle-svgrepo-com.svg"
@@ -305,7 +305,7 @@
                                      Opacity="0.45"
                                      IsVisible="{Binding !Player.IsShuffleMode}" />
                             </Panel>
-                        </Button>
+                        </Button>-->
 
                         <Button Click="OnCloseClicked" Classes="Basic" ToolTip.Tip="关闭歌词">
                             <PathIcon Data="{x:Static suki:Icons.Cross}" Foreground="White" Width="12" />
