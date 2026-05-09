@@ -243,6 +243,11 @@ KugouMusic.NET
 │     └─ KuGou.Net.Native      # Native AOT 导出层
 └─ docs/images           # README 截图资源
 ```
+
+## 交流群
+
+- QQ群：1081635731 (群刚建没基本人，可以进来提建议或者交流反馈)
+
 ## 👍 灵感来源
 
 - [KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)
