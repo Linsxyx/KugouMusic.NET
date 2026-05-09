@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -27,6 +29,11 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
+    private static readonly string LocalSongCoverCacheDirectory = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "kugou",
+        "local-song-covers");
+
     private static readonly HashSet<string> SupportedLocalAudioExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".mp3",
@@ -34,6 +41,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         ".wav",
         ".ogg",
         ".m4a",
+        ".aac",
         ".dsf",
         ".dff"
     };
@@ -430,6 +438,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                     var singer = "未知艺术家";
                     var albumName = "";
                     double duration = 0;
+                    var cover = GetLocalSongCoverSource(path, file);
 
                     try
                     {
@@ -442,6 +451,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
                         albumName = tfile.Tag.Album ?? "";
                         duration = tfile.Properties?.Duration.TotalSeconds ?? 0;
+                        cover = GetEmbeddedSongCoverSource(file, tfile) ?? cover;
                     }
                     catch (UnsupportedFormatException)
                     {
@@ -463,7 +473,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                         AlbumName = albumName,
                         DurationSeconds = duration,
                         LocalFilePath = file,
-                        Cover = GetLocalSongCoverSource(path, file)
+                        Cover = cover
                     });
                 }
 
@@ -895,6 +905,52 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         return meta.SongCoverPaths.TryGetValue(Path.GetFileName(songPath), out var coverPath)
             ? GetImageSourceOrDefault(coverPath, DefaultSongCover)
             : DefaultSongCover;
+    }
+
+    private static string? GetEmbeddedSongCoverSource(string songPath, File tagFile)
+    {
+        var picture = tagFile.Tag.Pictures?
+            .FirstOrDefault(x => x.Type == PictureType.FrontCover && x.Data.Count > 0)
+            ?? tagFile.Tag.Pictures?.FirstOrDefault(x => x.Data.Count > 0);
+
+        if (picture == null)
+            return null;
+
+        try
+        {
+            Directory.CreateDirectory(LocalSongCoverCacheDirectory);
+
+            var extension = GetPictureExtension(picture.MimeType);
+            var cacheKey = GetStableHash($"{songPath}|{System.IO.File.GetLastWriteTimeUtc(songPath).Ticks}|{picture.Data.Count}");
+            var cachePath = Path.Combine(LocalSongCoverCacheDirectory, $"{cacheKey}{extension}");
+
+            if (!System.IO.File.Exists(cachePath))
+                System.IO.File.WriteAllBytes(cachePath, picture.Data.Data);
+
+            return new Uri(cachePath).AbsoluteUri;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string GetPictureExtension(string? mimeType)
+    {
+        return mimeType?.ToLowerInvariant() switch
+        {
+            "image/png" => ".png",
+            "image/gif" => ".gif",
+            "image/bmp" => ".bmp",
+            "image/webp" => ".webp",
+            _ => ".jpg"
+        };
+    }
+
+    private static string GetStableHash(string value)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
     private static string GetImageSourceOrDefault(string? imagePath, string defaultSource)
