@@ -4,6 +4,7 @@
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:local="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:models="using:KugouAvaloniaPlayer.Models"
              x:Class="KugouAvaloniaPlayer.Controls.BottomPlaybackControl"
              x:DataType="vm:MainWindowViewModel">
 
@@ -40,7 +41,7 @@
 
             <Grid ColumnDefinitions="*, Auto, *">
 
-                <!-- 左侧：封面 + 歌曲信息 + 喜欢 -->
+                <!-- 左侧：封面 + 歌曲信息 -->
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
                             Spacing="10"
@@ -80,27 +81,6 @@
                         </Grid>
                     </Button>
 
-                    <Button Cursor="Hand"
-                            Command="{Binding Player.ToggleLikeCommand}"
-                            Classes="Basic"
-                            ToolTip.Tip="添加到我喜欢"
-                            Width="32"
-                            Height="32"
-                            IsVisible="{Binding Player.HasDisplayPlaybackQueue}"
-                            VerticalAlignment="Center">
-                        <Panel>
-                            <Svg Path="/Assets/FavoriteBorder.svg"
-                                 Css="path { fill: red; }"
-                                 Width="18"
-                                 Height="18"
-                                 IsVisible="{Binding Player.IsLiked}" />
-                            <Svg Path="/Assets/FavoriteBorder.svg"
-                                 Width="18"
-                                 Height="18"
-                                 Opacity="0.45"
-                                 IsVisible="{Binding !Player.IsLiked}" />
-                        </Panel>
-                    </Button>
                 </StackPanel>
 
                 <!-- 中间：播放控制 + 进度条 -->
@@ -116,18 +96,22 @@
                                 VerticalAlignment="Center"
                                 Margin="0,10,0,-15">
                         <Button Cursor="Hand"
-                                Command="{Binding Player.ToggleRepeatOneModeCommand}"
+                                Command="{Binding Player.ToggleLikeCommand}"
                                 Classes="Basic"
-                                ToolTip.Tip="单曲循环"
-                                Width="32" Height="32">
+                                ToolTip.Tip="添加到我喜欢"
+                                Width="32"
+                                Height="32"
+                                IsVisible="{Binding Player.HasDisplayPlaybackQueue}"
+                                VerticalAlignment="Center">
                             <Panel>
-                                <Svg Path="/Assets/repeat-one.svg"
+                                <Svg Path="/Assets/FavoriteBorder.svg"
+                                     Css="path { fill: red; }"
                                      Width="18" Height="18"
-                                     IsVisible="{Binding Player.IsRepeatOneMode}" />
-                                <Svg Path="/Assets/repeat-one.svg"
+                                     IsVisible="{Binding Player.IsLiked}" />
+                                <Svg Path="/Assets/FavoriteBorder.svg"
                                      Width="18" Height="18"
-                                     Opacity="0.35"
-                                     IsVisible="{Binding !Player.IsRepeatOneMode}" />
+                                     Opacity="0.45"
+                                     IsVisible="{Binding !Player.IsLiked}" />
                             </Panel>
                         </Button>
                         <Button Cursor="Hand"
@@ -159,18 +143,48 @@
                             <Svg Path="/Assets/next-svgrepo-com.svg" Width="16" Height="16" />
                         </Button>
                         <Button Cursor="Hand"
-                                Command="{Binding Player.ToggleShuffleModeCommand}"
                                 Classes="Basic"
-                                ToolTip.Tip="随机播放"
-                                Width="32" Height="32">
+                                ToolTip.Tip="播放模式"
+                                Width="32" Height="32"
+                                VerticalAlignment="Center">
+                            <Button.Flyout>
+                                <MenuFlyout>
+                                    <MenuItem Header="列表循环"
+                                              Command="{Binding Player.SetPlayModeCommand}"
+                                              CommandParameter="{x:Static models:PlayMode.Normal}">
+                                        <MenuItem.Icon>
+                                            <Svg Path="/Assets/repeat-svgrepo-com.svg" Width="18" Height="18" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="单曲循环"
+                                              Command="{Binding Player.SetPlayModeCommand}"
+                                              CommandParameter="{x:Static models:PlayMode.RepeatOne}">
+                                        <MenuItem.Icon>
+                                            <Svg Path="/Assets/repeat-one.svg" Width="18" Height="18" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                    <MenuItem Header="随机播放"
+                                              Command="{Binding Player.SetPlayModeCommand}"
+                                              CommandParameter="{x:Static models:PlayMode.Shuffle}">
+                                        <MenuItem.Icon>
+                                            <Svg Path="/Assets/shuffle-svgrepo-com.svg" Width="18" Height="18" />
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
                             <Panel>
+                                <!-- 列表循环 -->
+                                <Svg Path="/Assets/repeat-svgrepo-com.svg"
+                                     Width="18" Height="18"
+                                     IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=Normal}" />
+                                <!-- 单曲循环 -->
+                                <Svg Path="/Assets/repeat-one.svg"
+                                     Width="18" Height="18"
+                                     IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=RepeatOne}" />
+                                <!-- 随机播放 -->
                                 <Svg Path="/Assets/shuffle-svgrepo-com.svg"
                                      Width="18" Height="18"
-                                     IsVisible="{Binding Player.IsShuffleMode}" />
-                                <Svg Path="/Assets/shuffle-svgrepo-com.svg"
-                                     Width="18" Height="18"
-                                     Opacity="0.35"
-                                     IsVisible="{Binding !Player.IsShuffleMode}" />
+                                     IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=Shuffle}" />
                             </Panel>
                         </Button>
                     </StackPanel>

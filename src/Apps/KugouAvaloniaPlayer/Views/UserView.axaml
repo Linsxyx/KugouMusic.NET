@@ -614,6 +614,26 @@
 
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                         <StackPanel>
+                                            <TextBlock Text="写真背景透明度" FontWeight="DemiBold" />
+                                            <TextBlock Text="调整播放页面模糊背景的透明度"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding NowPlayingBackgroundOpacityDisplay}"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+
+                                    <Slider Minimum="0"
+                                            Maximum="1"
+                                            Value="{Binding NowPlayingBackgroundOpacity, Mode=TwoWay}"
+                                            TickFrequency="0.05"
+                                            Margin="0,0,0,4" Classes="Player" />
+
+                                    <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
                                             <TextBlock Text="歌词大小" FontWeight="DemiBold" />
                                             <TextBlock Text="调整播放页面歌词大小"
                                                        FontSize="12"

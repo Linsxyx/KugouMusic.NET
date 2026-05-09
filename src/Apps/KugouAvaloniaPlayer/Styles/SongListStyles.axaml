@@ -53,6 +53,10 @@
         <Setter Property="RenderTransform" Value="scale(1.01)" />
     </Style>
 
+    <Style Selector="Border.SongListItemShell:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.98)" />
+    </Style>
+
     <Style Selector="Border.SongListHoverOverlay">
         <Setter Property="Opacity" Value="0" />
         <Setter Property="Transitions">
