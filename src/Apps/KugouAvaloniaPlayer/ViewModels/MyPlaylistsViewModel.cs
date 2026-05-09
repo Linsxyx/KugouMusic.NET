@@ -154,26 +154,26 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             return;
 
         const int playlistPageSize = 100;
-        var allPlaylists = new List<UserPlaylistItem>();
+        var onlinePlaylists = new List<UserPlaylistItem>();
 
         var firstPage = await _userClient.GetPlaylistsAsync(page: 1, pageSize: playlistPageSize);
         if (firstPage?.Status == 1 && firstPage.Playlists.Count > 0)
         {
-            allPlaylists.AddRange(firstPage.Playlists);
+            onlinePlaylists.AddRange(firstPage.Playlists);
             var totalPages = (int)Math.Ceiling(firstPage.ListCount / (double)playlistPageSize);
             for (int page = 2; page <= totalPages; page++)
             {
-                var nextPage = await _userClient.GetPlaylistsAsync(page, playlistPageSize);
-                if (nextPage?.Playlists.Count > 0)
-                    allPlaylists.AddRange(nextPage.Playlists);
+                var pageResult = await _userClient.GetPlaylistsAsync(page, playlistPageSize);
+                if (pageResult?.Playlists.Count > 0)
+                    onlinePlaylists.AddRange(pageResult.Playlists);
             }
-            allPlaylists.Sort((a, b) => b.CreateTime.CompareTo(a.CreateTime));
+            onlinePlaylists.Sort((a, b) => b.CreateTime.CompareTo(a.CreateTime));
         }
 
-        if (allPlaylists.Count > 0)
+        if (onlinePlaylists.Count > 0)
         {
             var onlineItems = new List<PlaylistItem>();
-            foreach (var item in allPlaylists)
+            foreach (var item in onlinePlaylists)
                 if (!string.IsNullOrEmpty(item.ListCreateId) || item.IsCollectedAlbum)
                     onlineItems.Add(new PlaylistItem
                     {
