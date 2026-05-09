@@ -153,11 +153,27 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         if (!_userClient.IsLoggedIn())
             return;
 
-        var onlinePlaylists = await _userClient.GetPlaylistsAsync();
-        if (onlinePlaylists is not null && onlinePlaylists.Status == 1)
+        const int playlistPageSize = 100;
+        var allPlaylists = new List<UserPlaylistItem>();
+
+        var firstPage = await _userClient.GetPlaylistsAsync(page: 1, pageSize: playlistPageSize);
+        if (firstPage?.Status == 1 && firstPage.Playlists.Count > 0)
+        {
+            allPlaylists.AddRange(firstPage.Playlists);
+            var totalPages = (int)Math.Ceiling(firstPage.ListCount / (double)playlistPageSize);
+            for (int page = 2; page <= totalPages; page++)
+            {
+                var nextPage = await _userClient.GetPlaylistsAsync(page, playlistPageSize);
+                if (nextPage?.Playlists.Count > 0)
+                    allPlaylists.AddRange(nextPage.Playlists);
+            }
+            allPlaylists.Sort((a, b) => b.CreateTime.CompareTo(a.CreateTime));
+        }
+
+        if (allPlaylists.Count > 0)
         {
             var onlineItems = new List<PlaylistItem>();
-            foreach (var item in onlinePlaylists.Playlists)
+            foreach (var item in allPlaylists)
                 if (!string.IsNullOrEmpty(item.ListCreateId) || item.IsCollectedAlbum)
                     onlineItems.Add(new PlaylistItem
                     {
@@ -177,7 +193,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         }
         else
         {
-            _logger.LogError($"加载失败,err_code{onlinePlaylists?.ErrorCode}");
+            _logger.LogError($"加载失败,err_code{firstPage?.ErrorCode}");
             if (_favoritePlaylistService.TryGetLikePlaylistCache(out var cachedLike))
             {
                 Items.Add(cachedLike.Playlist);
