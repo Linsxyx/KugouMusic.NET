@@ -2,6 +2,13 @@ using System.Collections.Generic;
 
 namespace KugouAvaloniaPlayer.Models;
 
+public enum PlayMode
+{
+    Normal,
+    RepeatOne,
+    Shuffle
+}
+
 public enum CloseBehavior
 {
     Exit,
@@ -138,6 +145,8 @@ public class AppSettings
 
     public NowPlayingLyricDisplayMode PlayPageLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
+
+    public double NowPlayingBackgroundOpacity { get; set; } = 0.5;
 
     public GlobalShortcutSettings GlobalShortcuts { get; set; } = new();
 }

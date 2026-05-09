@@ -42,6 +42,8 @@ public record AppBackgroundSettingsChangedMessage(
     string? CustomImagePath,
     double CustomImageOpacity);
 
+public record NowPlayingBackgroundOpacityChangedMessage(double Opacity);
+
 public enum LyricSettingsScope
 {
     Desktop,

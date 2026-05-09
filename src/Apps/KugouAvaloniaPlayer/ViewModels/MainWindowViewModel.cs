@@ -67,6 +67,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsMiniPlayerOpaque { get; set; } = true;
 
+    [ObservableProperty]
+    public partial double NowPlayingBackgroundOpacity { get; set; } = 0.5;
+
     private bool _isUpdatingActivePageFromNavigation;
 
     [ObservableProperty]
@@ -177,6 +180,7 @@ public partial class MainWindowViewModel : ObservableObject
             SettingsManager.Settings.PlayPageLyricAlignment,
             SettingsManager.Settings.PlayPageLyricFontSize);
         NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
+        NowPlayingBackgroundOpacity = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundOpacity, 0.0, 1.0);
 
         PlaylistsViewModel.Items.CollectionChanged += OnPlaylistItemsChanged;
         RefreshSidebarPlaylists();
@@ -224,6 +228,10 @@ public partial class MainWindowViewModel : ObservableObject
                 message.UseCustomImage,
                 message.CustomImagePath,
                 message.CustomImageOpacity);
+        });
+        WeakReferenceMessenger.Default.Register<NowPlayingBackgroundOpacityChangedMessage>(this, (_, message) =>
+        {
+            NowPlayingBackgroundOpacity = message.Opacity;
         });
 
         Task.Run(async () =>

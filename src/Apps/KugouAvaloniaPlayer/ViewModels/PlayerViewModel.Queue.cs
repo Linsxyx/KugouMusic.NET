@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
+using KugouAvaloniaPlayer.Models;
 using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -112,11 +113,42 @@ public partial class PlayerViewModel
         OnPlaybackModeChanged();
     }
 
+    public PlayMode CurrentPlayMode =>
+        IsRepeatOneMode ? PlayMode.RepeatOne :
+        IsShuffleMode ? PlayMode.Shuffle :
+        PlayMode.Normal;
+
+    [RelayCommand]
+    private void SetPlayMode(PlayMode mode)
+    {
+        if (mode == CurrentPlayMode)
+            return;
+
+        switch (mode)
+        {
+            case PlayMode.RepeatOne:
+                _queueManager.ToggleRepeatOne(CurrentPlayingSong);
+                break;
+            case PlayMode.Shuffle:
+                _queueManager.ToggleShuffle(CurrentPlayingSong);
+                break;
+            case PlayMode.Normal:
+                if (IsRepeatOneMode)
+                    _queueManager.ToggleRepeatOne(CurrentPlayingSong);
+                if (IsShuffleMode)
+                    _queueManager.ToggleShuffle(CurrentPlayingSong);
+                break;
+        }
+
+        OnPlaybackModeChanged();
+    }
+
     private void OnPlaybackModeChanged()
     {
         ResetTransitionPipeline(true);
         OnPropertyChanged(nameof(IsRepeatOneMode));
         OnPropertyChanged(nameof(IsShuffleMode));
+        OnPropertyChanged(nameof(CurrentPlayMode));
     }
 
     [RelayCommand]
