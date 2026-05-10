@@ -96,6 +96,21 @@
             </Setter>
         </Style>
 
+        <Style Selector="Border.PortraitModeButton">
+            <Setter Property="Background" Value="#30FFFFFF" />
+        </Style>
+        <Style Selector="Border.PortraitModeButton.active">
+            <Setter Property="Background" Value="#5AFFFFFF" />
+        </Style>
+
+        <Style Selector="Image.NowPlayingBackgroundLayer">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.7" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+
         <Style Selector="controls1|MeasuredLyricScrollView#LyricScrollView">
             <Setter Property="Transitions">
                 <Transitions>
@@ -124,11 +139,24 @@
                                  Stretch="UniformToFill"
                                  RenderTransformOrigin="0.5,0.5"
                                  RenderTransform="scale(1.12)"
-                                 Opacity="{Binding NowPlayingBackgroundOpacity}">
+                                 Opacity="{Binding NowPlayingCoverBackgroundOpacity}"
+                                 Classes="NowPlayingBackgroundLayer">
                 <Image.Effect>
                     <BlurEffect Radius="40" />
                 </Image.Effect>
             </Image>
+            <Image asyncImageLoader:ImageLoader.Source="{Binding NowPlayingPortraitBackgroundA}"
+                   Stretch="UniformToFill"
+                   RenderTransformOrigin="0.5,0.5"
+                   RenderTransform="scale(1.04)"
+                   Opacity="{Binding NowPlayingPortraitLayerAOpacity}"
+                   Classes="NowPlayingBackgroundLayer" />
+            <Image asyncImageLoader:ImageLoader.Source="{Binding NowPlayingPortraitBackgroundB}"
+                   Stretch="UniformToFill"
+                   RenderTransformOrigin="0.5,0.5"
+                   RenderTransform="scale(1.04)"
+                   Opacity="{Binding NowPlayingPortraitLayerBOpacity}"
+                   Classes="NowPlayingBackgroundLayer" />
 
             <Grid IsHitTestVisible="False"
                   IsVisible="{Binding Player.IsNowPlayingVisualizerEnabled}"
@@ -190,7 +218,8 @@
 
                 <Button Cursor="Hand"
                         Command="{Binding ToggleNowPlayingLyricDisplayModeCommand}"
-                        Classes="Basic">
+                        Classes="Basic"
+                        ToolTip.Tip="歌词显示模式">
                     <Border Background="#30FFFFFF" CornerRadius="20" Padding="12,8">
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <Svg Path="/Assets/translation-svgrepo-com.svg"
@@ -199,6 +228,22 @@
                                  Height="25"
                                  Opacity="0.9" />
                         </StackPanel>
+                    </Border>
+                </Button>
+
+                <Button Cursor="Hand"
+                        Command="{Binding ToggleNowPlayingPortraitModeCommand}"
+                        Classes="Basic"
+                        ToolTip.Tip="写真模式">
+                    <Border Classes="PortraitModeButton"
+                            Classes.active="{Binding IsNowPlayingPortraitModeEnabled}"
+                            CornerRadius="20"
+                            Padding="12,8">
+                        <Svg Path="/Assets/portrait-mode.svg"
+                             Css="path { stroke: white; fill: none; } circle { stroke: white; fill: none; }"
+                             Width="25"
+                             Height="25"
+                             Opacity="0.9" />
                     </Border>
                 </Button>
             </StackPanel>
@@ -210,6 +255,7 @@
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
                             Spacing="40"
+                            IsVisible="{Binding IsNowPlayingStandardLayoutVisible}"
                             Opacity="{Binding Player.NowPlayingArtworkOpacity}">
                     <StackPanel.RenderTransform>
                         <TranslateTransform Y="{Binding Player.NowPlayingArtworkTranslateY}">
@@ -328,13 +374,14 @@
                 </StackPanel>
 
                 <controls1:MeasuredLyricScrollView x:Name="LyricScrollView"
-                                                   Grid.Column="1"
+                                                   Grid.Column="{Binding NowPlayingLyricsGridColumn}"
+                                                   Grid.ColumnSpan="{Binding NowPlayingLyricsGridColumnSpan}"
                                                    ItemsSource="{Binding Player.LyricLines}"
                                                    ActiveItem="{Binding Player.CurrentLyricLine}"
                                                    ActiveAnchorRatio="0.34"
                                                    ScrollDuration="0:0:0.37"
                                                    LineSpacing="22"
-                                                   Margin="60,0,0,0"
+                                                   Margin="{Binding NowPlayingLyricsMargin}"
                                                    Opacity="{Binding Player.NowPlayingLyricsOpacity}">
                     <controls1:MeasuredLyricScrollView.RenderTransform>
                         <TranslateTransform Y="{Binding Player.NowPlayingLyricsTranslateY}">
@@ -532,7 +579,9 @@
                     </controls1:MeasuredLyricScrollView.ItemTemplate>
                 </controls1:MeasuredLyricScrollView>
 
-                <TextBlock Grid.Column="1" Text="暂无歌词"
+                <TextBlock Grid.Column="{Binding NowPlayingLyricsGridColumn}"
+                           Grid.ColumnSpan="{Binding NowPlayingLyricsGridColumnSpan}"
+                           Text="暂无歌词"
                            IsVisible="{Binding !Player.LyricLines.Count}"
                            Foreground="White" Opacity="0.5" FontSize="24" FontWeight="Bold"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
