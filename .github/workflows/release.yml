@@ -88,6 +88,7 @@ jobs:
             -o ./releases
 
           find ./releases -type f -name '*.nupkg' ! -name "KugouAvaloniaPlayer-${VERSION}-*.nupkg" -delete
+          find ./releases -type f -iname '*-delta.nupkg' -delete
 
       - name: Create linux-arm64 archive (no auto-update)
         if: ${{ matrix.rid == 'linux-arm64' }}
@@ -296,6 +297,7 @@ jobs:
             -o ./releases
 
           find ./releases -type f -name '*.nupkg' ! -name "${APP_NAME}-${VERSION}-*.nupkg" -delete
+          find ./releases -type f -iname '*-delta.nupkg' -delete
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -345,6 +347,8 @@ jobs:
           cp ./all_artifacts/releases-windows-x64/releases.*.json ./release_files/ 2>/dev/null || true
           cp ./all_artifacts/releases-linux-x64/releases.*.json ./release_files/ 2>/dev/null || true
           cp ./all_artifacts/releases-macos-arm64/releases.*.json ./release_files/ 2>/dev/null || true
+
+          find ./release_files -type f -iname '*-delta.nupkg' -delete
 
           ls -lah ./release_files
 
