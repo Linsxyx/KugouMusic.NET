@@ -270,9 +270,9 @@
                         <ToggleButton Name="OnlinePlaylistsHeader"
                                       Classes="SidebarSectionHeader"
                                       Content="我的歌单"
-                                      IsChecked="True" />
+                                      IsChecked="{Binding IsOnlinePlaylistsExpanded, Mode=TwoWay}" />
                         <StackPanel Spacing="8"
-                                    IsVisible="{Binding #OnlinePlaylistsHeader.IsChecked}">
+                                    IsVisible="{Binding IsOnlinePlaylistsExpanded}">
                                     <ListBox Classes="SidebarPlaylistList"
                                              MaxHeight="320"
                                              SelectionMode="Single"
@@ -318,8 +318,9 @@
                         
                         <ToggleButton Name="AlbumPlaylistsHeader"
                                       Classes="SidebarSectionHeader"
-                                      Content="收藏的专辑" />
-                        <StackPanel IsVisible="{Binding #AlbumPlaylistsHeader.IsChecked}">
+                                      Content="收藏的专辑"
+                                      IsChecked="{Binding IsAlbumPlaylistsExpanded, Mode=TwoWay}" />
+                        <StackPanel IsVisible="{Binding IsAlbumPlaylistsExpanded}">
                                 <ListBox Classes="SidebarPlaylistList"
                                          MaxHeight="320"
                                          SelectionMode="Single"
@@ -365,9 +366,10 @@
                         
                         <ToggleButton Name="LocalPlaylistsHeader"
                                       Classes="SidebarSectionHeader"
-                                      Content="本地歌单" />
+                                      Content="本地歌单"
+                                      IsChecked="{Binding IsLocalPlaylistsExpanded, Mode=TwoWay}" />
                         <StackPanel Spacing="8"
-                                    IsVisible="{Binding #LocalPlaylistsHeader.IsChecked}">
+                                    IsVisible="{Binding IsLocalPlaylistsExpanded}">
                                     <ListBox Classes="SidebarPlaylistList"
                                              MaxHeight="320"
                                              SelectionMode="Single"

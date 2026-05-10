@@ -167,7 +167,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         if (onlinePlaylists is not null && onlinePlaylists.Status == 1)
         {
             var onlineItems = new List<PlaylistItem>();
-            foreach (var item in onlinePlaylists.Playlists)
+            foreach (var item in OrderUserPlaylistsForDisplay(onlinePlaylists.Playlists))
                 if (!string.IsNullOrEmpty(item.ListCreateId) || item.IsCollectedAlbum)
                     onlineItems.Add(new PlaylistItem
                     {
@@ -194,6 +194,14 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                 _logger.LogInformation("歌单列表远端失败，已从本地缓存兜底显示“我喜欢”。 source={Source}", cachedLike.Source);
             }
         }
+    }
+
+    private static IEnumerable<UserPlaylistItem> OrderUserPlaylistsForDisplay(List<UserPlaylistItem> playlists)
+    {
+        if (playlists.Count <= 2)
+            return playlists;
+
+        return playlists.Take(2).Concat(playlists.Skip(2).Reverse());
     }
 
     private async Task<UserPlaylistResponse?> LoadAllOnlinePlaylistsAsync()

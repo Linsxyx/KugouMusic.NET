@@ -65,6 +65,15 @@ public partial class MainWindowViewModel : ObservableObject
     public partial bool IsQueuePaneOpen { get; set; }
 
     [ObservableProperty]
+    public partial bool IsOnlinePlaylistsExpanded { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsAlbumPlaylistsExpanded { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLocalPlaylistsExpanded { get; set; }
+
+    [ObservableProperty]
     public partial bool IsMiniPlayerOpaque { get; set; } = true;
 
     [ObservableProperty]
@@ -324,6 +333,33 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         Dispatcher.UIThread.Post(() => IsDesktopLyricEnabled = isOpen);
+    }
+
+    partial void OnIsOnlinePlaylistsExpandedChanged(bool value)
+    {
+        if (!value)
+            return;
+
+        IsAlbumPlaylistsExpanded = false;
+        IsLocalPlaylistsExpanded = false;
+    }
+
+    partial void OnIsAlbumPlaylistsExpandedChanged(bool value)
+    {
+        if (!value)
+            return;
+
+        IsOnlinePlaylistsExpanded = false;
+        IsLocalPlaylistsExpanded = false;
+    }
+
+    partial void OnIsLocalPlaylistsExpandedChanged(bool value)
+    {
+        if (!value)
+            return;
+
+        IsOnlinePlaylistsExpanded = false;
+        IsAlbumPlaylistsExpanded = false;
     }
 
     partial void OnActivePageChanged(PageViewModelBase value)
