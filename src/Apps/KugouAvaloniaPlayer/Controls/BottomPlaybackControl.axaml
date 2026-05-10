@@ -35,7 +35,7 @@
                         Margin="20,0,20,16"
                         Padding="16,0"
                         CornerRadius="18"
-                        Classes.hidden="{Binding IsNowPlayingOpen}"
+                        Classes.hidden="{Binding NowPlaying.IsOpen}"
                         Height="72"
                         IsOpaque="{Binding IsMiniPlayerOpaque, FallbackValue=True}">
 
@@ -47,7 +47,7 @@
                             Spacing="10"
                             HorizontalAlignment="Left"
                             VerticalAlignment="Center">
-                    <Button Command="{Binding OpenNowPlayingCommand}"
+                    <Button Command="{Binding NowPlaying.OpenCommand}"
                             Classes="Basic"
                             Padding="0"
                             Cursor="Hand"

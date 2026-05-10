@@ -1,22 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
-using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Models;
@@ -29,12 +24,6 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private static readonly TimeSpan NowPlayingPortraitCycleInterval = TimeSpan.FromSeconds(8);
-    private static readonly TimeSpan NowPlayingPortraitFadeDuration = TimeSpan.FromMilliseconds(700);
-    private static readonly TimeSpan NowPlayingPortraitPrepareDelay = TimeSpan.FromMilliseconds(80);
-    private static readonly IBrush DefaultLyricBrush = new SolidColorBrush(Colors.White);
-    private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
-    private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
     private readonly LoginClient _authClient;
     private readonly IAppUpdateService _appUpdateService;
     private readonly IDesktopLyricWindowService _desktopLyricWindowService;
@@ -44,34 +33,17 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly INavigationService _navigationService;
     private readonly SearchViewModel _searchViewModel;
     private readonly KgSessionManager _sessionManager;
-    private readonly SongClient _songClient;
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
-    private CancellationTokenSource? _nowPlayingPortraitCancellation;
-    private IReadOnlyList<string> _nowPlayingPortraitUrls = [];
-    private bool _isNowPlayingPortraitLayerAActive = true;
-    private int _nowPlayingPortraitIndex;
 
     [ObservableProperty]
     public partial PageViewModelBase ActivePage { get; set; }
-
-    [ObservableProperty]
-    public partial LyricLineViewModel? CurrentLyricLine { get; set; }
 
     [ObservableProperty]
     public partial bool IsDesktopLyricEnabled { get; set; }
 
     [ObservableProperty]
     public partial bool IsLoggedIn { get; set; }
-
-    [ObservableProperty]
-    public partial bool EnableLegacyWordLyricEffect { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsNowPlayingOpen { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsNowPlayingVolumeVisible { get; set; }
 
     [ObservableProperty]
     public partial bool IsQueuePaneOpen { get; set; }
@@ -88,59 +60,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsMiniPlayerOpaque { get; set; } = true;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NowPlayingCoverBackgroundOpacity))]
-    public partial double NowPlayingBackgroundOpacity { get; set; } = 0.5;
-
     private bool _isUpdatingActivePageFromNavigation;
-
-    [ObservableProperty]
-    public partial bool IsNowPlayingPortraitModeEnabled { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsNowPlayingPortraitLoading { get; set; }
-
-    [ObservableProperty]
-    public partial string? NowPlayingPortraitBackgroundA { get; set; }
-
-    [ObservableProperty]
-    public partial string? NowPlayingPortraitBackgroundB { get; set; }
-
-    [ObservableProperty]
-    public partial double NowPlayingPortraitLayerAOpacity { get; set; }
-
-    [ObservableProperty]
-    public partial double NowPlayingPortraitLayerBOpacity { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNowPlayingPrimaryLyricVisible))]
-    [NotifyPropertyChangedFor(nameof(IsNowPlayingTranslationVisible))]
-    [NotifyPropertyChangedFor(nameof(IsNowPlayingRomanizationVisible))]
-    public partial NowPlayingLyricDisplayMode NowPlayingLyricDisplayMode { get; set; } = NowPlayingLyricDisplayMode.LyricsWithTranslation;
-
-    [ObservableProperty] 
-    public partial FontFamily NowPlayingLyricFontFamily { get; set; } = FontFamily.Default;
-
-    [ObservableProperty]
-    public partial double NowPlayingLyricFontSize { get; set; } = 26;
-
-    [ObservableProperty]
-    public partial IBrush NowPlayingLyricForeground { get; set; } = DefaultLyricBrush;
-
-    [ObservableProperty]
-    public partial HorizontalAlignment NowPlayingLyricHorizontalAlignment { get; set; } = HorizontalAlignment.Center;
-
-    [ObservableProperty]
-    public partial TextAlignment NowPlayingLyricTextAlignment { get; set; } = TextAlignment.Center;
-
-    [ObservableProperty]
-    public partial double NowPlayingTranslationFontSize { get; set; } = 16;
-
-    [ObservableProperty]
-    public partial IBrush NowPlayingTranslationLineForeground { get; set; } = DefaultTranslationLineBrush;
-
-    [ObservableProperty]
-    public partial IBrush NowPlayingTranslationWordForeground { get; set; } = DefaultTranslationWordBrush;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
     public partial string SearchKeyword { get; set; } = "";
@@ -163,7 +83,7 @@ public partial class MainWindowViewModel : ObservableObject
         IDesktopLyricWindowService desktopLyricWindowService,
         ILoginDialogService loginDialogService,
         INavigationService navigationService,
-        SongClient songClient,
+        NowPlayingViewModel nowPlaying,
         LoginViewModel loginViewModel,
         SearchViewModel searchViewModel,
         UserViewModel userViewModel,
@@ -184,7 +104,6 @@ public partial class MainWindowViewModel : ObservableObject
         _desktopLyricWindowService = desktopLyricWindowService;
         _loginDialogService = loginDialogService;
         _navigationService = navigationService;
-        _songClient = songClient;
 
         LoginViewModel = loginViewModel;
         _searchViewModel = searchViewModel;
@@ -196,7 +115,7 @@ public partial class MainWindowViewModel : ObservableObject
         _desktopLyricWindowService.IsOpenChanged += OnDesktopLyricWindowStateChanged;
 
         Player = player;
-        Player.PropertyChanged += OnPlayerPropertyChanged;
+        NowPlaying = nowPlaying;
         ToastManager = toastManager;
 
         Pages.Add(_dailyRecommendViewModel);
@@ -208,22 +127,10 @@ public partial class MainWindowViewModel : ObservableObject
         _navigationService.ReplaceRoot(_dailyRecommendViewModel);
         ActivePage = _dailyRecommendViewModel;
         IsDesktopLyricEnabled = _desktopLyricWindowService.IsOpen;
-        EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
         ApplyCustomBackgroundImage(
             SettingsManager.Settings.UseCustomBackgroundImage,
             SettingsManager.Settings.CustomBackgroundImagePath,
             SettingsManager.Settings.CustomBackgroundImageOpacity);
-        ApplyNowPlayingLyricStyleSettings(
-            SettingsManager.Settings.PlayPageLyricUseCustomMainColor,
-            SettingsManager.Settings.PlayPageLyricCustomMainColor,
-            SettingsManager.Settings.PlayPageLyricUseCustomTranslationColor,
-            SettingsManager.Settings.PlayPageLyricCustomTranslationColor,
-            SettingsManager.Settings.PlayPageLyricUseCustomFont,
-            SettingsManager.Settings.PlayPageLyricCustomFontFamily,
-            SettingsManager.Settings.PlayPageLyricAlignment,
-            SettingsManager.Settings.PlayPageLyricFontSize);
-        NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
-        NowPlayingBackgroundOpacity = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundOpacity, 0.0, 1.0);
 
         PlaylistsViewModel.Items.CollectionChanged += OnPlaylistItemsChanged;
         RefreshSidebarPlaylists();
@@ -249,32 +156,12 @@ public partial class MainWindowViewModel : ObservableObject
             (_, m) => { NavigateToPage(m.TargetPage); });
 
         WeakReferenceMessenger.Default.Register<RequestNavigateBackMessage>(this, (_, _) => { NavigateBack(); });
-        WeakReferenceMessenger.Default.Register<LyricStyleSettingsChangedMessage>(this, (_, message) =>
-        {
-            if (message.Scope != LyricSettingsScope.PlayPage)
-                return;
-
-            ApplyNowPlayingLyricStyleSettings(
-                message.UseCustomMainColor,
-                message.MainColorHex,
-                message.UseCustomTranslationColor,
-                message.TranslationColorHex,
-                message.UseCustomFont,
-                message.FontFamilyName,
-                message.Alignment,
-                message.FontSize);
-            EnableLegacyWordLyricEffect = message.EnableLegacyWordLyricEffect;
-        });
         WeakReferenceMessenger.Default.Register<AppBackgroundSettingsChangedMessage>(this, (_, message) =>
         {
             ApplyCustomBackgroundImage(
                 message.UseCustomImage,
                 message.CustomImagePath,
                 message.CustomImageOpacity);
-        });
-        WeakReferenceMessenger.Default.Register<NowPlayingBackgroundOpacityChangedMessage>(this, (_, message) =>
-        {
-            NowPlayingBackgroundOpacity = message.Opacity;
         });
 
         Task.Run(async () =>
@@ -339,6 +226,7 @@ public partial class MainWindowViewModel : ObservableObject
     public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
     public PlayerViewModel Player { get; }
+    public NowPlayingViewModel NowPlaying { get; }
     public ISukiToastManager ToastManager { get; }
     public ISukiDialogManager DialogManager { get; }
 
@@ -350,38 +238,6 @@ public partial class MainWindowViewModel : ObservableObject
     public AvaloniaList<PlaylistItem> SidebarOnlinePlaylists { get; } = new();
     public AvaloniaList<PlaylistItem> SidebarLocalPlaylists { get; } = new();
     public AvaloniaList<PlaylistItem> SidebarAlbumPlaylists { get; } = new();
-    public bool IsNowPlayingPrimaryLyricVisible => true;
-
-    public bool IsNowPlayingTranslationVisible =>
-        NowPlayingLyricDisplayMode == NowPlayingLyricDisplayMode.LyricsWithTranslation;
-
-    public bool IsNowPlayingRomanizationVisible =>
-        NowPlayingLyricDisplayMode == NowPlayingLyricDisplayMode.LyricsWithRomanization;
-
-    public bool HasNowPlayingPortraitBackground =>
-        IsNowPlayingPortraitModeEnabled &&
-        (!string.IsNullOrWhiteSpace(NowPlayingPortraitBackgroundA) ||
-         !string.IsNullOrWhiteSpace(NowPlayingPortraitBackgroundB));
-
-    public bool IsNowPlayingStandardLayoutVisible => !HasNowPlayingPortraitBackground;
-
-    public double NowPlayingCoverBackgroundOpacity => HasNowPlayingPortraitBackground ? 0 : NowPlayingBackgroundOpacity;
-
-    public int NowPlayingLyricsGridColumn => HasNowPlayingPortraitBackground ? 0 : 1;
-
-    public int NowPlayingLyricsGridColumnSpan => HasNowPlayingPortraitBackground ? 2 : 1;
-
-    public Thickness NowPlayingLyricsMargin => HasNowPlayingPortraitBackground
-        ? new Thickness(96, 0)
-        : new Thickness(60, 0, 0, 0);
-
-    private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(PlayerViewModel.DisplayedPlayingSong) || !IsNowPlayingPortraitModeEnabled)
-            return;
-
-        _ = RefreshNowPlayingPortraitsAsync();
-    }
 
     private void OnDesktopLyricWindowStateChanged(bool isOpen)
     {
@@ -698,293 +554,6 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenNowPlaying()
-    {
-        IsNowPlayingOpen = true;
-    }
-
-    [RelayCommand]
-    private void CloseNowPlaying()
-    {
-        IsNowPlayingOpen = false;
-        IsNowPlayingVolumeVisible = false;
-        IsNowPlayingPortraitModeEnabled = false;
-    }
-
-    [RelayCommand]
-    private void ToggleNowPlayingVolume()
-    {
-        IsNowPlayingVolumeVisible = !IsNowPlayingVolumeVisible;
-    }
-
-    [RelayCommand]
-    private void ToggleNowPlayingLyricDisplayMode()
-    {
-        NowPlayingLyricDisplayMode = NowPlayingLyricDisplayMode switch
-        {
-            NowPlayingLyricDisplayMode.LyricsWithTranslation => NowPlayingLyricDisplayMode.LyricsOnly,
-            NowPlayingLyricDisplayMode.LyricsOnly => NowPlayingLyricDisplayMode.LyricsWithRomanization,
-            _ => NowPlayingLyricDisplayMode.LyricsWithTranslation
-        };
-    }
-
-    [RelayCommand]
-    private void ToggleNowPlayingPortraitMode()
-    {
-        IsNowPlayingPortraitModeEnabled = !IsNowPlayingPortraitModeEnabled;
-    }
-
-    partial void OnIsNowPlayingPortraitModeEnabledChanged(bool value)
-    {
-        if (!value)
-        {
-            ClearNowPlayingPortraitState();
-            return;
-        }
-
-        IsNowPlayingVolumeVisible = false;
-        _ = RefreshNowPlayingPortraitsAsync();
-        NotifyNowPlayingPortraitLayoutProperties();
-    }
-
-    partial void OnNowPlayingPortraitBackgroundAChanged(string? value)
-    {
-        NotifyNowPlayingPortraitLayoutProperties();
-    }
-
-    partial void OnNowPlayingPortraitBackgroundBChanged(string? value)
-    {
-        NotifyNowPlayingPortraitLayoutProperties();
-    }
-
-    private async Task RefreshNowPlayingPortraitsAsync()
-    {
-        CancelNowPlayingPortraitWork();
-        ClearNowPlayingPortraitLayers();
-
-        var song = Player.DisplayedPlayingSong;
-        if (!IsNowPlayingPortraitModeEnabled || string.IsNullOrWhiteSpace(song?.Hash))
-            return;
-
-        var cancellation = new CancellationTokenSource();
-        _nowPlayingPortraitCancellation = cancellation;
-        var cancellationToken = cancellation.Token;
-        IsNowPlayingPortraitLoading = true;
-
-        try
-        {
-            var response = await _songClient.GetAudioImagesAsync(song.Hash, count: 5);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var urls = ExtractNowPlayingPortraitUrls(response);
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (cancellationToken.IsCancellationRequested || !IsNowPlayingPortraitModeEnabled)
-                    return;
-
-                ApplyNowPlayingPortraitUrls(urls);
-                IsNowPlayingPortraitLoading = false;
-            });
-
-            if (urls.Count > 1)
-                _ = RunNowPlayingPortraitCarouselAsync(urls, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "加载 NowPlaying 写真失败");
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (!cancellationToken.IsCancellationRequested)
-                    ClearNowPlayingPortraitState();
-            });
-        }
-        finally
-        {
-            if (!cancellationToken.IsCancellationRequested)
-                IsNowPlayingPortraitLoading = false;
-        }
-    }
-
-    private async Task RunNowPlayingPortraitCarouselAsync(IReadOnlyList<string> urls, CancellationToken cancellationToken)
-    {
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested && IsNowPlayingPortraitModeEnabled)
-            {
-                await Task.Delay(NowPlayingPortraitCycleInterval, cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    if (cancellationToken.IsCancellationRequested ||
-                        !IsNowPlayingPortraitModeEnabled ||
-                        !ReferenceEquals(urls, _nowPlayingPortraitUrls))
-                        return;
-
-                    _nowPlayingPortraitIndex = (_nowPlayingPortraitIndex + 1) % urls.Count;
-                });
-                cancellationToken.ThrowIfCancellationRequested();
-
-                await FadeToNextNowPlayingPortraitAsync(urls[_nowPlayingPortraitIndex], urls, cancellationToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
-
-    private void ApplyNowPlayingPortraitUrls(IReadOnlyList<string> urls)
-    {
-        _nowPlayingPortraitUrls = urls;
-        _nowPlayingPortraitIndex = 0;
-        _isNowPlayingPortraitLayerAActive = true;
-
-        if (urls.Count == 0)
-        {
-            ClearNowPlayingPortraitLayers();
-            return;
-        }
-
-        NowPlayingPortraitBackgroundA = urls[0];
-        NowPlayingPortraitBackgroundB = null;
-        NowPlayingPortraitLayerAOpacity = 1;
-        NowPlayingPortraitLayerBOpacity = 0;
-    }
-
-    private async Task FadeToNextNowPlayingPortraitAsync(
-        string url,
-        IReadOnlyList<string> urls,
-        CancellationToken cancellationToken)
-    {
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            if (!CanApplyNowPlayingPortraitTransition(urls, cancellationToken))
-                return;
-
-            PrepareNextNowPlayingPortraitLayer(url);
-        }, DispatcherPriority.Render);
-
-        await Task.Delay(NowPlayingPortraitPrepareDelay, cancellationToken);
-
-        await Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            if (!CanApplyNowPlayingPortraitTransition(urls, cancellationToken))
-                return;
-
-            CommitNextNowPlayingPortraitLayer();
-        }, DispatcherPriority.Render);
-
-        await Task.Delay(NowPlayingPortraitFadeDuration, cancellationToken);
-    }
-
-    private bool CanApplyNowPlayingPortraitTransition(IReadOnlyList<string> urls, CancellationToken cancellationToken)
-    {
-        return !cancellationToken.IsCancellationRequested &&
-               IsNowPlayingPortraitModeEnabled &&
-               ReferenceEquals(urls, _nowPlayingPortraitUrls);
-    }
-
-    private void PrepareNextNowPlayingPortraitLayer(string url)
-    {
-        if (_isNowPlayingPortraitLayerAActive)
-        {
-            NowPlayingPortraitBackgroundB = url;
-            NowPlayingPortraitLayerBOpacity = 0;
-        }
-        else
-        {
-            NowPlayingPortraitBackgroundA = url;
-            NowPlayingPortraitLayerAOpacity = 0;
-        }
-    }
-
-    private void CommitNextNowPlayingPortraitLayer()
-    {
-        if (_isNowPlayingPortraitLayerAActive)
-        {
-            NowPlayingPortraitLayerBOpacity = 1;
-            NowPlayingPortraitLayerAOpacity = 0;
-        }
-        else
-        {
-            NowPlayingPortraitLayerAOpacity = 1;
-            NowPlayingPortraitLayerBOpacity = 0;
-        }
-
-        _isNowPlayingPortraitLayerAActive = !_isNowPlayingPortraitLayerAActive;
-    }
-
-    private void ClearNowPlayingPortraitState()
-    {
-        CancelNowPlayingPortraitWork();
-        ClearNowPlayingPortraitLayers();
-        IsNowPlayingPortraitLoading = false;
-        NotifyNowPlayingPortraitLayoutProperties();
-    }
-
-    private void ClearNowPlayingPortraitLayers()
-    {
-        _nowPlayingPortraitUrls = [];
-        _nowPlayingPortraitIndex = 0;
-        _isNowPlayingPortraitLayerAActive = true;
-        NowPlayingPortraitBackgroundA = null;
-        NowPlayingPortraitBackgroundB = null;
-        NowPlayingPortraitLayerAOpacity = 0;
-        NowPlayingPortraitLayerBOpacity = 0;
-    }
-
-    private void CancelNowPlayingPortraitWork()
-    {
-        var cancellation = _nowPlayingPortraitCancellation;
-        if (cancellation == null)
-            return;
-
-        _nowPlayingPortraitCancellation = null;
-        cancellation.Cancel();
-        cancellation.Dispose();
-    }
-
-    private void NotifyNowPlayingPortraitLayoutProperties()
-    {
-        OnPropertyChanged(nameof(HasNowPlayingPortraitBackground));
-        OnPropertyChanged(nameof(IsNowPlayingStandardLayoutVisible));
-        OnPropertyChanged(nameof(NowPlayingCoverBackgroundOpacity));
-        OnPropertyChanged(nameof(NowPlayingLyricsGridColumn));
-        OnPropertyChanged(nameof(NowPlayingLyricsGridColumnSpan));
-        OnPropertyChanged(nameof(NowPlayingLyricsMargin));
-    }
-
-    private static IReadOnlyList<string> ExtractNowPlayingPortraitUrls(AudioImageResponse? response)
-    {
-        if (response == null)
-            return [];
-
-        var authors = response.Authors.ToList();
-        if (authors.Count == 0)
-            return [];
-
-        var urls = new List<string>();
-        foreach (var author in authors)
-        {
-            foreach (var pair in author.Images)
-                urls.AddRange(pair.Value.Select(x => NormalizeNowPlayingPortraitUrl(x.SizablePortrait)));
-        }
-
-        return urls
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string NormalizeNowPlayingPortraitUrl(string? url)
-    {
-        return string.IsNullOrWhiteSpace(url) ? string.Empty : url.Replace("{size}", "800");
-    }
-
-    [RelayCommand]
     private void CloseQueuePane()
     {
         IsQueuePaneOpen = false;
@@ -1011,95 +580,6 @@ public partial class MainWindowViewModel : ObservableObject
     public void ForceCloseDesktopLyric()
     {
         _desktopLyricWindowService.Close();
-    }
-
-    private void ApplyNowPlayingLyricStyleSettings(
-        bool useCustomMainColor,
-        string mainColorHex,
-        bool useCustomTranslationColor,
-        string translationColorHex,
-        bool useCustomFont,
-        string fontFamilyName,
-        LyricAlignmentOption alignment,
-        double fontSize)
-    {
-        ApplyNowPlayingFontSettings(useCustomFont, fontFamilyName);
-        ApplyNowPlayingAlignmentSettings(alignment);
-        ApplyNowPlayingFontSizeSettings(fontSize);
-
-        NowPlayingLyricForeground = useCustomMainColor
-            ? new SolidColorBrush(ParseColorOrDefault(mainColorHex, Colors.White))
-            : DefaultLyricBrush;
-
-        if (useCustomTranslationColor)
-        {
-            var color = new SolidColorBrush(ParseColorOrDefault(translationColorHex, Color.Parse("#CCFFFFFF")));
-            NowPlayingTranslationLineForeground = color;
-            NowPlayingTranslationWordForeground = color;
-            return;
-        }
-
-        NowPlayingTranslationLineForeground = DefaultTranslationLineBrush;
-        NowPlayingTranslationWordForeground = DefaultTranslationWordBrush;
-    }
-
-    private void ApplyNowPlayingFontSettings(bool useCustomFont, string fontFamilyName)
-    {
-        if (!useCustomFont || string.IsNullOrWhiteSpace(fontFamilyName))
-        {
-            NowPlayingLyricFontFamily = FontFamily.Default;
-            return;
-        }
-
-        NowPlayingLyricFontFamily = IsSystemFontInstalled(fontFamilyName)
-            ? new FontFamily(fontFamilyName)
-            : FontFamily.Default;
-    }
-
-    private void ApplyNowPlayingAlignmentSettings(LyricAlignmentOption alignment)
-    {
-        switch (alignment)
-        {
-            case LyricAlignmentOption.Left:
-                NowPlayingLyricHorizontalAlignment = HorizontalAlignment.Left;
-                NowPlayingLyricTextAlignment = TextAlignment.Left;
-                break;
-            case LyricAlignmentOption.Right:
-                NowPlayingLyricHorizontalAlignment = HorizontalAlignment.Right;
-                NowPlayingLyricTextAlignment = TextAlignment.Right;
-                break;
-            default:
-                NowPlayingLyricHorizontalAlignment = HorizontalAlignment.Center;
-                NowPlayingLyricTextAlignment = TextAlignment.Center;
-                break;
-        }
-    }
-
-    private void ApplyNowPlayingFontSizeSettings(double fontSize)
-    {
-        var clamped = Math.Clamp(fontSize, 18, 42);
-        NowPlayingLyricFontSize = clamped;
-        NowPlayingTranslationFontSize = Math.Max(14, Math.Round(clamped * 0.62, 1));
-    }
-
-    private static bool IsSystemFontInstalled(string fontFamilyName)
-    {
-        foreach (var systemFont in FontManager.Current.SystemFonts)
-            if (string.Equals(systemFont.Name, fontFamilyName, StringComparison.OrdinalIgnoreCase))
-                return true;
-
-        return false;
-    }
-
-    private static Color ParseColorOrDefault(string? colorText, Color fallback)
-    {
-        return Color.TryParse(colorText, out var parsed) ? parsed : fallback;
-    }
-
-    partial void OnNowPlayingLyricDisplayModeChanged(NowPlayingLyricDisplayMode value)
-    {
-        SettingsManager.Settings.PlayPageLyricDisplayMode = value;
-        SettingsManager.Save();
     }
 
     private async Task HandlePlaySongMessageAsync(SongItem song)

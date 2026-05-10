@@ -485,7 +485,7 @@
         </suki:SukiSideMenu>
 
         <localControls:BottomPlaybackControl />
-        <localControls:NowPlaying ZIndex="300" />
+        <localControls:NowPlaying DataContext="{Binding NowPlaying}" ZIndex="300" />
 
         <Border Name="QueueBackdrop"
                 Grid.Row="0"

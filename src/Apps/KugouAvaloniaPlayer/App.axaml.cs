@@ -77,6 +77,7 @@ public partial class App : Application
         collection.AddTransient<SearchViewModel>();
         collection.AddTransient<SingerViewModel>();
         collection.AddTransient<UserViewModel>();
+        collection.AddTransient<NowPlayingViewModel>();
         collection.AddTransient<MainWindowViewModel>();
         collection.AddTransient<DailyRecommendViewModel>();
         collection.AddTransient<HistoryViewModel>();

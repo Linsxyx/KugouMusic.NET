@@ -10,7 +10,7 @@ namespace KugouAvaloniaPlayer.Controls;
 
 public partial class NowPlaying : UserControl
 {
-    private MainWindowViewModel? _mainWindowViewModel;
+    private NowPlayingViewModel? _nowPlayingViewModel;
     private PlayerViewModel? _playerViewModel;
 
     public NowPlaying()
@@ -22,34 +22,34 @@ public partial class NowPlaying : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        UnhookMainViewModel();
+        UnhookViewModel();
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        UnhookMainViewModel();
-        _mainWindowViewModel = DataContext as MainWindowViewModel;
-        _playerViewModel = _mainWindowViewModel?.Player;
-        if (_mainWindowViewModel != null)
-            _mainWindowViewModel.PropertyChanged += OnMainWindowPropertyChanged;
+        UnhookViewModel();
+        _nowPlayingViewModel = DataContext as NowPlayingViewModel;
+        _playerViewModel = _nowPlayingViewModel?.Player;
+        if (_nowPlayingViewModel != null)
+            _nowPlayingViewModel.PropertyChanged += OnNowPlayingPropertyChanged;
         if (_playerViewModel != null)
             _playerViewModel.LyricLines.CollectionChanged += OnLyricLinesChanged;
     }
 
-    private void UnhookMainViewModel()
+    private void UnhookViewModel()
     {
         if (_playerViewModel != null)
             _playerViewModel.LyricLines.CollectionChanged -= OnLyricLinesChanged;
-        if (_mainWindowViewModel == null) return;
-        _mainWindowViewModel.PropertyChanged -= OnMainWindowPropertyChanged;
-        _mainWindowViewModel = null;
+        if (_nowPlayingViewModel == null) return;
+        _nowPlayingViewModel.PropertyChanged -= OnNowPlayingPropertyChanged;
+        _nowPlayingViewModel = null;
         _playerViewModel = null;
     }
 
-    private void OnMainWindowPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnNowPlayingPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(MainWindowViewModel.IsNowPlayingOpen) ||
-            _mainWindowViewModel?.IsNowPlayingOpen != true)
+        if (e.PropertyName != nameof(NowPlayingViewModel.IsOpen) ||
+            _nowPlayingViewModel?.IsOpen != true)
             return;
 
         Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
@@ -57,7 +57,7 @@ public partial class NowPlaying : UserControl
 
     private void OnLyricLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (_mainWindowViewModel?.IsNowPlayingOpen != true || _playerViewModel?.LyricLines.Count <= 0)
+        if (_nowPlayingViewModel?.IsOpen != true || _playerViewModel?.LyricLines.Count <= 0)
             return;
 
         Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
