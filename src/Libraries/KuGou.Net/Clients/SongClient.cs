@@ -64,7 +64,14 @@ public class SongClient(RawSongApi rawApi, RawSearchApi rawSearchApi)
         return rawApi.GetImagesAsync(hash, albumIds, albumAudioIds, count);
     }
 
-    public Task<JsonElement> GetAudioImagesAsync(string hash, string? audioIds = null, string? albumAudioIds = null,
+    public async Task<AudioImageResponse?> GetAudioImagesAsync(string hash, string? audioIds = null, string? albumAudioIds = null,
+        string? fileNames = null, int count = 5)
+    {
+        var json = await rawApi.GetAudioImagesAsync(hash, audioIds, albumAudioIds, fileNames, count);
+        return json.Deserialize(AppJsonContext.Default.AudioImageResponse);
+    }
+
+    public Task<JsonElement> GetAudioImagesRawAsync(string hash, string? audioIds = null, string? albumAudioIds = null,
         string? fileNames = null, int count = 5)
     {
         return rawApi.GetAudioImagesAsync(hash, audioIds, albumAudioIds, fileNames, count);
