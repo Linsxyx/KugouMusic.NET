@@ -47,6 +47,7 @@ jobs:
             "-p:BUILD_VERSION=$CLEAN_VERSION" \
             -r ${{ matrix.rid }} \
             --self-contained true \
+            -p:PublishSingleFile=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o ./publish
@@ -169,6 +170,7 @@ jobs:
             "-p:BUILD_VERSION=$VERSION" \
             -r "$RID" \
             --self-contained true \
+            -p:PublishSingleFile=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o ./publish/macos
