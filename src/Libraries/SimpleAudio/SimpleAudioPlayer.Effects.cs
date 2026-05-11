@@ -103,7 +103,7 @@ public partial class SimpleAudioPlayer
             return AudioAnalysisSnapshot.Empty;
         }
 
-        var fft = new float[1024];
+        var fft = _state.RealtimeFftBuffer;
         var fftRead = Bass.ChannelGetData(Stream, fft, (int)(DataFlags.FFT2048 | DataFlags.FFTNoWindow | DataFlags.FFTRemoveDC));
         if (fftRead < 0)
         {
@@ -136,7 +136,8 @@ public partial class SimpleAudioPlayer
         var rms = totalEnergy > 0 ? Math.Sqrt(totalEnergy / Math.Max(1, fft.Length - dcOffset)) : 0d;
         var brightness = totalEnergy > 0 ? highEnergy / totalEnergy : 0d;
         var spectralCentroid = totalEnergy > 0 ? weightedFrequency / totalEnergy : 0d;
-        var spectrumBands = BuildSpectrumBands(fft, sampleRate, dcOffset);
+        var spectrumBands = _state.RealtimeSpectrumBands;
+        BuildSpectrumBands(fft, sampleRate, dcOffset, spectrumBands);
         return new AudioAnalysisSnapshot
         {
             PositionSeconds = GetPosition().TotalSeconds,
@@ -148,19 +149,19 @@ public partial class SimpleAudioPlayer
         };
     }
 
-    private static float[] BuildSpectrumBands(float[] fft, int sampleRate, int dcOffset)
+    private static void BuildSpectrumBands(float[] fft, int sampleRate, int dcOffset, float[] bands)
     {
-        var bands = new float[RealtimeSpectrumBandCount];
+        Array.Clear(bands);
         if (fft.Length <= dcOffset + 1 || sampleRate <= 0)
         {
-            return bands;
+            return;
         }
 
         var minFreq = 42d;
         var maxFreq = Math.Min(16000d, sampleRate / 2d);
         if (maxFreq <= minFreq)
         {
-            return bands;
+            return;
         }
 
         var freqScale = maxFreq / minFreq;
@@ -187,8 +188,6 @@ public partial class SimpleAudioPlayer
             var normalized = (float)(Math.Log10(1 + magnitude * 220f) / 2.08d);
             bands[bandIndex] = Math.Clamp(normalized, 0f, 1f);
         }
-
-        return bands;
     }
 
     private void ApplyEQ()

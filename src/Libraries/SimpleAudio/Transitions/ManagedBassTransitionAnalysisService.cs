@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Buffers;
 using ManagedBass;
 using ManagedBass.Fx;
 
@@ -10,6 +11,7 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
     private const double IntroWindowSec = 10.0;
     private const double OutroWindowSec = 12.0;
     private const double TailScanWindowSec = 40.0;
+    private const int MaxPooledSampleBufferLength = 16 * 1024;
     private readonly ConcurrentDictionary<string, Lazy<Task<TrackAnalysisSnapshot>>> _analysisCache = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<TransitionProfile> AnalyzeAsync(PreparedTrack current, PreparedTrack next, CancellationToken ct = default)
@@ -311,26 +313,18 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             return 0;
         }
 
-        var samplesPerChannel = Math.Max(1024, (int)Math.Ceiling(windowSec * sampleRate));
-        var buffer = new float[samplesPerChannel * channels];
-        var requestedBytes = buffer.Length * sizeof(float);
-        var bytesRead = Bass.ChannelGetData(handle, buffer, requestedBytes | (int)DataFlags.Float);
-        if (bytesRead <= 0)
+        double sumSquares = 0;
+        var sampleCount = ReadWindowSamples(handle, windowSec, sampleRate, channels, samples =>
         {
-            return 0;
-        }
+            foreach (var value in samples)
+            {
+                sumSquares += value * value;
+            }
+        });
 
-        var sampleCount = Math.Min(buffer.Length, bytesRead / sizeof(float));
         if (sampleCount <= 0)
         {
             return 0;
-        }
-
-        double sumSquares = 0;
-        for (var i = 0; i < sampleCount; i++)
-        {
-            var value = buffer[i];
-            sumSquares += value * value;
         }
 
         return Math.Sqrt(sumSquares / sampleCount);
@@ -420,45 +414,41 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             return 0;
         }
 
-        var samplesPerChannel = Math.Max(1024, (int)Math.Ceiling(windowSec * sampleRate));
-        var buffer = new float[samplesPerChannel * channels];
-        var requestedBytes = buffer.Length * sizeof(float);
-        var bytesRead = Bass.ChannelGetData(handle, buffer, requestedBytes | (int)DataFlags.Float);
-        if (bytesRead <= 0)
+        var frameSize = Math.Max(256, channels * 512);
+        var frameRms = new List<double>();
+        var peak = 0d;
+        var frameSampleCount = 0;
+        double frameSumSquares = 0;
+
+        var sampleCount = ReadWindowSamples(handle, windowSec, sampleRate, channels, samples =>
         {
-            return 0;
+            foreach (var sample in samples)
+            {
+                frameSumSquares += sample * sample;
+                frameSampleCount++;
+
+                if (frameSampleCount < frameSize)
+                {
+                    continue;
+                }
+
+                AddFrameRms(frameRms, frameSumSquares, frameSampleCount, ref peak);
+                frameSampleCount = 0;
+                frameSumSquares = 0;
+            }
+        });
+
+        if (frameSampleCount > 0)
+        {
+            AddFrameRms(frameRms, frameSumSquares, frameSampleCount, ref peak);
         }
 
-        var sampleCount = Math.Min(buffer.Length, bytesRead / sizeof(float));
-        if (sampleCount <= 0)
+        if (sampleCount <= 0 || frameRms.Count == 0)
         {
             return 0;
         }
 
         edgeAvailable = true;
-        var frameSize = Math.Max(256, channels * 512);
-        var frameCount = Math.Max(1, sampleCount / frameSize);
-        var frameRms = new double[frameCount];
-        var peak = 0d;
-        for (var frameIndex = 0; frameIndex < frameCount; frameIndex++)
-        {
-            var start = frameIndex * frameSize;
-            var end = Math.Min(sampleCount, start + frameSize);
-            double sumSquares = 0;
-            for (var i = start; i < end; i++)
-            {
-                var sample = buffer[i];
-                sumSquares += sample * sample;
-            }
-
-            var rms = Math.Sqrt(sumSquares / Math.Max(1, end - start));
-            frameRms[frameIndex] = rms;
-            if (rms > peak)
-            {
-                peak = rms;
-            }
-        }
-
         if (peak <= 0)
         {
             activityRatio = 0;
@@ -469,7 +459,7 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         var activeFrames = 0;
         var firstActiveFrame = -1;
         var lastActiveFrame = -1;
-        for (var i = 0; i < frameRms.Length; i++)
+        for (var i = 0; i < frameRms.Count; i++)
         {
             if (frameRms[i] >= threshold)
             {
@@ -482,7 +472,7 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             }
         }
 
-        activityRatio = Math.Clamp((double)activeFrames / frameRms.Length, 0.0, 1.0);
+        activityRatio = Math.Clamp((double)activeFrames / frameRms.Count, 0.0, 1.0);
 
         var edgeFrameIndex = scanFromTail ? lastActiveFrame : firstActiveFrame;
         if (edgeFrameIndex < 0)
@@ -491,7 +481,7 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             return windowSec;
         }
 
-        var frameDuration = windowSec / frameRms.Length;
+        var frameDuration = windowSec / frameRms.Count;
         return scanFromTail
             ? Math.Max(0, windowSec - (edgeFrameIndex + 1) * frameDuration)
             : Math.Max(0, edgeFrameIndex * frameDuration);
@@ -504,43 +494,38 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             return 0;
         }
 
-        var samplesPerChannel = Math.Max(1024, (int)Math.Ceiling(windowSec * sampleRate));
-        var buffer = new float[samplesPerChannel * channels];
-        var requestedBytes = buffer.Length * sizeof(float);
-        var bytesRead = Bass.ChannelGetData(handle, buffer, requestedBytes | (int)DataFlags.Float);
-        if (bytesRead <= 0)
-        {
-            return 0;
-        }
-
-        var sampleCount = Math.Min(buffer.Length, bytesRead / sizeof(float));
-        if (sampleCount <= 0)
-        {
-            return 0;
-        }
-
         var frameSize = Math.Max(256, channels * 512);
-        var frameCount = Math.Max(1, sampleCount / frameSize);
-        var rms = new double[frameCount];
+        var rms = new List<double>();
         var peak = 0d;
+        var frameSampleCount = 0;
+        double frameSumSquares = 0;
 
-        for (var frameIndex = 0; frameIndex < frameCount; frameIndex++)
+        var sampleCount = ReadWindowSamples(handle, windowSec, sampleRate, channels, samples =>
         {
-            var start = frameIndex * frameSize;
-            var end = Math.Min(sampleCount, start + frameSize);
-            double sumSquares = 0;
-            for (var i = start; i < end; i++)
+            foreach (var sample in samples)
             {
-                var sample = buffer[i];
-                sumSquares += sample * sample;
-            }
+                frameSumSquares += sample * sample;
+                frameSampleCount++;
 
-            var value = Math.Sqrt(sumSquares / Math.Max(1, end - start));
-            rms[frameIndex] = value;
-            if (value > peak)
-            {
-                peak = value;
+                if (frameSampleCount < frameSize)
+                {
+                    continue;
+                }
+
+                AddFrameRms(rms, frameSumSquares, frameSampleCount, ref peak);
+                frameSampleCount = 0;
+                frameSumSquares = 0;
             }
+        });
+
+        if (frameSampleCount > 0)
+        {
+            AddFrameRms(rms, frameSumSquares, frameSampleCount, ref peak);
+        }
+
+        if (sampleCount <= 0 || rms.Count == 0)
+        {
+            return 0;
         }
 
         if (peak <= 1e-7)
@@ -548,7 +533,7 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             return windowSec;
         }
 
-        var smoothed = SmoothMovingAverage(rms, 5);
+        var smoothed = SmoothMovingAverage(rms.ToArray(), 5);
         var floor = Percentile(smoothed, 0.40);
         var threshold = Math.Max(Math.Max(peak * 0.065, floor * 0.62), 4e-5);
         var lastActiveFrame = -1;
@@ -570,6 +555,66 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         }
 
         return Math.Min(TailScanWindowSec, invalidTail);
+    }
+
+    private static int ReadWindowSamples(
+        int handle,
+        double windowSec,
+        int sampleRate,
+        int channels,
+        Action<ReadOnlySpan<float>> processSamples)
+    {
+        var requestedSamples = Math.Max(1024, (int)Math.Ceiling(windowSec * sampleRate) * channels);
+        var bufferLength = Math.Min(MaxPooledSampleBufferLength, requestedSamples);
+        var buffer = ArrayPool<float>.Shared.Rent(bufferLength);
+        var totalSamples = 0;
+
+        try
+        {
+            while (totalSamples < requestedSamples)
+            {
+                var samplesToRead = Math.Min(bufferLength, requestedSamples - totalSamples);
+                var bytesRead = Bass.ChannelGetData(
+                    handle,
+                    buffer,
+                    samplesToRead * sizeof(float) | (int)DataFlags.Float);
+
+                if (bytesRead <= 0)
+                {
+                    break;
+                }
+
+                var samplesRead = Math.Min(samplesToRead, bytesRead / sizeof(float));
+                if (samplesRead <= 0)
+                {
+                    break;
+                }
+
+                processSamples(buffer.AsSpan(0, samplesRead));
+                totalSamples += samplesRead;
+
+                if (samplesRead < samplesToRead)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            ArrayPool<float>.Shared.Return(buffer);
+        }
+
+        return totalSamples;
+    }
+
+    private static void AddFrameRms(List<double> frameRms, double sumSquares, int sampleCount, ref double peak)
+    {
+        var value = Math.Sqrt(sumSquares / Math.Max(1, sampleCount));
+        frameRms.Add(value);
+        if (value > peak)
+        {
+            peak = value;
+        }
     }
 
     private static double[] SmoothMovingAverage(double[] values, int windowSize)

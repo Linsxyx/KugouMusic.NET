@@ -260,6 +260,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
     public void AbortCrossfade()
     {
         CancellationTokenSource? cancellation;
+        Task? crossfadeTask;
         SimpleAudioPlayer? fadingDeck;
         lock (_crossfadeGate)
         {
@@ -270,13 +271,20 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
             cancellation = _crossfadeCancellation;
             _crossfadeCancellation = null;
+            crossfadeTask = _crossfadeTask;
+            _crossfadeTask = null;
             fadingDeck = _fadingDeck;
             IsCrossfading = false;
             _crossfadeProgress = 0f;
             _fadingDeck = null;
         }
 
-        cancellation?.Cancel();
+        if (cancellation != null)
+        {
+            cancellation.Cancel();
+            DisposeCancellationWhenTaskCompletes(crossfadeTask, cancellation);
+        }
+
         if (fadingDeck != null)
         {
             fadingDeck.Stop();
@@ -392,6 +400,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
             stopwatch.Stop();
         }
 
+        CancellationTokenSource? completedCancellation;
         lock (_crossfadeGate)
         {
             if (!IsCrossfading || cancellationToken.IsCancellationRequested)
@@ -401,13 +410,40 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
             IsCrossfading = false;
             _crossfadeProgress = 0f;
+            completedCancellation = _crossfadeCancellation;
             _crossfadeCancellation = null;
+            _crossfadeTask = null;
             _fadingDeck = null;
         }
 
+        completedCancellation?.Dispose();
         outgoingDeck.Stop();
         ApplyDeckSettings(outgoingDeck);
         ApplyDeckSettings(incomingDeck);
+    }
+
+    private static void DisposeCancellationWhenTaskCompletes(Task? task, CancellationTokenSource cancellation)
+    {
+        if (task == null || task.IsCompleted)
+        {
+            cancellation.Dispose();
+            return;
+        }
+
+        _ = task.ContinueWith(
+            static (completedTask, state) =>
+            {
+                if (completedTask.IsFaulted)
+                {
+                    _ = completedTask.Exception;
+                }
+
+                ((CancellationTokenSource)state!).Dispose();
+            },
+            cancellation,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private void ApplyCrossfadeState(
