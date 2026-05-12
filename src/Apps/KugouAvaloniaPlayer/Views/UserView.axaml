@@ -267,6 +267,17 @@
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                 <StackPanel>
+                                    <TextBlock Text="自动音量平衡" FontWeight="DemiBold" />
+                                    <TextBlock Text="按歌曲响度自动补偿播放音量"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              IsChecked="{Binding EnableVolumeNormalization, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
                                     <TextBlock Text="播放页音频可视化" FontWeight="DemiBold" />
                                     <TextBlock Text="控制播放页面进度条下方的频谱动画显示"
                                                FontSize="12"

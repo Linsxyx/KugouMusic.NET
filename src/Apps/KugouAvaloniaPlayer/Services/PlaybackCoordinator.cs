@@ -9,7 +9,8 @@ namespace KugouAvaloniaPlayer.Services;
 public interface IPlaybackCoordinator : IDisposable
 {
     DualTrackAudioPlayer Player { get; }
-    Task<bool> LoadAsync(string source, string songName, TimeSpan timeout, CancellationToken cancellationToken);
+    Task<bool> LoadAsync(string source, string songName, float normalizationGain, TimeSpan timeout,
+        CancellationToken cancellationToken);
     void InvalidatePendingLoads();
 }
 
@@ -23,6 +24,7 @@ public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : I
     public async Task<bool> LoadAsync(
         string source,
         string songName,
+        float normalizationGain,
         TimeSpan timeout,
         CancellationToken cancellationToken)
     {
@@ -38,7 +40,7 @@ public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : I
                         cancellationToken.IsCancellationRequested)
                         return false;
 
-                    var loaded = Player.Load(source);
+                    var loaded = Player.Load(source, normalizationGain);
                     if (!loaded)
                         return false;
 

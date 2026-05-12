@@ -100,6 +100,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     public partial bool IsPlayingAudio { get; set; }
 
+    private bool _isVolumeNormalizationEnabled;
     private bool _isPreparingNextTrack;
     [ObservableProperty]
     public partial bool IsSeamlessTransitionEnabled { get; set; }
@@ -170,8 +171,10 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         MusicQuality = SettingsManager.Settings.MusicQuality;
         IsSeamlessTransitionEnabled = SettingsManager.Settings.EnableSeamlessTransition;
         IsNowPlayingVisualizerEnabled = SettingsManager.Settings.EnableNowPlayingVisualizer;
+        _isVolumeNormalizationEnabled = SettingsManager.Settings.EnableVolumeNormalization;
         QualitySelection = MusicQuality;
         UpdateAudioEffects(SettingsManager.Settings.EQPreset, SettingsManager.Settings.EnableSurround);
+        _player.SetVolumeNormalizationEnabled(_isVolumeNormalizationEnabled);
 
         _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         _playbackTimer.Tick += OnPlaybackTimerTick;
@@ -278,8 +281,12 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
             if (requestVersion != _playRequestVersion || currentLoadCts.IsCancellationRequested) return;
 
+            var normalizationGain =
+                await ResolveNormalizationGainAsync(sourceInfo.Source, sourceInfo.IsLocal, song.DurationSeconds,
+                    currentLoadCts.Token);
+
             var loadSuccess =
-                await _playbackCoordinator.LoadAsync(sourceInfo.Source, song.Name, AudioLoadTimeout,
+                await _playbackCoordinator.LoadAsync(sourceInfo.Source, song.Name, normalizationGain, AudioLoadTimeout,
                     currentLoadCts.Token);
 
             if (loadSuccess)

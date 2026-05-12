@@ -21,8 +21,11 @@ public sealed class DualTrackAudioPlayer : IDisposable
     private float _currentReverbAmount;
     private float _currentReverbTimeMs = 1500f;
     private float _currentStereoWidth;
+    private float _deckANormalizationGain = 1.0f;
+    private float _deckBNormalizationGain = 1.0f;
     private bool _surroundEnabled;
     private float _userVolume = 1.0f;
+    private bool _volumeNormalizationEnabled;
     private string? _activeSource;
     private string? _preparedSource;
 
@@ -58,10 +61,10 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
     public string? PreparedSource => _preparedSource;
 
-    public bool Load(string url)
+    public bool Load(string url, float normalizationGain = 1.0f)
     {
         AbortCrossfade();
-        if (!PrepareNext(url))
+        if (!PrepareNext(url, normalizationGain))
         {
             return false;
         }
@@ -70,13 +73,15 @@ public sealed class DualTrackAudioPlayer : IDisposable
         return SwitchToPrepared();
     }
 
-    public bool PrepareNext(string url)
+    public bool PrepareNext(string url, float normalizationGain = 1.0f)
     {
         _standbyDeck.Stop();
+        SetStoredNormalizationGain(_standbyDeck, normalizationGain);
         ApplyDeckSettings(_standbyDeck);
 
         if (!_standbyDeck.Load(url))
         {
+            SetStoredNormalizationGain(_standbyDeck, 1.0f);
             _preparedSource = null;
             return false;
         }
@@ -102,6 +107,8 @@ public sealed class DualTrackAudioPlayer : IDisposable
     public void CancelPrepared()
     {
         _standbyDeck.Stop();
+        SetStoredNormalizationGain(_standbyDeck, 1.0f);
+        _standbyDeck.SetNormalizationGain(1.0f);
         _preparedSource = null;
     }
 
@@ -122,6 +129,8 @@ public sealed class DualTrackAudioPlayer : IDisposable
         AbortCrossfade();
         _activeDeck.Stop();
         _standbyDeck.Stop();
+        SetStoredNormalizationGain(_activeDeck, 1.0f);
+        SetStoredNormalizationGain(_standbyDeck, 1.0f);
         _activeSource = null;
         _preparedSource = null;
     }
@@ -136,6 +145,20 @@ public sealed class DualTrackAudioPlayer : IDisposable
     public float GetVolume()
     {
         return _activeDeck.GetVolume();
+    }
+
+    public void SetVolumeNormalizationEnabled(bool enabled)
+    {
+        _volumeNormalizationEnabled = enabled;
+        _activeDeck.SetNormalizationGain(GetEffectiveNormalizationGain(_activeDeck));
+        _standbyDeck.SetNormalizationGain(GetEffectiveNormalizationGain(_standbyDeck));
+        _fadingDeck?.SetNormalizationGain(GetEffectiveNormalizationGain(_fadingDeck));
+    }
+
+    public void SetActiveNormalizationGain(float gain)
+    {
+        SetStoredNormalizationGain(_activeDeck, gain);
+        _activeDeck.SetNormalizationGain(GetEffectiveNormalizationGain(_activeDeck));
     }
 
     public void SetPosition(TimeSpan time)
@@ -324,8 +347,37 @@ public sealed class DualTrackAudioPlayer : IDisposable
         deck.SetReverbAmount(_currentReverbAmount);
         deck.SetReverbTime(_currentReverbTimeMs);
         deck.SetVolume(_userVolume);
+        deck.SetNormalizationGain(GetEffectiveNormalizationGain(deck));
         deck.SetTransitionGain(1f);
         deck.SetTransitionTone(0f);
+    }
+
+    private float GetEffectiveNormalizationGain(SimpleAudioPlayer? deck)
+    {
+        if (!_volumeNormalizationEnabled || deck == null)
+        {
+            return 1.0f;
+        }
+
+        return GetStoredNormalizationGain(deck);
+    }
+
+    private float GetStoredNormalizationGain(SimpleAudioPlayer deck)
+    {
+        return ReferenceEquals(deck, _deckA) ? _deckANormalizationGain : _deckBNormalizationGain;
+    }
+
+    private void SetStoredNormalizationGain(SimpleAudioPlayer deck, float gain)
+    {
+        var clamped = Math.Clamp(gain, 0.5f, 1.5f);
+        if (ReferenceEquals(deck, _deckA))
+        {
+            _deckANormalizationGain = clamped;
+        }
+        else
+        {
+            _deckBNormalizationGain = clamped;
+        }
     }
 
     private void SwapDecks()

@@ -103,6 +103,12 @@ public partial class SimpleAudioPlayer : IDisposable
         return 0f;
     }
 
+    public void SetNormalizationGain(float gain)
+    {
+        VolumeNormalizationGain = Math.Clamp(gain, 0.5f, 1.5f);
+        UpdateActualVolume();
+    }
+
     public void SetPosition(TimeSpan time)
     {
         if (Stream == 0)
@@ -163,7 +169,8 @@ public partial class SimpleAudioPlayer : IDisposable
             var hasSpatialFx = StereoWidth > 0.001f || ReverbAmount > 0.001f || ChorusMix > 0.001f || EchoMix > 0.001f;
             var toneHeadroom = TransitionToneDepth > 0.001f ? 0.9f : 1.0f;
             var headroom = hasSpatialFx || CurrentEq.Any(g => g > 3f) ? 0.8f : 1.0f;
-            var actualVolume = (float)Math.Pow(UserVolume, 2) * headroom * toneHeadroom * Math.Clamp(TransitionGain, 0f, 1.25f);
+            var actualVolume = (float)Math.Pow(UserVolume, 2) * VolumeNormalizationGain * headroom * toneHeadroom *
+                               Math.Clamp(TransitionGain, 0f, 1.25f);
             Bass.ChannelSetAttribute(Stream, ChannelAttribute.Volume, Math.Clamp(actualVolume, 0f, 1f));
         }
     }

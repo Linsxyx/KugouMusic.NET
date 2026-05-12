@@ -13,6 +13,7 @@
     <ItemGroup>
         <PackageReference Include="ManagedBass" Version="4.1.0-prerelease" />
         <PackageReference Include="ManagedBass.Fx" Version="4.1.0-prerelease" />
+        <PackageReference Include="ManagedBass.Loud" Version="4.1.0-prerelease" />
     </ItemGroup>
 
     <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">

@@ -44,6 +44,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         ".ogg",
         ".m4a",
         ".aac",
+        ".webm",
         ".dsf",
         ".dff"
     };

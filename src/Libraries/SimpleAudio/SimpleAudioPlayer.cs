@@ -1,5 +1,6 @@
 using ManagedBass;
 using ManagedBass.Fx;
+using ManagedBass.Loud;
 
 namespace SimpleAudio;
 
@@ -132,6 +133,12 @@ public partial class SimpleAudioPlayer
         set => _state.UserVolume = value;
     }
 
+    private float VolumeNormalizationGain
+    {
+        get => _state.VolumeNormalizationGain;
+        set => _state.VolumeNormalizationGain = value;
+    }
+
     public SimpleAudioPlayer()
     {
         _stereoDspProc = StereoEnhancerDSP;
@@ -151,6 +158,8 @@ public partial class SimpleAudioPlayer
 
         Bass.PluginLoad(GetBassPluginName("bassflac"));
         Bass.PluginLoad(GetBassPluginName("bassdsd"));
+        Bass.PluginLoad(GetBassPluginName("bassloud"));
+        Bass.PluginLoad(GetBassPluginName("basswebm"));
         if (!OperatingSystem.IsMacOS())
         {
             Bass.PluginLoad(GetBassPluginName("bass_aac"));
@@ -163,6 +172,15 @@ public partial class SimpleAudioPlayer
         catch (Exception ex)
         {
             Console.WriteLine($"[BASS_FX Load Error] {ex.Message}");
+        }
+
+        try
+        {
+            _ = BassLoud.Version;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BASS_LOUD Load Error] {ex.Message}");
         }
 
         Bass.Configure(Configuration.NetBufferLength, 5000);

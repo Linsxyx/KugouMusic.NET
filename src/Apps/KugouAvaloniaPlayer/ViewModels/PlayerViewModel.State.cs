@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -186,6 +187,20 @@ public partial class PlayerViewModel
             ResetVisualizerBars();
     }
 
+    public void SetVolumeNormalizationEnabled(bool enabled)
+    {
+        _isVolumeNormalizationEnabled = enabled;
+        _player.SetVolumeNormalizationEnabled(enabled);
+
+        if (!enabled)
+        {
+            _player.SetActiveNormalizationGain(1.0f);
+            return;
+        }
+
+        _ = RefreshCurrentTrackNormalizationAsync();
+    }
+
     public async Task<bool> SwitchQualityAsync(string? quality)
     {
         if (string.IsNullOrWhiteSpace(quality) || !QualityOptions.Contains(quality, StringComparer.OrdinalIgnoreCase))
@@ -247,8 +262,13 @@ public partial class PlayerViewModel
             _playbackTimer.Stop();
             _player.Stop();
 
+            var normalizationGain = await ResolveNormalizationGainAsync(
+                sourceInfo.Source,
+                sourceInfo.IsLocal,
+                currentSong.DurationSeconds,
+                currentLoadCts.Token);
             var loadSuccess = await _playbackCoordinator.LoadAsync(sourceInfo.Source, currentSong.Name,
-                AudioLoadTimeout, currentLoadCts.Token);
+                normalizationGain, AudioLoadTimeout, currentLoadCts.Token);
             if (!loadSuccess)
             {
                 RevertQualitySelectionToCurrentQuality();
@@ -355,6 +375,56 @@ public partial class PlayerViewModel
             bars.Add(new AudioVisualizerBarViewModel());
 
         return bars;
+    }
+
+    private async Task RefreshCurrentTrackNormalizationAsync()
+    {
+        var currentSong = CurrentPlayingSong;
+        var source = _player.ActiveSource;
+        if (!_isVolumeNormalizationEnabled || currentSong == null || string.IsNullOrWhiteSpace(source))
+        {
+            return;
+        }
+
+        try
+        {
+            var gain = await ResolveNormalizationGainAsync(
+                source,
+                !string.IsNullOrWhiteSpace(currentSong.LocalFilePath) && File.Exists(currentSong.LocalFilePath),
+                currentSong.DurationSeconds,
+                CancellationToken.None);
+            _player.SetActiveNormalizationGain(gain);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "刷新当前歌曲音量平衡失败");
+        }
+    }
+
+    private async Task<float> ResolveNormalizationGainAsync(
+        string source,
+        bool isLocal,
+        double durationSeconds,
+        CancellationToken cancellationToken)
+    {
+        if (!_isVolumeNormalizationEnabled || string.IsNullOrWhiteSpace(source))
+        {
+            return 1.0f;
+        }
+
+        try
+        {
+            return await TrackVolumeNormalizer.EstimateGainAsync(source, isLocal, durationSeconds, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "估算歌曲音量补偿失败");
+            return 1.0f;
+        }
     }
 
     private void ResetVisualizerBars()

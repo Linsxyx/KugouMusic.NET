@@ -127,7 +127,13 @@ public partial class PlayerViewModel
                 !sourceInfo.Success || string.IsNullOrWhiteSpace(sourceInfo.Source))
                 return;
 
-            if (!_player.PrepareNext(sourceInfo.Source))
+            var normalizationGain = await ResolveNormalizationGainAsync(
+                sourceInfo.Source,
+                sourceInfo.IsLocal,
+                nextSong.DurationSeconds,
+                linkedCts.Token);
+
+            if (!_player.PrepareNext(sourceInfo.Source, normalizationGain))
             {
                 _prepareFailureSongKey = nextSongKey;
                 return;

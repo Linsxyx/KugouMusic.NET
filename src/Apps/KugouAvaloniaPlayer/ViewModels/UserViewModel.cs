@@ -95,6 +95,9 @@ public partial class UserViewModel : PageViewModelBase
     public partial bool EnableSurround { get; set; }
 
     [ObservableProperty]
+    public partial bool EnableVolumeNormalization { get; set; }
+
+    [ObservableProperty]
     public partial bool IsCheckingUpdate { get; set; }
 
     [ObservableProperty]
@@ -181,6 +184,7 @@ public partial class UserViewModel : PageViewModelBase
         SelectedEQPreset = Array.Exists(EQPresetOptions, x => x == preset) ? preset : "原声";
 
         EnableSurround = SettingsManager.Settings.EnableSurround;
+        EnableVolumeNormalization = SettingsManager.Settings.EnableVolumeNormalization;
         EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
         EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
         EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
@@ -494,6 +498,15 @@ public partial class UserViewModel : PageViewModelBase
         Player.UpdateAudioEffects(SelectedEQPreset, value);
     }
 
+    partial void OnEnableVolumeNormalizationChanged(bool value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.EnableVolumeNormalization = value;
+        SettingsManager.Save();
+        Player.SetVolumeNormalizationEnabled(value);
+    }
+
     partial void OnEnableSeamlessTransitionChanged(bool value)
     {
         if (_isApplyingSettingsSnapshot) return;
@@ -760,6 +773,7 @@ public partial class UserViewModel : PageViewModelBase
                 ? SettingsManager.Settings.EQPreset
                 : "原声";
             EnableSurround = SettingsManager.Settings.EnableSurround;
+            EnableVolumeNormalization = SettingsManager.Settings.EnableVolumeNormalization;
             EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
             EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
             EnableLegacyWordLyricEffect = SettingsManager.Settings.EnableLegacyWordLyricEffect;
@@ -779,6 +793,7 @@ public partial class UserViewModel : PageViewModelBase
 
         Player.MusicQuality = SettingsManager.Settings.MusicQuality;
         Player.UpdateAudioEffects(SelectedEQPreset, EnableSurround);
+        Player.SetVolumeNormalizationEnabled(EnableVolumeNormalization);
         Player.SetSeamlessTransitionEnabled(EnableSeamlessTransition);
         Player.SetNowPlayingVisualizerEnabled(EnableNowPlayingVisualizer);
         _eqSettingsViewModel.ReloadFromSettings();
