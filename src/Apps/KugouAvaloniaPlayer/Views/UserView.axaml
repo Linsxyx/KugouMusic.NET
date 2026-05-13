@@ -88,7 +88,7 @@
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto"
                           Padding="0,0,0,24">
-                <StackPanel Spacing="12" Margin="2,0,4,0">
+                <StackPanel Spacing="12" Margin="2,0,4,96">
                     <TextBlock Text="设置"
                                FontSize="22"
                                FontWeight="Bold"
