@@ -100,6 +100,9 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public partial bool IsPortraitLoading { get; set; }
 
     [ObservableProperty]
+    public partial bool IsPortraitAvailable { get; set; }
+
+    [ObservableProperty]
     public partial string? PortraitBackgroundA { get; set; }
 
     [ObservableProperty]
@@ -218,10 +221,41 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(PlayerViewModel.DisplayedPlayingSong) || !IsPortraitModeEnabled)
+        if (e.PropertyName != nameof(PlayerViewModel.DisplayedPlayingSong))
             return;
 
-        _ = RefreshPortraitsAsync();
+        IsPortraitAvailable = false;
+
+        if (IsPortraitModeEnabled)
+            _ = RefreshPortraitsAsync();
+
+        _ = PrefetchPortraitAvailabilityAsync();
+    }
+
+    private async Task PrefetchPortraitAvailabilityAsync()
+    {
+        var song = Player.DisplayedPlayingSong;
+        if (string.IsNullOrWhiteSpace(song?.Hash))
+            return;
+
+        try
+        {
+            var response = await _songClient.GetAudioImagesAsync(song.Hash, count: 1);
+            var urls = ExtractPortraitUrls(response);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Player.DisplayedPlayingSong?.Hash != song.Hash)
+                    return;
+
+                IsPortraitAvailable = urls.Count > 0;
+                if (!IsPortraitAvailable)
+                    IsPortraitModeEnabled = false;
+            });
+        }
+        catch
+        {
+            // Silently ignore — portrait just won't be available.
+        }
     }
 
     partial void OnIsPortraitModeEnabledChanged(bool value)
@@ -492,7 +526,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         }
 
         LyricFontFamily = IsSystemFontInstalled(fontFamilyName)
-            ? new FontFamily(fontFamilyName)
+            ? new FontFamily($"{fontFamilyName}, Microsoft YaHei, SimSun")
             : FontFamily.Default;
     }
 

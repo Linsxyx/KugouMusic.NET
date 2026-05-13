@@ -74,18 +74,18 @@
         </Style>
 
         <Style Selector="Border.VisualizerBar">
-            <Setter Property="Width" Value="10" />
+            <Setter Property="Width" Value="12" />
             <Setter Property="CornerRadius" Value="999" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
             <Setter Property="Background">
                 <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
-                    <GradientStop Color="#22FFFFFF" Offset="0" />
-                    <GradientStop Color="#9A22D3EE" Offset="0.36" />
-                    <GradientStop Color="#E8FFFFFF" Offset="0.7" />
-                    <GradientStop Color="#CFF472B6" Offset="1" />
+                    <GradientStop Color="#22FFFFFF" Offset="0.0" />
+                    <GradientStop Color="#AA22D3EE" Offset="0.3" />
+                    <GradientStop Color="#E8FFFFFF" Offset="0.65" />
+                    <GradientStop Color="#DDF472B6" Offset="1.0" />
                 </LinearGradientBrush>
             </Setter>
-            <Setter Property="BoxShadow" Value="0 0 36 0 #8022D3EE" />
+            <Setter Property="BoxShadow" Value="0 0 32 2 #8822D3EE" />
         </Style>
 
         <Style Selector="StackPanel#AlbumMotionContainer">
@@ -164,28 +164,58 @@
                   VerticalAlignment="Stretch"
                   RowDefinitions="*,Auto"
                   Opacity="0.96">
+
+                <!-- Ambient bottom glow -->
+                <Border Grid.Row="1"
+                        Height="140"
+                        Margin="-40,0,-40,-24"
+                        VerticalAlignment="Bottom"
+                        HorizontalAlignment="Stretch"
+                        IsHitTestVisible="False"
+                        Opacity="0.22">
+                    <Border.Background>
+                        <RadialGradientBrush Center="50%,100%" GradientOrigin="50%,100%" RadiusX="0.7" RadiusY="0.7">
+                            <GradientStop Color="#00FFFFFF" Offset="0.0" />
+                            <GradientStop Color="#3022D3EE" Offset="0.4" />
+                            <GradientStop Color="#50F472B6" Offset="0.7" />
+                            <GradientStop Color="#2022D3EE" Offset="1.0" />
+                        </RadialGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <!-- Main visualizer bars -->
                 <ItemsControl Grid.Row="1"
                               Height="320"
                               Margin="-80,0,-80,-28"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Bottom"
                               ItemsSource="{Binding Player.NowPlayingVisualizerBars}">
-                    <ItemsControl.Effect>
-                        <BlurEffect Radius="1.6" />
-                    </ItemsControl.Effect>
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal"
-                                        Spacing="8"
+                                        Spacing="5"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Bottom" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:AudioVisualizerBarViewModel">
-                            <Border Classes="VisualizerBar"
-                                    Height="{Binding Height}"
-                                    Opacity="{Binding Opacity}" />
+                            <Panel Opacity="{Binding Opacity}">
+                                <!-- Main bar with gradient -->
+                                <Border Classes="VisualizerBar"
+                                        Height="{Binding Height}" />
+                                <!-- Glass highlight -->
+                                <Border Classes="VisualizerBar"
+                                        Height="{Binding Height}">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                            <GradientStop Color="#88FFFFFF" Offset="0.0" />
+                                            <GradientStop Color="#22FFFFFF" Offset="0.3" />
+                                            <GradientStop Color="#00FFFFFF" Offset="0.6" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                            </Panel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -234,7 +264,8 @@
                 <Button Cursor="Hand"
                         Command="{Binding TogglePortraitModeCommand}"
                         Classes="Basic"
-                        ToolTip.Tip="写真模式">
+                        ToolTip.Tip="写真模式"
+                        IsVisible="{Binding IsPortraitAvailable}">
                     <Border Classes="PortraitModeButton"
                             Classes.active="{Binding IsPortraitModeEnabled}"
                             CornerRadius="20"
@@ -403,6 +434,7 @@
                                                Width="{Binding $parent[controls1:MeasuredLyricScrollView].Bounds.Width}"
                                                TextWrapping="Wrap"
                                                HorizontalAlignment="Stretch"
+                                               FontFamily="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricFontFamily}"
                                                TextAlignment="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricTextAlignment}">
                                         <TextBlock.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -438,6 +470,7 @@
                                                                Classes="KaraokeWord NowPlayingWord"
                                                                Classes.played="{Binding IsPlayed}"
                                                                Classes.current="{Binding IsCurrent}"
+                                                               FontFamily="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricFontFamily}"
                                                                RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}" />
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -483,6 +516,7 @@
                                                Width="{Binding $parent[controls1:MeasuredLyricScrollView].Bounds.Width}"
                                                TextWrapping="Wrap"
                                                HorizontalAlignment="Stretch"
+                                               FontFamily="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricFontFamily}"
                                                TextAlignment="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricTextAlignment}">
                                         <TextBlock.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -520,6 +554,7 @@
                                                                Classes="KaraokeTransWord NowPlayingTrans"
                                                                Classes.played="{Binding IsPlayed}"
                                                                Classes.current="{Binding IsCurrent}"
+                                                               FontFamily="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricFontFamily}"
                                                                Foreground="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).TranslationWordForeground}"
                                                                RenderTransform="{Binding LiftOffset, Converter={StaticResource WordLiftTransformConverter}}" />
                                                 </DataTemplate>
@@ -567,6 +602,7 @@
                                                Width="{Binding $parent[controls1:MeasuredLyricScrollView].Bounds.Width}"
                                                TextWrapping="Wrap"
                                                HorizontalAlignment="Stretch"
+                                               FontFamily="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricFontFamily}"
                                                TextAlignment="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricTextAlignment}">
                                         <TextBlock.IsVisible>
                                             <MultiBinding Converter="{x:Static BoolConverters.And}">

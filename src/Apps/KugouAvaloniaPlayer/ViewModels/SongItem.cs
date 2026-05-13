@@ -144,4 +144,7 @@ public partial class PlaylistItem : ObservableObject
 
     [ObservableProperty]
     public partial PlaylistType Type { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSelected { get; set; }
 }

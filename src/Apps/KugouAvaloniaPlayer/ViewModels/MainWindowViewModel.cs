@@ -133,6 +133,7 @@ public partial class MainWindowViewModel : ObservableObject
             SettingsManager.Settings.CustomBackgroundImageOpacity);
 
         PlaylistsViewModel.Items.CollectionChanged += OnPlaylistItemsChanged;
+        PlaylistsViewModel.PropertyChanged += OnPlaylistViewModelPropertyChanged;
         RefreshSidebarPlaylists();
 
         WeakReferenceMessenger.Default.Register<PlaySongMessage>(this,
@@ -531,9 +532,42 @@ public partial class MainWindowViewModel : ObservableObject
         await PlaylistsViewModel.OpenPlaylistCommand.ExecuteAsync(item);
     }
 
+    private void OnPlaylistViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MyPlaylistsViewModel.SelectedPlaylist))
+            UpdateSidebarSelection();
+    }
+
     private void OnPlaylistItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         RefreshSidebarPlaylists();
+    }
+
+    private void UpdateSidebarSelection()
+    {
+        var selected = PlaylistsViewModel.SelectedPlaylist;
+
+        foreach (var item in SidebarOnlinePlaylists)
+            item.IsSelected = IsSameItem(selected, item);
+        foreach (var item in SidebarLocalPlaylists)
+            item.IsSelected = IsSameItem(selected, item);
+        foreach (var item in SidebarAlbumPlaylists)
+            item.IsSelected = IsSameItem(selected, item);
+    }
+
+    private static bool IsSameItem(PlaylistItem? a, PlaylistItem b)
+    {
+        if (a == null) return false;
+        if (a.Type != b.Type) return false;
+
+        return a.Type switch
+        {
+            PlaylistType.Local => string.Equals(a.LocalPath, b.LocalPath, StringComparison.OrdinalIgnoreCase),
+            PlaylistType.Online or PlaylistType.Album => a.ListId > 0 && b.ListId > 0
+                ? a.ListId == b.ListId
+                : string.Equals(a.Id, b.Id, StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
     }
 
     private void RefreshSidebarPlaylists()
@@ -545,6 +579,8 @@ public partial class MainWindowViewModel : ObservableObject
         SidebarOnlinePlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Online));
         SidebarLocalPlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Local));
         SidebarAlbumPlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Album));
+
+        UpdateSidebarSelection();
     }
 
     [RelayCommand]

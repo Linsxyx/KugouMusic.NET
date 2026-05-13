@@ -294,7 +294,7 @@
                                                         </ContextMenu>
                                                     </Border.ContextMenu>
                                                     <Button Classes="SidebarPlaylistOption"
-                                                            Classes.selected="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.SelectedPlaylist, Converter={StaticResource PlaylistSelectionConverter}, ConverterParameter={Binding .}}"
+                                                            Classes.selected="{Binding IsSelected}"
                                                             Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
                                                             CommandParameter="{Binding .}">
                                                         <Grid ColumnDefinitions="32,*,Auto" VerticalAlignment="Center">
@@ -342,7 +342,7 @@
                                                         </ContextMenu>
                                                     </Border.ContextMenu>
                                                     <Button Classes="SidebarPlaylistOption"
-                                                            Classes.selected="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.SelectedPlaylist, Converter={StaticResource PlaylistSelectionConverter}, ConverterParameter={Binding .}}"
+                                                            Classes.selected="{Binding IsSelected}"
                                                             Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
                                                             CommandParameter="{Binding .}">
                                                         <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
@@ -395,7 +395,7 @@
                                                         </ContextMenu>
                                                     </Border.ContextMenu>
                                                     <Button Classes="SidebarPlaylistOption"
-                                                            Classes.selected="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.SelectedPlaylist, Converter={StaticResource PlaylistSelectionConverter}, ConverterParameter={Binding .}}"
+                                                            Classes.selected="{Binding IsSelected}"
                                                             Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
                                                             CommandParameter="{Binding .}">
                                                         <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
