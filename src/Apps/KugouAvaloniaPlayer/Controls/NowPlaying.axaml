@@ -73,19 +73,70 @@
                     Value="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).TranslationLineForeground}" />
         </Style>
 
-        <Style Selector="Border.VisualizerBar">
+        <Style Selector="Grid.VisualizerBarItem">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.VisualizerBarGlow">
             <Setter Property="Width" Value="12" />
             <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Opacity" Value="0.24" />
+            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="BoxShadow" Value="0 0 18 3 #3DFFFFFF" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.08" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.VisualizerBar">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Bottom" />
             <Setter Property="Background">
                 <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
-                    <GradientStop Color="#22FFFFFF" Offset="0.0" />
-                    <GradientStop Color="#AA22D3EE" Offset="0.3" />
-                    <GradientStop Color="#E8FFFFFF" Offset="0.65" />
-                    <GradientStop Color="#DDF472B6" Offset="1.0" />
+                    <GradientStop Color="#08FFFFFF" Offset="0.0" />
+                    <GradientStop Color="#54FFFFFF" Offset="0.34" />
+                    <GradientStop Color="#D8FFFFFF" Offset="0.72" />
+                    <GradientStop Color="#A8F8FFFF" Offset="1.0" />
                 </LinearGradientBrush>
             </Setter>
-            <Setter Property="BoxShadow" Value="0 0 32 2 #8822D3EE" />
+            <Setter Property="BoxShadow" Value="0 0 10 1 #66FFFFFF" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.08" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.VisualizerBarHighlight">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Opacity" Value="0.42" />
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Color="#FFFFFFFF" Offset="0.0" />
+                    <GradientStop Color="#66FFFFFF" Offset="0.42" />
+                    <GradientStop Color="#00FFFFFF" Offset="1.0" />
+                </LinearGradientBrush>
+            </Setter>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Height" Duration="0:0:0.08" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
         </Style>
 
         <Style Selector="StackPanel#AlbumMotionContainer">
@@ -163,59 +214,67 @@
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
                   RowDefinitions="*,Auto"
-                  Opacity="0.96">
+                  Opacity="0.68"
+                  ZIndex="2">
 
                 <!-- Ambient bottom glow -->
                 <Border Grid.Row="1"
-                        Height="140"
-                        Margin="-40,0,-40,-24"
+                        Height="170"
+                        Margin="-80,0,-80,-30"
                         VerticalAlignment="Bottom"
                         HorizontalAlignment="Stretch"
                         IsHitTestVisible="False"
-                        Opacity="0.22">
+                        Opacity="0.2">
                     <Border.Background>
-                        <RadialGradientBrush Center="50%,100%" GradientOrigin="50%,100%" RadiusX="0.7" RadiusY="0.7">
+                        <RadialGradientBrush Center="50%,100%" GradientOrigin="50%,100%" RadiusX="0.82" RadiusY="0.72">
                             <GradientStop Color="#00FFFFFF" Offset="0.0" />
-                            <GradientStop Color="#3022D3EE" Offset="0.4" />
-                            <GradientStop Color="#50F472B6" Offset="0.7" />
-                            <GradientStop Color="#2022D3EE" Offset="1.0" />
+                            <GradientStop Color="#22FFFFFF" Offset="0.35" />
+                            <GradientStop Color="#42FFFFFF" Offset="0.66" />
+                            <GradientStop Color="#00FFFFFF" Offset="1.0" />
                         </RadialGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Height="1"
+                        Margin="-40,0,-40,28"
+                        VerticalAlignment="Bottom"
+                        HorizontalAlignment="Stretch"
+                        Opacity="0.18">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                            <GradientStop Color="#00FFFFFF" Offset="0.0" />
+                            <GradientStop Color="#C8FFFFFF" Offset="0.5" />
+                            <GradientStop Color="#00FFFFFF" Offset="1.0" />
+                        </LinearGradientBrush>
                     </Border.Background>
                 </Border>
 
                 <!-- Main visualizer bars -->
                 <ItemsControl Grid.Row="1"
-                              Height="320"
-                              Margin="-80,0,-80,-28"
-                              HorizontalAlignment="Center"
+                              Height="235"
+                              Margin="-20,0,-20,-24"
+                              HorizontalAlignment="Stretch"
                               VerticalAlignment="Bottom"
                               ItemsSource="{Binding Player.NowPlayingVisualizerBars}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="5"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Bottom" />
+                            <UniformGrid Rows="1"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Bottom" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:AudioVisualizerBarViewModel">
-                            <Panel Opacity="{Binding Opacity}">
-                                <!-- Main bar with gradient -->
+                            <Grid Classes="VisualizerBarItem"
+                                  Opacity="{Binding Opacity}">
+                                <Border Classes="VisualizerBarGlow"
+                                        Height="{Binding Height}" />
                                 <Border Classes="VisualizerBar"
                                         Height="{Binding Height}" />
-                                <!-- Glass highlight -->
-                                <Border Classes="VisualizerBar"
-                                        Height="{Binding Height}">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                                            <GradientStop Color="#88FFFFFF" Offset="0.0" />
-                                            <GradientStop Color="#22FFFFFF" Offset="0.3" />
-                                            <GradientStop Color="#00FFFFFF" Offset="0.6" />
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                            </Panel>
+                                <Border Classes="VisualizerBarHighlight"
+                                        Height="{Binding Height}" />
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
