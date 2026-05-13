@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 
@@ -90,7 +91,10 @@ partial class App
     private void UpdatePlayPauseText()
     {
         if (_playPauseItem != null && _playerViewModel != null)
-            Dispatcher.Post(() => { _playPauseItem.Header = _playerViewModel.IsPlayingAudio ? "暂停" : "播放"; });
+            Dispatcher.UIThread.Post(() =>
+            {
+                _playPauseItem.Header = _playerViewModel.IsPlayingAudio ? "暂停" : "播放";
+            });
     }
 
     private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)

@@ -49,7 +49,7 @@ public partial class App : Application
         collection.AddSingleton<ISessionPersistence, KugouSessionPersistence>();
         collection.AddKuGouSdk();
 
-        var uiDispatcher = Dispatcher.CurrentDispatcher;
+        var uiDispatcher = Dispatcher.UIThread;
 
         collection.AddSingleton<ISukiToastManager, SukiToastManager>();
         collection.AddSingleton<ISukiDialogManager, SukiDialogManager>();

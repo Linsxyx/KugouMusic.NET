@@ -75,7 +75,7 @@ public partial class PlayerViewModel
             if (cancellationToken.IsCancellationRequested || CurrentPlayingSong != song)
                 return;
 
-            await Dispatcher.UIThread.Resume();
+            await Dispatcher.UIThread.InvokeAsync(() => { });
             if (cancellationToken.IsCancellationRequested || CurrentPlayingSong != song)
                 return;
 

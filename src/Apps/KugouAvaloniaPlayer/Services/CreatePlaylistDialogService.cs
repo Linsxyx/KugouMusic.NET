@@ -40,7 +40,7 @@ public sealed class CreatePlaylistDialogService(
         {
             var textBox = new TextBox
             {
-                PlaceholderText = watermark,
+                Watermark = watermark,
                 Text = defaultValue ?? string.Empty,
                 Width = 300
             };
@@ -71,7 +71,7 @@ public sealed class CreatePlaylistDialogService(
             var selectedCoverPath = currentCoverPath;
             var nameBox = new TextBox
             {
-                PlaceholderText = "请输入歌单名称",
+                Watermark = "请输入歌单名称",
                 Text = currentName,
                 Width = 340
             };

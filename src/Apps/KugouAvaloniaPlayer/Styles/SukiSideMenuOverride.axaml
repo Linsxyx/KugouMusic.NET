@@ -90,7 +90,7 @@
                                                              BorderThickness="0"
                                                              Classes="NoShadow"
                                                              Text="{TemplateBinding SearchText, Mode=TwoWay}"
-                                                             PlaceholderText="Search" />
+                                                             Watermark="Search" />
                                                 </DockPanel>
                                             </suki:GlassCard>
                                         </StackPanel>

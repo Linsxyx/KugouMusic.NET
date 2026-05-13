@@ -40,7 +40,7 @@
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                             <TextBox Text="{Binding SearchKeyword}"
                                      behaviors:InteractionBehaviors.EnterKeyCommand="{Binding SearchCommand}"
-                                     PlaceholderText="输入歌曲名、歌手名、歌单或专辑...">
+                                     Watermark="输入歌曲名、歌手名、歌单或专辑...">
                                 <TextBox.KeyBindings>
                                     <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
                                 </TextBox.KeyBindings>
@@ -150,7 +150,7 @@
                     <Grid Grid.Row="1" ColumnDefinitions="*, Auto">
                         <TextBox Text="{Binding SearchKeyword}"
                                  behaviors:InteractionBehaviors.EnterKeyCommand="{Binding SearchCommand}"
-                                 PlaceholderText="输入歌曲名、歌手名、歌单或专辑...">
+                                 Watermark="输入歌曲名、歌手名、歌单或专辑...">
                             <TextBox.KeyBindings>
                                 <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
                             </TextBox.KeyBindings>

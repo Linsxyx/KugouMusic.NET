@@ -321,7 +321,7 @@ public class MeasuredLyricScrollView : ItemsControl
         if (_layoutUpdateQueued) return;
 
         _layoutUpdateQueued = true;
-        Dispatcher.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             _layoutUpdateQueued = false;
             ApplyMeasuredLayout();
@@ -551,7 +551,7 @@ public class MeasuredLyricScrollView : ItemsControl
         InvalidateMeasure();
         InvalidateArrange();
         QueueLayoutUpdate();
-        Dispatcher.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             InvalidateMeasure();
             InvalidateArrange();
