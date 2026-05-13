@@ -12,6 +12,12 @@
 
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Blue" />
+        <Style Selector="suki|SukiWindow[IsTitleBarVisible=False] /template/ Border#PART_BottomBorder">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="suki|SukiWindow[IsTitleBarVisible=True] /template/ Border#PART_BottomBorder">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SukiMainHostCustomBackground.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SukiSideMenuOverride.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SliderPlayer.axaml" />
