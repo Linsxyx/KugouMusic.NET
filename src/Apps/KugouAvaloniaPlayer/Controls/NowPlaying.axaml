@@ -304,7 +304,7 @@
 
                     <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">
                         <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name}"
-                                   FontSize="28" FontWeight="Bold" Foreground="White"
+                                   FontSize="28" FontWeight="ExtraLight" Foreground="White"
                                    TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer}"
                                    FontSize="18" Foreground="#DDFFFFFF"
@@ -502,7 +502,7 @@
                                                                                        Progress="{Binding Progress}"
                                                                                        FontSize="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricFontSize}"
                                                                                        FontFamily="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricFontFamily}"
-                                                                                       FontWeight="Bold"
+                                                                                       FontWeight="ExtraLight"
                                                                                        Foreground="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricForeground}"
                                                                                        PlayedForeground="{Binding $parent[UserControl].((vm:NowPlayingViewModel)DataContext).LyricForeground}" />
                                                 </DataTemplate>
@@ -623,7 +623,7 @@
                            Grid.ColumnSpan="{Binding LyricsGridColumnSpan}"
                            Text="暂无歌词"
                            IsVisible="{Binding !Player.LyricLines.Count}"
-                           Foreground="White" Opacity="0.5" FontSize="24" FontWeight="Bold"
+                           Foreground="White" Opacity="0.5" FontSize="24" FontWeight="ExtraLight"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Grid>
 

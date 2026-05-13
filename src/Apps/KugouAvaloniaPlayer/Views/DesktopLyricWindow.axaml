@@ -132,14 +132,14 @@
         </Style>
 
         <Style Selector="TextBlock.DesktopLine">
-            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontWeight" Value="ExtraLight" />
             <Setter Property="FontSize" Value="{Binding FontSize}" />
             <Setter Property="FontFamily"
                     Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}" />
         </Style>
 
         <Style Selector="TextBlock.DesktopWord">
-            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontWeight" Value="ExtraLight" />
             <Setter Property="FontSize"
                     Value="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}" />
             <Setter Property="FontFamily"
@@ -403,7 +403,7 @@
                                                                Progress="{Binding Progress}"
                                                                FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}"
                                                                FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
-                                                               FontWeight="Bold"
+                                                               FontWeight="ExtraLight"
                                                                Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
                                                                PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}">
                                 <controls:KaraokeGradientTextBlock.Effect>
@@ -486,7 +486,7 @@
                                                                Progress="{Binding Progress}"
                                                                FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationFontSize}"
                                                                FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
-                                                               FontWeight="Medium"
+                                                               FontWeight="ExtraLight"
                                                                Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
                                                                PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).TranslationWordForeground}"
                                                                UnplayedOpacity="0.4">
@@ -560,7 +560,7 @@
                                                                    Progress="{Binding Progress}"
                                                                    FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}"
                                                                    FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
-                                                                   FontWeight="Bold"
+                                                                   FontWeight="ExtraLight"
                                                                    Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
                                                                    PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}">
                                     <controls:KaraokeGradientTextBlock.Effect>
@@ -629,7 +629,7 @@
                                                                    Progress="{Binding Progress}"
                                                                    FontSize="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).FontSize}"
                                                                    FontFamily="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricFontFamily}"
-                                                                   FontWeight="Bold"
+                                                                   FontWeight="ExtraLight"
                                                                    Foreground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}"
                                                                    PlayedForeground="{Binding $parent[Window].((vm:DesktopLyricViewModel)DataContext).LyricForeground}">
                                     <controls:KaraokeGradientTextBlock.Effect>
