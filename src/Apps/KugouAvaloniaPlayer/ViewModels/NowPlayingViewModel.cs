@@ -526,7 +526,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         }
 
         LyricFontFamily = IsSystemFontInstalled(fontFamilyName)
-            ? new FontFamily($"{fontFamilyName}, Microsoft YaHei, SimSun")
+            ? new FontFamily(fontFamilyName)
             : FontFamily.Default;
     }
 
