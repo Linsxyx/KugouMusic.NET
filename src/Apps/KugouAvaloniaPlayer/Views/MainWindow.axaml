@@ -25,7 +25,8 @@
                 Cursor="Hand"
                 Command="{Binding NavigateToUserCommand}"
                 ToolTip.Tip="设置">
-            <Svg Path="/Assets/gear-svgrepo-com.svg"
+            <Svg Classes="ThemeSvgIcon"
+                 Path="/Assets/gear-svgrepo-com.svg"
                  Width="18"
                  Height="18"
                  VerticalAlignment="Center" />
