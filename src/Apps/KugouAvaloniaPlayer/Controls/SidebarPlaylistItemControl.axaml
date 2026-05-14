@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="KugouAvaloniaPlayer.Controls.SidebarPlaylistItemControl"
+             x:DataType="vm:PlaylistItem"
+             x:Name="Root">
+
+    <Border Name="ItemShell"
+            Height="40"
+            CornerRadius="8"
+            ContextRequested="ItemShell_OnContextRequested">
+        <Button Classes="SidebarPlaylistOption"
+                Classes.selected="{Binding IsSelected}"
+                Command="{Binding #Root.OpenCommand}"
+                CommandParameter="{Binding .}">
+            <Grid ColumnDefinitions="32,*"
+                  VerticalAlignment="Center">
+                <Border Width="28"
+                        Height="28"
+                        CornerRadius="6"
+                        ClipToBounds="True"
+                        VerticalAlignment="Center">
+                    <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
+                           Stretch="UniformToFill" />
+                </Border>
+                <TextBlock Grid.Column="1"
+                           Margin="10,0,0,0"
+                           Text="{Binding Name}"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+    </Border>
+</UserControl>

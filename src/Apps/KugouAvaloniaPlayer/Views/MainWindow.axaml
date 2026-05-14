@@ -284,33 +284,9 @@
                                         </ListBox.ItemsPanel>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate DataType="vm:PlaylistItem">
-                                                <Border Height="40" CornerRadius="8">
-                                                    <Border.ContextMenu>
-                                                        <ContextMenu>
-                                                            <MenuItem Header="删除歌单"
-                                                                      Tag="{Binding .}"
-                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}"
-                                                                      CommandParameter="{Binding $self.Tag}" />
-                                                        </ContextMenu>
-                                                    </Border.ContextMenu>
-                                                    <Button Classes="SidebarPlaylistOption"
-                                                            Classes.selected="{Binding IsSelected}"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                            CommandParameter="{Binding .}">
-                                                        <Grid ColumnDefinitions="32,*,Auto" VerticalAlignment="Center">
-                                                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
-                                                                    VerticalAlignment="Center">
-                                                                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
-                                                                                     Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="1"
-                                                                       Margin="10,0,0,0"
-                                                                       Text="{Binding Name}"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       VerticalAlignment="Center" />
-                                                        </Grid>
-                                                    </Button>
-                                                </Border>
+                                                <localControls:SidebarPlaylistItemControl
+                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                    DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
@@ -332,33 +308,9 @@
                                     </ListBox.ItemsPanel>
                                     <ListBox.ItemTemplate>
                                             <DataTemplate DataType="vm:PlaylistItem">
-                                                <Border Height="40" CornerRadius="8">
-                                                    <Border.ContextMenu>
-                                                        <ContextMenu>
-                                                            <MenuItem Header="取消收藏专辑"
-                                                                      Tag="{Binding .}"
-                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}"
-                                                                      CommandParameter="{Binding $self.Tag}" />
-                                                        </ContextMenu>
-                                                    </Border.ContextMenu>
-                                                    <Button Classes="SidebarPlaylistOption"
-                                                            Classes.selected="{Binding IsSelected}"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                            CommandParameter="{Binding .}">
-                                                        <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
-                                                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
-                                                                    VerticalAlignment="Center">
-                                                                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
-                                                                                     Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="1"
-                                                                       Margin="10,0,0,0"
-                                                                       Text="{Binding Name}"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       VerticalAlignment="Center" />
-                                                        </Grid>
-                                                    </Button>
-                                                </Border>
+                                                <localControls:SidebarPlaylistItemControl
+                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                    DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
                                             </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
@@ -381,37 +333,10 @@
                                         </ListBox.ItemsPanel>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate DataType="vm:PlaylistItem">
-                                                <Border Height="40" CornerRadius="8">
-                                                    <Border.ContextMenu>
-                                                        <ContextMenu>
-                                                            <MenuItem Header="编辑本地歌单"
-                                                                      Tag="{Binding .}"
-                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.EditLocalPlaylistCommand}"
-                                                                      CommandParameter="{Binding $self.Tag}" />
-                                                            <MenuItem Header="移除本地歌单"
-                                                                      Tag="{Binding .}"
-                                                                      Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteLocalPlaylistCommand}"
-                                                                      CommandParameter="{Binding $self.Tag}" />
-                                                        </ContextMenu>
-                                                    </Border.ContextMenu>
-                                                    <Button Classes="SidebarPlaylistOption"
-                                                            Classes.selected="{Binding IsSelected}"
-                                                            Command="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                            CommandParameter="{Binding .}">
-                                                        <Grid ColumnDefinitions="32,*" VerticalAlignment="Center">
-                                                            <Border Width="28" Height="28" CornerRadius="6" ClipToBounds="True"
-                                                                    VerticalAlignment="Center">
-                                                                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
-                                                                                     Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="1"
-                                                                       Margin="10,0,0,0"
-                                                                       Text="{Binding Name}"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       VerticalAlignment="Center" />
-                                                        </Grid>
-                                                    </Button>
-                                                </Border>
+                                                <localControls:SidebarPlaylistItemControl
+                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                    EditLocalPlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.EditLocalPlaylistCommand}"
+                                                    DeleteLocalPlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteLocalPlaylistCommand}" />
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>

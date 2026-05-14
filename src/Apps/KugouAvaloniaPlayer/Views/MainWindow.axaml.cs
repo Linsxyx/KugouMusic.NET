@@ -36,7 +36,6 @@ public partial class MainWindow : SukiWindow
 
         base.OnClosing(e);
     }
-
 #if DEBUG
     protected override void OnKeyDown(KeyEventArgs e)
     {
