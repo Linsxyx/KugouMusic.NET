@@ -23,9 +23,9 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class PlayerViewModel : ViewModelBase, IDisposable
 {
     private const int MaxConsecutiveFailures = 5;
-    private const int VisualizerBarCount = 72;
-    private const double VisualizerMinHeight = 18;
-    private const double VisualizerHeightRange = 245;
+    private const int VisualizerBarCount = 96;
+    private const double VisualizerMinHeight = 6;
+    private const double VisualizerHeightRange = 170;
     private const double AnalysisWindowSec = 15.0;
     private const double FallbackMixDurationSec = 6.8;
     private const double FallbackMixEntrySec = 4.6;

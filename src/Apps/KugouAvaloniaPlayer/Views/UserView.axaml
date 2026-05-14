@@ -862,6 +862,9 @@
                             </Grid>
                         </StackPanel>
                     </suki:GlassCard>
+
+                    <Border Height="64"
+                            IsHitTestVisible="False" />
                 </StackPanel>
             </ScrollViewer>
         </Grid>

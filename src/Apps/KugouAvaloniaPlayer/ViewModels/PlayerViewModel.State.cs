@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -432,7 +433,7 @@ public partial class PlayerViewModel
         for (var i = 0; i < NowPlayingVisualizerBars.Count; i++)
         {
             NowPlayingVisualizerBars[i].Height = VisualizerMinHeight;
-            NowPlayingVisualizerBars[i].Opacity = 0.22;
+            NowPlayingVisualizerBars[i].Opacity = 0.1;
         }
     }
 
@@ -445,21 +446,42 @@ public partial class PlayerViewModel
             return;
         }
 
-        var energyBoost = Math.Clamp(snapshot.Rms * 10.5, 0d, 1d);
-        var brightnessBoost = Math.Clamp(snapshot.Brightness * 1.45, 0d, 1d);
+        var energyBoost = Math.Clamp(snapshot.Rms * 8.5, 0d, 1d);
+        var brightnessBoost = Math.Clamp(snapshot.Brightness * 1.25, 0d, 1d);
+        var barCount = NowPlayingVisualizerBars.Count;
 
-        for (var i = 0; i < NowPlayingVisualizerBars.Count; i++)
+        for (var i = 0; i < barCount; i++)
         {
-            var sourceIndex = Math.Min(i, spectrumBands.Count - 1);
-            var band = Math.Clamp(spectrumBands[sourceIndex], 0f, 1f);
-            var emphasis = 1d - Math.Abs(i / (NowPlayingVisualizerBars.Count - 1d) - 0.5d) * 0.22d;
-            var target = Math.Clamp((band * 0.72d + energyBoost * 0.2d + brightnessBoost * 0.08d) * emphasis, 0d, 1d);
+            var phase = barCount <= 1 ? 0d : i / (barCount - 1d);
+            var band = SampleSpectrumBand(spectrumBands, phase);
+            var shapedBand = Math.Pow(Math.Clamp(band, 0d, 1d), 0.72d);
+            var centerLift = 0.82d + Math.Sin(phase * Math.PI) * 0.12d;
+            var ripple = 1d + Math.Sin(snapshot.PositionSeconds * 4.8d + i * 0.18d) * energyBoost * 0.035d;
+            var target = Math.Clamp(
+                (shapedBand * 0.58d + energyBoost * 0.14d + brightnessBoost * 0.04d) * centerLift * ripple,
+                0d,
+                1d);
             var targetHeight = VisualizerMinHeight + target * VisualizerHeightRange;
             var bar = NowPlayingVisualizerBars[i];
 
-            var smoothing = targetHeight >= bar.Height ? 0.58d : 0.18d;
+            var smoothing = targetHeight >= bar.Height ? 0.46d : 0.16d;
             bar.Height += (targetHeight - bar.Height) * smoothing;
-            bar.Opacity = Math.Clamp(0.24 + target * 0.76, 0.24, 1d);
+            bar.Opacity = Math.Clamp(0.1d + Math.Pow(target, 0.9d) * 0.5d, 0.1d, 0.6d);
         }
+    }
+
+    private static double SampleSpectrumBand(IReadOnlyList<float> spectrumBands, double phase)
+    {
+        if (spectrumBands.Count == 1)
+            return spectrumBands[0];
+
+        var position = Math.Clamp(phase, 0d, 1d) * (spectrumBands.Count - 1);
+        var lowerIndex = (int)Math.Floor(position);
+        var upperIndex = Math.Min(lowerIndex + 1, spectrumBands.Count - 1);
+        var mix = position - lowerIndex;
+        var lower = Math.Clamp(spectrumBands[lowerIndex], 0f, 1f);
+        var upper = Math.Clamp(spectrumBands[upperIndex], 0f, 1f);
+
+        return lower + (upper - lower) * mix;
     }
 }
