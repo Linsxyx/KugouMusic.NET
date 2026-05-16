@@ -58,7 +58,16 @@ public class ArtistController(ArtistClient artistClient) : ControllerBase
         return Ok(await artistClient.GetSingerListAsync(sextype, type, hotsize));
     }
 
+    /// <summary>
+    ///     获取歌手MV。
+    /// </summary>
+    /// <param name="id">歌手 ID。</param>
+    /// <param name="page">页码。</param>
+    /// <param name="pagesize">每页数量。</param>
+    /// <param name="tag">official: 官方版本，live：现场版本，fan：饭制版本，artist: 歌手发布, all: 获取全部，默认为获取全部</param>
+    /// <returns>歌手MV。</returns>
     [HttpGet("videos")]
+    [ProducesResponseType(typeof(ArtistVideoResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetVideos(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
         [FromQuery] int page = 1,

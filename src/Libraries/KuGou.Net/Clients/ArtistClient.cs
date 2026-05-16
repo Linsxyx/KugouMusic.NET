@@ -41,9 +41,13 @@ public class ArtistClient(RawArtistApi rawApi, RawSearchApi rawSearchApi, KgSess
         return rawApi.GetListsAsync(0, sexType, type, hotSize);
     }
 
-    public Task<JsonElement> GetVideosAsync(string id, int page = 1, int pageSize = 30, string tag = "all")
+    public async Task<ArtistVideoResponse?> GetVideosAsync(string id, int page = 1, int pageSize = 30, string tag = "all")
     {
-        return rawApi.GetVideosAsync(id, page, pageSize, tag);
+        var json = await rawApi.GetVideosAsync(id, page, pageSize, tag);
+        return KgApiResponseParser.Parse<ArtistVideoResponse>(
+            json, 
+            AppJsonContext.Default.ArtistVideoResponse
+        );
     }
 
     public async Task<SingerDetailResponse?> GetDetailAsync(string id)

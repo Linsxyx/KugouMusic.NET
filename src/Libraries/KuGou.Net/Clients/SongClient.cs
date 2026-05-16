@@ -1,5 +1,6 @@
 using System.Text.Json;
 using KuGou.Net.Abstractions.Models;
+using KuGou.Net.Adapters.Common;
 using KuGou.Net.Protocol.Raw;
 using KuGou.Net.util;
 
@@ -28,9 +29,10 @@ public class SongClient(RawSongApi rawApi, RawSearchApi rawSearchApi)
         return rawApi.GetAudioKtvTotalAsync(songId, songHash, singerName);
     }
 
-    public Task<JsonElement> GetKmrAudioMvAsync(string albumAudioIds, string? fields = null)
+    public async Task<AudioMvResponse?> GetKmrAudioMvAsync(string albumAudioIds, string? fields = null)
     {
-        return rawApi.GetKmrAudioMvAsync(albumAudioIds, fields);
+        var json = await rawApi.GetKmrAudioMvAsync(albumAudioIds, fields);
+        return KgApiResponseParser.Parse<AudioMvResponse>(json, AppJsonContext.Default.AudioMvResponse);
     }
 
     public Task<JsonElement> GetKmrAudioAsync(string albumAudioIds, string? fields = "base")

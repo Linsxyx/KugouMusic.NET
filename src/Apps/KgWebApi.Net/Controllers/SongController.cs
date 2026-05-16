@@ -75,7 +75,14 @@ public class SongController(SongClient songClient) : ControllerBase
         return Ok(await songClient.GetSongRankingFilterAsync(albumAudioId, page, pagesize));
     }
 
+    /// <summary>
+    ///     获取歌曲 MV。
+    /// </summary>
+    /// <param name="albumAudioIds">专辑音乐 id (album_audio_id/MixSongID 均可以)</param>
+    /// <param name="fields">支持的值有：mkv,tags,h264,h265,authors</param>
+    /// <returns>歌曲 相对应的 mv。</returns>
     [HttpGet("/kmr/audio/mv")]
+    [ProducesResponseType(typeof(AudioMvResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetKmrAudioMv(
         [FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioIds,
         [FromQuery] string? fields = null)

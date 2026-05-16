@@ -1,28 +1,39 @@
 using System.Text.Json;
+using KuGou.Net.Abstractions.Models;
+using KuGou.Net.Adapters.Common;
 using KuGou.Net.Protocol.Raw;
+using KuGou.Net.util;
 
 namespace KuGou.Net.Clients;
 
 public class CommentClient(RawCommentApi rawApi)
 {
-    public Task<JsonElement> GetMusicCommentsAsync(string mixSongId, int page = 1, int pageSize = 30)
+    public async Task<MusicCommentResponse?> GetMusicCommentsAsync(string mixSongId, int page = 1, int pageSize = 30)
     {
-        return rawApi.GetMusicCommentsAsync(mixSongId, page, pageSize);
+        var json = await rawApi.GetMusicCommentsAsync(mixSongId, page, pageSize);
+        return KgApiResponseParser.Parse<MusicCommentResponse>(json, AppJsonContext.Default.MusicCommentResponse);
     }
 
-    public Task<JsonElement> GetPlaylistCommentsAsync(string id, int page = 1, int pageSize = 30)
+    public async Task<MusicCommentResponse?> GetPlaylistCommentsAsync(string id, int page = 1, int pageSize = 30)
     {
-        return rawApi.GetPlaylistCommentsAsync(id, page, pageSize);
+        var json = await rawApi.GetPlaylistCommentsAsync(id, page, pageSize);
+        return KgApiResponseParser.Parse<MusicCommentResponse>(json, AppJsonContext.Default.MusicCommentResponse);
     }
 
-    public Task<JsonElement> GetAlbumCommentsAsync(string id, int page = 1, int pageSize = 30)
+    public async Task<MusicCommentResponse?> GetAlbumCommentsAsync(string id, int page = 1, int pageSize = 30)
     {
-        return rawApi.GetAlbumCommentsAsync(id, page, pageSize);
+        var json = await rawApi.GetAlbumCommentsAsync(id, page, pageSize);
+        return KgApiResponseParser.Parse<MusicCommentResponse>(json, AppJsonContext.Default.MusicCommentResponse);
     }
 
-    public Task<JsonElement> GetCommentCountAsync(string? hash = null, string? specialId = null)
+    public async Task<Dictionary<string, int>?> GetCommentCountAsync(string? hash = null, string? specialId = null)
     {
-        return rawApi.GetCommentCountAsync(hash, specialId);
+        var json = await rawApi.GetCommentCountAsync(hash, specialId);
+        
+        return KgApiResponseParser.Parse<Dictionary<string, int>>(
+            json, 
+            AppJsonContext.Default.DictionaryStringInt32
+        );
     }
 
     public Task<JsonElement> GetFloorCommentsAsync(
