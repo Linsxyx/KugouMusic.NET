@@ -10,6 +10,15 @@
              x:Class="KugouAvaloniaPlayer.Controls.SongListItemControl"
              x:DataType="vm:SongItem">
 
+    <UserControl.Styles>
+        <Style Selector="TextBlock.SongTitle">
+            <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
+        </Style>
+        <Style Selector="TextBlock.SongTitle.playing">
+            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor75}" />
+        </Style>
+    </UserControl.Styles>
+
     <Border Name="ItemShell"
             Classes="SongListItemShell"
             CornerRadius="14"
@@ -30,8 +39,11 @@
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0" Spacing="3">
-                <TextBlock Text="{Binding Name}" FontWeight="Bold" TextTrimming="CharacterEllipsis"
-                           Foreground="{StaticResource SukiLowText}" />
+                <TextBlock Text="{Binding Name}"
+                           Classes="SongTitle"
+                           Classes.playing="{Binding IsPlaying}"
+                           FontWeight="Bold"
+                           TextTrimming="CharacterEllipsis" />
                 <TextBlock Text="{Binding Singer}" FontSize="12" FontWeight="ExtraLight"
                            Foreground="{StaticResource SukiLiquid2}"
                            TextTrimming="CharacterEllipsis" />
