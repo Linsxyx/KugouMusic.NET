@@ -138,6 +138,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         WeakReferenceMessenger.Default.Register<NavigateToSingerMessage>(this, (_, m) =>
         {
+            NowPlaying.CloseCommand.Execute(null);
             var singerVm = singerViewModelFactory1.Create(m.Singer.Id.ToString(), m.Singer.Name);
             _navigationService.Push(singerVm);
         });

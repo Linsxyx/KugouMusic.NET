@@ -85,10 +85,14 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public partial bool IsVolumeVisible { get; set; }
 
     [ObservableProperty]
+    public partial bool IsSingerMenuExpanded { get; set; }
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CoverBackgroundOpacity))]
     public partial double BackgroundOpacity { get; set; } = 0.5;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PortraitModeStatusText))]
     public partial bool IsPortraitModeEnabled { get; set; }
 
     [ObservableProperty]
@@ -113,6 +117,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsPrimaryLyricVisible))]
     [NotifyPropertyChangedFor(nameof(IsTranslationVisible))]
     [NotifyPropertyChangedFor(nameof(IsRomanizationVisible))]
+    [NotifyPropertyChangedFor(nameof(CurrentLyricDisplayModeText))]
     public partial NowPlayingLyricDisplayMode NowPlayingLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
 
@@ -147,6 +152,36 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     public bool IsRomanizationVisible =>
         NowPlayingLyricDisplayMode == NowPlayingLyricDisplayMode.LyricsWithRomanization;
+
+    public bool HasCurrentSinger =>
+        Player.DisplayedPlayingSong?.Singers.Count > 0;
+
+    public bool CanAddCurrentSongToPlaylist =>
+        Player.DisplayedPlayingSong is { LocalFilePath: null };
+
+    public string CurrentLyricDisplayModeText =>
+        NowPlayingLyricDisplayMode switch
+        {
+            NowPlayingLyricDisplayMode.LyricsOnly => "仅歌词",
+            NowPlayingLyricDisplayMode.LyricsWithRomanization => "歌词 + 音译",
+            _ => "歌词 + 翻译"
+        };
+
+    public string PortraitModeStatusText => IsPortraitModeEnabled ? "当前：已开启" : "当前：未开启";
+
+    public string CurrentSingerDisplayText
+    {
+        get
+        {
+            var singers = Player.DisplayedPlayingSong?.Singers;
+            return singers switch
+            {
+                { Count: > 1 } => $"{singers.Count} 位歌手",
+                { Count: 1 } => singers[0].Name,
+                _ => "当前歌手"
+            };
+        }
+    }
 
     public bool HasPortraitBackground =>
         IsPortraitModeEnabled &&
@@ -187,6 +222,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     private void Close()
     {
         IsOpen = false;
+        IsSingerMenuExpanded = false;
         IsVolumeVisible = false;
         IsPortraitModeEnabled = false;
     }
@@ -195,6 +231,12 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     private void ToggleVolume()
     {
         IsVolumeVisible = !IsVolumeVisible;
+    }
+
+    [RelayCommand]
+    private void ToggleSingerMenu()
+    {
+        IsSingerMenuExpanded = !IsSingerMenuExpanded;
     }
 
     [RelayCommand]
@@ -214,11 +256,30 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         IsPortraitModeEnabled = !IsPortraitModeEnabled;
     }
 
+    [RelayCommand]
+    private void ViewSinger(SingerLite? singer)
+    {
+        if (singer != null)
+            WeakReferenceMessenger.Default.Send(new NavigateToSingerMessage(singer));
+    }
+
+    [RelayCommand]
+    private void AddCurrentSongToPlaylist()
+    {
+        var song = Player.DisplayedPlayingSong;
+        if (song != null && song.LocalFilePath is null)
+            WeakReferenceMessenger.Default.Send(new ShowPlaylistDialogMessage(song));
+    }
+
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(PlayerViewModel.DisplayedPlayingSong))
             return;
 
+        OnPropertyChanged(nameof(HasCurrentSinger));
+        OnPropertyChanged(nameof(CanAddCurrentSongToPlaylist));
+        OnPropertyChanged(nameof(CurrentSingerDisplayText));
+        IsSingerMenuExpanded = false;
         IsPortraitAvailable = false;
 
         if (IsPortraitModeEnabled)

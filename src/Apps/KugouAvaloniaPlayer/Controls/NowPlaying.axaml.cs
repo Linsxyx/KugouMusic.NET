@@ -21,6 +21,8 @@ public partial class NowPlaying : UserControl
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        HideMoreFlyout();
+        DetachMoreFlyoutLightDismissHandler();
         base.OnDetachedFromVisualTree(e);
         UnhookViewModel();
     }
@@ -48,9 +50,14 @@ public partial class NowPlaying : UserControl
 
     private void OnNowPlayingPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(NowPlayingViewModel.IsOpen) ||
-            _nowPlayingViewModel?.IsOpen != true)
+        if (e.PropertyName != nameof(NowPlayingViewModel.IsOpen))
             return;
+
+        if (_nowPlayingViewModel?.IsOpen != true)
+        {
+            HideMoreFlyout();
+            return;
+        }
 
         Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
     }

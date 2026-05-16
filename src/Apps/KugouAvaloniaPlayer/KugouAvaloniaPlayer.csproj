@@ -94,5 +94,8 @@
         <Compile Update="Views\DesktopLyricLockOverlayWindow.axaml.cs">
           <DependentUpon>DesktopLyricLockOverlayWindow.axaml</DependentUpon>
         </Compile>
+        <Compile Update="Controls\NowPlaying.MoreFlyout.cs">
+          <DependentUpon>NowPlaying.axaml</DependentUpon>
+        </Compile>
     </ItemGroup>
 </Project>

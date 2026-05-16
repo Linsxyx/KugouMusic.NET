@@ -174,6 +174,13 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
 
+### 2.2.2
+- 优化播放页面，现可在播放页面跳转歌手和添加到歌单
+- 优化导航栏字体显示
+- 优化歌词，移除旧版逐字歌词
+- 修复播放列表无法点击其他位置消失
+- 为当前播放歌曲添加歌曲名称颜色变化
+
 ### v2.0.0
 - 全面美化页面，可自定义背景图片
 - 优化歌词动效
@@ -246,7 +253,7 @@ KugouMusic.NET
 
 ## 交流群
 
-- QQ群：1081635731 (群刚建没基本人，可以进来提建议或者交流反馈)
+- QQ群：1081635731 
 
 ## 👍 灵感来源
 
