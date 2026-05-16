@@ -36,7 +36,7 @@ public class LyricLineControl : UserControl
     public static readonly StyledProperty<KaraokeClipMode> ClipModeProperty =
         AvaloniaProperty.Register<LyricLineControl, KaraokeClipMode>(nameof(ClipMode), KaraokeClipMode.ByTextWidth);
 
-    public static new readonly StyledProperty<FontFamily> FontFamilyProperty =
+    public new static readonly StyledProperty<FontFamily> FontFamilyProperty =
         TextBlock.FontFamilyProperty.AddOwner<LyricLineControl>();
 
     public static readonly StyledProperty<double> PrimaryFontSizeProperty =
@@ -305,35 +305,28 @@ public class LyricLineControl : UserControl
         _isApplyingPreset = true;
         try
         {
+            ClipMode = KaraokeClipMode.ByTextWidth;
             switch (preset)
             {
                 case LyricViewPreset.AppleMusicClassic:
-                    ClipMode = KaraokeClipMode.ByTextWidth;
                     TextAlignment = TextAlignment.Center;
                     SecondaryTopSpacing = 5d;
-                    SectionSpacing = 0d;
-                    InactivePrimaryOpacity = 0.48d;
-                    InactiveSecondaryOpacity = 0.6d;
                     break;
 
                 case LyricViewPreset.DesktopClassic:
-                    ClipMode = KaraokeClipMode.ByTextWidth;
                     TextAlignment = TextAlignment.Center;
                     SecondaryTopSpacing = 0d;
-                    SectionSpacing = 0d;
-                    InactivePrimaryOpacity = 0.48d;
-                    InactiveSecondaryOpacity = 0.6d;
                     break;
 
                 default:
-                    ClipMode = KaraokeClipMode.ByTextWidth;
                     TextAlignment = TextAlignment.Left;
                     SecondaryTopSpacing = 0d;
-                    SectionSpacing = 0d;
-                    InactivePrimaryOpacity = 0.48d;
-                    InactiveSecondaryOpacity = 0.6d;
                     break;
             }
+
+            SectionSpacing = 0d;
+            InactivePrimaryOpacity = 0.48d;
+            InactiveSecondaryOpacity = 0.6d;
         }
         finally
         {
@@ -351,7 +344,7 @@ public class LyricLineControl : UserControl
         _primaryWordPanel.HorizontalContentAlignment = horizontalAlignment;
         _translationWordPanel.HorizontalContentAlignment = horizontalAlignment;
 
-        ApplyTextBlockStyle(_primaryTextBlock, PrimaryFontSize, PrimaryForeground, isActive, InactivePrimaryOpacity, FontWeight.SemiBold, FontWeight.Bold);
+        ApplyTextBlockStyle(_primaryTextBlock, PrimaryFontSize, PrimaryForeground, isActive, InactivePrimaryOpacity, FontWeight.ExtraLight, FontWeight.ExtraLight);
         ApplyTextBlockStyle(_translationTextBlock, TranslationFontSize, TranslationForeground, isActive, InactiveSecondaryOpacity, FontWeight.Medium, FontWeight.Medium);
         ApplyTextBlockStyle(_romanizationTextBlock, RomanizationFontSize, RomanizationForeground, isActive, InactiveSecondaryOpacity, FontWeight.Medium, FontWeight.Medium);
 
@@ -433,7 +426,7 @@ public class LyricLineControl : UserControl
             Text = word.Text,
             FontFamily = FontFamily,
             FontSize = fontSize,
-            FontWeight = FontWeight.SemiBold,
+            FontWeight = FontWeight.ExtraLight,
             Foreground = foreground,
             RenderTransform = transform
         };
@@ -478,9 +471,8 @@ public class LyricLineControl : UserControl
                             : isPlayed
                                 ? 0.96d
                                 : unplayedOpacity;
-                    textBlock.FontWeight = isCurrent ? FontWeight.Bold : FontWeight.SemiBold;
-                    if (visual.Transform != null)
-                        visual.Transform.Y = enableLift ? LyricProgressCalculator.GetLiftOffset(progress) : 0d;
+                    textBlock.FontWeight = FontWeight.ExtraLight;
+                    visual.Transform?.Y = enableLift ? LyricProgressCalculator.GetLiftOffset(progress) : 0d;
                     break;
             }
         }
