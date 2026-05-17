@@ -39,6 +39,12 @@ public record SingerSongItem : KgBaseModel
     /// </summary>
     [property: JsonPropertyName("album_id")]
     public long AlbumId { get; set; }
+    
+    /// <summary>
+    ///     专辑歌曲 ID(等同于mixsongid) 。
+    /// </summary>
+    [property: JsonPropertyName("album_audio_id")]
+    public long AlbumAudioId { get; set; }
 
     /// <summary>
     ///     专辑名称。

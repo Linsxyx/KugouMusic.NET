@@ -82,6 +82,12 @@ public record PlaylistSong : KgBaseModel
         get => field?.Replace("{size}", "400");
         set;
     }
+    
+    /// <summary>
+    ///     混合歌曲 ID。
+    /// </summary>
+    [JsonPropertyName("mixsongid")]
+    public int MixSongId { get; set; } 
 
     private string ProcessName(string? rawName)
     {

@@ -90,5 +90,5 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
 // ================= DTO 模型 =================
 
 public record MobileLoginRequest(
-    [property: Required(AllowEmptyStrings = false)] string Mobile,
-    [property: Required(AllowEmptyStrings = false)] string Code);
+    [param: Required(AllowEmptyStrings = false)] string Mobile,
+    [param: Required(AllowEmptyStrings = false)] string Code);

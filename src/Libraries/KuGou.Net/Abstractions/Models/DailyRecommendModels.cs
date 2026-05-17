@@ -80,10 +80,10 @@ public record DailyRecommendSong : KgBaseModel
     public long AudioId { get; set; }
 
     /// <summary>
-    ///     混合 ID (用于歌词搜索等)
+    ///     混合 ID 
     /// </summary>
     [property: JsonPropertyName("mixsongid")]
-    public string MixSongId { get; set; } = "";
+    public int MixSongId { get; set; } 
 
     /// <summary>
     ///     封面

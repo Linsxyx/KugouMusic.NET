@@ -31,7 +31,7 @@ public class AlbumController(AlbumClient albumClient) : ControllerBase
     /// <summary>
     ///     获取专辑歌曲列表。
     /// </summary>
-    /// <param name="id">专辑 ID。</param>
+    /// <param name="id">专辑 ID。用户歌单里的MusiclibId就是专辑id</param>
     /// <param name="page">页码。</param>
     /// <param name="pagesize">每页数量。</param>
     /// <returns>专辑歌曲列表。</returns>

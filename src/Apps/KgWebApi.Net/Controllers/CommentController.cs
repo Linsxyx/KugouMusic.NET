@@ -12,7 +12,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <summary>
     ///     获取歌曲评论。
     /// </summary>
-    /// <param name="mixsongid">歌曲 mixsongid。</param>
+    /// <param name="mixsongid">歌单下 mixsongid。歌手albumaudioid 专辑里没找到有这个字段</param>
     /// <param name="page">页码。</param>
     /// <param name="pagesize">每页数量。</param>
     /// <returns>歌曲评论列表。</returns>

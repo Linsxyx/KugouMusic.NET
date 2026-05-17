@@ -86,7 +86,7 @@ public record UserPlaylistItem : KgBaseModel
     [JsonPropertyName("type")] public int Type { get; set; }
 
     /// <summary>
-    ///     媒体库 ID。
+    ///     专辑 ID。
     /// </summary>
     [JsonPropertyName("musiclib_id")] public long MusiclibId { get; set; }
 
