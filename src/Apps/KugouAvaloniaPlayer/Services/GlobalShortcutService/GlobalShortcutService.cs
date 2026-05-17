@@ -421,6 +421,12 @@ public sealed partial class GlobalShortcutService(
                 case GlobalShortcutAction.ToggleDesktopLyric:
                     desktopLyricWindowService.Toggle();
                     break;
+                case GlobalShortcutAction.VolumeUp:
+                    playerViewModel.IncreaseVolume();
+                    break;
+                case GlobalShortcutAction.VolumeDown:
+                    playerViewModel.DecreaseVolume();
+                    break;
             }
         });
     }

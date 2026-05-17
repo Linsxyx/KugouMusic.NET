@@ -39,7 +39,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     public partial bool IsFmLoading { get; set; }
 
     [ObservableProperty]
-    public partial PersonalFmMode SelectedFmMode { get; set; } = PersonalFmMode.Peak;
+    public partial PersonalFmMode SelectedFmMode { get; set; } = PersonalFmMode.Normal;
 
     [ObservableProperty]
     public partial PersonalFmSongPoolId SelectedFmSongPoolId { get; set; } = PersonalFmSongPoolId.Taste;

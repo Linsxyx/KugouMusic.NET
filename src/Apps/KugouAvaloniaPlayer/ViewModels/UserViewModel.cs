@@ -200,7 +200,9 @@ public partial class UserViewModel : PageViewModelBase
             new GlobalShortcutItemViewModel(GlobalShortcutAction.PreviousTrack, "上一首"),
             new GlobalShortcutItemViewModel(GlobalShortcutAction.NextTrack, "下一首"),
             new GlobalShortcutItemViewModel(GlobalShortcutAction.ShowMainWindow, "显示窗口"),
-            new GlobalShortcutItemViewModel(GlobalShortcutAction.ToggleDesktopLyric, "显示桌面歌词")
+            new GlobalShortcutItemViewModel(GlobalShortcutAction.ToggleDesktopLyric, "显示桌面歌词"),
+            new GlobalShortcutItemViewModel(GlobalShortcutAction.VolumeUp, "音量加"),
+            new GlobalShortcutItemViewModel(GlobalShortcutAction.VolumeDown, "音量减")
         ];
         RefreshShortcutTexts();
         ApplyRegistrationResults(_globalShortcutService.CurrentResults);

@@ -140,7 +140,7 @@ public class RecommendClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
     /// <param name="songid">音乐 songid (建议)</param>
     /// <param name="playtime">已播放时间秒数 (建议)</param>
     /// <param name="action">行为：'play'(正常), 'garbage'(不喜欢/垃圾桶)</param>
-    /// <param name="mode">模式：'normal'(红心 Radio), 'small'(小众 Radio), 'peak'(巅峰 Radio)</param>
+    /// <param name="mode">模式：'normal'(红心 Radio), 'small'(小众 Radio), 'peak'(速览 Radio)</param>
     /// <param name="songPoolId">推荐策略：0(根据口味), 1(根据风格), 2(特殊推荐池)</param>
     /// <param name="isOverplay">是否已播放完成</param>
     /// <param name="remainSongCount">剩余未播歌曲数，大于 4 不返回推荐歌曲</param>

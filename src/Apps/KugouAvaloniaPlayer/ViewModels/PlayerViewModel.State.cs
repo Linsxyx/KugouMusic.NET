@@ -81,6 +81,8 @@ public partial class PlayerViewModel
     partial void OnMusicVolumeChanged(float value)
     {
         _player.SetVolume(value);
+        SettingsManager.Settings.MusicVolume = value;
+        SettingsManager.Save();
     }
 
     partial void OnDisplayedPlayingSongChanged(SongItem? value)

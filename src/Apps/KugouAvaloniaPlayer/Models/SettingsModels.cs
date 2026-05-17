@@ -21,7 +21,9 @@ public enum GlobalShortcutAction
     PreviousTrack,
     NextTrack,
     ShowMainWindow,
-    ToggleDesktopLyric
+    ToggleDesktopLyric,
+    VolumeUp,
+    VolumeDown
 }
 
 public enum LyricAlignmentOption
@@ -46,6 +48,8 @@ public class GlobalShortcutSettings
     public string? NextTrack { get; set; } = "Ctrl+Alt+Right";
     public string? ShowMainWindow { get; set; } = "Ctrl+Alt+Up";
     public string? ToggleDesktopLyric { get; set; } = "Ctrl+Alt+L";
+    public string? VolumeUp { get; set; } = "Ctrl+Alt+Shift+Up";
+    public string? VolumeDown { get; set; } = "Ctrl+Alt+Shift+Down";
 
     public GlobalShortcutSettings Clone()
     {
@@ -56,7 +60,9 @@ public class GlobalShortcutSettings
             PreviousTrack = PreviousTrack,
             NextTrack = NextTrack,
             ShowMainWindow = ShowMainWindow,
-            ToggleDesktopLyric = ToggleDesktopLyric
+            ToggleDesktopLyric = ToggleDesktopLyric,
+            VolumeUp = VolumeUp,
+            VolumeDown = VolumeDown
         };
     }
 
@@ -69,6 +75,8 @@ public class GlobalShortcutSettings
             GlobalShortcutAction.NextTrack => NextTrack,
             GlobalShortcutAction.ShowMainWindow => ShowMainWindow,
             GlobalShortcutAction.ToggleDesktopLyric => ToggleDesktopLyric,
+            GlobalShortcutAction.VolumeUp => VolumeUp,
+            GlobalShortcutAction.VolumeDown => VolumeDown,
             _ => null
         };
     }
@@ -91,6 +99,12 @@ public class GlobalShortcutSettings
                 break;
             case GlobalShortcutAction.ToggleDesktopLyric:
                 ToggleDesktopLyric = shortcut;
+                break;
+            case GlobalShortcutAction.VolumeUp:
+                VolumeUp = shortcut;
+                break;
+            case GlobalShortcutAction.VolumeDown:
+                VolumeDown = shortcut;
                 break;
         }
     }
@@ -121,6 +135,8 @@ public class AppSettings
     public bool EnableSeamlessTransition { get; set; } = true;
 
     public bool EnableNowPlayingVisualizer { get; set; }
+
+    public float MusicVolume { get; set; } = 0.8f;
 
     public float[] CustomEqGains { get; set; } = new float[10];
 

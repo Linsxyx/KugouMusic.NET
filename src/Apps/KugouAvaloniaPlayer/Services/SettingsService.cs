@@ -48,6 +48,7 @@ public static class SettingsManager
                 Settings.GlobalShortcuts ??= new GlobalShortcutSettings();
                 Settings.AppTheme = NormalizeAppTheme(Settings.AppTheme);
                 Settings.CustomBackgroundImageOpacity = Math.Clamp(Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
+                Settings.MusicVolume = Math.Clamp(Settings.MusicVolume, 0f, 1f);
             }
         }
         catch (Exception)

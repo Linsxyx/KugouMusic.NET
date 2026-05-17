@@ -700,7 +700,7 @@
                                     <TextBlock Text="{Binding AppVersion}"
                                                FontSize="12"
                                                Foreground="{DynamicResource SukiLowText}" />
-                                    <TextBlock Text="QQ群：1081635731 (群刚建没基本人，可以进来提建议或者交流反馈)"
+                                    <TextBlock Text="QQ群：1081635731 (欢迎进来提建议或者交流反馈)"
                                                FontSize="12"
                                                Foreground="{DynamicResource SukiLowText}" />
                                 </StackPanel>

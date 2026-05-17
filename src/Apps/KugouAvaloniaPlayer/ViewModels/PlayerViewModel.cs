@@ -25,6 +25,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 {
     private const int MaxConsecutiveFailures = 5;
     private const int VisualizerBarCount = 96;
+    private const float VolumeStep = 0.05f;
     private const double VisualizerMinHeight = 6;
     private const double VisualizerHeightRange = 170;
     private const double AnalysisWindowSec = 15.0;
@@ -168,6 +169,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         IsSeamlessTransitionEnabled = SettingsManager.Settings.EnableSeamlessTransition;
         IsNowPlayingVisualizerEnabled = SettingsManager.Settings.EnableNowPlayingVisualizer;
         _isVolumeNormalizationEnabled = SettingsManager.Settings.EnableVolumeNormalization;
+        MusicVolume = Math.Clamp(SettingsManager.Settings.MusicVolume, 0f, 1f);
         QualitySelection = MusicQuality;
         UpdateAudioEffects(SettingsManager.Settings.EQPreset, SettingsManager.Settings.EnableSurround);
         _player.SetVolumeNormalizationEnabled(_isVolumeNormalizationEnabled);
@@ -201,6 +203,21 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
     public bool IsRepeatOneMode => _queueManager.IsRepeatOneMode;
     public bool IsShuffleMode => _queueManager.IsShuffleMode;
+
+    public void ChangeVolume(float delta)
+    {
+        MusicVolume = Math.Clamp(MusicVolume + delta, 0f, 1f);
+    }
+
+    public void IncreaseVolume()
+    {
+        ChangeVolume(VolumeStep);
+    }
+
+    public void DecreaseVolume()
+    {
+        ChangeVolume(-VolumeStep);
+    }
 
     public void Dispose()
     {

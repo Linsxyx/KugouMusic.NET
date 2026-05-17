@@ -52,7 +52,7 @@ public static class PersonalFmPresentation
         return mode switch
         {
             PersonalFmMode.Small => "小众 Radio",
-            PersonalFmMode.Peak => "巅峰 Radio",
+            PersonalFmMode.Peak => "速览 Radio",
             _ => "红心 Radio"
         };
     }
@@ -62,7 +62,7 @@ public static class PersonalFmPresentation
         return mode switch
         {
             PersonalFmMode.Small => "小众",
-            PersonalFmMode.Peak => "巅峰",
+            PersonalFmMode.Peak => "速览",
             _ => "红心"
         };
     }
