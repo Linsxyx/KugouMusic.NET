@@ -9,12 +9,22 @@ namespace KgWebApi.Net.Controllers;
 [Route("album")]
 public class AlbumController(AlbumClient albumClient) : ControllerBase
 {
+    /// <summary>
+    ///     新碟上架。
+    /// </summary>
+    /// <returns>新碟上架列表。</returns>
     [HttpGet("shop")]
     public async Task<IActionResult> GetAlbumShop()
     {
         return Ok(await albumClient.GetAlbumShopAsync());
     }
 
+    /// <summary>
+    ///     专辑信息。
+    /// </summary>
+    /// <param name="albumId">专辑 id，可以传多个。</param>
+    /// <param name="fields">需要返回的信息字段。</param>
+    /// <returns>专辑相关信息。</returns>
     [HttpGet]
     public async Task<IActionResult> GetAlbum([FromQuery(Name = "album_id")][Required(AllowEmptyStrings = false)] string albumId,
         [FromQuery] string? fields = null)
@@ -22,6 +32,11 @@ public class AlbumController(AlbumClient albumClient) : ControllerBase
         return Ok(await albumClient.GetAlbumRawAsync(albumId, fields));
     }
 
+    /// <summary>
+    ///     专辑详情。
+    /// </summary>
+    /// <param name="id">专辑 id。</param>
+    /// <returns>专辑详情。</returns>
     [HttpGet("detail")]
     public async Task<IActionResult> GetDetail([FromQuery(Name = "id")][Required(AllowEmptyStrings = false)] string id)
     {

@@ -10,7 +10,7 @@ namespace KgWebApi.Net.Controllers;
 public class CaptchaController(LoginClient loginClient) : ControllerBase
 {
     /// <summary>
-    ///     发送手机验证码。
+    ///     发送验证码。
     /// </summary>
     /// <param name="mobile">手机号。</param>
     /// <returns>验证码发送结果。</returns>

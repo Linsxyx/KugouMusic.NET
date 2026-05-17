@@ -75,6 +75,19 @@ public class CommentController(CommentClient commentClient) : ControllerBase
         return Ok(await commentClient.GetCommentCountAsync(hash, specialId));
     }
 
+    /// <summary>
+    ///     楼层评论。
+    /// </summary>
+    /// <param name="specialId">评论下的 special_child_id 字段。</param>
+    /// <param name="tid">评论 id。</param>
+    /// <param name="mixsongid">歌曲的 mixsongid。</param>
+    /// <param name="resourceType">资源类型。</param>
+    /// <param name="page">页码。</param>
+    /// <param name="pagesize">每页数量。</param>
+    /// <param name="show_classify">是否返回分类列表。</param>
+    /// <param name="show_hotword_list">是否返回热词。</param>
+    /// <param name="code">附加 code。</param>
+    /// <returns>楼层评论数据。</returns>
     [HttpGet("floor")]
     public async Task<IActionResult> GetFloorComments(
         [FromQuery(Name = "special_id")][Required(AllowEmptyStrings = false)] string specialId,
@@ -99,6 +112,15 @@ public class CommentController(CommentClient commentClient) : ControllerBase
             code));
     }
 
+    /// <summary>
+    ///     歌曲评论 - 根据分类返回。
+    /// </summary>
+    /// <param name="mixsongid">音乐 mixsongid。</param>
+    /// <param name="typeId">分类 id。</param>
+    /// <param name="page">页码。</param>
+    /// <param name="pagesize">每页数量。</param>
+    /// <param name="sort">排序，1 为正序，2 为倒序。</param>
+    /// <returns>按分类筛选的歌曲评论。</returns>
     [HttpGet("music/classify")]
     public async Task<IActionResult> GetMusicCommentClassify(
         [FromQuery][Required(AllowEmptyStrings = false)] string mixsongid,
@@ -110,6 +132,14 @@ public class CommentController(CommentClient commentClient) : ControllerBase
         return Ok(await commentClient.GetMusicCommentClassifyAsync(mixsongid, typeId, page, pagesize, sort));
     }
 
+    /// <summary>
+    ///     歌曲评论 - 根据热词返回。
+    /// </summary>
+    /// <param name="mixsongid">音乐 mixsongid。</param>
+    /// <param name="hotWord">热词。</param>
+    /// <param name="page">页码。</param>
+    /// <param name="pagesize">每页数量。</param>
+    /// <returns>按热词筛选的歌曲评论。</returns>
     [HttpGet("music/hotword")]
     public async Task<IActionResult> GetMusicCommentHotword(
         [FromQuery][Required(AllowEmptyStrings = false)] string mixsongid,

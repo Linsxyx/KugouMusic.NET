@@ -9,12 +9,23 @@ namespace KgWebApi.Net.Controllers;
 [Route("playlist")]
 public class PlayListController(PlaylistClient playlistClient) : ControllerBase
 {
+    /// <summary>
+    ///     推荐曲谱。
+    /// </summary>
+    /// <param name="position">曲谱位置。</param>
+    /// <returns>推荐曲谱列表。</returns>
     [HttpGet("/sheet/collection")]
     public async Task<IActionResult> GetSheetCollection([FromQuery] int position = 2)
     {
         return Ok(await playlistClient.GetSheetCollectionAsync(position));
     }
 
+    /// <summary>
+    ///     曲谱合集详情。
+    /// </summary>
+    /// <param name="collectionId">曲谱合集 ID。</param>
+    /// <param name="page">页码。</param>
+    /// <returns>曲谱合集详情。</returns>
     [HttpGet("/sheet/collection/detail")]
     public async Task<IActionResult> GetSheetCollectionDetail(
         [FromQuery(Name = "collection_id")][Required(AllowEmptyStrings = false)] string collectionId,
@@ -23,6 +34,12 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
         return Ok(await playlistClient.GetSheetCollectionDetailAsync(collectionId, page));
     }
 
+    /// <summary>
+    ///     曲谱详情。
+    /// </summary>
+    /// <param name="id">曲谱 ID。</param>
+    /// <param name="source">曲谱 source。</param>
+    /// <returns>曲谱详情。</returns>
     [HttpGet("/sheet/detail")]
     public async Task<IActionResult> GetSheetDetail(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
@@ -31,12 +48,25 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
         return Ok(await playlistClient.GetSheetDetailAsync(id, source));
     }
 
+    /// <summary>
+    ///     曲谱合集。
+    /// </summary>
+    /// <param name="opernType">曲谱类型。</param>
+    /// <returns>曲谱合集列表。</returns>
     [HttpGet("/sheet/hot")]
     public async Task<IActionResult> GetSheetHot([FromQuery(Name = "opern_type")] int opernType = 1)
     {
         return Ok(await playlistClient.GetSheetHotAsync(opernType));
     }
 
+    /// <summary>
+    ///     歌曲曲谱。
+    /// </summary>
+    /// <param name="albumAudioId">音乐的 mixsongid/album_audio_id。</param>
+    /// <param name="opernType">曲谱类型。</param>
+    /// <param name="page">页码。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>歌曲曲谱列表。</returns>
     [HttpGet("/sheet/list")]
     public async Task<IActionResult> GetSheetList(
         [FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioId,
@@ -103,6 +133,11 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     相似歌单。
+    /// </summary>
+    /// <param name="ids">歌单 global_collection_id。</param>
+    /// <returns>相似歌单列表。</returns>
     [HttpGet("similar")]
     public async Task<IActionResult> GetSimilar([FromQuery][Required(AllowEmptyStrings = false)] string ids)
     {
@@ -110,6 +145,12 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     音效歌单。
+    /// </summary>
+    /// <param name="page">页数。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>音效歌单列表。</returns>
     [HttpGet("effect")]
     public async Task<IActionResult> GetEffect([FromQuery] int page = 1, [FromQuery] int pagesize = 30)
     {
@@ -118,10 +159,11 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     }
 
     /// <summary>
-    ///     收藏歌单
+    ///     收藏歌单。
+    /// </summary>
     /// <param name="name">歌单名称。</param>
     /// <param name="sourceGlobalId">歌单 ID。</param>
-    /// </summary>
+    /// <returns>收藏歌单结果。</returns>
     [HttpPost("add")]
     public async Task<IActionResult> AddPlaylist(
         [FromQuery][Required(AllowEmptyStrings = false)] string name,
@@ -132,10 +174,11 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     }
 
     /// <summary>
-    ///     新建歌单
-    /// <param name="name">歌单名称。</param>
-    /// <param name="type">是否设为隐私，0：公开，1：隐私，仅支持创建歌单时传入</param>
+    ///     新建歌单。
     /// </summary>
+    /// <param name="name">歌单名称。</param>
+    /// <param name="type">是否设为隐私，0：公开，1：隐私，仅支持创建歌单时传入。</param>
+    /// <returns>新建歌单结果。</returns>
     [HttpPost("create")]
     public async Task<IActionResult> CreatePlaylist(
         [FromQuery][Required(AllowEmptyStrings = false)] string name,
@@ -146,8 +189,10 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     }
 
     /// <summary>
-    ///     取消收藏 / 删除歌单
+    ///     取消收藏 / 删除歌单。
     /// </summary>
+    /// <param name="listid">用户歌单 listid。</param>
+    /// <returns>删除歌单结果。</returns>
     [HttpPost("del")]
     public async Task<IActionResult> DeletePlaylist([FromQuery][Required(AllowEmptyStrings = false)] string listid)
     {

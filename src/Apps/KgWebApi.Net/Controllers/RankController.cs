@@ -22,6 +22,14 @@ public class RankController(RankClient rankClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     排行榜信息。
+    /// </summary>
+    /// <param name="rankid">排行榜 id。</param>
+    /// <param name="rankCid">排行榜 cid。</param>
+    /// <param name="albumImg">是否返回专辑图片。</param>
+    /// <param name="zone">排行榜 zone。</param>
+    /// <returns>排行榜信息。</returns>
     [HttpGet("info")]
     public async Task<IActionResult> GetRankInfo(
         [FromQuery][BindRequired] int rankid,

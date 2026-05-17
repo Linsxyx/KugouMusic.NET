@@ -59,6 +59,11 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }*/
 
+    /// <summary>
+    ///     AI 推荐。
+    /// </summary>
+    /// <param name="albumAudioIds">专辑音乐 id (album_audio_id/MixSongID 均可以)。</param>
+    /// <returns>AI 推荐歌曲。</returns>
     [HttpGet("ai/recommend")]
     public async Task<IActionResult> GetAiRecommend([FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioIds)
     {
@@ -66,6 +71,10 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /// <summary>
+    ///     乐库。
+    /// </summary>
+    /// <returns>手机端乐库数据。</returns>
     [HttpGet("yueku")]
     public async Task<IActionResult> GetYueku()
     {
@@ -73,6 +82,10 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /// <summary>
+    ///     乐库 banner。
+    /// </summary>
+    /// <returns>乐库轮播图数据。</returns>
     [HttpGet("yueku/banner")]
     public async Task<IActionResult> GetYuekuBanner()
     {
@@ -80,6 +93,10 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /// <summary>
+    ///     乐库电台。
+    /// </summary>
+    /// <returns>乐库电台数据。</returns>
     [HttpGet("yueku/fm")]
     public async Task<IActionResult> GetYuekuFm()
     {
@@ -87,6 +104,12 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /// <summary>
+    ///     新碟上架。
+    /// </summary>
+    /// <param name="page">页数。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>新碟上架列表。</returns>
     [HttpGet("top/album")]
     public async Task<IActionResult> GetTopAlbum(
         [FromQuery] int page = 1,
@@ -96,6 +119,11 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /// <summary>
+    ///     歌曲推荐。
+    /// </summary>
+    /// <param name="cardId">推荐卡片 id。</param>
+    /// <returns>歌曲推荐内容。</returns>
     [HttpGet("top/card")]
     public async Task<IActionResult> GetTopCard([FromQuery(Name = "card_id")] int cardId = 1)
     {
@@ -103,6 +131,13 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /*/// <summary>
+    ///     歌曲推荐
+    /// </summary>
+    /// <param name="cardId">推荐卡片 id。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <param name="tagId">标签 id。</param>
+    /// <returns>概念版歌曲推荐内容。</returns>
     [HttpGet("top/card/youth")]
     public async Task<IActionResult> GetTopCardYouth(
         [FromQuery(Name = "card_id")] int cardId = 3005,
@@ -111,8 +146,12 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
     {
         var res = await recommendClient.GetTopCardYouthAsync(cardId, pagesize, tagId);
         return Ok(res);
-    }
+    }*/
 
+    /// <summary>
+    ///     编辑精选。
+    /// </summary>
+    /// <returns>编辑精选数据。</returns>
     [HttpGet("top/ip")]
     public async Task<IActionResult> GetTopIp()
     {
@@ -120,6 +159,10 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /// <summary>
+    ///     banner。
+    /// </summary>
+    /// <returns>banner 轮播图数据。</returns>
     [HttpGet("pc/diantai")]
     public async Task<IActionResult> GetPcDiantai()
     {
@@ -127,6 +170,12 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /// <summary>
+    ///     刷刷。
+    /// </summary>
+    /// <param name="songPoolId">AI 策略池。</param>
+    /// <param name="mode">获取模式。</param>
+    /// <returns>刷刷推荐结果。</returns>
     [HttpGet("brush")]
     public async Task<IActionResult> GetBrush(
         [FromQuery(Name = "song_pool_id")] int songPoolId = 0,
@@ -136,13 +185,25 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
         return Ok(res);
     }
 
+    /*/// <summary>
+    ///     每日推荐。
+    /// </summary>
+    /// <returns>每日推荐列表。</returns>
     [HttpPost("everyday/friend")]
     public async Task<IActionResult> GetEverydayFriend()
     {
         var res = await recommendClient.GetEverydayFriendAsync();
         return Ok(res);
-    }
+    }*/
 
+    /// <summary>
+    ///     历史推荐。
+    /// </summary>
+    /// <param name="mode">历史推荐模式。</param>
+    /// <param name="platform">设备类型。</param>
+    /// <param name="historyName">历史推荐名称。</param>
+    /// <param name="date">日期。</param>
+    /// <returns>历史推荐数据。</returns>
     [HttpPost("everyday/history")]
     public async Task<IActionResult> GetEverydayHistory(
         [FromQuery] string mode = "list",

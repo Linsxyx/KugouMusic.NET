@@ -13,7 +13,7 @@ namespace KgWebApi.Net.Controllers;
 public class LoginController(LoginClient loginClient, ILogger<LoginController> logger) : ControllerBase
 {
     /// <summary>
-    ///     手机验证码登录
+    ///     登录。
     /// </summary>
     /// <param name="req">手机号和短信验证码。</param>
     /// <returns>登录结果和账号 Token 信息。轮询此接口可获取二维码扫码状态, 408 为等待扫描，404 为已经扫描，403 为拒绝登录，405 为登录成功，402 为已过期</returns>
@@ -37,7 +37,7 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
     }
 
     /// <summary>
-    ///     获取二维码 Key 和链接
+    ///     二维码登录 - 二维码 key 生成接口。
     /// </summary>
     /// <returns>二维码 Key、登录链接和展示信息。</returns>
     [HttpGet("qr/key")]
@@ -50,7 +50,7 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
     }
 
     /// <summary>
-    ///     检查二维码扫码状态
+    ///     二维码登录 - 二维码检测扫码状态接口。
     /// </summary>
     /// <param name="key">二维码 Key</param>
     /// <returns>二维码登录状态。</returns>
@@ -66,7 +66,7 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
     }
 
     /// <summary>
-    ///     刷新 Token
+    ///     刷新登录。
     /// </summary>
     /// <returns>刷新后的 Token 信息。</returns>
     [HttpPost("token")]
@@ -78,7 +78,10 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
         return Ok(result);
     }
 
-
+    /// <summary>
+    ///     退出登录。
+    /// </summary>
+    /// <returns>退出登录结果。</returns>
     [HttpPost("logout")]
     public Task<IActionResult> LogOut()
     {

@@ -16,8 +16,13 @@ public class SearchController(
     : ControllerBase
 {
     /// <summary>
-    ///     搜索歌曲或专辑等
+    ///     搜索。
     /// </summary>
+    /// <param name="keywords">关键词。</param>
+    /// <param name="page">页数。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <param name="type">搜索类型。默认为单曲，special：歌单，lyric：歌词，song：单曲，album：专辑</param>
+    /// <returns>搜索结果。</returns>
     [HttpGet]
     public async Task<IActionResult> Search(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords = "",
@@ -122,7 +127,7 @@ public class SearchController(
     }
 
     /// <summary>
-    ///     获取热搜
+    ///     热搜列表。
     /// </summary>
     /// <returns>热搜关键词和热度信息。</returns>
     [HttpGet("hot")]
@@ -133,6 +138,10 @@ public class SearchController(
         return Ok(result);
     }
 
+    /// <summary>
+    ///     默认搜索关键词。
+    /// </summary>
+    /// <returns>默认搜索关键词。</returns>
     [HttpGet("default")]
     public async Task<IActionResult> GetDefault()
     {
@@ -140,6 +149,15 @@ public class SearchController(
         return Ok(result);
     }
 
+    /// <summary>
+    ///     搜索建议。
+    /// </summary>
+    /// <param name="keywords">搜索关键词。</param>
+    /// <param name="albumTipCount">专辑返回数量。</param>
+    /// <param name="correctTipCount">纠正提示数量。</param>
+    /// <param name="mvTipCount">MV 返回数量。</param>
+    /// <param name="musicTipCount">音乐返回数量。</param>
+    /// <returns>搜索建议结果。</returns>
     [HttpGet("suggest")]
     public async Task<IActionResult> GetSuggest(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords,
@@ -157,6 +175,11 @@ public class SearchController(
         return Ok(result);
     }
 
+    /// <summary>
+    ///     综合搜索。
+    /// </summary>
+    /// <param name="keyword">搜索关键词。</param>
+    /// <returns>综合搜索结果。</returns>
     [HttpGet("mixed")]
     public async Task<IActionResult> GetMixed([FromQuery][Required(AllowEmptyStrings = false)] string keyword)
     {
@@ -164,6 +187,13 @@ public class SearchController(
         return Ok(result);
     }
 
+    /// <summary>
+    ///     综合搜索。
+    /// </summary>
+    /// <param name="keywords">关键词。</param>
+    /// <param name="page">页数。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>综合搜索结果。</returns>
     [HttpGet("complex")]
     public async Task<IActionResult> GetComplex(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords,
@@ -173,6 +203,4 @@ public class SearchController(
         var result = await searchClient.SearchComplexRawAsync(keywords, page, pagesize);
         return Ok(result);
     }
-
-
 }

@@ -49,6 +49,10 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取用户最近听歌历史。
+    /// </summary>
+    /// <returns>近期听歌历史记录。</returns>
     [HttpGet("history")]
     public async Task<IActionResult> UserHistory()
     {
@@ -56,6 +60,10 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取用户听歌历史排行。
+    /// </summary>
+    /// <returns>用户听歌历史排行。</returns>
     [HttpGet("listen")]
     public async Task<IActionResult> UserListen()
     {
@@ -63,6 +71,10 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取用户关注歌手。
+    /// </summary>
+    /// <returns>用户关注的歌手或用户列表。</returns>
     [HttpGet("follow")]
     public async Task<IActionResult> UserFollow()
     {
@@ -70,6 +82,12 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取用户云盘。
+    /// </summary>
+    /// <param name="page">页数。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>用户云盘音乐列表。</returns>
     [HttpGet("cloud")]
     public async Task<IActionResult> UserCloud(
         [FromQuery] int page = 1,
@@ -79,6 +97,14 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取用户云盘音乐 URL。
+    /// </summary>
+    /// <param name="hash">音乐 hash。</param>
+    /// <param name="albumAudioId">专辑音频 id。</param>
+    /// <param name="audioId">音频 id。</param>
+    /// <param name="name">云盘音乐名称。</param>
+    /// <returns>用户云盘音乐 URL。</returns>
     [HttpGet("cloud/url")]
     public async Task<IActionResult> UserCloudUrl(
         [FromQuery][Required(AllowEmptyStrings = false)] string hash,
@@ -90,6 +116,12 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取关注歌手消息。
+    /// </summary>
+    /// <param name="artistId">需要获取歌手或用户消息的 userid。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>关注歌手或用户消息。</returns>
     [HttpGet("follow/message")]
     public async Task<IActionResult> UserFollowMessage(
         [FromQuery(Name = "id")][Required(AllowEmptyStrings = false)] string artistId,
@@ -99,6 +131,12 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取用户收藏的视频。
+    /// </summary>
+    /// <param name="page">页数。</param>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>用户收藏的视频列表。</returns>
     [HttpGet("video/collect")]
     public async Task<IActionResult> UserVideoCollect(
         [FromQuery] int page = 1,
@@ -108,6 +146,11 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取用户喜欢的视频。
+    /// </summary>
+    /// <param name="pagesize">每页页数。</param>
+    /// <returns>用户喜欢的视频列表。</returns>
     [HttpGet("video/love")]
     public async Task<IActionResult> UserVideoLove([FromQuery] int pagesize = 30)
     {
@@ -115,6 +158,11 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     歌曲收藏数。
+    /// </summary>
+    /// <param name="mixsongids">音乐 mixsongid，多个以逗号分隔。</param>
+    /// <returns>歌曲收藏数。</returns>
     [HttpGet("/favorite/count")]
     public async Task<IActionResult> FavoriteCount([FromQuery][Required(AllowEmptyStrings = false)] string mixsongids)
     {
@@ -122,6 +170,10 @@ public class UserController(UserClient userClient) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    ///     获取服务器时间。
+    /// </summary>
+    /// <returns>服务器时间。</returns>
     [HttpPost("/server/now")]
     public async Task<IActionResult> ServerNow()
     {
