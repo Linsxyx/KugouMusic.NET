@@ -1,9 +1,9 @@
 using KgWebApi.Net.Data;
+using KgWebApi.Net.Services;
 using KuGou.Net.Infrastructure;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Infrastructure.Http.Handlers;
 using KuGou.Net.Protocol.Session;
-using KgWebApi.Net.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi;
@@ -39,7 +39,15 @@ builder.Services.AddScoped(_ => new CookieContainer());
 builder.Services.AddScoped<KgSessionManager>();
 builder.Services.AddScoped<KgSignatureHandler>();
 builder.Services.AddScoped<IKgTransport, WebApiKgTransport>();
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, _, _) =>
