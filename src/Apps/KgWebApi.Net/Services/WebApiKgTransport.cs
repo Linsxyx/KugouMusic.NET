@@ -1,36 +1,22 @@
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Infrastructure.Http.Handlers;
 using KuGou.Net.Protocol.Transport;
-using System.Net;
 using System.Text.Json;
 
 namespace KgWebApi.Net.Services;
 
-public sealed class WebApiKgTransport : IKgTransport, IDisposable
+public sealed class WebApiKgTransport : IKgTransport
 {
-    private readonly HttpClient _client;
     private readonly KgHttpTransport _transport;
 
-    public WebApiKgTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
+    public WebApiKgTransport(IHttpClientFactory httpClientFactory, KgSignatureHandler signatureHandler)
     {
-        signatureHandler.InnerHandler = new HttpClientHandler
-        {
-            UseCookies = true,
-            CookieContainer = cookieContainer,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-        };
-
-        _client = new HttpClient(signatureHandler, disposeHandler: true);
-        _transport = new KgHttpTransport(_client);
+        var client = httpClientFactory.CreateClient(WebApiKuGouHttpClientNames.Outbound);
+        _transport = new KgHttpTransport(client, signatureHandler.ApplyAsync);
     }
 
     public Task<JsonElement> SendAsync(KgRequest request)
     {
         return _transport.SendAsync(request);
-    }
-
-    public void Dispose()
-    {
-        _client.Dispose();
     }
 }

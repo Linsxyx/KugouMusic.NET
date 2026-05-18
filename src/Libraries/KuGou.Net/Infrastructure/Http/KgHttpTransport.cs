@@ -11,7 +11,9 @@ public interface IKgTransport
     Task<JsonElement> SendAsync(KgRequest request);
 }
 
-public class KgHttpTransport(HttpClient client) : IKgTransport
+public class KgHttpTransport(
+    HttpClient client,
+    Func<HttpRequestMessage, CancellationToken, Task>? prepareRequestAsync = null) : IKgTransport
 {
     public async Task<JsonElement> SendAsync(KgRequest request)
     {
@@ -54,6 +56,9 @@ public class KgHttpTransport(HttpClient client) : IKgTransport
                 msg.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
             }
         }
+
+        if (prepareRequestAsync is not null)
+            await prepareRequestAsync(msg, CancellationToken.None);
 
         using var response = await client.SendAsync(msg);
         response.EnsureSuccessStatusCode();

@@ -52,9 +52,11 @@ public sealed partial class WebApiKuGouServiceProvider
 
     public required ILoggerFactory LoggerFactory { get; init; }
 
+    public required IHttpClientFactory HttpClientFactory { get; init; }
+
     public IKgTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
     {
-        return new WebApiKgTransport(cookieContainer, signatureHandler);
+        return new WebApiKgTransport(HttpClientFactory, signatureHandler);
     }
 
     public ILogger<RawLoginApi> CreateRawLoginApiLogger() => LoggerFactory.CreateLogger<RawLoginApi>();

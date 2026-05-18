@@ -11,24 +11,32 @@ public sealed partial class KgWebSessionMiddleware(RequestDelegate next)
         var sessionKey = ResolveSessionKey(context);
         sessionContext.SessionKey = sessionKey;
 
-        context.Response.OnStarting(() =>
+        if (!IsPublicCachedEndpoint(context))
         {
-            context.Response.Headers[KgWebSessionDefaults.HeaderName] = sessionKey;
-            context.Response.Cookies.Append(
-                KgWebSessionDefaults.CookieName,
-                sessionKey,
-                new CookieOptions
-                {
-                    HttpOnly = true,
-                    IsEssential = true,
-                    SameSite = SameSiteMode.Lax,
-                    Secure = context.Request.IsHttps,
-                    Expires = DateTimeOffset.UtcNow.AddDays(30)
-                });
-            return Task.CompletedTask;
-        });
+            context.Response.OnStarting(() =>
+            {
+                context.Response.Headers[KgWebSessionDefaults.HeaderName] = sessionKey;
+                context.Response.Cookies.Append(
+                    KgWebSessionDefaults.CookieName,
+                    sessionKey,
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                        IsEssential = true,
+                        SameSite = SameSiteMode.Lax,
+                        Secure = context.Request.IsHttps,
+                        Expires = DateTimeOffset.UtcNow.AddDays(30)
+                    });
+                return Task.CompletedTask;
+            });
+        }
 
         await next(context);
+    }
+
+    private static bool IsPublicCachedEndpoint(HttpContext context)
+    {
+        return context.GetEndpoint()?.Metadata.GetMetadata<KgWebApi.Net.Controllers.KgPublicResponseCacheAttribute>() is not null;
     }
 
     private static string ResolveSessionKey(HttpContext context)

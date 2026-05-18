@@ -76,6 +76,7 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
     /// </summary>
     /// <returns>手机端乐库数据。</returns>
     [HttpGet("yueku")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetYueku()
     {
         var res = await recommendClient.GetYuekuAsync();
@@ -98,6 +99,7 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
     /// </summary>
     /// <returns>乐库电台数据。</returns>
     [HttpGet("yueku/fm")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetYuekuFm()
     {
         var res = await recommendClient.GetYuekuFmAsync();
@@ -153,6 +155,7 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
     /// </summary>
     /// <returns>编辑精选数据。</returns>
     [HttpGet("top/ip")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetTopIp()
     {
         var res = await recommendClient.GetTopIpAsync();

@@ -15,6 +15,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <param name="position">曲谱位置。</param>
     /// <returns>推荐曲谱列表。</returns>
     [HttpGet("/sheet/collection")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetSheetCollection([FromQuery] int position = 2)
     {
         return Ok(await playlistClient.GetSheetCollectionAsync(position));
@@ -27,6 +28,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <param name="page">页码。</param>
     /// <returns>曲谱合集详情。</returns>
     [HttpGet("/sheet/collection/detail")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetSheetCollectionDetail(
         [FromQuery(Name = "collection_id")][Required(AllowEmptyStrings = false)] string collectionId,
         [FromQuery] int page = 1)
@@ -41,6 +43,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <param name="source">曲谱 source。</param>
     /// <returns>曲谱详情。</returns>
     [HttpGet("/sheet/detail")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetSheetDetail(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
         [FromQuery][Required(AllowEmptyStrings = false)] string source)
@@ -54,6 +57,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <param name="opernType">曲谱类型。</param>
     /// <returns>曲谱合集列表。</returns>
     [HttpGet("/sheet/hot")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetSheetHot([FromQuery(Name = "opern_type")] int opernType = 1)
     {
         return Ok(await playlistClient.GetSheetHotAsync(opernType));
@@ -68,6 +72,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <param name="pagesize">每页页数。</param>
     /// <returns>歌曲曲谱列表。</returns>
     [HttpGet("/sheet/list")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetSheetList(
         [FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioId,
         [FromQuery(Name = "opern_type")] int opernType = 0,
@@ -95,6 +100,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// </summary>
     /// <returns>歌单标签分类列表。</returns>
     [HttpGet("tags")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(List<PlaylistTagCategory>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTags()
     {
@@ -113,6 +119,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <param name="pagesize">每页数量。</param>
     /// <returns>歌单歌曲分页结果。</returns>
     [HttpGet("track/all")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(PlaylistSongResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDtrackAll(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
@@ -152,6 +159,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     /// <param name="pagesize">每页页数。</param>
     /// <returns>音效歌单列表。</returns>
     [HttpGet("effect")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetEffect([FromQuery] int page = 1, [FromQuery] int pagesize = 30)
     {
         var result = await playlistClient.GetSoundEffectRawAsync(page, pagesize);

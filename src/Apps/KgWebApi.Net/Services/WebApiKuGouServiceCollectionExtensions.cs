@@ -13,7 +13,8 @@ public static class WebApiKuGouServiceCollectionExtensions
         {
             SessionPersistence = sp.GetRequiredService<ISessionPersistence>(),
             CookieContainer = sp.GetRequiredService<CookieContainer>(),
-            LoggerFactory = sp.GetRequiredService<ILoggerFactory>()
+            LoggerFactory = sp.GetRequiredService<ILoggerFactory>(),
+            HttpClientFactory = sp.GetRequiredService<IHttpClientFactory>()
         });
 
         services.AddScopedFromKuGouProvider<KgSessionManager>();

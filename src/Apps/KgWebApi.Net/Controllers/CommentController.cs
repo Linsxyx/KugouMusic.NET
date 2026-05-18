@@ -17,6 +17,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <param name="pagesize">每页数量。</param>
     /// <returns>歌曲评论列表。</returns>
     [HttpGet("music")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(MusicCommentResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMusicComments(
         [FromQuery][Required(AllowEmptyStrings = false)] string mixsongid,
@@ -34,6 +35,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <param name="pagesize">每页数量。</param>
     /// <returns>歌单评论列表。</returns>
     [HttpGet("playlist")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(MusicCommentResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPlaylistComments(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
@@ -51,6 +53,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <param name="pagesize">每页数量。</param>
     /// <returns>专辑评论列表。</returns>
     [HttpGet("album")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(MusicCommentResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAlbumComments(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
@@ -67,6 +70,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <param name="specialId">评论下的 special_child_id 字段。</param>
     /// <returns>评论数字典。</returns>
     [HttpGet("count")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(Dictionary<string, int>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCommentCount(
         [FromQuery][Required(AllowEmptyStrings = false)] string hash,
@@ -89,6 +93,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <param name="code">附加 code。</param>
     /// <returns>楼层评论数据。</returns>
     [HttpGet("floor")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetFloorComments(
         [FromQuery(Name = "special_id")][Required(AllowEmptyStrings = false)] string specialId,
         [FromQuery][Required(AllowEmptyStrings = false)] string tid,
@@ -122,6 +127,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <param name="sort">排序，1 为正序，2 为倒序。</param>
     /// <returns>按分类筛选的歌曲评论。</returns>
     [HttpGet("music/classify")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetMusicCommentClassify(
         [FromQuery][Required(AllowEmptyStrings = false)] string mixsongid,
         [FromQuery(Name = "type_id")][Required(AllowEmptyStrings = false)] string typeId,
@@ -141,6 +147,7 @@ public class CommentController(CommentClient commentClient) : ControllerBase
     /// <param name="pagesize">每页数量。</param>
     /// <returns>按热词筛选的歌曲评论。</returns>
     [HttpGet("music/hotword")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetMusicCommentHotword(
         [FromQuery][Required(AllowEmptyStrings = false)] string mixsongid,
         [FromQuery(Name = "hot_word")][Required(AllowEmptyStrings = false)] string hotWord,

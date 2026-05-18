@@ -24,6 +24,7 @@ public class SearchController(
     /// <param name="type">搜索类型。默认为单曲，special：歌单，lyric：歌词，song：单曲，album：专辑</param>
     /// <returns>搜索结果。</returns>
     [HttpGet]
+    [KgPublicResponseCache]
     public async Task<IActionResult> Search(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords = "",
         [FromQuery] int page = 1,
@@ -65,6 +66,7 @@ public class SearchController(
     /// <param name="page">页码。</param>
     /// <returns>匹配的歌单列表。</returns>
     [HttpGet("special")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(List<SearchPlaylistItem>), StatusCodes.Status200OK)]
     public async Task<IActionResult> SearchSpecial(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords = "",
@@ -99,6 +101,7 @@ public class SearchController(
     /// <param name="page">页码。</param>
     /// <returns>匹配的专辑列表。</returns>
     [HttpGet("album")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(List<SearchAlbumItem>), StatusCodes.Status200OK)]
     public async Task<IActionResult> SearchAlbum(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords = "",
@@ -131,6 +134,7 @@ public class SearchController(
     /// </summary>
     /// <returns>热搜关键词和热度信息。</returns>
     [HttpGet("hot")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(SearchHotResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetHot()
     {
@@ -159,6 +163,7 @@ public class SearchController(
     /// <param name="musicTipCount">音乐返回数量。</param>
     /// <returns>搜索建议结果。</returns>
     [HttpGet("suggest")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetSuggest(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords,
         [FromQuery] int albumTipCount = 10,
@@ -181,6 +186,7 @@ public class SearchController(
     /// <param name="keyword">搜索关键词。</param>
     /// <returns>综合搜索结果。</returns>
     [HttpGet("mixed")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetMixed([FromQuery][Required(AllowEmptyStrings = false)] string keyword)
     {
         var result = await searchClient.SearchMixedRawAsync(keyword);
@@ -195,6 +201,7 @@ public class SearchController(
     /// <param name="pagesize">每页页数。</param>
     /// <returns>综合搜索结果。</returns>
     [HttpGet("complex")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetComplex(
         [FromQuery][Required(AllowEmptyStrings = false)] string keywords,
         [FromQuery] int page = 1,

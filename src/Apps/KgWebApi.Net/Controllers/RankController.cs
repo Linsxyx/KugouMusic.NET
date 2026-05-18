@@ -15,6 +15,7 @@ public class RankController(RankClient rankClient) : ControllerBase
     /// <param name="withsong">是否包含榜单歌曲。</param>
     /// <returns>榜单列表。</returns>
     [HttpGet("list")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(RankListResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRankList([FromQuery] int withsong = 1)
     {
@@ -31,6 +32,7 @@ public class RankController(RankClient rankClient) : ControllerBase
     /// <param name="zone">排行榜 zone。</param>
     /// <returns>排行榜信息。</returns>
     [HttpGet("info")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetRankInfo(
         [FromQuery][BindRequired] int rankid,
         [FromQuery(Name = "rank_cid")] int? rankCid = null,
@@ -49,6 +51,7 @@ public class RankController(RankClient rankClient) : ControllerBase
     /// <param name="pagesize">每页数量。</param>
     /// <returns>榜单歌曲分页结果。</returns>
     [HttpGet("audio")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(RankSongResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRankSongs(
         [FromQuery][BindRequired] int rankid,

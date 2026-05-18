@@ -18,7 +18,21 @@ var sqliteConnectionString = !string.IsNullOrWhiteSpace(configuredConnectionStri
 builder.Services
     .AddControllers();
 
-builder.Services.AddHttpClient();
+builder.Services
+    .AddHttpClient(WebApiKuGouHttpClientNames.Outbound, client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(30);
+        client.DefaultRequestHeaders.Connection.Add("keep-alive");
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        UseCookies = false,
+        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+        MaxConnectionsPerServer = 64
+    })
+    .SetHandlerLifetime(TimeSpan.FromMinutes(5));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IKgWebSessionContext, KgWebSessionContext>();
 builder.Services.AddDbContext<KgWebApiDbContext>(options => options.UseSqlite(sqliteConnectionString));
@@ -26,6 +40,7 @@ builder.Services.AddDbContext<KgWebApiDbContext>(options => options.UseSqlite(sq
 builder.Services.AddScoped<ISessionPersistence, KgWebSessionPersistence>();
 builder.Services.AddScoped(_ => new CookieContainer());
 builder.Services.AddWebApiKuGouServices();
+builder.Services.AddOutputCache();
 
 builder.Services.AddOpenApi(options =>
 {
@@ -61,10 +76,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseMiddleware<KgWebSessionMiddleware>();
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseMiddleware<KgWebSessionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseOutputCache();
 app.MapControllers();
 
 app.Run();

@@ -72,6 +72,7 @@ public class ArtistController(ArtistClient artistClient) : ControllerBase
     /// <param name="hotsize">返回热门数量。</param>
     /// <returns>歌手列表。</returns>
     [HttpGet("lists")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetLists(
         [FromQuery] int musician = 0,
         [FromQuery(Name = "sextypes")] int sexTypes = 0,
@@ -89,6 +90,7 @@ public class ArtistController(ArtistClient artistClient) : ControllerBase
     /// <param name="hotsize">返回热门数量。</param>
     /// <returns>歌手列表。</returns>
     [HttpGet("/singer/list")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetSingerList(
         [FromQuery] int sextype = 0,
         [FromQuery] int type = 0,
@@ -106,6 +108,7 @@ public class ArtistController(ArtistClient artistClient) : ControllerBase
     /// <param name="tag">official: 官方版本，live：现场版本，fan：饭制版本，artist: 歌手发布, all: 获取全部，默认为获取全部</param>
     /// <returns>歌手MV。</returns>
     [HttpGet("videos")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(ArtistVideoResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetVideos(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
@@ -122,6 +125,7 @@ public class ArtistController(ArtistClient artistClient) : ControllerBase
     /// <param name="id">歌手 ID。</param>
     /// <returns>歌手详情。</returns>
     [HttpGet("detail")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(SingerDetailResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDetail([FromQuery][Required(AllowEmptyStrings = false)] string id)
     {
@@ -156,6 +160,7 @@ public class ArtistController(ArtistClient artistClient) : ControllerBase
     /// <param name="sort">排序方式:new/hot</param>
     /// <returns>歌手专辑列表。</returns>
     [HttpGet("albums")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetAlbums(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
         [FromQuery] int page = 1,

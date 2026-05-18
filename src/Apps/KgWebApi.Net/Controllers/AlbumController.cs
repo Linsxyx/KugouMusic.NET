@@ -14,6 +14,7 @@ public class AlbumController(AlbumClient albumClient) : ControllerBase
     /// </summary>
     /// <returns>新碟上架列表。</returns>
     [HttpGet("shop")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetAlbumShop()
     {
         return Ok(await albumClient.GetAlbumShopAsync());
@@ -26,6 +27,7 @@ public class AlbumController(AlbumClient albumClient) : ControllerBase
     /// <param name="fields">需要返回的信息字段。</param>
     /// <returns>专辑相关信息。</returns>
     [HttpGet]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetAlbum([FromQuery(Name = "album_id")][Required(AllowEmptyStrings = false)] string albumId,
         [FromQuery] string? fields = null)
     {
@@ -38,6 +40,7 @@ public class AlbumController(AlbumClient albumClient) : ControllerBase
     /// <param name="id">专辑 id。</param>
     /// <returns>专辑详情。</returns>
     [HttpGet("detail")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetDetail([FromQuery(Name = "id")][Required(AllowEmptyStrings = false)] string id)
     {
         return Ok(await albumClient.GetDetailRawAsync(id));
@@ -51,6 +54,7 @@ public class AlbumController(AlbumClient albumClient) : ControllerBase
     /// <param name="pagesize">每页数量。</param>
     /// <returns>专辑歌曲列表。</returns>
     [HttpGet("songs")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(List<AlbumSongItem>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSongs(
         [FromQuery(Name = "id")][Required(AllowEmptyStrings = false)] string id,

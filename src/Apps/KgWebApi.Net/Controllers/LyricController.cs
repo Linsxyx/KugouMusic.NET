@@ -17,6 +17,7 @@ public class LyricController(LyricClient lyricClient) : ControllerBase
     /// <param name="man">是否返回多个歌词。</param>
     /// <returns>歌词搜索结果。</returns>
     [HttpGet("search/lyric")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> SearchLyric(
         [FromQuery] string? hash,
         [FromQuery(Name = "album_audio_id")] string? albumAudioId,
@@ -36,6 +37,7 @@ public class LyricController(LyricClient lyricClient) : ControllerBase
     /// <param name="decode">是否解码歌词。</param>
     /// <returns>歌词内容和解析后的歌词行。</returns>
     [HttpGet("lyric")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(LyricResult), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetLyric(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,

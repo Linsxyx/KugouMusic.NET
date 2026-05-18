@@ -33,6 +33,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="showDetail">是否返回详情，否则只返回总数。</param>
     /// <returns>更多版本音乐信息。</returns>
     [HttpGet("/audio/related")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetAudioRelated(
         [FromQuery(Name = "album_audio_id")][BindRequired] long albumAudioId,
         [FromQuery] int page = 1,
@@ -60,6 +61,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="mixId">音乐的 mixsongid/album_audio_id。</param>
     /// <returns>最佳伴奏信息。</returns>
     [HttpGet("/audio/accompany/matching")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetAudioAccompanyMatching(
         [FromQuery][Required(AllowEmptyStrings = false)] string hash,
         [FromQuery][Required(AllowEmptyStrings = false)] string fileName,
@@ -76,6 +78,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="singerName">歌手名称，多个以 `、` 隔开。</param>
     /// <returns>音乐 K 歌数量。</returns>
     [HttpGet("/audio/ktv/total")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetAudioKtvTotal(
         [FromQuery][BindRequired] long songId,
         [FromQuery][Required(AllowEmptyStrings = false)] string songHash,
@@ -90,6 +93,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="hash">音乐 hash，可以传多个，以逗号分割。</param>
     /// <returns>歌曲高潮时间信息。</returns>
     [HttpGet("climax")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetClimax([FromQuery][Required(AllowEmptyStrings = false)] string hash)
     {
         return Ok(await songClient.GetSongClimaxAsync(hash));
@@ -101,6 +105,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="albumAudioId">专辑音乐 id (album_audio_id/MixSongID 均可以)。</param>
     /// <returns>歌曲成绩单信息。</returns>
     [HttpGet("ranking")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetRanking([FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioId)
     {
         return Ok(await songClient.GetSongRankingAsync(albumAudioId));
@@ -114,6 +119,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="pagesize">每页页数。</param>
     /// <returns>更详细的歌曲成绩单信息。</returns>
     [HttpGet("ranking/filter")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetRankingFilter(
         [FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioId,
         [FromQuery] int page = 1,
@@ -129,6 +135,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="fields">支持的值有：mkv,tags,h264,h265,authors</param>
     /// <returns>歌曲 相对应的 mv。</returns>
     [HttpGet("/kmr/audio/mv")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(AudioMvResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetKmrAudioMv(
         [FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioIds,
@@ -144,6 +151,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="fields">可选字段集合。</param>
     /// <returns>音乐专辑/歌手信息。</returns>
     [HttpGet("/kmr/audio")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetKmrAudio(
         [FromQuery(Name = "album_audio_id")][Required(AllowEmptyStrings = false)] string albumAudioIds,
         [FromQuery] string? fields = "base")
@@ -158,6 +166,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="albumIds">专辑 id。</param>
     /// <returns>音乐详情。</returns>
     [HttpGet("/privilege/lite")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetPrivilegeLite(
         [FromQuery][Required(AllowEmptyStrings = false)] string hash,
         [FromQuery(Name = "album_id")] string? albumIds = null)
@@ -174,6 +183,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="count">最多返回多少张图片。</param>
     /// <returns>歌手和专辑图片信息。</returns>
     [HttpGet("/images")]
+    [KgPublicResponseCache]
     public async Task<IActionResult> GetImages(
         [FromQuery][Required(AllowEmptyStrings = false)] string hash,
         [FromQuery(Name = "album_id")] string? albumIds = null,
@@ -193,6 +203,7 @@ public class SongController(SongClient songClient) : ControllerBase
     /// <param name="count">返回数量。</param>
     /// <returns>歌曲图片结果。</returns>
     [HttpGet("/images/audio")]
+    [KgPublicResponseCache]
     [ProducesResponseType(typeof(AudioImageResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAudioImages(
         [FromQuery][Required(AllowEmptyStrings = false)] string hash,

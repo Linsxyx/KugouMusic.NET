@@ -11,8 +11,14 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        await ApplyAsync(request, cancellationToken);
+        return await base.SendAsync(request, cancellationToken);
+    }
+
+    public Task ApplyAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
+    {
         if (!request.Options.TryGetValue(new HttpRequestOptionsKey<KgRequest>("KgRequestDetail"), out var kgReq))
-            return await base.SendAsync(request, cancellationToken);
+            return Task.CompletedTask;
 
         var session = sessionManager.Session;
         var timeStr = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
@@ -99,6 +105,24 @@ public class KgSignatureHandler(KgSessionManager sessionManager) : DelegatingHan
         request.Headers.TryAddWithoutValidation("kg-rec", "1");
         request.Headers.TryAddWithoutValidation("kg-rf", "B9EDA08A64250DEFFBCADDEE00F8F25F");
 
-        return await base.SendAsync(request, cancellationToken);
+        if (!request.Headers.Contains("Cookie"))
+        {
+            var cookies = new List<string>();
+            AddCookie(cookies, "userid", userId);
+            AddCookie(cookies, "token", token);
+            AddCookie(cookies, "vip_type", session.VipType);
+            AddCookie(cookies, "vip_token", session.VipToken);
+
+            if (cookies.Count > 0)
+                request.Headers.TryAddWithoutValidation("Cookie", string.Join("; ", cookies));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static void AddCookie(List<string> cookies, string name, string? value)
+    {
+        if (!string.IsNullOrEmpty(value))
+            cookies.Add($"{name}={Uri.EscapeDataString(value)}");
     }
 }
