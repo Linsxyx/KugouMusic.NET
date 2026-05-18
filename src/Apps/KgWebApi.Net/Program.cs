@@ -1,6 +1,9 @@
 using KgWebApi.Net.Data;
-using KuGou.Net.Protocol.Session;
 using KgWebApi.Net.Services;
+using KuGou.Net.Infrastructure;
+using KuGou.Net.Infrastructure.Http;
+using KuGou.Net.Infrastructure.Http.Handlers;
+using KuGou.Net.Protocol.Session;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -25,6 +28,18 @@ builder.Services.AddDbContext<KgWebApiDbContext>(options => options.UseSqlite(sq
 
 builder.Services.AddScoped<ISessionPersistence, KgWebSessionPersistence>();
 builder.Services.AddScoped(_ => new CookieContainer());
+builder.Services.AddScoped<KgSessionManager>();
+builder.Services.AddScoped<KgSignatureHandler>();
+builder.Services.AddScoped<IKgTransport, WebApiKgTransport>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 builder.Services.AddWebApiKuGouServices();
 
 builder.Services.AddOpenApi(options =>
