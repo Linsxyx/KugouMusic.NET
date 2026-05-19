@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -14,6 +15,8 @@ namespace AvaloniaLyrics;
 
 public class LyricView : ItemsControl
 {
+    private static readonly TimeSpan MaxPositionClockDrift = TimeSpan.FromMilliseconds(240);
+
     private const int StaggerRange = 10;
     private const int StaggerStepMs = 20;
     private const int EntranceStepMs = 12;
@@ -40,6 +43,9 @@ public class LyricView : ItemsControl
 
     public static readonly StyledProperty<TimeSpan> PositionProperty =
         AvaloniaProperty.Register<LyricView, TimeSpan>(nameof(Position));
+
+    public static readonly StyledProperty<bool> IsPositionClockRunningProperty =
+        AvaloniaProperty.Register<LyricView, bool>(nameof(IsPositionClockRunning));
 
     public static readonly StyledProperty<bool> IsActiveProperty =
         AvaloniaProperty.Register<LyricView, bool>(nameof(IsActive), true);
@@ -154,6 +160,9 @@ public class LyricView : ItemsControl
     private double _manualOffset;
     private double _manualOffsetTarget;
     private double _manualOffsetVelocity;
+    private TimeSpan _positionAnchor;
+    private long _positionAnchorTimestamp;
+    private bool _positionFrameQueued;
     private TimeSpan _renderPosition;
 
     public LyricView()
@@ -162,6 +171,9 @@ public class LyricView : ItemsControl
         _userScrollResetTimer.Tick += OnUserScrollTimeout;
         LayoutUpdated += OnLayoutUpdated;
         ItemTemplate = CreateDefaultItemTemplate();
+        _positionAnchor = Position;
+        _positionAnchorTimestamp = Stopwatch.GetTimestamp();
+        _renderPosition = Position;
     }
 
     protected override Type StyleKeyOverride => typeof(LyricView);
@@ -176,6 +188,12 @@ public class LyricView : ItemsControl
     {
         get => GetValue(PositionProperty);
         set => SetValue(PositionProperty, value);
+    }
+
+    public bool IsPositionClockRunning
+    {
+        get => GetValue(IsPositionClockRunningProperty);
+        set => SetValue(IsPositionClockRunningProperty, value);
     }
 
     public bool IsActive
@@ -343,6 +361,7 @@ public class LyricView : ItemsControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        StopPositionClock(syncToPosition: false);
         _animationFrameQueued = false;
         _hasLastFrameTimestamp = false;
         _userScrollResetTimer.Stop();
@@ -376,15 +395,20 @@ public class LyricView : ItemsControl
             if (!IsActive)
                 return;
 
-            SetAndRaise(RenderPositionProperty, ref _renderPosition, Position);
-            SyncActiveLine();
+            SyncPositionAnchor();
+            SetRenderPosition(Position);
+            var activeLineChanged = SyncActiveLine();
             if (_isUserScrolling)
             {
                 _deferredActiveItemUpdate = true;
+                EnsurePositionClockRunning();
                 return;
             }
 
-            QueueLayoutUpdate();
+            if (activeLineChanged)
+                QueueLayoutUpdate();
+
+            EnsurePositionClockRunning();
             return;
         }
 
@@ -392,15 +416,28 @@ public class LyricView : ItemsControl
         {
             if (IsActive)
             {
-                SetAndRaise(RenderPositionProperty, ref _renderPosition, Position);
+                SyncPositionAnchor();
+                SetRenderPosition(Position);
                 SyncActiveLine();
                 QueueLayoutUpdate();
                 EnsureAnimationFrameRunning();
+                EnsurePositionClockRunning();
             }
             else
             {
                 StopAnimationFrames();
+                StopPositionClock(syncToPosition: true);
             }
+
+            return;
+        }
+
+        if (change.Property == IsPositionClockRunningProperty)
+        {
+            if (!ShouldRunPositionClock())
+                StopPositionClock(syncToPosition: true);
+            else
+                EnsurePositionClockRunning();
 
             return;
         }
@@ -426,10 +463,12 @@ public class LyricView : ItemsControl
                 if (IsActive)
                     QueueLayoutUpdate();
                 EnsureAnimationFrameRunning();
+                EnsurePositionClockRunning();
             }
             else
             {
                 StopAnimationFrames();
+                StopPositionClock(syncToPosition: true);
             }
         }
     }
@@ -771,16 +810,17 @@ public class LyricView : ItemsControl
         _lineCenters = new double[capacity];
     }
 
-    private void SyncActiveLine()
+    private bool SyncActiveLine()
     {
         if (_linesSnapshot.Count == 0)
         {
+            var changed = _activeLine != null || _activeIndex != -1;
             SetAndRaise(ActiveLineProperty, ref _activeLine, null);
             SetAndRaise(ActiveIndexProperty, ref _activeIndex, -1);
-            return;
+            return changed;
         }
 
-        var position = Position;
+        var position = RenderPosition;
         var resultIndex = 0;
         var left = 0;
         var right = _linesSnapshot.Count - 1;
@@ -804,8 +844,11 @@ public class LyricView : ItemsControl
                 }
             }
 
-        SetAndRaise(ActiveLineProperty, ref _activeLine, _linesSnapshot[resultIndex]);
+        var nextActiveLine = _linesSnapshot[resultIndex];
+        var changedActiveLine = !ReferenceEquals(_activeLine, nextActiveLine) || _activeIndex != resultIndex;
+        SetAndRaise(ActiveLineProperty, ref _activeLine, nextActiveLine);
         SetAndRaise(ActiveIndexProperty, ref _activeIndex, resultIndex);
+        return changedActiveLine;
     }
 
     private void RefreshLinesSnapshot()
@@ -937,6 +980,76 @@ public class LyricView : ItemsControl
         }
 
         return changed;
+    }
+
+    private void EnsurePositionClockRunning()
+    {
+        if (_positionFrameQueued || !ShouldRunPositionClock())
+            return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null)
+            return;
+
+        _positionFrameQueued = true;
+        topLevel.RequestAnimationFrame(OnPositionAnimationFrame);
+    }
+
+    private void StopPositionClock(bool syncToPosition)
+    {
+        _positionFrameQueued = false;
+        if (!syncToPosition)
+            return;
+
+        SyncPositionAnchor();
+        SetRenderPosition(Position);
+        var activeLineChanged = SyncActiveLine();
+        if (activeLineChanged && IsActive && IsVisible && !_isUserScrolling)
+            QueueLayoutUpdate();
+    }
+
+    private bool ShouldRunPositionClock()
+    {
+        return IsPositionClockRunning &&
+               IsActive &&
+               IsVisible &&
+               ItemCount > 0 &&
+               Bounds.Height > 0d &&
+               Bounds.Width > 0d &&
+               TopLevel.GetTopLevel(this) != null;
+    }
+
+    private void SyncPositionAnchor()
+    {
+        _positionAnchor = Position;
+        _positionAnchorTimestamp = Stopwatch.GetTimestamp();
+    }
+
+    private void SetRenderPosition(TimeSpan value)
+    {
+        SetAndRaise(RenderPositionProperty, ref _renderPosition, value);
+    }
+
+    private void OnPositionAnimationFrame(TimeSpan timestamp)
+    {
+        _positionFrameQueued = false;
+        if (!ShouldRunPositionClock())
+        {
+            StopPositionClock(syncToPosition: true);
+            return;
+        }
+
+        var elapsed = Stopwatch.GetElapsedTime(_positionAnchorTimestamp);
+        var cappedElapsed = elapsed > MaxPositionClockDrift ? MaxPositionClockDrift : elapsed;
+        SetRenderPosition(_positionAnchor + cappedElapsed);
+
+        var activeLineChanged = SyncActiveLine();
+        if (activeLineChanged && !_isUserScrolling)
+            QueueLayoutUpdate();
+        else if (_isUserScrolling)
+            _deferredActiveItemUpdate = true;
+
+        EnsurePositionClockRunning();
     }
 
     private void EnsureAnimationFrameRunning()

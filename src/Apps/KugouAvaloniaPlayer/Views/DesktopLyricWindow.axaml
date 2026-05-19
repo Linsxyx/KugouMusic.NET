@@ -338,6 +338,7 @@
                                          Line="{Binding CurrentRenderLyricLine}"
                                          ActiveLine="{Binding SingleLineActiveLine}"
                                          Position="{Binding Player.CurrentPosition}"
+                                         IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
                                          ShowTranslation="{Binding IsDesktopTranslationActuallyVisible}"
                                          ShowRomanization="False"
                                          WordRenderMode="{Binding SingleLineWordRenderMode}">
@@ -361,6 +362,7 @@
                                              Line="{Binding TopLyricLine}"
                                              ActiveLine="{Binding TopActiveLine}"
                                              Position="{Binding Player.CurrentPosition}"
+                                             IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
                                              ShowTranslation="False"
                                              ShowRomanization="False"
                                              WordRenderMode="{Binding TopLaneWordRenderMode}">
@@ -380,6 +382,7 @@
                                              Line="{Binding BottomLyricLine}"
                                              ActiveLine="{Binding BottomActiveLine}"
                                              Position="{Binding Player.CurrentPosition}"
+                                             IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
                                              ShowTranslation="False"
                                              ShowRomanization="False"
                                              WordRenderMode="{Binding BottomLaneWordRenderMode}">

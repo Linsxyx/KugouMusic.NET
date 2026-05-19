@@ -50,6 +50,11 @@ public class KaraokeTextBlock : Control
     public static readonly StyledProperty<bool> UsePlayedGradientProperty =
         AvaloniaProperty.Register<KaraokeTextBlock, bool>(nameof(UsePlayedGradient), true);
 
+    private FormattedText? _formattedText;
+    private double _formattedTextMaxWidth = double.NaN;
+    private IBrush? _playedBrush;
+    private IBrush? _unplayedBrush;
+
     static KaraokeTextBlock()
     {
         AffectsMeasure<KaraokeTextBlock>(
@@ -162,9 +167,32 @@ public class KaraokeTextBlock : Control
         set => SetValue(UsePlayedGradientProperty, value);
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == ProgressProperty)
+            return;
+
+        if (change.Property == PlayedForegroundProperty ||
+            change.Property == PlayedOpacityProperty ||
+            change.Property == UsePlayedGradientProperty)
+        {
+            _playedBrush = null;
+            return;
+        }
+
+        _formattedText = null;
+        _unplayedBrush = null;
+        if (change.Property == ForegroundProperty || change.Property == UnplayedOpacityProperty)
+            return;
+
+        _playedBrush = null;
+    }
+
     protected override Size MeasureOverride(Size availableSize)
     {
-        var formattedText = CreateFormattedText(availableSize.Width, CreateOpacityBrush(Foreground, UnplayedOpacity));
+        var formattedText = GetFormattedText(availableSize.Width);
         return new Size(
             Math.Ceiling(formattedText.WidthIncludingTrailingWhitespace),
             Math.Ceiling(formattedText.Height));
@@ -176,8 +204,7 @@ public class KaraokeTextBlock : Control
         if (string.IsNullOrEmpty(text))
             return;
 
-        var unplayedBrush = CreateOpacityBrush(Foreground, UnplayedOpacity);
-        var formattedText = CreateFormattedText(Bounds.Width, unplayedBrush);
+        var formattedText = GetFormattedText(Bounds.Width);
         var origin = new Point(0, Math.Max(0, (Bounds.Height - formattedText.Height) / 2));
 
         var progress = Math.Clamp(Progress, 0d, 1d);
@@ -208,11 +235,23 @@ public class KaraokeTextBlock : Control
             }
         }
 
-        formattedText.SetForegroundBrush(CreatePlayedBrush());
+        formattedText.SetForegroundBrush(GetPlayedBrush());
         using (context.PushClip(new Rect(0, 0, clipWidth, Bounds.Height)))
         {
             context.DrawText(formattedText, origin);
         }
+
+        formattedText.SetForegroundBrush(GetUnplayedBrush());
+    }
+
+    private FormattedText GetFormattedText(double maxWidth)
+    {
+        if (_formattedText != null && Math.Abs(_formattedTextMaxWidth - maxWidth) < 0.1d)
+            return _formattedText;
+
+        _formattedText = CreateFormattedText(maxWidth, GetUnplayedBrush());
+        _formattedTextMaxWidth = maxWidth;
+        return _formattedText;
     }
 
     private FormattedText CreateFormattedText(double maxWidth, IBrush foreground)
@@ -238,6 +277,16 @@ public class KaraokeTextBlock : Control
             formattedText.MaxTextWidth = maxWidth;
 
         return formattedText;
+    }
+
+    private IBrush GetUnplayedBrush()
+    {
+        return _unplayedBrush ??= CreateOpacityBrush(Foreground, UnplayedOpacity);
+    }
+
+    private IBrush GetPlayedBrush()
+    {
+        return _playedBrush ??= CreatePlayedBrush();
     }
 
     private IBrush CreatePlayedBrush()

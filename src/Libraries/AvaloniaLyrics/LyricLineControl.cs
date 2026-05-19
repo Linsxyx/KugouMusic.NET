@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -9,6 +10,8 @@ namespace AvaloniaLyrics;
 
 public class LyricLineControl : UserControl
 {
+    private static readonly TimeSpan MaxPositionClockDrift = TimeSpan.FromMilliseconds(240);
+
     public static readonly StyledProperty<LyricViewPreset> PresetProperty =
         AvaloniaProperty.Register<LyricLineControl, LyricViewPreset>(nameof(Preset), LyricViewPreset.Default);
 
@@ -20,6 +23,9 @@ public class LyricLineControl : UserControl
 
     public static readonly StyledProperty<TimeSpan> PositionProperty =
         AvaloniaProperty.Register<LyricLineControl, TimeSpan>(nameof(Position));
+
+    public static readonly StyledProperty<bool> IsPositionClockRunningProperty =
+        AvaloniaProperty.Register<LyricLineControl, bool>(nameof(IsPositionClockRunning));
 
     public static readonly StyledProperty<bool> ShowPrimaryTextProperty =
         AvaloniaProperty.Register<LyricLineControl, bool>(nameof(ShowPrimaryText), true);
@@ -86,6 +92,10 @@ public class LyricLineControl : UserControl
     private readonly TextBlock _romanizationTextBlock;
     private readonly List<WordVisual> _primaryWordVisuals = [];
     private readonly List<WordVisual> _translationWordVisuals = [];
+    private TimeSpan _positionAnchor;
+    private long _positionAnchorTimestamp;
+    private bool _positionFrameQueued;
+    private TimeSpan _renderPosition;
     private bool _isApplyingPreset;
 
     public LyricLineControl()
@@ -110,6 +120,9 @@ public class LyricLineControl : UserControl
         _rootPanel.Children.Add(_romanizationTextBlock);
         Content = _rootPanel;
 
+        _positionAnchor = Position;
+        _positionAnchorTimestamp = Stopwatch.GetTimestamp();
+        _renderPosition = Position;
         UpdateLayoutState(rebuildWords: true);
     }
 
@@ -135,6 +148,12 @@ public class LyricLineControl : UserControl
     {
         get => GetValue(PositionProperty);
         set => SetValue(PositionProperty, value);
+    }
+
+    public bool IsPositionClockRunning
+    {
+        get => GetValue(IsPositionClockRunningProperty);
+        set => SetValue(IsPositionClockRunningProperty, value);
     }
 
     public bool ShowPrimaryText
@@ -268,9 +287,36 @@ public class LyricLineControl : UserControl
             return;
         }
 
-        if (change.Property == PositionProperty || change.Property == ActiveLineProperty)
+        if (change.Property == PositionProperty)
+        {
+            SyncPositionAnchor();
+            if (!ShouldRunPositionClock())
+                SetRenderPosition(Position);
+
+            if (ReferenceEquals(Line, ActiveLine))
+                RefreshWordProgress();
+
+            EnsurePositionClockRunning();
+            return;
+        }
+
+        if (change.Property == ActiveLineProperty)
         {
             UpdateLayoutState(rebuildWords: false);
+            if (!ShouldRunPositionClock())
+                SetRenderPosition(Position);
+
+            EnsurePositionClockRunning();
+            return;
+        }
+
+        if (change.Property == IsPositionClockRunningProperty || change.Property == IsVisibleProperty)
+        {
+            if (!ShouldRunPositionClock())
+                StopPositionClock(syncToPosition: true);
+            else
+                EnsurePositionClockRunning();
+
             return;
         }
 
@@ -295,6 +341,12 @@ public class LyricLineControl : UserControl
         {
             UpdateLayoutState(rebuildWords: false);
         }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        StopPositionClock(syncToPosition: false);
+        base.OnDetachedFromVisualTree(e);
     }
 
     private void ApplyPreset(LyricViewPreset preset)
@@ -370,8 +422,78 @@ public class LyricLineControl : UserControl
         _translationTextBlock.IsVisible = ShowTranslation && !showTranslationWords && !string.IsNullOrWhiteSpace(line?.Translation);
         _romanizationTextBlock.IsVisible = ShowRomanization && !string.IsNullOrWhiteSpace(line?.Romanization);
 
-        RefreshWordVisuals(_primaryWordVisuals, Position, isActive, PrimaryForeground, PrimaryPlayedForeground, 0.34d, WordRenderMode == LyricWordRenderMode.LegacyLift);
-        RefreshWordVisuals(_translationWordVisuals, Position, isActive, TranslationForeground, TranslationPlayedForeground, 0.4d, WordRenderMode == LyricWordRenderMode.LegacyLift);
+        RefreshWordProgress();
+    }
+
+    private void RefreshWordProgress()
+    {
+        var line = Line;
+        var isActive = ReferenceEquals(line, ActiveLine);
+        RefreshWordVisuals(_primaryWordVisuals, _renderPosition, isActive, PrimaryForeground, PrimaryPlayedForeground, 0.34d, WordRenderMode == LyricWordRenderMode.LegacyLift);
+        RefreshWordVisuals(_translationWordVisuals, _renderPosition, isActive, TranslationForeground, TranslationPlayedForeground, 0.4d, WordRenderMode == LyricWordRenderMode.LegacyLift);
+    }
+
+    private void SyncPositionAnchor()
+    {
+        _positionAnchor = Position;
+        _positionAnchorTimestamp = Stopwatch.GetTimestamp();
+        _renderPosition = Position;
+    }
+
+    private void SetRenderPosition(TimeSpan value)
+    {
+        if (_renderPosition == value)
+            return;
+
+        _renderPosition = value;
+    }
+
+    private bool ShouldRunPositionClock()
+    {
+        return IsPositionClockRunning &&
+               IsVisible &&
+               ReferenceEquals(Line, ActiveLine) &&
+               (_primaryWordVisuals.Count > 0 || _translationWordVisuals.Count > 0) &&
+               TopLevel.GetTopLevel(this) != null;
+    }
+
+    private void EnsurePositionClockRunning()
+    {
+        if (_positionFrameQueued || !ShouldRunPositionClock())
+            return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel == null)
+            return;
+
+        _positionFrameQueued = true;
+        topLevel.RequestAnimationFrame(OnPositionAnimationFrame);
+    }
+
+    private void StopPositionClock(bool syncToPosition)
+    {
+        _positionFrameQueued = false;
+        if (!syncToPosition)
+            return;
+
+        SetRenderPosition(Position);
+        RefreshWordProgress();
+    }
+
+    private void OnPositionAnimationFrame(TimeSpan timestamp)
+    {
+        _positionFrameQueued = false;
+        if (!ShouldRunPositionClock())
+        {
+            StopPositionClock(syncToPosition: true);
+            return;
+        }
+
+        var elapsed = Stopwatch.GetElapsedTime(_positionAnchorTimestamp);
+        var cappedElapsed = elapsed > MaxPositionClockDrift ? MaxPositionClockDrift : elapsed;
+        SetRenderPosition(_positionAnchor + cappedElapsed);
+        RefreshWordProgress();
+        EnsurePositionClockRunning();
     }
 
     private void RebuildWordVisuals(

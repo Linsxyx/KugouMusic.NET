@@ -579,6 +579,7 @@
                                   Grid.ColumnSpan="{Binding LyricsGridColumnSpan}"
                                   Lines="{Binding Player.RenderLyricLines}"
                                   Position="{Binding Player.CurrentPosition}"
+                                  IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
                                   IsActive="{Binding IsOpen}"
                                   Preset="AppleMusicClassic"
                                   Margin="{Binding LyricsMargin}"
