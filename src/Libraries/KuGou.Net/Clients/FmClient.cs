@@ -1,6 +1,5 @@
 using System.Text.Json;
 using KuGou.Net.Abstractions.Models;
-using KuGou.Net.Adapters.Common;
 using KuGou.Net.Protocol.Raw;
 using KuGou.Net.util;
 
@@ -11,13 +10,13 @@ public class FmClient(RawFmApi rawApi)
     public async Task<FmRecommendResponse?> GetRecommendAsync()
     {
         var json = await rawApi.GetRecommendAsync();
-        return KgApiResponseParser.Parse<FmRecommendResponse>(json, AppJsonContext.Default.FmRecommendResponse);
+        return json.Deserialize(AppJsonContext.Default.FmRecommendResponse);
     }
 
     public async Task<FmSongResponse?> GetSongsAsync(string fmIds, int type = 2, int offset = -1, int size = 20)
     {
         var json = await rawApi.GetSongsAsync(fmIds, type, offset, size);
-        return KgApiResponseParser.Parse<FmSongResponse>(json, AppJsonContext.Default.FmSongResponse);
+        return json.Deserialize(AppJsonContext.Default.FmSongResponse);
     }
 
     public Task<JsonElement> GetClassSongAsync()
@@ -28,6 +27,6 @@ public class FmClient(RawFmApi rawApi)
     public async Task<FmImageResponse?> GetImagesAsync(string fmIds)
     {
         var json = await rawApi.GetImagesAsync(fmIds);
-        return KgApiResponseParser.Parse<FmImageResponse>(json, AppJsonContext.Default.FmImageResponse);
+        return json.Deserialize(AppJsonContext.Default.FmImageResponse);
     }
 }

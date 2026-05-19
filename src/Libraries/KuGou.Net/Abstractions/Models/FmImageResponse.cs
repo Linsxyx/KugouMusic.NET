@@ -16,8 +16,8 @@ public record FmImageData
     [JsonPropertyName("fmid")]
     public long FmId { get; set; }
     
-    [JsonPropertyName("fmId")]
-    public string FmIdString { get; set; } = "";
+    /*[JsonPropertyName("fmId")]
+    public string FmIdString { get; set; } = "";*/
 
     [JsonPropertyName("fmtype")]
     public int FmType { get; set; }
