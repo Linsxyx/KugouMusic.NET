@@ -1,3 +1,4 @@
+using KgWebApi.Net.Extensions;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
@@ -87,7 +88,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     public async Task<IActionResult> GetDetail([FromQuery(Name = "ids")][Required(AllowEmptyStrings = false)] string ids)
     {
         var result = await playlistClient.GetInfoAsync(ids);
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>
@@ -100,7 +101,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     {
         var result = await playlistClient.GetTagsAsync();
 
-        if (result == null) return NotFound(new { status = 0, msg = "未获取到标签数据" });
+        if (result == null) return this.ApiNotFound("未获取到标签数据", 40401);
 
         return Ok(result);
     }
@@ -120,7 +121,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
         [FromQuery] int pagesize = 30)
     {
         var result = await playlistClient.GetSongsAsync(id, page, pagesize);
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     [HttpGet("track/all/new")]
@@ -210,10 +211,10 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
     public async Task<IActionResult> AddTracks([FromBody] AddTracksRequest request)
     {
         if (string.IsNullOrEmpty(request.ListId))
-            return BadRequest("ListId 不能为空");
+            return this.ApiBadRequest("ListId 不能为空", 40004);
 
         if (request.Songs == null || request.Songs.Count == 0)
-            return BadRequest("歌曲列表不能为空");
+            return this.ApiBadRequest("歌曲列表不能为空", 40005);
 
         // 转换 DTO 到 Tuple List
         var songList = request.Songs.Select(s => (
@@ -224,7 +225,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
         )).ToList();
 
         var result = await playlistClient.AddSongsAsync(request.ListId, songList);
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>
@@ -239,7 +240,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
         [FromQuery][Required(AllowEmptyStrings = false)] string listid,
         [FromQuery][Required(AllowEmptyStrings = false)] string fileids)
     {
-        if (string.IsNullOrEmpty(fileids)) return BadRequest("fileids cannot be empty");
+        if (string.IsNullOrEmpty(fileids)) return this.ApiBadRequest("fileids cannot be empty", 40006);
 
         var idList = new List<long>();
         foreach (var idStr in fileids.Split(',', StringSplitOptions.RemoveEmptyEntries))
@@ -247,7 +248,7 @@ public class PlayListController(PlaylistClient playlistClient) : ControllerBase
                 idList.Add(id);
 
         var result = await playlistClient.RemoveSongsAsync(listid, idList);
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 }
 

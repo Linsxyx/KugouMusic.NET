@@ -2,6 +2,7 @@ using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using KgWebApi.Net.Extensions;
 
 namespace KgWebApi.Net.Controllers;
 
@@ -182,7 +183,7 @@ public class YouthController(UserClient userService) : ControllerBase
     public async Task<IActionResult> OneDayVip()
     {
         var result = await userService.ReceiveOneDayVipAsync();
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>
@@ -194,7 +195,7 @@ public class YouthController(UserClient userService) : ControllerBase
     public async Task<IActionResult> UpgradeVip()
     {
         var result = await userService.UpgradeVipRewardAsync();
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>
@@ -206,6 +207,6 @@ public class YouthController(UserClient userService) : ControllerBase
     public async Task<IActionResult> GetVipRecordAsync()
     {
         var result = await userService.GetVipRecordAsync();
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 }

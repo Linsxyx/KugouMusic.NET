@@ -1,3 +1,4 @@
+using KgWebApi.Net.Extensions;
 using KuGou.Net.ExternalPlaylists;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,11 +19,11 @@ public class ExternalPlaylistController(IExternalPlaylistParser externalPlaylist
     public async Task<IActionResult> Parse([FromBody] ExternalPlaylistParseRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.SourceText))
-            return BadRequest(new { message = "sourceText 不能为空" });
+            return this.ApiBadRequest("sourceText 不能为空", 40007);
 
         var result = await externalPlaylistParser.ParseAndLoadAsync(request.SourceText);
         if (!result.Success)
-            return BadRequest(new { message = result.ErrorMessage });
+            return this.ApiBadRequest(result.ErrorMessage, 40008);
 
         return Ok(new ExternalPlaylistParseResponse
         {

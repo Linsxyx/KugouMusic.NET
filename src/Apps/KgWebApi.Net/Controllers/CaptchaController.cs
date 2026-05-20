@@ -1,3 +1,4 @@
+using KgWebApi.Net.Extensions;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
@@ -19,9 +20,9 @@ public class CaptchaController(LoginClient loginClient) : ControllerBase
     public async Task<IActionResult> SendCode([FromQuery][Required(AllowEmptyStrings = false)] string mobile)
     {
         if (string.IsNullOrWhiteSpace(mobile) || mobile.Length < 11)
-            return BadRequest(new { status = 0, msg = "手机号格式不正确" });
+            return this.ApiBadRequest("手机号格式不正确", 40001);
 
         var result = await loginClient.SendCodeAsync(mobile);
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 }

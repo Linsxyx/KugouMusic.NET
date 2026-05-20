@@ -1,3 +1,4 @@
+using KgWebApi.Net.Extensions;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
@@ -22,17 +23,17 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
     public async Task<IActionResult> LoginByMobile([FromBody] MobileLoginRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Mobile) || string.IsNullOrWhiteSpace(req.Code))
-            return BadRequest(new { status = 0, msg = "手机号和验证码不能为空" });
+            return this.ApiBadRequest("手机号和验证码不能为空", 40002);
 
         try
         {
             var result = await loginClient.LoginByMobileAsync(req.Mobile, req.Code);
-            return Ok(result);
+            return this.FromKgStatus(result);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "手机登录异常");
-            return StatusCode(500, new { status = 0, msg = ex.Message });
+            return this.ApiServerError(ex.Message, 50001);
         }
     }
 
@@ -58,7 +59,7 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
     [ProducesResponseType(typeof(QrLoginStatusResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> CheckQrCode([FromQuery][Required(AllowEmptyStrings = false)] string key)
     {
-        if (string.IsNullOrWhiteSpace(key)) return BadRequest(new { status = 0, msg = "Key 不能为空" });
+        if (string.IsNullOrWhiteSpace(key)) return this.ApiBadRequest("Key 不能为空", 40003);
 
         var result = await loginClient.CheckQrStatusAsync(key);
 
@@ -75,7 +76,7 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
     {
         var result = await loginClient.RefreshSessionAsync();
 
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>

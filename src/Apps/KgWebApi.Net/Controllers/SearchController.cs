@@ -1,3 +1,4 @@
+using KgWebApi.Net.Extensions;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
@@ -32,7 +33,7 @@ public class SearchController(
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(keywords)) return BadRequest(new { error = "关键词不能为空" });
+            if (string.IsNullOrWhiteSpace(keywords)) return this.ApiBadRequest("关键词不能为空", 40009);
 
             logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
@@ -49,12 +50,12 @@ public class SearchController(
         catch (TaskCanceledException)
         {
             logger.LogWarning("搜索请求超时或取消");
-            return StatusCode(504, new { error = "请求超时" });
+            return this.ApiGatewayTimeout("请求超时", 50401);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "搜索异常，关键词: {Keywords}", keywords);
-            return StatusCode(500, new { error = $"内部服务器错误: {ex.Message}" });
+            return this.ApiServerError($"内部服务器错误: {ex.Message}", 50002);
         }
     }
 
@@ -72,7 +73,7 @@ public class SearchController(
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(keywords)) return BadRequest(new { error = "关键词不能为空" });
+            if (string.IsNullOrWhiteSpace(keywords)) return this.ApiBadRequest("关键词不能为空", 40009);
 
             logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
@@ -83,12 +84,12 @@ public class SearchController(
         catch (TaskCanceledException)
         {
             logger.LogWarning("搜索请求超时或取消");
-            return StatusCode(504, new { error = "请求超时" });
+            return this.ApiGatewayTimeout("请求超时", 50401);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "搜索异常，关键词: {Keywords}", keywords);
-            return StatusCode(500, new { error = $"内部服务器错误: {ex.Message}" });
+            return this.ApiServerError($"内部服务器错误: {ex.Message}", 50002);
         }
     }
 
@@ -106,7 +107,7 @@ public class SearchController(
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(keywords)) return BadRequest(new { error = "关键词不能为空" });
+            if (string.IsNullOrWhiteSpace(keywords)) return this.ApiBadRequest("关键词不能为空", 40009);
 
             logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
@@ -117,12 +118,12 @@ public class SearchController(
         catch (TaskCanceledException)
         {
             logger.LogWarning("搜索请求超时或取消");
-            return StatusCode(504, new { error = "请求超时" });
+            return this.ApiGatewayTimeout("请求超时", 50401);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "搜索异常，关键词: {Keywords}", keywords);
-            return StatusCode(500, new { error = $"内部服务器错误: {ex.Message}" });
+            return this.ApiServerError($"内部服务器错误: {ex.Message}", 50002);
         }
     }
 

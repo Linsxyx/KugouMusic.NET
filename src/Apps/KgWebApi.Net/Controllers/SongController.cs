@@ -1,3 +1,4 @@
+using KgWebApi.Net.Extensions;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
@@ -238,6 +239,7 @@ public class SongController(SongClient songClient) : ControllerBase
         [FromQuery(Name = "album_audio_id")] string? albumAudioId = null,
         [FromQuery(Name = "free_part")] bool freePart = false)
     {
-        return Ok(await songClient.GetPlayInfoAsync(hash, quality));
+        var result = await songClient.GetPlayInfoAsync(hash, quality);
+        return this.FromKgStatus(result);
     }
 }

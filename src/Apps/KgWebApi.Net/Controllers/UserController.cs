@@ -2,6 +2,7 @@ using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using KgWebApi.Net.Extensions;
 
 namespace KgWebApi.Net.Controllers;
 
@@ -18,7 +19,7 @@ public class UserController(UserClient userClient) : ControllerBase
     public async Task<IActionResult> UserDetail()
     {
         var result = await userClient.GetUserInfoAsync();
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>
@@ -30,7 +31,7 @@ public class UserController(UserClient userClient) : ControllerBase
     public async Task<IActionResult> UserVipDetail()
     {
         var result = await userClient.GetVipInfoAsync();
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>
@@ -46,7 +47,7 @@ public class UserController(UserClient userClient) : ControllerBase
         [FromQuery] int pagesize = 30)
     {
         var result = await userClient.GetPlaylistsAsync(page, pagesize);
-        return Ok(result);
+        return this.FromKgStatus(result);
     }
 
     /// <summary>
