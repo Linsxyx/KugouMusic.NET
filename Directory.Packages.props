@@ -19,9 +19,13 @@
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.3" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.12.8" />
+    <PackageVersion Include="Serilog" Version="4.3.1" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Settings.Configuration" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageVersion Include="Spectre.Console" Version="0.55.0" />
     <PackageVersion Include="SukiUI" Version="7.0.2-nightly20260520" />
     <PackageVersion Include="Svg.Controls.Avalonia" Version="12.0.0.6" />

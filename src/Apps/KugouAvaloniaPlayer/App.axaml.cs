@@ -11,6 +11,9 @@ using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Events;
+using Serilog.Extensions.Logging;
 using SimpleAudio;
 using SukiUI;
 
@@ -32,14 +35,18 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         SimpleAudioPlayer.Initialize();
-        _loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.SetMinimumLevel(LogLevel.Information);
-            builder.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
-            builder.AddFilter("Microsoft.Extensions.Http", LogLevel.Warning);
-            builder.AddDebug();
-            builder.AddConsole();
-        });
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.Extensions.Http", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Debug(outputTemplate:
+                "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Console(outputTemplate:
+                "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+
+        _loggerFactory = new SerilogLoggerFactory(Log.Logger, dispose: true);
 
         SettingsManager.Load();
         ApplySavedTheme();
@@ -82,6 +89,7 @@ public partial class App : Application
                 SimpleAudioPlayer.Free();
                 _serviceProvider?.Dispose();
                 _loggerFactory?.Dispose();
+                Log.CloseAndFlush();
             };
         }
 

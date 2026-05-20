@@ -1,15 +1,25 @@
 using KgWebApi.Net.Data;
 using KgWebApi.Net.Services;
-using KuGou.Net.Infrastructure;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Infrastructure.Http.Handlers;
 using KuGou.Net.Protocol.Session;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
+using Serilog;
+using Serilog.Events;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+    .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
+builder.Host.UseSerilog();
 
 var configuredConnectionString = builder.Configuration.GetConnectionString("KgWebApi");
 var sqliteConnectionString = !string.IsNullOrWhiteSpace(configuredConnectionString)
@@ -76,10 +86,18 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseSerilogRequestLogging();
 app.UseMiddleware<KgWebSessionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-app.Run();
+try
+{
+    app.Run();
+}
+finally
+{
+    Log.CloseAndFlush();
+}

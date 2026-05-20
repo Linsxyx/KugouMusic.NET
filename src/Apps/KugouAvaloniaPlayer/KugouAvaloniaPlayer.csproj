@@ -47,8 +47,10 @@
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="Jab" PrivateAssets="all"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Console"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug"/>
+        <PackageReference Include="Serilog"/>
+        <PackageReference Include="Serilog.Extensions.Logging"/>
+        <PackageReference Include="Serilog.Sinks.Console"/>
+        <PackageReference Include="Serilog.Sinks.Debug"/>
         <PackageReference Include="SukiUI"/>
         <PackageReference Include="Svg.Controls.Avalonia"/>
         <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
