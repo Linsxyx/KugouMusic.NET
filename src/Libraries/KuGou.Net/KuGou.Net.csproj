@@ -9,8 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3"/>
-        <PackageReference Include="Jab" Version="0.12.0" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.Extensions.Http"/>
+        <PackageReference Include="Jab" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>

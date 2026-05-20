@@ -1,0 +1,33 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="AsyncImageLoader.Avalonia" Version="3.8.0" />
+    <PackageVersion Include="Avalonia" Version="12.0.3" />
+    <PackageVersion Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.0.3" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.0.3" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+    <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageVersion Include="Jab" Version="0.12.0" />
+    <PackageVersion Include="ManagedBass" Version="4.1.0-prerelease" />
+    <PackageVersion Include="ManagedBass.Fx" Version="4.1.0-prerelease" />
+    <PackageVersion Include="ManagedBass.Loud" Version="4.1.0-prerelease" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.3" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.12.8" />
+    <PackageVersion Include="Spectre.Console" Version="0.55.0" />
+    <PackageVersion Include="SukiUI" Version="7.0.2-nightly20260520" />
+    <PackageVersion Include="Svg.Controls.Avalonia" Version="12.0.0.6" />
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+    <PackageVersion Include="TagLibSharp" Version="2.3.0" />
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
+    <PackageVersion Include="Velopack" Version="0.0.1589-ga2c5a97" />
+  </ItemGroup>
+</Project>

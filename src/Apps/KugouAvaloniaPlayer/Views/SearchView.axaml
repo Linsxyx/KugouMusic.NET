@@ -29,7 +29,7 @@
             <Grid Grid.Row="0" Margin="0,0,0,20" ColumnDefinitions="*, Auto" MaxWidth="800" HorizontalAlignment="Stretch">
                 <TextBox Grid.Column="0"
                          Text="{Binding SearchKeyword}"
-                         Watermark="输入歌曲名、歌手名、歌单或专辑..."
+                         PlaceholderText="输入歌曲名、歌手名、歌单或专辑..."
                          CornerRadius="8"
                          Height="42"
                          FontSize="15"

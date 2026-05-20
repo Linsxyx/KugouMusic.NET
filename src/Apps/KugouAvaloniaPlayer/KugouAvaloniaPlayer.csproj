@@ -34,27 +34,27 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="AsyncImageLoader.Avalonia" Version="3.8.0" />
-        <PackageReference Include="Avalonia" Version="12.0.2"/>
-        <PackageReference Include="Avalonia.Controls.ItemsRepeater" Version="12.0.0" />
-        <PackageReference Include="Avalonia.Desktop" Version="12.0.2"/>
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.2"/>
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.2"/>
+        <PackageReference Include="AsyncImageLoader.Avalonia" />
+        <PackageReference Include="Avalonia" />
+        <PackageReference Include="Avalonia.Controls.ItemsRepeater" />
+        <PackageReference Include="Avalonia.Desktop" />
+        <PackageReference Include="Avalonia.Themes.Fluent" />
+        <PackageReference Include="Avalonia.Fonts.Inter" />
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
-        <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1">
+        <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
             <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
-        <PackageReference Include="Jab" Version="0.12.0" PrivateAssets="all"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.3"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.3"/>
-        <PackageReference Include="SukiUI" Version="6.0.4-pr598"/>
-        <PackageReference Include="Svg.Controls.Avalonia" Version="12.0.0.6"/>
-        <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0"/>
-        <PackageReference Include="TagLibSharp" Version="2.3.0"/>
-        <PackageReference Include="Tmds.DBus.Protocol" Version="0.92.0"/>
-        <PackageReference Include="Velopack" Version="0.0.1589-ga2c5a97" />
+        <PackageReference Include="CommunityToolkit.Mvvm"/>
+        <PackageReference Include="Jab" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Console"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug"/>
+        <PackageReference Include="SukiUI"/>
+        <PackageReference Include="Svg.Controls.Avalonia"/>
+        <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
+        <PackageReference Include="TagLibSharp"/>
+        <PackageReference Include="Tmds.DBus.Protocol"/>
+        <PackageReference Include="Velopack" />
     </ItemGroup>
 
     <ItemGroup>
