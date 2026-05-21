@@ -393,19 +393,27 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     {
         _consecutiveFailures++;
         _logger.LogWarning($"加载失败 ({_consecutiveFailures}/{MaxConsecutiveFailures}): {song.Name}");
-        _ = Task.Run(async () =>
+        Dispatcher.UIThread.Post(() =>
         {
-            await Task.Delay(1000);
-            if (requestVersion != Volatile.Read(ref _playRequestVersion))
-                return;
-
-            Dispatcher.UIThread.Post(() =>
+            var currentIndex = PlaybackQueue.IndexOf(song);
+            if (currentIndex >= 0)
             {
-                if (requestVersion != Volatile.Read(ref _playRequestVersion))
-                    return;
-
+                PlaybackQueue.RemoveAt(currentIndex);
+                _logger.LogInformation($"已从队列中移除失败歌曲: {song.Name}");
+            }
+            if (PlaybackQueue.Count > 0)
+            {
                 PlayNextCommand.Execute(null);
-            });
+            }
+            else
+            {
+                StopAndReset();
+                _toastManager.CreateToast()
+                    .OfType(NotificationType.Warning)
+                    .WithTitle("播放失败")
+                    .WithContent("队列中没有可播放的歌曲")
+                    .Queue();
+            }
         });
     }
 
