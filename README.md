@@ -10,6 +10,9 @@
     <a href="https://github.com/Linsxyx/KugouMusic.NET/releases"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-brightgreen.svg" alt="Platform" /></a>
     <a href="https://github.com/Linsxyx/KugouMusic.NET/releases"><img src="https://img.shields.io/github/v/release/Linsxyx/KugouMusic.NET" alt="Release" /></a>
     <a href="https://github.com/Linsxyx/KugouMusic.NET/releases"><img src="https://img.shields.io/github/downloads/Linsxyx/KugouMusic.NET/total?label=download" alt="Downloads" /></a>
+<a href="https://github.com/Linsxyx/KugouMusic.NET/stargazers">
+    <img src="https://img.shields.io/github/stars/Linsxyx/KugouMusic.NET?style=flat&color=yellow" alt="GitHub Stars" />
+</a>
   </p>
 
   <p>

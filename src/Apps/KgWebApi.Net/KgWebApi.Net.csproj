@@ -20,6 +20,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj" />
+        <ProjectReference Include="..\..\Libraries\NeteaseCloudMusic.AudioMatch\NeteaseCloudMusic.AudioMatch.csproj" />
     </ItemGroup>
 
     <ItemGroup>

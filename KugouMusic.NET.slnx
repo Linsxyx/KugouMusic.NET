@@ -4,6 +4,7 @@
     <Project Path="src/Native/KuGou.Net.Native/KuGou.Net.Native.csproj"/>
     <Project Path="src/Libraries/AvaloniaLyrics/AvaloniaLyrics.csproj"/>
     <Project Path="src/Libraries/KuGou.Net/KuGou.Net.csproj"/>
+    <Project Path="src/Libraries/NeteaseCloudMusic.AudioMatch/NeteaseCloudMusic.AudioMatch.csproj"/>
     <Project Path="src/Apps/KugouAvaloniaPlayer\KugouAvaloniaPlayer.csproj"/>
     <Project Path="src/Libraries/SimpleAudio\SimpleAudio.csproj"/>
 </Solution>

@@ -41,6 +41,20 @@ builder.Services.AddHttpClient(WebApiKgHttpClientNames.KuGou)
         MaxConnectionsPerServer = 64
     })
     .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
+builder.Services.AddHttpClient(WebApiKgHttpClientNames.NeteaseCloudMusic, client =>
+    {
+        client.BaseAddress = new Uri("https://interface.music.163.com");
+        client.Timeout = TimeSpan.FromSeconds(20);
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        UseCookies = false,
+        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+        PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+        MaxConnectionsPerServer = 32
+    })
+    .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IKgWebSessionContext, KgWebSessionContext>();
 builder.Services.AddDbContext<KgWebApiDbContext>(options => options.UseSqlite(sqliteConnectionString));
@@ -50,6 +64,8 @@ builder.Services.AddScoped(_ => new CookieContainer());
 builder.Services.AddScoped<KgSessionManager>();
 builder.Services.AddScoped<KgSignatureHandler>();
 builder.Services.AddScoped<IKgTransport, WebApiKgTransport>();
+builder.Services.AddSingleton<NeteaseCloudMusic.AudioMatch.INeteaseAudioFingerprinter, NeteaseCloudMusic.AudioMatch.NeteaseAudioFingerprinter>();
+builder.Services.AddScoped<NeteaseAudioMatchService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
