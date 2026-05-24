@@ -23,6 +23,16 @@ public partial class PlayerViewModel
         _ = LoadLyricsForCurrentSongAsync(song, isLocal, loadVersion);
     }
 
+    private void ClearLyricsForPendingSongSwitch()
+    {
+        Interlocked.Increment(ref _lyricsLoadVersion);
+        BeginNowPlayingLyricsTransition();
+        _lyricsService.Clear();
+        CurrentLyricLine = null;
+        CurrentLyricIndex = -1;
+        NextLyricLine = null;
+    }
+
     private async Task LoadLyricsForCurrentSongAsync(SongItem song, bool isLocal, int loadVersion)
     {
         try
