@@ -107,6 +107,9 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(FmImageResponse))]
 [JsonSerializable(typeof(FmImageData))]
 [JsonSerializable(typeof(List<FmImageData>))]
+[JsonSerializable(typeof(PrivilegeLiteResponse))]
+[JsonSerializable(typeof(PrivilegeLiteData))]
+[JsonSerializable(typeof(List<PrivilegeLiteData>))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }

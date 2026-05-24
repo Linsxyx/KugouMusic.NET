@@ -55,9 +55,13 @@ public class SongClient(RawSongApi rawApi, RawSearchApi rawSearchApi)
         return rawApi.GetSongRankingFilterAsync(albumAudioId, page, pageSize);
     }
 
-    public Task<JsonElement> GetPrivilegeLiteAsync(string hash, string? albumIds = null)
+    public async Task<List<PrivilegeLiteData>?> GetPrivilegeLiteAsync(string hash, string? albumIds = null)
     {
-        return rawApi.GetPrivilegeLiteAsync(hash, albumIds);
+        var json =  await rawApi.GetPrivilegeLiteAsync(hash, albumIds);
+        return KgApiResponseParser.Parse<List<PrivilegeLiteData>>(
+            json, 
+            AppJsonContext.Default.ListPrivilegeLiteData
+        );
     }
 
     public Task<JsonElement> GetImagesAsync(string hash, string? albumIds = null, string? albumAudioIds = null,
