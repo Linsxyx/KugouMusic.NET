@@ -33,7 +33,8 @@
 - 问题反馈：[Issues](https://github.com/Linsxyx/KugouMusic.NET/issues)
 - 桌面客户端：`KugouAvaloniaPlayer`
 - 终端播放器：`KgTest`
-- 开发者入口：`KuGou.Net` / `KgWebApi.Net` / `SimpleAudio`
+- 开发者入口：`KuGou.Net` / `KgWebApi.Net` / `SimpleAudio` / `AvaloniaLyrics`
+- 安卓版正在开发中，可进群体验[`交流群`](#交流群)
 
 ## 为什么值得用
 
@@ -201,6 +202,7 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 - `src/Libraries/KuGou.Net`：酷狗业务 SDK，封装登录、搜索、歌单、歌词、榜单、用户等能力
 - `src/Apps/KgWebApi.Net`：基于 SDK 的 ASP.NET Core Web API 封装
 - `src/Libraries/SimpleAudio`：基于 ManagedBass 的跨平台播放与音效层
+- `src/Libraries/AvaloniaLyrics`：歌词控件库
 - `src/Native/KuGou.Net.Native`：把 SDK 能力导出为 Native AOT 友好的 C ABI
 
 ## 终端播放器 KgTest
@@ -244,7 +246,8 @@ KugouMusic.NET
 │  │  └─ KgWebApi.Net          # ASP.NET Core Web API
 │  ├─ Libraries
 │  │  ├─ KuGou.Net             # 核心 SDK
-│  │  └─ SimpleAudio           # 音频播放与音效层
+│  │  ├─ SimpleAudio           # 音频播放与音效层
+│  │  └─ AvaloniaLyrics        # Avalonia 歌词控件
 │  └─ Native
 │     └─ KuGou.Net.Native      # Native AOT 导出层
 └─ docs/images           # README 截图资源
