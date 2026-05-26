@@ -127,7 +127,7 @@ public partial class PlayerViewModel
                 !sourceInfo.Success || string.IsNullOrWhiteSpace(sourceInfo.Source))
                 return;
 
-            var normalizationGain = await ResolveNormalizationGainAsync(
+            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
                 sourceInfo.Source,
                 sourceInfo.IsLocal,
                 nextSong.DurationSeconds,

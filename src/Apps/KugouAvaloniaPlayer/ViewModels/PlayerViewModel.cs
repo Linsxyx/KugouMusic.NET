@@ -11,7 +11,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.SystemMediaSession;
@@ -24,10 +23,7 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class PlayerViewModel : ViewModelBase, IDisposable
 {
     private const int MaxConsecutiveFailures = 5;
-    private const int VisualizerBarCount = 96;
     private const float VolumeStep = 0.05f;
-    private const double VisualizerMinHeight = 6;
-    private const double VisualizerHeightRange = 170;
     private const double AnalysisWindowSec = 15.0;
     private const double FallbackMixDurationSec = 6.8;
     private const double FallbackMixEntrySec = 4.6;
@@ -35,15 +31,17 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private static readonly TimeSpan SeamlessVisualSwitchDelay = TimeSpan.FromSeconds(2);
     private const int TailTelemetryCapacity = 320;
     private static readonly TimeSpan AudioLoadTimeout = TimeSpan.FromSeconds(12);
-    private readonly RecommendClient _discoveryClient;
+    private readonly PlaybackAudioEffectsService _audioEffectsService;
     private readonly FavoritePlaylistService _favoriteService;
     private readonly PlaybackHistoryService _historyService;
     private readonly ILogger<PlayerViewModel> _logger;
     private readonly LyricsService _lyricsService;
+    private readonly PersonalFmService _personalFmService;
     private readonly DispatcherTimer _playbackTimer;
     private readonly IPlaybackCoordinator _playbackCoordinator;
     private readonly IPlaybackSourceResolver _playbackSourceResolver;
     private readonly ISystemMediaSessionService _systemMediaSessionService;
+    private readonly PlaybackVisualizerService _visualizerService;
 
     private readonly DualTrackAudioPlayer _player;
     private readonly SemaphoreSlim _playSongLock = new(1, 1);
@@ -97,7 +95,6 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     public partial bool IsPlayingAudio { get; set; }
 
-    private bool _isVolumeNormalizationEnabled;
     private bool _isPreparingNextTrack;
     [ObservableProperty]
     public partial bool IsSeamlessTransitionEnabled { get; set; }
@@ -145,19 +142,23 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? _transitionWorkCancellation;
 
     public PlayerViewModel(
-        RecommendClient discoveryClient, ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
+        ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
         PlaybackQueueManager queueManager, LyricsService lyricsService, FavoritePlaylistService favoriteService,
         PlaybackHistoryService historyService,
+        PersonalFmService personalFmService, PlaybackAudioEffectsService audioEffectsService,
+        PlaybackVisualizerService visualizerService,
         ITransitionAnalysisService transitionAnalysisService, IPlaybackSourceResolver playbackSourceResolver,
         IPlaybackCoordinator playbackCoordinator, ISystemMediaSessionService systemMediaSessionService)
     {
-        _discoveryClient = discoveryClient;
         _toastManager = toastManager;
         _logger = logger;
         _queueManager = queueManager;
         _lyricsService = lyricsService;
         _favoriteService = favoriteService;
         _historyService = historyService;
+        _personalFmService = personalFmService;
+        _audioEffectsService = audioEffectsService;
+        _visualizerService = visualizerService;
         _transitionAnalysisService = transitionAnalysisService;
         _playbackSourceResolver = playbackSourceResolver;
         _playbackCoordinator = playbackCoordinator;
@@ -168,11 +169,10 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         MusicQuality = SettingsManager.Settings.MusicQuality;
         IsSeamlessTransitionEnabled = SettingsManager.Settings.EnableSeamlessTransition;
         IsNowPlayingVisualizerEnabled = SettingsManager.Settings.EnableNowPlayingVisualizer;
-        _isVolumeNormalizationEnabled = SettingsManager.Settings.EnableVolumeNormalization;
         MusicVolume = Math.Clamp(SettingsManager.Settings.MusicVolume, 0f, 1f);
         QualitySelection = MusicQuality;
         UpdateAudioEffects(SettingsManager.Settings.EQPreset, SettingsManager.Settings.EnableSurround);
-        _player.SetVolumeNormalizationEnabled(_isVolumeNormalizationEnabled);
+        _audioEffectsService.Initialize(SettingsManager.Settings.EnableVolumeNormalization);
 
         _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         _playbackTimer.Tick += OnPlaybackTimerTick;
@@ -187,6 +187,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             (_, m) => _ = ShowPlaylistDialogSafelyAsync(m.Song));
 
         _queueManager.PlaybackQueue.CollectionChanged += OnPlaybackQueueCollectionChanged;
+        _personalFmService.StateChanged += OnPersonalFmServiceStateChanged;
         PersonalFmStateChanged += SyncDisplayPlaybackQueue;
         SyncDisplayPlaybackQueue();
     }
@@ -195,8 +196,12 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     public AvaloniaList<SongItem> DisplayPlaybackQueue { get; } = new();
     public AvaloniaList<LyricLineViewModel> LyricLines => _lyricsService.LyricLines;
     public AvaloniaList<LyricLine> RenderLyricLines => _lyricsService.RenderLyricLines;
-    public VisualizerBandState[] NowPlayingVisualizerBars { get; } = new VisualizerBandState[VisualizerBarCount];
-    public event Action? VisualizerUpdated;
+    public VisualizerBandState[] NowPlayingVisualizerBars => _visualizerService.Bars;
+    public event Action? VisualizerUpdated
+    {
+        add => _visualizerService.Updated += value;
+        remove => _visualizerService.Updated -= value;
+    }
     public string[] QualityOptions { get; } = ["128", "320", "flac", "high"];
     public int DisplayPlaybackQueueCount => DisplayPlaybackQueue.Count;
     public bool HasDisplayPlaybackQueue => DisplayPlaybackQueue.Count > 0;
@@ -233,6 +238,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _playbackTimer.Tick -= OnPlaybackTimerTick;
         _player.PlaybackEnded -= OnPlaybackEnded;
         _queueManager.PlaybackQueue.CollectionChanged -= OnPlaybackQueueCollectionChanged;
+        _personalFmService.StateChanged -= OnPersonalFmServiceStateChanged;
         PersonalFmStateChanged -= SyncDisplayPlaybackQueue;
         _queueManager.Clear();
         _lyricsService.Clear();
@@ -298,7 +304,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             if (requestVersion != _playRequestVersion || currentLoadCts.IsCancellationRequested) return;
 
             var normalizationGain =
-                await ResolveNormalizationGainAsync(sourceInfo.Source, sourceInfo.IsLocal, song.DurationSeconds,
+                await _audioEffectsService.ResolveNormalizationGainAsync(sourceInfo.Source, sourceInfo.IsLocal, song.DurationSeconds,
                     currentLoadCts.Token);
 
             var loadSuccess =

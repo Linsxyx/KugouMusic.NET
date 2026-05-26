@@ -58,6 +58,9 @@ namespace KugouAvaloniaPlayer.Services;
 [Singleton<LyricsService>]
 [Singleton<FavoritePlaylistService>]
 [Singleton<PlaybackHistoryService>]
+[Singleton<PersonalFmService>]
+[Singleton<PlaybackAudioEffectsService>]
+[Singleton<PlaybackVisualizerService>]
 [Singleton<IPlaybackSourceResolver, PlaybackSourceResolver>]
 [Singleton<IPlaybackCoordinator, PlaybackCoordinator>]
 [Singleton<ITransitionAnalysisService, ManagedBassTransitionAnalysisService>]
@@ -104,6 +107,8 @@ public interface IAvaloniaAppServiceModule;
 [Singleton<ILogger<GlobalShortcutServiceImpl>>(Factory = nameof(CreateGlobalShortcutServiceLogger))]
 [Singleton<ILogger<LyricsService>>(Factory = nameof(CreateLyricsServiceLogger))]
 [Singleton<ILogger<PlaybackCoordinator>>(Factory = nameof(CreatePlaybackCoordinatorLogger))]
+[Singleton<ILogger<PlaybackAudioEffectsService>>(Factory = nameof(CreatePlaybackAudioEffectsServiceLogger))]
+[Singleton<ILogger<PersonalFmService>>(Factory = nameof(CreatePersonalFmServiceLogger))]
 [Singleton<ILogger<PlaybackHistoryService>>(Factory = nameof(CreatePlaybackHistoryServiceLogger))]
 [Singleton<ILogger<SystemMediaSessionServiceImpl>>(Factory = nameof(CreateSystemMediaSessionServiceLogger))]
 public sealed partial class AvaloniaAppServiceProvider
@@ -160,6 +165,8 @@ public sealed partial class AvaloniaAppServiceProvider
     public ILogger<GlobalShortcutServiceImpl> CreateGlobalShortcutServiceLogger() => LoggerFactory.CreateLogger<GlobalShortcutServiceImpl>();
     public ILogger<LyricsService> CreateLyricsServiceLogger() => LoggerFactory.CreateLogger<LyricsService>();
     public ILogger<PlaybackCoordinator> CreatePlaybackCoordinatorLogger() => LoggerFactory.CreateLogger<PlaybackCoordinator>();
+    public ILogger<PlaybackAudioEffectsService> CreatePlaybackAudioEffectsServiceLogger() => LoggerFactory.CreateLogger<PlaybackAudioEffectsService>();
+    public ILogger<PersonalFmService> CreatePersonalFmServiceLogger() => LoggerFactory.CreateLogger<PersonalFmService>();
     public ILogger<PlaybackHistoryService> CreatePlaybackHistoryServiceLogger() => LoggerFactory.CreateLogger<PlaybackHistoryService>();
     public ILogger<SystemMediaSessionServiceImpl> CreateSystemMediaSessionServiceLogger() => LoggerFactory.CreateLogger<SystemMediaSessionServiceImpl>();
 }

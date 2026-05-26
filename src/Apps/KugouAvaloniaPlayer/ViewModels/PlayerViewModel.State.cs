@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls.Notifications;
@@ -163,18 +161,13 @@ public partial class PlayerViewModel
 
     public void ApplyCustomEQ(float[] gains)
     {
-        _player.SetEQ(gains);
+        _audioEffectsService.ApplyCustomEQ(gains);
         OnPropertyChanged(nameof(MusicQuality));
     }
 
     public void UpdateAudioEffects(string preset, bool surround)
     {
-        if (preset == "自定义")
-            _player.SetEQ(SettingsManager.Settings.CustomEqGains);
-        else
-            _player.SetEQ(GetEqPreset(preset));
-
-        _player.SetSurround(surround);
+        _audioEffectsService.UpdateAudioEffects(preset, surround);
     }
 
     public void SetSeamlessTransitionEnabled(bool enabled)
@@ -202,16 +195,10 @@ public partial class PlayerViewModel
 
     public void SetVolumeNormalizationEnabled(bool enabled)
     {
-        _isVolumeNormalizationEnabled = enabled;
-        _player.SetVolumeNormalizationEnabled(enabled);
-
-        if (!enabled)
-        {
-            _player.SetActiveNormalizationGain(1.0f);
-            return;
-        }
-
-        _ = RefreshCurrentTrackNormalizationAsync();
+        if (enabled)
+            _ = _audioEffectsService.SetVolumeNormalizationEnabledAsync(CurrentPlayingSong);
+        else
+            _audioEffectsService.DisableVolumeNormalization();
     }
 
     public async Task<bool> SwitchQualityAsync(string? quality)
@@ -275,7 +262,7 @@ public partial class PlayerViewModel
             _playbackTimer.Stop();
             _player.Stop();
 
-            var normalizationGain = await ResolveNormalizationGainAsync(
+            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
                 sourceInfo.Source,
                 sourceInfo.IsLocal,
                 currentSong.DurationSeconds,
@@ -363,129 +350,13 @@ public partial class PlayerViewModel
         };
     }
 
-    private float[] GetEqPreset(string preset)
-    {
-        return preset switch
-        {
-            "流行" => [-2f, 0f, -5.0f, -1.0f, 0f, 0.0f, 0f, -3.0f, 0f, 0f],
-            "摇滚" => [4.0f, 1.0f, -2.0f, 0f, 0f, -2.0f, 0f, -2.0f, 1.0f, 4.0f],
-            "爵士" => [0f, 0f, 0f, -1.0f, -1.0f, -3.0f, 0f, 0f, 0f, 0f],
-            "古典" => [0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 3.0f, 1.0f, 6.0f, 2.0f, 6.0f],
-            "嘻哈" => [3.0f, 0f, -3.0f, 0f, 0f, -3.0f, 0f, 0.0f, 0f, 2.0f],
-            "布鲁斯" => [2.0f, 2.0f, -6.0f, -2.0f, 3.0f, 1.0f, 0f, 1.0f, 0.0f, 2.0f],
-            "电子音乐" => [3.0f, 1.0f, -1.0f, 0f, 0f, -3.0f, 0f, 0f, 0f, 0f],
-            "金属" => [2.0f, 0f, 0f, -1.0f, -1.0f, -4.0f, 0f, 0f, 0f, 0f],
-            _ => [0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f]
-        };
-    }
-
-    private async Task RefreshCurrentTrackNormalizationAsync()
-    {
-        var currentSong = CurrentPlayingSong;
-        var source = _player.ActiveSource;
-        if (!_isVolumeNormalizationEnabled || currentSong == null || string.IsNullOrWhiteSpace(source))
-        {
-            return;
-        }
-
-        try
-        {
-            var gain = await ResolveNormalizationGainAsync(
-                source,
-                !string.IsNullOrWhiteSpace(currentSong.LocalFilePath) && File.Exists(currentSong.LocalFilePath),
-                currentSong.DurationSeconds,
-                CancellationToken.None);
-            _player.SetActiveNormalizationGain(gain);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "刷新当前歌曲音量平衡失败");
-        }
-    }
-
-    private async Task<float> ResolveNormalizationGainAsync(
-        string source,
-        bool isLocal,
-        double durationSeconds,
-        CancellationToken cancellationToken)
-    {
-        if (!_isVolumeNormalizationEnabled || string.IsNullOrWhiteSpace(source))
-        {
-            return 1.0f;
-        }
-
-        try
-        {
-            return await TrackVolumeNormalizer.EstimateGainAsync(source, isLocal, durationSeconds, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "估算歌曲音量补偿失败");
-            return 1.0f;
-        }
-    }
-
     private void ResetVisualizerBars()
     {
-        for (var i = 0; i < NowPlayingVisualizerBars.Length; i++)
-        {
-            NowPlayingVisualizerBars[i].Height = VisualizerMinHeight;
-            NowPlayingVisualizerBars[i].Opacity = 0.1;
-        }
-        VisualizerUpdated?.Invoke(); // 通知控件重绘
+        _visualizerService.Reset();
     }
 
     private void UpdateNowPlayingVisualizer(AudioAnalysisSnapshot snapshot)
     {
-        var spectrumBands = snapshot.SpectrumBands;
-        if (spectrumBands == null || spectrumBands.Count == 0)
-        {
-            ResetVisualizerBars();
-            return;
-        }
-
-        var energyBoost = Math.Clamp(snapshot.Rms * 8.5, 0d, 1d);
-        var brightnessBoost = Math.Clamp(snapshot.Brightness * 1.25, 0d, 1d);
-        var barCount = NowPlayingVisualizerBars.Length; 
-
-        for (var i = 0; i < barCount; i++)
-        {
-            var phase = barCount <= 1 ? 0d : i / (barCount - 1d);
-            var band = SampleSpectrumBand(spectrumBands, phase);
-            var shapedBand = Math.Pow(Math.Clamp(band, 0d, 1d), 0.72d);
-            var centerLift = 0.82d + Math.Sin(phase * Math.PI) * 0.12d;
-            var ripple = 1d + Math.Sin(snapshot.PositionSeconds * 4.8d + i * 0.18d) * energyBoost * 0.035d;
-            var target = Math.Clamp(
-                (shapedBand * 0.58d + energyBoost * 0.14d + brightnessBoost * 0.04d) * centerLift * ripple,
-                0d,
-                1d);
-            var targetHeight = VisualizerMinHeight + target * VisualizerHeightRange;
-            
-            ref var bar = ref NowPlayingVisualizerBars[i];
-    
-            var smoothing = targetHeight >= bar.Height ? 0.46d : 0.16d;
-            bar.Height += (targetHeight - bar.Height) * smoothing;
-            bar.Opacity = Math.Clamp(0.1d + Math.Pow(target, 0.9d) * 0.5d, 0.1d, 0.6d);
-        }
-        VisualizerUpdated?.Invoke();
-    }
-
-    private static double SampleSpectrumBand(IReadOnlyList<float> spectrumBands, double phase)
-    {
-        if (spectrumBands.Count == 1)
-            return spectrumBands[0];
-
-        var position = Math.Clamp(phase, 0d, 1d) * (spectrumBands.Count - 1);
-        var lowerIndex = (int)Math.Floor(position);
-        var upperIndex = Math.Min(lowerIndex + 1, spectrumBands.Count - 1);
-        var mix = position - lowerIndex;
-        var lower = Math.Clamp(spectrumBands[lowerIndex], 0f, 1f);
-        var upper = Math.Clamp(spectrumBands[upperIndex], 0f, 1f);
-
-        return lower + (upper - lower) * mix;
+        _visualizerService.Update(snapshot);
     }
 }
