@@ -49,8 +49,10 @@
         <PackageReference Include="Jab" PrivateAssets="all"/>
         <PackageReference Include="Serilog"/>
         <PackageReference Include="Serilog.Extensions.Logging"/>
+        <PackageReference Include="Serilog.Sinks.Async" />
         <PackageReference Include="Serilog.Sinks.Console"/>
         <PackageReference Include="Serilog.Sinks.Debug"/>
+        <PackageReference Include="Serilog.Sinks.File" />
         <PackageReference Include="SukiUI"/>
         <PackageReference Include="Svg.Controls.Avalonia"/>
         <PackageReference Include="System.Security.Cryptography.ProtectedData"/>

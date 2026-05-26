@@ -11,14 +11,35 @@ using Serilog.Events;
 using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var logDir = Path.Combine(builder.Environment.ContentRootPath, "Logs");
+
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
     .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.Extensions.Http", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+#if DEBUG
+    .WriteTo.Async(a => a.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}"))
+#else
+    .WriteTo.Async(a => a.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}"))
+    .WriteTo.Async(a => a.File(
+        Path.Combine(logDir, "kgwebapi-.log"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        retainedFileTimeLimit: TimeSpan.FromDays(30),
+        fileSizeLimitBytes: 20 * 1024 * 1024,
+        rollOnFileSizeLimit: true,
+        shared: true,
+        outputTemplate:
+        "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}"))
+#endif
     .CreateLogger();
+
 builder.Host.UseSerilog();
 
 var configuredConnectionString = builder.Configuration.GetConnectionString("KgWebApi");
