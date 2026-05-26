@@ -224,18 +224,47 @@ public partial class SearchViewModel(
 
     private async Task SearchPlaylists()
     {
-        var results = await searchClient.SearchSpecialAsync(SearchKeyword);
-        if (results != null)
-            foreach (var item in results)
-                Playlists.Add(item);
+        for (int page = 1; ; page++)
+        {
+            try
+            {
+                var results = await searchClient.SearchSpecialAsync(SearchKeyword, page);
+                if (results == null || results.Count == 0) break;
+
+                foreach (var item in results)
+                    Playlists.Add(item);
+
+                if (results.Count < 30) break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "网络问题，歌单搜索中断");
+                break;
+            }
+        }
     }
 
     private async Task SearchAlbums()
     {
-        var results = await searchClient.SearchAlbumAsync(SearchKeyword);
-        if (results != null)
-            foreach (var item in results)
-                Albums.Add(item);
+        for (int page = 1; ; page++)
+        {
+            try
+            {
+                var results = await searchClient.SearchAlbumAsync(SearchKeyword, page);
+                if (results == null || results.Count == 0) break;
+
+                var sorted = results.OrderBy(x => x.PublishTime).ToList();
+                foreach (var item in sorted)
+                    Albums.Add(item);
+
+                if (results.Count < 30) break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "网络问题，专辑搜索中断");
+                break;
+            }
+        }
     }
 
     [RelayCommand]
