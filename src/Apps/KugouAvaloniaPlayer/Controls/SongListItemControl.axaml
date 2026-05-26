@@ -35,7 +35,9 @@
                     Background="{StaticResource SukiControlTouchBackground}" />
 
             <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" Width="45" Height="45" Margin="8,5">
-                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}" Stretch="UniformToFill" />
+                <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
+                       Stretch="UniformToFill"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
             </Border>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0" Spacing="3">

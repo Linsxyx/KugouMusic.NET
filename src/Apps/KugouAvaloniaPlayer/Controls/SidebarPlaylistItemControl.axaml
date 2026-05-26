@@ -22,7 +22,8 @@
                         ClipToBounds="True"
                         VerticalAlignment="Center">
                     <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
-                           Stretch="UniformToFill" />
+                           Stretch="UniformToFill"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Border>
                 <TextBlock Grid.Column="1"
                            Margin="10,0,0,0"

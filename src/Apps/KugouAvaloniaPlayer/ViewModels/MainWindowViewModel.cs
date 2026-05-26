@@ -530,6 +530,13 @@ public partial class MainWindowViewModel : ObservableObject
         await PlaylistsViewModel.OpenPlaylistCommand.ExecuteAsync(item);
     }
 
+    [RelayCommand]
+    private void OpenLocalLibrary()
+    {
+        NavigateToPage(PlaylistsViewModel);
+        PlaylistsViewModel.OpenLocalLibraryHomeCommand.Execute(null);
+    }
+
     private void OnPlaylistViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MyPlaylistsViewModel.SelectedPlaylist))
@@ -560,7 +567,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         return a.Type switch
         {
-            PlaylistType.Local => string.Equals(a.LocalPath, b.LocalPath, StringComparison.OrdinalIgnoreCase),
+            PlaylistType.Local => string.Equals(a.Id, b.Id, StringComparison.OrdinalIgnoreCase),
             PlaylistType.Online or PlaylistType.Album => a.ListId > 0 && b.ListId > 0
                 ? a.ListId == b.ListId
                 : string.Equals(a.Id, b.Id, StringComparison.OrdinalIgnoreCase),
@@ -575,7 +582,6 @@ public partial class MainWindowViewModel : ObservableObject
         SidebarAlbumPlaylists.Clear();
 
         SidebarOnlinePlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Online));
-        SidebarLocalPlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Local));
         SidebarAlbumPlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Album));
 
         UpdateSidebarSelection();

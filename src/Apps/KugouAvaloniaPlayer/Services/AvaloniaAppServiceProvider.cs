@@ -39,6 +39,7 @@ namespace KugouAvaloniaPlayer.Services;
 [Singleton<IGlobalShortcutService, GlobalShortcutServiceImpl>]
 [Singleton<ISystemMediaSessionService, SystemMediaSessionServiceImpl>]
 [Singleton<IFolderPickerService, FolderPickerService>]
+[Singleton<ILocalMusicLibraryService, LocalMusicLibraryService>]
 [Singleton<IGitHubReleaseService, GitHubReleaseService>]
 [Singleton<IAppUpdateService, AppUpdateService>]
 [Transient<LoginViewModel>]
@@ -111,6 +112,7 @@ public interface IAvaloniaAppServiceModule;
 [Singleton<ILogger<PersonalFmService>>(Factory = nameof(CreatePersonalFmServiceLogger))]
 [Singleton<ILogger<PlaybackHistoryService>>(Factory = nameof(CreatePlaybackHistoryServiceLogger))]
 [Singleton<ILogger<SystemMediaSessionServiceImpl>>(Factory = nameof(CreateSystemMediaSessionServiceLogger))]
+[Singleton<ILogger<LocalMusicLibraryService>>(Factory = nameof(CreateLocalMusicLibraryServiceLogger))]
 public sealed partial class AvaloniaAppServiceProvider
 {
     public ISessionPersistence SessionPersistence { get; init; } = new KugouSessionPersistence();
@@ -169,4 +171,5 @@ public sealed partial class AvaloniaAppServiceProvider
     public ILogger<PersonalFmService> CreatePersonalFmServiceLogger() => LoggerFactory.CreateLogger<PersonalFmService>();
     public ILogger<PlaybackHistoryService> CreatePlaybackHistoryServiceLogger() => LoggerFactory.CreateLogger<PlaybackHistoryService>();
     public ILogger<SystemMediaSessionServiceImpl> CreateSystemMediaSessionServiceLogger() => LoggerFactory.CreateLogger<SystemMediaSessionServiceImpl>();
+    public ILogger<LocalMusicLibraryService> CreateLocalMusicLibraryServiceLogger() => LoggerFactory.CreateLogger<LocalMusicLibraryService>();
 }

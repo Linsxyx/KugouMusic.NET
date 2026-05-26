@@ -264,7 +264,9 @@
                     </StackPanel.RenderTransform>
                     <suki:GlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
                                     MinHeight="220" MaxWidth="350" MaxHeight="350">
-                        <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}" Stretch="UniformToFill" />
+                        <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}"
+                               Stretch="UniformToFill"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
                     </suki:GlassCard>
 
                     <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">

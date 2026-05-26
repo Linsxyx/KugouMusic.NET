@@ -32,6 +32,7 @@ public partial class FavoritePlaylistService(
 {
     private const string LikeListIdForAction = "2";
     private const int CacheSchemaVersion = 2;
+    private const string StoreScope = "favorite_like_cache";
     private const int AddToPlaylistDialogPageSize = 100;
     private static readonly TimeSpan LoadPlaylistDialogTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan AddSongToPlaylistTimeout = TimeSpan.FromSeconds(12);
@@ -539,11 +540,18 @@ public partial class FavoritePlaylistService(
         cache = null;
         try
         {
-            var filePath = GetLikeCacheFilePath();
-            if (!File.Exists(filePath))
-                return TryLoadLegacyCacheFile(out cache);
+            var json = AppSqliteStore.LoadValue(StoreScope, GetCurrentUserId());
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                var filePath = GetLikeCacheFilePath();
+                if (!File.Exists(filePath))
+                    return TryLoadLegacyCacheFile(out cache);
 
-            var json = File.ReadAllText(filePath);
+                json = File.ReadAllText(filePath);
+                AppSqliteStore.SaveValue(StoreScope, GetCurrentUserId(), json);
+                AppSqliteStore.DeleteFileIfExists(filePath);
+            }
+
             var model = JsonSerializer.Deserialize(json, LikeCacheJsonContext.Default.LikeCacheFileModel);
             if (model?.Items == null || model.Items.Count == 0)
                 return false;
@@ -576,6 +584,11 @@ public partial class FavoritePlaylistService(
                 return false;
 
             cache = NormalizeCacheModel(legacy, "local");
+            AppSqliteStore.SaveValue(
+                StoreScope,
+                GetCurrentUserId(),
+                JsonSerializer.Serialize(cache, LikeCacheJsonContext.Default.LikeCacheFileModel));
+            AppSqliteStore.DeleteFileIfExists(legacyPath);
             logger.LogInformation("已读取旧版我喜欢缓存: source=local legacy=true items={ItemCount}", cache.Items.Count);
             return true;
         }
@@ -604,15 +617,9 @@ public partial class FavoritePlaylistService(
     {
         try
         {
-            var filePath = GetLikeCacheFilePath();
-            var dir = Path.GetDirectoryName(filePath);
-            if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            var tempPath = filePath + ".tmp";
             var json = JsonSerializer.Serialize(cache, LikeCacheJsonContext.Default.LikeCacheFileModel);
-            File.WriteAllText(tempPath, json);
-            File.Move(tempPath, filePath, true);
+            AppSqliteStore.SaveValue(StoreScope, GetCurrentUserId(), json);
+            AppSqliteStore.DeleteFileIfExists(GetLikeCacheFilePath());
         }
         catch (Exception ex)
         {

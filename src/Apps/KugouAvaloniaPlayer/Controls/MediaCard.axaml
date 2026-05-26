@@ -30,6 +30,7 @@
                             Background="{StaticResource SukiPrimaryColorLow}">
                         <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.Cover}"
                                              Stretch="UniformToFill"
+                                             RenderOptions.BitmapInterpolationMode="HighQuality"
                                              HorizontalAlignment="Center"
                                              VerticalAlignment="Center" />
                     </Border>

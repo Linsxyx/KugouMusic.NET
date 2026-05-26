@@ -69,7 +69,8 @@
                         ClipToBounds="True"
                         Background="{DynamicResource SukiPrimaryColorLow}">
                     <Image asyncImageLoader:ImageLoader.Source="{Binding SongCover}"
-                                         Stretch="UniformToFill" />
+                                         Stretch="UniformToFill"
+                                         RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Border>
 
                 <StackPanel Grid.Column="1"
@@ -161,7 +162,8 @@
                                                     Background="{StaticResource SukiPrimaryColor0}"
                                                     VerticalAlignment="Center">
                                                 <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
-                                                                     Stretch="UniformToFill" />
+                                                                     Stretch="UniformToFill"
+                                                                     RenderOptions.BitmapInterpolationMode="HighQuality" />
                                             </Border>
 
                                             <StackPanel Grid.Column="1"

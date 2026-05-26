@@ -59,7 +59,8 @@
                                     Width="48"
                                     Height="48">
                                 <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}"
-                                       Stretch="UniformToFill" />
+                                       Stretch="UniformToFill"
+                                       RenderOptions.BitmapInterpolationMode="HighQuality" />
                             </Border>
                             <StackPanel Grid.Column="1"
                                         VerticalAlignment="Center"

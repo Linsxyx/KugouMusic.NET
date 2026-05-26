@@ -296,30 +296,12 @@
                                       IsChecked="{Binding IsLocalPlaylistsExpanded, Mode=TwoWay}" />
                         <StackPanel Spacing="8"
                                     IsVisible="{Binding IsLocalPlaylistsExpanded}">
-                                    <ListBox Classes="SidebarPlaylistList"
-                                             MaxHeight="320"
-                                             SelectionMode="Single"
-                                             ItemsSource="{Binding SidebarLocalPlaylists}">
-                                        <ListBox.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <VirtualizingStackPanel />
-                                            </ItemsPanelTemplate>
-                                        </ListBox.ItemsPanel>
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate DataType="vm:PlaylistItem">
-                                                <localControls:SidebarPlaylistItemControl
-                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                    EditLocalPlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.EditLocalPlaylistCommand}"
-                                                    DeleteLocalPlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteLocalPlaylistCommand}" />
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
                                     <Button Height="36"
                                             Classes="Basic"
                                             Cursor="Hand"
                                             HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Stretch"
-                                            Command="{Binding PlaylistsViewModel.ImportLocalFolderCommand}">
+                                            Command="{Binding OpenLocalLibraryCommand}">
                                         <Grid ColumnDefinitions="28,*" VerticalAlignment="Center">
                                             <Border Grid.Column="0"
                                                     Width="20"
@@ -334,7 +316,7 @@
                                                  VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1"
                                                        Margin="10,0,0,0"
-                                                       Text="导入本地文件夹"
+                                                       Text="本地音乐库"
                                                        VerticalAlignment="Center"
                                                        TextTrimming="CharacterEllipsis"
                                                        Foreground="{DynamicResource SukiLowText}" />
@@ -350,8 +332,6 @@
                             HorizontalContentAlignment="Stretch">
                         <Button.Flyout>
                             <MenuFlyout Placement="Bottom">
-                                <MenuItem Header="导入本地文件夹..."
-                                          Command="{Binding PlaylistsViewModel.ImportLocalFolderCommand}" />
                                 <MenuItem Header="导入其他平台歌单链接..."
                                           Command="{Binding PlaylistsViewModel.ImportExternalPlaylistCommand}" />
                                 <MenuItem Header="新建歌单..."

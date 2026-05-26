@@ -9,20 +9,94 @@
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="KugouAvaloniaPlayer.Views.MyPlaylistsView"
+             x:Name="PlaylistsRoot"
              x:DataType="vm:MyPlaylistsViewModel">
 
     <Grid Margin="15">
+        <suki:GlassCard Padding="24"
+                        IsVisible="{Binding IsLocalLibraryHome}">
+            <Grid RowDefinitions="Auto,*">
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="10"
+                      Margin="0,0,0,18">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="本地音乐库"
+                                   FontSize="26"
+                                   FontWeight="ExtraBold" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Classes="Basic"
+                            MinHeight="36"
+                            Padding="14,0"
+                            Command="{Binding ImportLocalFolderCommand}"
+                            Cursor="Hand">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Svg Classes="ThemeSvgIcon" Path="/Assets/music-folder-8-svgrepo-com.svg" Width="16" Height="16" />
+                            <TextBlock Text="导入文件夹" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2"
+                            Classes="Basic"
+                            MinHeight="36"
+                            Padding="14,0"
+                            Command="{Binding ShowCreateLocalPlaylistDialogCommand}"
+                            Cursor="Hand">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Svg Classes="ThemeSvgIcon" Path="/Assets/PlaylistAdd.svg" Width="16" Height="16" />
+                            <TextBlock Text="新建本地歌单" />
+                        </StackPanel>
+                    </Button>
+
+                </Grid>
+
+                <ScrollViewer Grid.Row="1">
+                    <ItemsRepeater ItemsSource="{Binding LocalLibraryPlaylists}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout MinItemWidth="184"
+                                               MinItemHeight="236"
+                                               MinColumnSpacing="15"
+                                               MinRowSpacing="15" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate DataType="vm:PlaylistItem">
+                                <localControls:MediaCard Cover="{Binding Cover}"
+                                                         Title="{Binding Name}"
+                                                         Subtitle="{Binding Subtitle}"
+                                                         Command="{Binding #PlaylistsRoot.((vm:MyPlaylistsViewModel)DataContext).OpenPlaylistCommand}"
+                                                         CommandParameter="{Binding .}">
+                                    <localControls:MediaCard.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="编辑..."
+                                                      Command="{Binding #PlaylistsRoot.((vm:MyPlaylistsViewModel)DataContext).EditLocalPlaylistCommand}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="删除"
+                                                      Command="{Binding #PlaylistsRoot.((vm:MyPlaylistsViewModel)DataContext).DeleteLocalPlaylistCommand}"
+                                                      CommandParameter="{Binding}" />
+                                        </ContextMenu>
+                                    </localControls:MediaCard.ContextMenu>
+                                </localControls:MediaCard>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </ScrollViewer>
+            </Grid>
+        </suki:GlassCard>
+
         <localControls:SongCollectionDetailView
-            IsVisible="{Binding SelectedPlaylist, Converter={x:Static ObjectConverters.IsNotNull}}"
+            IsVisible="{Binding IsShowingSongs}"
             Cover="{Binding SelectedPlaylist.Cover}"
             Title="{Binding SelectedPlaylist.Name}"
             Songs="{Binding SelectedPlaylistSongs}"
             LoadMoreCommand="{Binding LoadMoreCommand}"
-            BackCommand="{Binding $parent[suki:SukiWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
+            BackCommand="{Binding BackFromPlaylistCommand}"
             IsLoadingMore="{Binding IsLoadingMore}"
             ListMargin="0"
-            HeroActionCommand="{Binding EditLocalPlaylistCommand}"
-            HeroActionSvgPath="/Assets/Editor.svg"
+            HeroActionCommand="{Binding AddLocalFilesCommand}"
+            HeroActionSvgPath="/Assets/PlaylistAdd.svg"
+            HeroActionText="添加歌曲"
             HeroActionIsVisible="{Binding IsLocalPlaylist}" />
     </Grid>
 </UserControl>

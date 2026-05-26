@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -19,8 +17,6 @@ using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SukiUI.Toasts;
-using TagLib;
-using File = TagLib.File;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -31,28 +27,12 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string LikeCover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg";
-    private static readonly string LocalSongCoverCacheDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "kugou",
-        "local-song-covers");
-
-    private static readonly HashSet<string> SupportedLocalAudioExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".mp3",
-        ".flac",
-        ".wav",
-        ".ogg",
-        ".m4a",
-        ".aac",
-        ".webm",
-        ".dsf",
-        ".dff"
-    };
 
     private readonly ICreatePlaylistDialogService _createPlaylistDialogService;
     private readonly IExternalPlaylistImportService _externalPlaylistImportService;
     private readonly FavoritePlaylistService _favoritePlaylistService;
     private readonly IFolderPickerService _folderPickerService;
+    private readonly ILocalMusicLibraryService _localMusicLibraryService;
     private readonly ILogger<MyPlaylistsViewModel> _logger;
     private readonly AlbumClient _albumClient;
     private readonly PlaylistClient _playlistClient;
@@ -69,6 +49,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     public partial bool IsLoadingMore { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLocalLibraryHome))]
     public partial bool IsShowingSongs { get; set; }
 
     private CancellationTokenSource? _refreshPlaylistsCts;
@@ -76,6 +57,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOnlinePlaylist))]
     [NotifyPropertyChangedFor(nameof(IsLocalPlaylist))]
+    [NotifyPropertyChangedFor(nameof(IsLocalLibraryHome))]
     public partial PlaylistItem? SelectedPlaylist { get; set; }
 
     public MyPlaylistsViewModel(
@@ -86,6 +68,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         ISukiToastManager toastManager,
         ICreatePlaylistDialogService createPlaylistDialogService,
         IFolderPickerService folderPickerService,
+        ILocalMusicLibraryService localMusicLibraryService,
         IExternalPlaylistImportService externalPlaylistImportService,
         ILogger<MyPlaylistsViewModel> logger)
     {
@@ -96,6 +79,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         _toastManager = toastManager;
         _createPlaylistDialogService = createPlaylistDialogService;
         _folderPickerService = folderPickerService;
+        _localMusicLibraryService = localMusicLibraryService;
         _externalPlaylistImportService = externalPlaylistImportService;
         _logger = logger;
 
@@ -114,6 +98,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     // 标识当前选中的歌单是否为网络歌单
     public bool IsOnlinePlaylist => SelectedPlaylist?.Type == PlaylistType.Online;
     public bool IsLocalPlaylist => SelectedPlaylist?.Type == PlaylistType.Local;
+    public bool IsLocalLibraryHome => !IsShowingSongs;
 
     public override string DisplayName => "我的歌单";
     public override string Icon => "/Assets/music-player-svgrepo-com.svg";
@@ -124,42 +109,53 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
     public AvaloniaList<PlaylistItem> Items { get; } = new();
 
+    public AvaloniaList<PlaylistItem> LocalLibraryPlaylists { get; } = new();
+
     [RelayCommand]
     private void GoBack()
     {
         IsShowingSongs = false;
         SelectedPlaylist = null;
         SelectedPlaylistSongs.Clear();
+        OnPropertyChanged(nameof(IsLocalLibraryHome));
+    }
+
+    [RelayCommand]
+    private void BackFromPlaylist()
+    {
+        if (SelectedPlaylist?.Type == PlaylistType.Local)
+        {
+            GoBack();
+            return;
+        }
+
+        WeakReferenceMessenger.Default.Send(new RequestNavigateBackMessage());
     }
 
     [RelayCommand]
     private async Task LoadAllPlaylists()
     {
         Items.Clear();
+        LocalLibraryPlaylists.Clear();
 
-        Items.Add(new PlaylistItem
+        try
         {
-            Name = "新建/添加",
-            Type = PlaylistType.AddButton
-        });
-
-        var localItems = new List<PlaylistItem>();
-        foreach (var path in SettingsManager.Settings.LocalMusicFolders)
-            if (Directory.Exists(path))
-            {
-                var meta = GetLocalPlaylistMeta(path);
-                localItems.Add(new PlaylistItem
-                {
-                    Name = string.IsNullOrWhiteSpace(meta?.Name) ? new DirectoryInfo(path).Name : meta.Name,
-                    LocalPath = path,
-                    Type = PlaylistType.Local,
-                    Cover = GetImageSourceOrDefault(meta?.CoverPath, DefaultCover),
-                    Count = 0
-                });
-            }
-
-        if (localItems.Count > 0)
+            var localPlaylists = await _localMusicLibraryService.GetPlaylistsAsync();
+            var localItems = localPlaylists.Select(ToLocalPlaylistItem).ToList();
+            LocalLibraryPlaylists.AddRange(localItems);
             Items.AddRange(localItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "加载本地音乐库失败");
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("本地音乐库加载失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
 
         if (!_userClient.IsLoggedIn())
             return;
@@ -203,6 +199,19 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             return playlists;
 
         return playlists.Take(2).Concat(playlists.Skip(2).Reverse());
+    }
+
+    private static PlaylistItem ToLocalPlaylistItem(LocalPlaylistSummary item)
+    {
+        return new PlaylistItem
+        {
+            Name = item.Name,
+            Id = item.Id.ToString(),
+            Count = item.TrackCount,
+            Type = PlaylistType.Local,
+            Cover = GetImageSourceOrDefault(item.CoverPath, DefaultCover),
+            Subtitle = $"{item.TrackCount} 首歌曲"
+        };
     }
 
     private async Task<UserPlaylistResponse?> LoadAllOnlinePlaylistsAsync()
@@ -284,7 +293,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         }
         else if (item.Type == PlaylistType.Local)
         {
-            await ScanLocalFolder(item.LocalPath!);
+            await LoadLocalPlaylistSongsAsync(item);
         }
     }
 
@@ -303,22 +312,92 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
             await LoadMoreSongsInternal();
     }
 
+    private async Task LoadLocalPlaylistSongsAsync(PlaylistItem item)
+    {
+        if (!long.TryParse(item.Id, out var playlistId))
+            return;
+
+        IsLoadingMore = true;
+        try
+        {
+            var tracks = await _localMusicLibraryService.GetPlaylistTracksAsync(playlistId);
+            SelectedPlaylistSongs.Clear();
+            SelectedPlaylistSongs.AddRange(tracks.Select(ToSongItem));
+            _hasMoreSongs = false;
+            item.Count = tracks.Count;
+            item.Subtitle = $"{tracks.Count} 首歌曲";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "加载本地歌单歌曲失败 playlistId={PlaylistId}", item.Id);
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("加载失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        finally
+        {
+            IsLoadingMore = false;
+        }
+    }
+
+    private static SongItem ToSongItem(LocalTrackItem item)
+    {
+        return new SongItem
+        {
+            LocalTrackId = item.Id,
+            Name = item.Title,
+            Singer = item.Artist,
+            AlbumName = item.Album,
+            DurationSeconds = item.DurationSeconds,
+            LocalFilePath = item.LocalPath,
+            Cover = GetImageSourceOrDefault(item.CoverPath, DefaultSongCover)
+        };
+    }
+
     [RelayCommand]
-    private void DeleteLocalPlaylist(PlaylistItem? item)
+    private async Task DeleteLocalPlaylist(PlaylistItem? item)
     {
         if (item == null || item.Type != PlaylistType.Local) return;
 
-        Items.Remove(item);
+        if (!long.TryParse(item.Id, out var playlistId))
+            return;
 
-        if (!string.IsNullOrEmpty(item.LocalPath))
+        try
         {
-            if (SettingsManager.Settings.LocalMusicFolders.Contains(item.LocalPath))
+            await _localMusicLibraryService.DeletePlaylistAsync(playlistId);
+            Items.Remove(item);
+            LocalLibraryPlaylists.Remove(item);
+
+            if (SelectedPlaylist != null && SelectedPlaylist.Type == PlaylistType.Local && SelectedPlaylist.Id == item.Id)
             {
-                SettingsManager.Settings.LocalMusicFolders.Remove(item.LocalPath);
+                SelectedPlaylist = null;
+                SelectedPlaylistSongs.Clear();
+                IsShowingSongs = false;
+                WeakReferenceMessenger.Default.Send(new RequestNavigateBackMessage());
             }
 
-            SettingsManager.Settings.LocalPlaylistMetas.Remove(item.LocalPath);
-            SettingsManager.Save();
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Success)
+                .WithTitle("已删除")
+                .WithContent($"已删除本地歌单「{item.Name}」")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "删除本地歌单失败 playlistId={PlaylistId}", item.Id);
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("删除失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
         }
     }
 
@@ -326,20 +405,17 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private async Task EditLocalPlaylist(PlaylistItem? item)
     {
         item ??= SelectedPlaylist;
-        if (item?.Type != PlaylistType.Local || string.IsNullOrWhiteSpace(item.LocalPath)) return;
+        if (item?.Type != PlaylistType.Local || !long.TryParse(item.Id, out var playlistId)) return;
 
-        var meta = EnsureLocalPlaylistMeta(item.LocalPath);
-        var defaultName = string.IsNullOrWhiteSpace(meta.Name) ? item.Name : meta.Name;
-        var result = await _createPlaylistDialogService.PromptLocalPlaylistEditAsync(defaultName, meta.CoverPath);
+        var result = await _createPlaylistDialogService.PromptLocalPlaylistEditAsync(item.Name, LocalPathFromImageSource(item.Cover));
         if (result == null)
             return;
 
-        meta.Name = result.Name;
-        meta.CoverPath = result.CoverPath;
-        SettingsManager.Save();
+        await _localMusicLibraryService.UpdatePlaylistAsync(playlistId, result.Name, result.CoverPath);
 
         item.Name = result.Name;
         item.Cover = GetImageSourceOrDefault(result.CoverPath, DefaultCover);
+        item.Subtitle = $"{item.Count} 首歌曲";
 
         _toastManager.CreateToast()
             .OfType(NotificationType.Success)
@@ -353,18 +429,14 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     [RelayCommand]
     private async Task SetLocalSongCover(SongItem? song)
     {
-        if (song == null || SelectedPlaylist?.Type != PlaylistType.Local ||
-            string.IsNullOrWhiteSpace(SelectedPlaylist.LocalPath) ||
-            string.IsNullOrWhiteSpace(song.LocalFilePath))
+        if (song == null || SelectedPlaylist?.Type != PlaylistType.Local || song.LocalTrackId <= 0)
             return;
 
         var coverPath = await _folderPickerService.PickSingleImageFileAsync("选择歌曲封面");
         if (string.IsNullOrWhiteSpace(coverPath))
             return;
 
-        var meta = EnsureLocalPlaylistMeta(SelectedPlaylist.LocalPath);
-        meta.SongCoverPaths[Path.GetFileName(song.LocalFilePath)] = coverPath;
-        SettingsManager.Save();
+        await _localMusicLibraryService.SetTrackCoverAsync(song.LocalTrackId, coverPath);
 
         song.Cover = GetImageSourceOrDefault(coverPath, DefaultSongCover);
 
@@ -464,108 +536,137 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         }
     }
 
-    private async Task ScanLocalFolder(string path)
+    [RelayCommand]
+    private async Task ShowCreateLocalPlaylistDialog()
     {
-        await Task.Run(() =>
+        var name = await _createPlaylistDialogService.PromptPlaylistNameAsync("新建本地歌单");
+        if (string.IsNullOrWhiteSpace(name))
+            return;
+
+        try
         {
-            if (!Directory.Exists(path)) return;
+            var playlist = await _localMusicLibraryService.CreatePlaylistAsync(name);
+            await LoadAllPlaylists();
+            var item = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == playlist.Id.ToString());
+            if (item != null)
+                await OpenPlaylist(item);
 
-            try
-            {
-                var files = Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories)
-                    .Where(f => SupportedLocalAudioExtensions.Contains(Path.GetExtension(f)))
-                    .ToList();
-
-                var tempList = new List<SongItem>();
-
-                foreach (var file in files)
-                {
-                    var title = Path.GetFileNameWithoutExtension(file);
-                    var singer = "未知艺术家";
-                    var albumName = "";
-                    double duration = 0;
-                    var cover = GetLocalSongCoverSource(path, file);
-
-                    try
-                    {
-                        using var tfile = File.Create(file);
-
-                        title = !string.IsNullOrWhiteSpace(tfile.Tag.Title) ? tfile.Tag.Title : title;
-
-                        var artists = tfile.Tag.Performers;
-                        if (artists is { Length: > 0 }) singer = string.Join(", ", artists);
-
-                        albumName = tfile.Tag.Album ?? "";
-                        duration = tfile.Properties?.Duration.TotalSeconds ?? 0;
-                        cover = GetEmbeddedSongCoverSource(file, tfile) ?? cover;
-                    }
-                    catch (UnsupportedFormatException)
-                    {
-                        _logger.LogWarning($"文件格式不支持，已降级为文件名加载 [{file}]");
-                    }
-                    catch (CorruptFileException ex)
-                    {
-                        _logger.LogWarning($"文件头伪装或损坏，已降级为文件名加载 [{file}]: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning($"读取标签失败，已降级为文件名加载 [{file}]: {ex.Message}");
-                    }
-
-                    tempList.Add(new SongItem
-                    {
-                        Name = title,
-                        Singer = singer,
-                        AlbumName = albumName,
-                        DurationSeconds = duration,
-                        LocalFilePath = file,
-                        Cover = cover
-                    });
-                }
-
-                Dispatcher.UIThread.Post(() =>
-                {
-                    SelectedPlaylistSongs.Clear();
-                    SelectedPlaylistSongs.AddRange(tempList);
-                });
-            }
-            catch (UnauthorizedAccessException)
-            {
-                _logger.LogError($"权限错误: 无法访问文件夹 {path}");
-                Dispatcher.UIThread.Post(() =>
-                {
-                    _toastManager.CreateToast()
-                        .OfType(NotificationType.Error)
-                        .WithTitle("无权访问")
-                        .WithContent("无法读取某些文件夹，请检查权限。")
-                        .Dismiss().After(TimeSpan.FromSeconds(3))
-                        .Queue();
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"扫描文件夹出错: {ex.Message}");
-            }
-        });
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Success)
+                .WithTitle("创建成功")
+                .WithContent($"已创建本地歌单「{playlist.Name}」")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "创建本地歌单失败");
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("创建失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
     }
 
-    public void AddLocalPlaylist(string path)
+    [RelayCommand]
+    private async Task AddLocalFiles()
     {
-        if (!SettingsManager.Settings.LocalMusicFolders.Contains(path))
-        {
-            SettingsManager.Settings.LocalMusicFolders.Add(path);
-            SettingsManager.Save();
-        }
+        var files = await _folderPickerService.PickAudioFilesAsync("选择本地歌曲");
+        if (files.Count == 0)
+            return;
 
-        _ = LoadAllPlaylists();
+        try
+        {
+            var target = SelectedPlaylist?.Type == PlaylistType.Local ? SelectedPlaylist : LocalLibraryPlaylists.FirstOrDefault();
+            if (target == null)
+            {
+                var playlist = await _localMusicLibraryService.CreatePlaylistAsync("本地歌曲");
+                await LoadAllPlaylists();
+                target = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == playlist.Id.ToString());
+            }
+
+            if (target == null || !long.TryParse(target.Id, out var playlistId))
+                return;
+
+            await _localMusicLibraryService.AddFilesToPlaylistAsync(playlistId, files);
+            await LoadAllPlaylists();
+
+            target = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == playlistId.ToString());
+            if (target != null)
+                await OpenPlaylist(target);
+
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Success)
+                .WithTitle("已添加")
+                .WithContent($"已添加 {files.Count} 首本地歌曲。")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "添加本地歌曲失败");
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("添加失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    [RelayCommand]
+    private void OpenLocalLibraryHome()
+    {
+        IsShowingSongs = false;
+        SelectedPlaylist = null;
+        SelectedPlaylistSongs.Clear();
     }
 
     [RelayCommand]
     private async Task ImportLocalFolder()
     {
         var path = await _folderPickerService.PickSingleFolderAsync("选择本地音乐文件夹");
-        if (!string.IsNullOrWhiteSpace(path))
-            AddLocalPlaylist(path);
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        IsLoadingMore = true;
+        try
+        {
+            var imported = await _localMusicLibraryService.ImportFolderAsync(path);
+            await LoadAllPlaylists();
+            var item = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == imported.Id.ToString());
+            if (item != null)
+                await OpenPlaylist(item);
+
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Success)
+                .WithTitle("导入完成")
+                .WithContent($"已导入本地歌单「{imported.Name}」，共 {imported.TrackCount} 首。")
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "导入本地文件夹失败 path={Path}", path);
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("导入失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        finally
+        {
+            IsLoadingMore = false;
+        }
     }
 
     [RelayCommand]
@@ -925,85 +1026,19 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         return item.ListId == 2 || string.Equals(item.Name, "我喜欢", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static LocalPlaylistMeta? GetLocalPlaylistMeta(string localPath)
-    {
-        return SettingsManager.Settings.LocalPlaylistMetas.TryGetValue(localPath, out var meta) ? meta : null;
-    }
-
-    private static LocalPlaylistMeta EnsureLocalPlaylistMeta(string localPath)
-    {
-        if (!SettingsManager.Settings.LocalPlaylistMetas.TryGetValue(localPath, out var meta) || meta == null)
-        {
-            meta = new LocalPlaylistMeta();
-            SettingsManager.Settings.LocalPlaylistMetas[localPath] = meta;
-        }
-
-        meta.SongCoverPaths ??= new Dictionary<string, string>();
-        return meta;
-    }
-
-    private static string GetLocalSongCoverSource(string playlistPath, string songPath)
-    {
-        var meta = GetLocalPlaylistMeta(playlistPath);
-        if (meta?.SongCoverPaths == null)
-            return DefaultSongCover;
-
-        return meta.SongCoverPaths.TryGetValue(Path.GetFileName(songPath), out var coverPath)
-            ? GetImageSourceOrDefault(coverPath, DefaultSongCover)
-            : DefaultSongCover;
-    }
-
-    private static string? GetEmbeddedSongCoverSource(string songPath, File tagFile)
-    {
-        var picture = tagFile.Tag.Pictures?
-            .FirstOrDefault(x => x.Type == PictureType.FrontCover && x.Data.Count > 0)
-            ?? tagFile.Tag.Pictures?.FirstOrDefault(x => x.Data.Count > 0);
-
-        if (picture == null)
-            return null;
-
-        try
-        {
-            Directory.CreateDirectory(LocalSongCoverCacheDirectory);
-
-            var extension = GetPictureExtension(picture.MimeType);
-            var cacheKey = GetStableHash($"{songPath}|{System.IO.File.GetLastWriteTimeUtc(songPath).Ticks}|{picture.Data.Count}");
-            var cachePath = Path.Combine(LocalSongCoverCacheDirectory, $"{cacheKey}{extension}");
-
-            if (!System.IO.File.Exists(cachePath))
-                System.IO.File.WriteAllBytes(cachePath, picture.Data.Data);
-
-            return new Uri(cachePath).AbsoluteUri;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string GetPictureExtension(string? mimeType)
-    {
-        return mimeType?.ToLowerInvariant() switch
-        {
-            "image/png" => ".png",
-            "image/gif" => ".gif",
-            "image/bmp" => ".bmp",
-            "image/webp" => ".webp",
-            _ => ".jpg"
-        };
-    }
-
-    private static string GetStableHash(string value)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(value));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
-
     private static string GetImageSourceOrDefault(string? imagePath, string defaultSource)
     {
         if (string.IsNullOrWhiteSpace(imagePath) || !System.IO.File.Exists(imagePath))
             return defaultSource;
 
         return new Uri(imagePath).AbsoluteUri;
+    }
+
+    private static string? LocalPathFromImageSource(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source) || !Uri.TryCreate(source, UriKind.Absolute, out var uri) || !uri.IsFile)
+            return null;
+
+        return uri.LocalPath;
     }
 }

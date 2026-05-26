@@ -147,7 +147,9 @@
                         BorderBrush="{DynamicResource CollectionCoverBorderBrush}"
                         BorderThickness="2"
                         Background="{DynamicResource CollectionCoverBackgroundBrush}">
-                    <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.Cover}" Stretch="UniformToFill" />
+                    <Image asyncImageLoader:ImageLoader.Source="{Binding #Root.Cover}"
+                           Stretch="UniformToFill"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
                 </Border>
 
                 <Grid Grid.Column="1"

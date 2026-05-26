@@ -22,6 +22,9 @@ internal partial class AppSettingsJsonContext : JsonSerializerContext
 // 设置管理器
 public static class SettingsManager
 {
+    private const string StoreScope = "settings";
+    private const string StoreKey = "app";
+
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "kugou",
@@ -39,17 +42,19 @@ public static class SettingsManager
     {
         try
         {
-            if (File.Exists(SettingsPath))
+            var json = AppSqliteStore.LoadValue(StoreScope, StoreKey);
+            if (string.IsNullOrWhiteSpace(json) && File.Exists(SettingsPath))
             {
-                var json = File.ReadAllText(SettingsPath);
-                Settings = JsonSerializer.Deserialize(json, JsonContext.AppSettings) ?? new AppSettings();
-                Settings.LocalMusicFolders ??= new List<string>();
-                Settings.LocalPlaylistMetas ??= new Dictionary<string, LocalPlaylistMeta>();
-                Settings.GlobalShortcuts ??= new GlobalShortcutSettings();
-                Settings.AppTheme = NormalizeAppTheme(Settings.AppTheme);
-                Settings.CustomBackgroundImageOpacity = Math.Clamp(Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
-                Settings.MusicVolume = Math.Clamp(Settings.MusicVolume, 0f, 1f);
+                json = File.ReadAllText(SettingsPath);
+                AppSqliteStore.SaveValue(StoreScope, StoreKey, json);
+                AppSqliteStore.DeleteFileIfExists(SettingsPath);
             }
+
+            if (string.IsNullOrWhiteSpace(json))
+                return;
+
+            Settings = JsonSerializer.Deserialize(json, JsonContext.AppSettings) ?? new AppSettings();
+            NormalizeSettings();
         }
         catch (Exception)
         {
@@ -62,11 +67,9 @@ public static class SettingsManager
     {
         try
         {
-            var dir = Path.GetDirectoryName(SettingsPath);
-            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir!);
-
             var json = JsonSerializer.Serialize(Settings, JsonContext.AppSettings);
-            File.WriteAllText(SettingsPath, json);
+            AppSqliteStore.SaveValue(StoreScope, StoreKey, json);
+            AppSqliteStore.DeleteFileIfExists(SettingsPath);
         }
         catch (Exception)
         {
@@ -100,5 +103,18 @@ public static class SettingsManager
         catch (Exception)
         {
         }
+    }
+
+    private static void NormalizeSettings()
+    {
+        Settings.LocalMusicFolders ??= new List<string>();
+        Settings.LocalPlaylistMetas ??= new Dictionary<string, LocalPlaylistMeta>();
+        Settings.GlobalShortcuts ??= new GlobalShortcutSettings();
+        Settings.AppTheme = NormalizeAppTheme(Settings.AppTheme);
+        Settings.CustomBackgroundImagePath = string.IsNullOrWhiteSpace(Settings.CustomBackgroundImagePath)
+            ? null
+            : Settings.CustomBackgroundImagePath;
+        Settings.CustomBackgroundImageOpacity = Math.Clamp(Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
+        Settings.MusicVolume = Math.Clamp(Settings.MusicVolume, 0f, 1f);
     }
 }

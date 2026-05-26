@@ -47,6 +47,7 @@
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="Jab" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
         <PackageReference Include="Serilog"/>
         <PackageReference Include="Serilog.Extensions.Logging"/>
         <PackageReference Include="Serilog.Sinks.Async" />

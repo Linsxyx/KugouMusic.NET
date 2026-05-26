@@ -10,6 +10,8 @@ namespace KugouAvaloniaPlayer.Services;
 public sealed class KugouSessionPersistence : ISessionPersistence
 {
     private const string ProtectedSessionPrefix = "KGSESSION:v1:";
+    private const string StoreScope = "session";
+    private const string StoreKey = "default";
 
     private static readonly string SessionPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -23,11 +25,18 @@ public sealed class KugouSessionPersistence : ISessionPersistence
 
     public KgSession? Load()
     {
-        if (!File.Exists(SessionPath)) return null;
-
         try
         {
-            var content = File.ReadAllText(SessionPath);
+            var content = AppSqliteStore.LoadValue(StoreScope, StoreKey);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                if (!File.Exists(SessionPath)) return null;
+
+                content = File.ReadAllText(SessionPath);
+                AppSqliteStore.SaveValue(StoreScope, StoreKey, content);
+                AppSqliteStore.DeleteFileIfExists(SessionPath);
+            }
+
             var json = UnprotectSessionJson(content);
             return JsonSerializer.Deserialize(json, JsonContext.KgSession);
         }
@@ -47,11 +56,8 @@ public sealed class KugouSessionPersistence : ISessionPersistence
 
             var json = JsonSerializer.Serialize(session, JsonContext.KgSession);
             var content = ProtectSessionJson(json);
-            var tempPath = SessionPath + ".tmp";
-            File.WriteAllText(tempPath, content);
-            RestrictFileAccess(tempPath);
-            File.Move(tempPath, SessionPath, true);
-            RestrictFileAccess(SessionPath);
+            AppSqliteStore.SaveValue(StoreScope, StoreKey, content);
+            AppSqliteStore.DeleteFileIfExists(SessionPath);
         }
         catch
         {
@@ -63,7 +69,8 @@ public sealed class KugouSessionPersistence : ISessionPersistence
     {
         try
         {
-            if (File.Exists(SessionPath)) File.Delete(SessionPath);
+            AppSqliteStore.DeleteValue(StoreScope, StoreKey);
+            AppSqliteStore.DeleteFileIfExists(SessionPath);
         }
         catch
         {

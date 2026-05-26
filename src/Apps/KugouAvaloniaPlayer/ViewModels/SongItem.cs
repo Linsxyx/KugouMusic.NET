@@ -38,6 +38,9 @@ public partial class SongItem : ObservableObject
     public partial string? LocalFilePath { get; set; }
 
     [ObservableProperty]
+    public partial long LocalTrackId { get; set; }
+
+    [ObservableProperty]
     public partial string Name { get; set; } = "";
 
     [ObservableProperty]

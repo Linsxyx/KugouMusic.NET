@@ -18,7 +18,7 @@ public class PlaylistSelectionConverter : IValueConverter
 
         return selected.Type switch
         {
-            PlaylistType.Local => SameText(selected.LocalPath, candidate.LocalPath),
+            PlaylistType.Local => SameText(selected.Id, candidate.Id),
             PlaylistType.Online or PlaylistType.Album => SameOnlinePlaylist(selected, candidate),
             _ => false
         };

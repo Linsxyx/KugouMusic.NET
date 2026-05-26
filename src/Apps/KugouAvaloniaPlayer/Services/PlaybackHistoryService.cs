@@ -20,6 +20,7 @@ public sealed class PlaybackHistoryService(
 {
     private const int CacheSchemaVersion = 1;
     private const int MaxHistoryCount = 100;
+    private const string StoreScope = "playback_history";
     private readonly SemaphoreSlim _historyLock = new(1, 1);
     private PlaybackHistoryFileModel? _latestCache;
 
@@ -60,7 +61,7 @@ public sealed class PlaybackHistoryService(
                 .ToList();
 
             cache.UpdatedAt = DateTimeOffset.Now.ToString("O");
-            SaveHistoryToDisk(cache);
+            SaveHistoryToStore(cache);
         }
         finally
         {
@@ -78,7 +79,7 @@ public sealed class PlaybackHistoryService(
             var cache = EnsureCacheForCurrentUser();
             cache.Items.Clear();
             cache.UpdatedAt = DateTimeOffset.Now.ToString("O");
-            SaveHistoryToDisk(cache);
+            SaveHistoryToStore(cache);
         }
         finally
         {
@@ -94,7 +95,7 @@ public sealed class PlaybackHistoryService(
         if (_latestCache != null && string.Equals(_latestCache.UserId, currentUserId, StringComparison.Ordinal))
             return _latestCache;
 
-        if (TryLoadHistoryFromDisk(out var diskCache))
+        if (TryLoadHistoryFromStore(out var diskCache))
             return _latestCache = diskCache!;
 
         return _latestCache = new PlaybackHistoryFileModel
@@ -106,16 +107,23 @@ public sealed class PlaybackHistoryService(
         };
     }
 
-    private bool TryLoadHistoryFromDisk(out PlaybackHistoryFileModel? cache)
+    private bool TryLoadHistoryFromStore(out PlaybackHistoryFileModel? cache)
     {
         cache = null;
         try
         {
-            var filePath = GetHistoryFilePath();
-            if (!File.Exists(filePath))
-                return false;
+            var json = AppSqliteStore.LoadValue(StoreScope, GetCurrentUserId());
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                var filePath = GetHistoryFilePath();
+                if (!File.Exists(filePath))
+                    return false;
 
-            var json = File.ReadAllText(filePath);
+                json = File.ReadAllText(filePath);
+                AppSqliteStore.SaveValue(StoreScope, GetCurrentUserId(), json);
+                AppSqliteStore.DeleteFileIfExists(filePath);
+            }
+
             var model = JsonSerializer.Deserialize(json, PlaybackHistoryJsonContext.Default.PlaybackHistoryFileModel);
             if (model?.Items == null)
                 return false;
@@ -137,28 +145,22 @@ public sealed class PlaybackHistoryService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "读取本地播放历史失败。 path={Path}", GetHistoryFilePath());
+            logger.LogWarning(ex, "读取 SQLite 播放历史失败。 userId={UserId}", GetCurrentUserId());
             return false;
         }
     }
 
-    private void SaveHistoryToDisk(PlaybackHistoryFileModel cache)
+    private void SaveHistoryToStore(PlaybackHistoryFileModel cache)
     {
         try
         {
-            var filePath = GetHistoryFilePath();
-            var dir = Path.GetDirectoryName(filePath);
-            if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
-            var tempPath = filePath + ".tmp";
             var json = JsonSerializer.Serialize(cache, PlaybackHistoryJsonContext.Default.PlaybackHistoryFileModel);
-            File.WriteAllText(tempPath, json);
-            File.Move(tempPath, filePath, true);
+            AppSqliteStore.SaveValue(StoreScope, GetCurrentUserId(), json);
+            AppSqliteStore.DeleteFileIfExists(GetHistoryFilePath());
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "写入本地播放历史失败。 path={Path}", GetHistoryFilePath());
+            logger.LogWarning(ex, "写入 SQLite 播放历史失败。 userId={UserId}", GetCurrentUserId());
         }
     }
 
