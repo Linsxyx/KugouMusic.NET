@@ -66,9 +66,10 @@ public class ArtistClient(RawArtistApi rawApi, RawSearchApi rawSearchApi, KgSess
         return json.Deserialize(AppJsonContext.Default.SingerAudioResponse);
     }
 
-    public Task<JsonElement> GetAlbumsAsync(string id, int page = 1, int pageSize = 30, string sort = "new")
+    public async Task<ArtistAlbumResponse?> GetAlbumsAsync(string id, int page = 1, int pageSize = 30, string sort = "new")
     {
-        return rawApi.GetAlbumsAsync(id, page, pageSize, sort);
+        var json = await rawApi.GetAlbumsAsync(id, page, pageSize, sort);
+        return json.Deserialize(AppJsonContext.Default.ArtistAlbumResponse);
     }
 
     public Task<JsonElement> GetDetailRawAsync(string id)

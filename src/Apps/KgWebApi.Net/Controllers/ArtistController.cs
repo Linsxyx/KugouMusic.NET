@@ -156,6 +156,7 @@ public class ArtistController(ArtistClient artistClient) : ControllerBase
     /// <param name="sort">排序方式:new/hot</param>
     /// <returns>歌手专辑列表。</returns>
     [HttpGet("albums")]
+    [ProducesResponseType(typeof(ArtistAlbumResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAlbums(
         [FromQuery][Required(AllowEmptyStrings = false)] string id,
         [FromQuery] int page = 1,

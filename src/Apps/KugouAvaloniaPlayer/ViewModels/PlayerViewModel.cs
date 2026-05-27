@@ -400,6 +400,12 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     {
         _consecutiveFailures++;
         _logger.LogWarning($"加载失败 ({_consecutiveFailures}/{MaxConsecutiveFailures}): {song.Name}");
+        _toastManager.CreateToast()
+            .OfType(NotificationType.Warning)
+            .WithTitle("加载失败")
+            .Dismiss().After(TimeSpan.FromSeconds(3))
+            .WithContent($"{song.Name}")
+            .Queue();
         Dispatcher.UIThread.Post(() =>
         {
             var currentIndex = PlaybackQueue.IndexOf(song);
