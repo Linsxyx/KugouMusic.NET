@@ -173,7 +173,7 @@
                         </ListBox>
 
                         <!-- 歌单 -->
-                        <ScrollViewer Padding="0,0,0,50">
+                        <ScrollViewer Padding="0,0,0,-50">
                             <ScrollViewer.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="!IsSearching" />
@@ -199,7 +199,7 @@
                         </ScrollViewer>
 
                         <!-- 专辑 -->
-                        <ScrollViewer Padding="0,0,0,50">
+                        <ScrollViewer Padding="0,0,0,-50">
                             <ScrollViewer.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="!IsSearching" />
