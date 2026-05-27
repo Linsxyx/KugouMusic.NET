@@ -72,9 +72,16 @@ public sealed partial class GitHubReleaseService(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "加载 GitHub Releases 失败。");
+            logger.LogWarning("加载 GitHub Releases 失败: {Error}", DescribeException(ex));
             return [];
         }
+    }
+
+    private static string DescribeException(Exception exception)
+    {
+        return exception.InnerException is null
+            ? $"{exception.GetType().Name}: {exception.Message}"
+            : $"{exception.GetType().Name}: {exception.Message} Inner={exception.InnerException.GetType().Name}: {exception.InnerException.Message}";
     }
 
     private static string GetString(JsonElement element, string propertyName)

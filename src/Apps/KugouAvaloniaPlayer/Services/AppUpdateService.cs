@@ -103,32 +103,57 @@ public sealed class AppUpdateService(
 
     private async Task<List<CheckedUpdateSource>> CheckAllSourcesAsync(IEnumerable<UpdateSourceCandidate> candidates)
     {
-        var checkTasks = candidates.Select(async candidate =>
-        {
-            try
-            {
-                var updateInfo = await candidate.UpdateManager.CheckForUpdatesAsync();
-                logger.LogInformation("{SourceName} 更新源检查完成，版本: {Version}",
-                    candidate.SourceName,
-                    updateInfo?.TargetFullRelease.Version.ToString() ?? "无更新");
-                if (updateInfo is not null)
-                    LogUpdateInfo(candidate.SourceName, updateInfo);
+        var checkResults = await Task.WhenAll(candidates.Select(CheckSourceAsync));
+        var checkedSources = checkResults
+            .Where(result => result.CheckedSource is not null)
+            .Select(result => result.CheckedSource!)
+            .ToList();
 
-                return new CheckedUpdateSource(
+        var failedSources = checkResults
+            .Where(result => result.Error is not null)
+            .ToList();
+        if (checkedSources.Count == 0 && failedSources.Count > 0)
+        {
+            logger.LogWarning("所有更新源检查失败: {Failures}",
+                string.Join("; ", failedSources.Select(result =>
+                    $"{result.SourceName}: {DescribeException(result.Error!)}")));
+        }
+
+        return checkedSources;
+    }
+
+    private async Task<UpdateSourceCheckResult> CheckSourceAsync(UpdateSourceCandidate candidate)
+    {
+        try
+        {
+            var updateInfo = await candidate.UpdateManager.CheckForUpdatesAsync();
+            logger.LogInformation("{SourceName} 更新源检查完成，版本: {Version}",
+                candidate.SourceName,
+                updateInfo?.TargetFullRelease.Version.ToString() ?? "无更新");
+            if (updateInfo is not null)
+                LogUpdateInfo(candidate.SourceName, updateInfo);
+
+            return new UpdateSourceCheckResult(
+                candidate.SourceName,
+                new CheckedUpdateSource(
                     candidate.SourceName,
                     candidate.UpdateManager,
                     updateInfo,
-                    candidate.Priority);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "{SourceName} 更新源检查失败。", candidate.SourceName);
-                return null;
-            }
-        });
+                    candidate.Priority),
+                Error: null);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("{SourceName} 更新源检查失败: {Error}", candidate.SourceName, DescribeException(ex));
+            return new UpdateSourceCheckResult(candidate.SourceName, CheckedSource: null, ex);
+        }
+    }
 
-        var checkedCandidates = await Task.WhenAll(checkTasks);
-        return checkedCandidates.OfType<CheckedUpdateSource>().ToList();
+    private static string DescribeException(Exception exception)
+    {
+        return exception.InnerException is null
+            ? $"{exception.GetType().Name}: {exception.Message}"
+            : $"{exception.GetType().Name}: {exception.Message} Inner={exception.InnerException.GetType().Name}: {exception.InnerException.Message}";
     }
 
     private static IReadOnlyList<AvailableUpdateSource> SelectBestVersionSources(IEnumerable<CheckedUpdateSource> checkedSources)
@@ -370,6 +395,11 @@ public sealed class AppUpdateService(
         UpdateManager UpdateManager,
         UpdateInfo? UpdateInfo,
         int Priority);
+
+    private sealed record UpdateSourceCheckResult(
+        string SourceName,
+        CheckedUpdateSource? CheckedSource,
+        Exception? Error);
 
     private sealed record AvailableUpdateSource(
         string SourceName,
