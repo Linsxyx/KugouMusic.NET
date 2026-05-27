@@ -34,6 +34,6 @@
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
     <PackageVersion Include="TagLibSharp" Version="2.3.0" />
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
-    <PackageVersion Include="Velopack" Version="0.0.1589-ga2c5a97" />
+    <PackageVersion Include="Velopack" Version="1.0.1" />
   </ItemGroup>
 </Project>
