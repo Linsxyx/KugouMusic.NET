@@ -17,7 +17,7 @@
                         IsVisible="{Binding IsLocalLibraryHome}">
             <Grid RowDefinitions="Auto,*">
                 <Grid Grid.Row="0"
-                      ColumnDefinitions="*,Auto,Auto,Auto"
+                      ColumnDefinitions="*,Auto,Auto,Auto,Auto"
                       ColumnSpacing="10"
                       Margin="0,0,0,18">
                     <StackPanel Spacing="4">
@@ -30,6 +30,19 @@
                             Classes="Basic"
                             MinHeight="36"
                             Padding="14,0"
+                            Command="{Binding RefreshLocalLibraryCommand}"
+                            IsEnabled="{Binding !IsRefreshingLocalLibrary}"
+                            Cursor="Hand">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon  Data="{x:Static suki:Icons.Refresh}" />
+                            <TextBlock Text="刷新" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2"
+                            Classes="Basic"
+                            MinHeight="36"
+                            Padding="14,0"
                             Command="{Binding ImportLocalFolderCommand}"
                             Cursor="Hand">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -38,7 +51,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="2"
+                    <Button Grid.Column="3"
                             Classes="Basic"
                             MinHeight="36"
                             Padding="14,0"
@@ -51,7 +64,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="3"
+                    <Button Grid.Column="4"
                             Classes="Basic"
                             MinHeight="36"
                             Padding="14,0"
@@ -65,7 +78,7 @@
 
                 </Grid>
 
-                <ScrollViewer Grid.Row="1">
+                <ScrollViewer Grid.Row="1" Padding="0,0,0,-50">
                     <ItemsRepeater ItemsSource="{Binding LocalLibraryPlaylists}">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout MinItemWidth="184"

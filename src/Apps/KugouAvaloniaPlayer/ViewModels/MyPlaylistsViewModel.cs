@@ -49,6 +49,9 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     [ObservableProperty]
     public partial bool IsImportingJellyfinLibrary { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsRefreshingLocalLibrary { get; set; }
+
     private bool _isLikePlaylistLocalMode;
     [ObservableProperty]
     public partial bool IsLoadingMore { get; set; }
@@ -682,6 +685,58 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         finally
         {
             IsLoadingMore = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshLocalLibrary()
+    {
+        if (IsRefreshingLocalLibrary)
+            return;
+
+        IsRefreshingLocalLibrary = true;
+        var progressToast = _toastManager.CreateToast()
+            .WithTitle("正在刷新本地音乐库...")
+            .WithContent("正在重新扫描已导入的文件夹和 Jellyfin 媒体库。")
+            .Queue();
+        try
+        {
+            var refreshed = await _localMusicLibraryService.RefreshImportedLibrariesAsync();
+            await LoadAllPlaylists();
+
+            if (SelectedPlaylist?.Type == PlaylistType.Local &&
+                long.TryParse(SelectedPlaylist.Id, out var playlistId) &&
+                refreshed.Any(x => x.Id == playlistId))
+            {
+                await LoadLocalPlaylistSongsAsync(SelectedPlaylist);
+            }
+
+            var songCount = refreshed.Sum(x => x.TrackCount);
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Success)
+                .WithTitle("刷新完成")
+                .WithContent(refreshed.Count == 0
+                    ? "没有可刷新的导入音乐库。"
+                    : $"已刷新 {refreshed.Count} 个歌单，共 {songCount} 首。")
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "刷新本地音乐库失败");
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("刷新失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+        finally
+        {
+            _toastManager.Dismiss(progressToast);
+            IsRefreshingLocalLibrary = false;
         }
     }
 

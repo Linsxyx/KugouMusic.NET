@@ -27,6 +27,7 @@ public interface ILocalMusicLibraryService
         JellyfinLibrary library,
         IProgress<JellyfinImportProgress>? progress = null,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LocalPlaylistSummary>> RefreshImportedLibrariesAsync(CancellationToken cancellationToken = default);
     Task AddFilesToPlaylistAsync(long playlistId, IEnumerable<string> filePaths, CancellationToken cancellationToken = default);
     Task UpdatePlaylistAsync(long playlistId, string name, string? coverPath, CancellationToken cancellationToken = default);
     Task DeletePlaylistAsync(long playlistId, CancellationToken cancellationToken = default);
@@ -183,10 +184,12 @@ public sealed class LocalMusicLibraryService(
         }
 
         var importedPlaylistIds = new List<long>();
+        var importedSourceRefs = new HashSet<string>(StringComparer.Ordinal);
         var processedSongs = 0;
         foreach (var albumGroup in albumGroups)
         {
             var sourceRef = serverFingerprint + ":" + library.Id + ":" + albumGroup.Key;
+            importedSourceRefs.Add(sourceRef);
             var playlist = await FindPlaylistAsync(
                 connection,
                 transaction,
@@ -241,6 +244,16 @@ public sealed class LocalMusicLibraryService(
             importedPlaylistIds.Add(playlist.Id);
         }
 
+        var stalePlaylistIds = await GetPlaylistIdsBySourceRefPrefixAsync(
+            connection,
+            transaction,
+            PlaylistKindJellyfinLibrary,
+            serverFingerprint + ":" + library.Id + ":",
+            importedSourceRefs,
+            cancellationToken);
+        foreach (var stalePlaylistId in stalePlaylistIds)
+            await DeletePlaylistAsync(connection, transaction, stalePlaylistId, cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
 
         var summaries = new List<LocalPlaylistSummary>();
@@ -248,6 +261,50 @@ public sealed class LocalMusicLibraryService(
             summaries.Add(await GetPlaylistSummaryAsync(connection, null, playlistId, cancellationToken));
 
         return summaries;
+    }
+
+    public async Task<IReadOnlyList<LocalPlaylistSummary>> RefreshImportedLibrariesAsync(CancellationToken cancellationToken = default)
+    {
+        await EnsureInitializedAsync(cancellationToken);
+
+        await using var connection = await AppDatabase.CreateConnectionAsync(cancellationToken);
+        var folderPaths = await GetImportedFolderPathsAsync(connection, cancellationToken);
+        var jellyfinLibraries = await GetImportedJellyfinLibrariesAsync(connection, cancellationToken);
+
+        var refreshed = new List<LocalPlaylistSummary>();
+        foreach (var folderPath in folderPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Directory.Exists(folderPath))
+            {
+                logger.LogWarning("刷新本地音乐库时跳过不存在的文件夹。 folder={Folder}", folderPath);
+                continue;
+            }
+
+            refreshed.Add(await ImportFolderAsync(folderPath, cancellationToken));
+        }
+
+        foreach (var library in jellyfinLibraries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!SettingsManager.Settings.JellyfinServers.TryGetValue(library.ServerFingerprint, out var settings))
+            {
+                logger.LogWarning(
+                    "刷新 Jellyfin 音乐库时找不到服务器配置。 fingerprint={Fingerprint} libraryId={LibraryId}",
+                    library.ServerFingerprint,
+                    library.LibraryId);
+                continue;
+            }
+
+            var options = new JellyfinConnectionOptions(settings.ServerUrl, settings.UserId, settings.ApiKey);
+            refreshed.AddRange(await ImportJellyfinLibraryAsync(
+                options,
+                new JellyfinLibrary(library.LibraryId, "Jellyfin 音乐库"),
+                null,
+                cancellationToken));
+        }
+
+        return refreshed;
     }
 
     public async Task<LocalPlaylistSummary> ImportFolderAsync(string folderPath, CancellationToken cancellationToken = default)
@@ -597,6 +654,90 @@ public sealed class LocalMusicLibraryService(
             playlists.Add(ReadPlaylistSummary(reader));
 
         return playlists;
+    }
+
+    private static async Task<List<string>> GetImportedFolderPathsAsync(
+        SqliteConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT DISTINCT source_ref
+            FROM playlists
+            WHERE kind = $kind AND source_ref IS NOT NULL AND source_ref <> ''
+            ORDER BY source_ref;
+            """;
+        command.Parameters.AddWithValue("$kind", PlaylistKindImportedFolder);
+
+        var folderPaths = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+            folderPaths.Add(reader.GetString(0));
+
+        return folderPaths;
+    }
+
+    private static async Task<List<JellyfinLibraryRef>> GetImportedJellyfinLibrariesAsync(
+        SqliteConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT DISTINCT source_ref
+            FROM playlists
+            WHERE kind = $kind AND source_ref IS NOT NULL AND source_ref <> ''
+            ORDER BY source_ref;
+            """;
+        command.Parameters.AddWithValue("$kind", PlaylistKindJellyfinLibrary);
+
+        var libraries = new HashSet<JellyfinLibraryRef>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var sourceRef = reader.GetString(0);
+            var parts = sourceRef.Split(':', 3);
+            if (parts.Length >= 2 &&
+                !string.IsNullOrWhiteSpace(parts[0]) &&
+                !string.IsNullOrWhiteSpace(parts[1]))
+            {
+                libraries.Add(new JellyfinLibraryRef(parts[0], parts[1]));
+            }
+        }
+
+        return libraries.ToList();
+    }
+
+    private static async Task<List<long>> GetPlaylistIdsBySourceRefPrefixAsync(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        string kind,
+        string sourceRefPrefix,
+        HashSet<string> exceptSourceRefs,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            """
+            SELECT id, source_ref
+            FROM playlists
+            WHERE kind = $kind AND source_ref LIKE $sourceRefPattern;
+            """;
+        command.Parameters.AddWithValue("$kind", kind);
+        command.Parameters.AddWithValue("$sourceRefPattern", sourceRefPrefix + "%");
+
+        var playlistIds = new List<long>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var sourceRef = GetNullableString(reader, "source_ref");
+            if (string.IsNullOrWhiteSpace(sourceRef) || !exceptSourceRefs.Contains(sourceRef))
+                playlistIds.Add(reader.GetInt64(reader.GetOrdinal("id")));
+        }
+
+        return playlistIds;
     }
 
     private static async Task<LocalPlaylistEntity?> FindPlaylistAsync(
@@ -1128,4 +1269,8 @@ public sealed class LocalMusicLibraryService(
         string Key,
         string Name,
         List<JellyfinAudioItem> Items);
+
+    private sealed record JellyfinLibraryRef(
+        string ServerFingerprint,
+        string LibraryId);
 }
