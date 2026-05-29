@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
 using KugouAvaloniaPlayer.Models;
 using Microsoft.Extensions.Logging;
+using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -49,6 +52,30 @@ public partial class PlayerViewModel
         {
             _logger.LogError(ex, "打开添加到歌单对话框失败");
         }
+    }
+
+    private void AddLoadedSongsToQueue(IReadOnlyList<SongItem> songs)
+    {
+        if (songs.Count == 0)
+        {
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Warning)
+                .WithTitle("没有可添加的歌曲")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        if (IsPersonalFmSessionActive)
+            ClearPersonalFmSession();
+
+        _queueManager.AddToEnd(songs);
+        _toastManager.CreateToast()
+            .OfType(NotificationType.Success)
+            .WithTitle("已添加到播放列表")
+            .WithContent($"已添加 {songs.Count} 首歌曲")
+            .Dismiss().After(TimeSpan.FromSeconds(3))
+            .Queue();
     }
 
     [RelayCommand]

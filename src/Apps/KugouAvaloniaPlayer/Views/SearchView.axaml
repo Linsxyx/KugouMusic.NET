@@ -237,6 +237,7 @@
                             LoadingMoreText="加载更多..."
                             ListPadding="0,0,0,50"
                             TitleFontSize="24"
+                            ShowAddLoadedSongsToQueueButton="{Binding CanCollectDetail}"
                             HeroActionCommand="{Binding CollectPlaylistCommand}"
                             HeroActionIconData="{x:Static suki:Icons.Star}"
                             HeroActionIsVisible="{Binding CanCollectDetail}" />

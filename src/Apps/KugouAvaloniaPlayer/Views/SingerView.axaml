@@ -20,8 +20,8 @@
             LoadingMoreText="正在加载更多..."
             ListPadding="0,0,0,50"
             TitleFontSize="24"
-            HeroActionCommand="{Binding ToggleSortCommand}"
-            HeroActionSvgPath="/Assets/FormatList.svg"
-            HeroActionText="{Binding CurrentSortText}" />
+            HeroDropdownItems="{Binding SortOptions}"
+            HeroDropdownSelectedItem="{Binding CurrentSortText, Mode=TwoWay}"
+            HeroDropdownLabel="排序" />
     </Grid>
 </UserControl>

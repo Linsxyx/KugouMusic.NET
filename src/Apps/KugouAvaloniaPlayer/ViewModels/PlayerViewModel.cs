@@ -183,6 +183,8 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 if (!AddSongToPersonalFmNext(m.Song))
                     _queueManager.AddToNext(m.Song, CurrentPlayingSong);
             });
+        WeakReferenceMessenger.Default.Register<AddLoadedSongsToQueueMessage>(this,
+            (_, m) => AddLoadedSongsToQueue(m.Songs));
         WeakReferenceMessenger.Default.Register<ShowPlaylistDialogMessage>(this,
             (_, m) => _ = ShowPlaylistDialogSafelyAsync(m.Song));
 

@@ -6,6 +6,8 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using SukiUI;
 
@@ -60,6 +62,24 @@ public partial class SongCollectionDetailView : UserControl
 
     public static readonly StyledProperty<bool> HasPlayFirstCommandProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasPlayFirstCommand));
+
+    public static readonly StyledProperty<bool> ShowAddLoadedSongsToQueueButtonProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(ShowAddLoadedSongsToQueueButton));
+
+    public static readonly StyledProperty<IEnumerable?> HeroDropdownItemsProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, IEnumerable?>(nameof(HeroDropdownItems));
+
+    public static readonly StyledProperty<object?> HeroDropdownSelectedItemProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, object?>(nameof(HeroDropdownSelectedItem));
+
+    public static readonly StyledProperty<string?> HeroDropdownLabelProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(HeroDropdownLabel));
+
+    public static readonly StyledProperty<bool> HasHeroDropdownProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasHeroDropdown));
+
+    public static readonly StyledProperty<bool> HasHeroDropdownLabelProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasHeroDropdownLabel));
 
     public static readonly StyledProperty<bool> IsLoadingMoreProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(IsLoadingMore));
@@ -118,11 +138,13 @@ public partial class SongCollectionDetailView : UserControl
     public SongCollectionDetailView()
     {
         PlayFirstSongCommand = new RelayCommand(PlayFirstSong);
+        AddLoadedSongsToQueueCommand = new RelayCommand(AddLoadedSongsToQueue);
         InitializeComponent();
         UpdateCurrentHeroBackground();
     }
 
     public ICommand PlayFirstSongCommand { get; }
+    public ICommand AddLoadedSongsToQueueCommand { get; }
 
     public string? Cover
     {
@@ -206,6 +228,42 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(HasPlayFirstCommandProperty);
         private set => SetValue(HasPlayFirstCommandProperty, value);
+    }
+
+    public bool ShowAddLoadedSongsToQueueButton
+    {
+        get => GetValue(ShowAddLoadedSongsToQueueButtonProperty);
+        set => SetValue(ShowAddLoadedSongsToQueueButtonProperty, value);
+    }
+
+    public IEnumerable? HeroDropdownItems
+    {
+        get => GetValue(HeroDropdownItemsProperty);
+        set => SetValue(HeroDropdownItemsProperty, value);
+    }
+
+    public object? HeroDropdownSelectedItem
+    {
+        get => GetValue(HeroDropdownSelectedItemProperty);
+        set => SetValue(HeroDropdownSelectedItemProperty, value);
+    }
+
+    public string? HeroDropdownLabel
+    {
+        get => GetValue(HeroDropdownLabelProperty);
+        set => SetValue(HeroDropdownLabelProperty, value);
+    }
+
+    public bool HasHeroDropdown
+    {
+        get => GetValue(HasHeroDropdownProperty);
+        private set => SetValue(HasHeroDropdownProperty, value);
+    }
+
+    public bool HasHeroDropdownLabel
+    {
+        get => GetValue(HasHeroDropdownLabelProperty);
+        private set => SetValue(HasHeroDropdownLabelProperty, value);
     }
 
     public bool IsLoadingMore
@@ -333,6 +391,10 @@ public partial class SongCollectionDetailView : UserControl
         if (change.Property == PlayFirstCommandProperty)
             HasPlayFirstCommand = change.NewValue is not null;
 
+        if (change.Property == HeroDropdownItemsProperty ||
+            change.Property == HeroDropdownLabelProperty)
+            UpdateHeroDropdownState();
+
         if (change.Property == HeroBackgroundProperty ||
             change.Property == LightHeroBackgroundProperty ||
             change.Property == NightHeroBackgroundProperty)
@@ -365,6 +427,12 @@ public partial class SongCollectionDetailView : UserControl
             firstSong.PlayCommand.Execute(null);
     }
 
+    private void AddLoadedSongsToQueue()
+    {
+        var loadedSongs = Songs?.OfType<SongItem>().ToList() ?? [];
+        WeakReferenceMessenger.Default.Send(new AddLoadedSongsToQueueMessage(loadedSongs));
+    }
+
     private void UpdateHeroActionState()
     {
         HasHeroActionText = !string.IsNullOrWhiteSpace(HeroActionText);
@@ -375,6 +443,12 @@ public partial class SongCollectionDetailView : UserControl
                          HasHeroActionText ||
                          HasHeroActionSvgPath ||
                          HasHeroActionIconData);
+    }
+
+    private void UpdateHeroDropdownState()
+    {
+        HasHeroDropdown = HeroDropdownItems is not null;
+        HasHeroDropdownLabel = !string.IsNullOrWhiteSpace(HeroDropdownLabel);
     }
 
     private void OnSukiThemePropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)

@@ -121,6 +121,7 @@
             LoadMoreCommand="{Binding LoadMoreSongsCommand}"
             BackCommand="{Binding GoBackCommand}"
             IsLoadingMore="{Binding IsLoadingMoreSongs}"
+            ShowAddLoadedSongsToQueueButton="True"
             HeroActionCommand="{Binding CollectPlaylistCommand}"
             HeroActionIconData="{x:Static suki:Icons.Star}" />
     </Grid>

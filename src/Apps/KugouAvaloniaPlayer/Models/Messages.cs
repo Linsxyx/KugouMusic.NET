@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using KuGou.Net.Abstractions.Models;
 using KugouAvaloniaPlayer.ViewModels;
 
@@ -6,6 +7,8 @@ namespace KugouAvaloniaPlayer.Models;
 public record PlaySongMessage(SongItem Song);
 
 public record AddToNextMessage(SongItem Song);
+
+public record AddLoadedSongsToQueueMessage(IReadOnlyList<SongItem> Songs);
 
 public record ShowPlaylistDialogMessage(SongItem Song);
 

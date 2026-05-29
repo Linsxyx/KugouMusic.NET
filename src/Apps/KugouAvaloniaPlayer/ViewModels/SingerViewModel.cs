@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -49,7 +50,15 @@ public partial class SingerViewModel : PageViewModelBase
     public override string DisplayName => "歌手详情";
     public override string Icon => "avares://KugouAvaloniaPlayer/Assets/default_singer.png";
 
+    public IReadOnlyList<string> SortOptions { get; } = ["热门", "最新"];
+
     public AvaloniaList<SongItem> Songs { get; } = new();
+
+    partial void OnCurrentSortTextChanged(string value)
+    {
+        IsHotSort = value != "最新";
+        _ = LoadSongsAsync();
+    }
 
     private async Task LoadSongsAsync()
     {
@@ -142,11 +151,8 @@ public partial class SingerViewModel : PageViewModelBase
 
 
     [RelayCommand]
-    private async Task ToggleSort()
+    private void ToggleSort()
     {
-        IsHotSort = !IsHotSort;
-        CurrentSortText = IsHotSort ? "热门" : "最新";
-
-        await LoadSongsAsync();
+        CurrentSortText = IsHotSort ? "最新" : "热门";
     }
 }

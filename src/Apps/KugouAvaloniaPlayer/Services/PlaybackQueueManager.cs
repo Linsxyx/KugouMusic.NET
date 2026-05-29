@@ -111,6 +111,15 @@ public class PlaybackQueueManager
             PlaybackQueue.Add(song);
     }
 
+    public void AddToEnd(IReadOnlyList<SongItem> songs)
+    {
+        if (songs.Count == 0)
+            return;
+
+        OriginalQueue.AddRange(songs);
+        PlaybackQueue.AddRange(songs);
+    }
+
     public void Remove(SongItem song)
     {
         PlaybackQueue.Remove(song);
