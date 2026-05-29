@@ -9,9 +9,9 @@ namespace KuGou.Net.Clients;
 
 public class SearchClient(RawSearchApi rawApi, KgSessionManager sessionManager)
 {
-    public async Task<List<SongInfo>> SearchAsync(string keyword, int page = 1, string type = "song")
+    public async Task<List<SongInfo>> SearchAsync(string keyword, int page = 1, string type = "song",int pageSize = 30)
     {
-        var json = await rawApi.SearchAsync(keyword, page, 30, type);
+        var json = await rawApi.SearchAsync(keyword, page, pageSize, type);
 
         var data = KgApiResponseParser.Parse<SearchResultData>(json, AppJsonContext.Default.SearchResultData);
 
@@ -32,9 +32,9 @@ public class SearchClient(RawSearchApi rawApi, KgSessionManager sessionManager)
         return data;
     }
     public async Task<List<SearchPlaylistItem>?> SearchSpecialAsync(string keyword, int page = 1,
-        string type = "special")
+        string type = "special",int pageSize = 30)
     {
-        var json = await rawApi.SearchAsync(keyword, page, 30, type);
+        var json = await rawApi.SearchAsync(keyword, page, pageSize, type);
 
         var data = KgApiResponseParser.Parse<SearchPlaylistResponse>(
             json,
@@ -43,9 +43,9 @@ public class SearchClient(RawSearchApi rawApi, KgSessionManager sessionManager)
         return data?.Playlists;
     }
 
-    public async Task<List<SearchAlbumItem>?> SearchAlbumAsync(string keyword, int page = 1, string type = "album")
+    public async Task<List<SearchAlbumItem>?> SearchAlbumAsync(string keyword, int page = 1, string type = "album" ,int pageSize = 30)
     {
-        var json = await rawApi.SearchAsync(keyword, page, 30, type);
+        var json = await rawApi.SearchAsync(keyword, page, pageSize, type);
 
         var data = KgApiResponseParser.Parse<SearchAlbumResponse>(
             json,

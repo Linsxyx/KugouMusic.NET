@@ -228,13 +228,13 @@ public partial class SearchViewModel(
         {
             try
             {
-                var results = await searchClient.SearchSpecialAsync(SearchKeyword, page);
+                var results = await searchClient.SearchSpecialAsync(SearchKeyword, page,pageSize:50);
                 if (results == null || results.Count == 0) break;
 
                 foreach (var item in results)
                     Playlists.Add(item);
 
-                if (results.Count < 30) break;
+                if (results.Count < 50) break;
             }
             catch (Exception ex)
             {
@@ -250,14 +250,13 @@ public partial class SearchViewModel(
         {
             try
             {
-                var results = await searchClient.SearchAlbumAsync(SearchKeyword, page);
+                var results = await searchClient.SearchAlbumAsync(SearchKeyword, page,pageSize:50);
                 if (results == null || results.Count == 0) break;
-
-                var sorted = results.OrderBy(x => x.PublishTime).ToList();
-                foreach (var item in sorted)
+                
+                foreach (var item in results)
                     Albums.Add(item);
 
-                if (results.Count < 30) break;
+                if (results.Count < 50) break;
             }
             catch (Exception ex)
             {
