@@ -18,6 +18,8 @@
     <a href="https://github.com/Linsxyx/KugouMusic.NET/issues">问题反馈</a>
     ·
     <a href="#页面展示">查看截图</a>
+    ·
+    <a href="#交流群">交流群</a>
   </p>
 </div>
 
@@ -34,7 +36,7 @@
 - 桌面客户端：`KugouAvaloniaPlayer`
 - 终端播放器：`KgTest`
 - 开发者入口：`KuGou.Net` / `KgWebApi.Net` / `SimpleAudio` / `AvaloniaLyrics`
-- 安卓版正在开发中，可进群体验[`交流群`](#交流群)
+- 安卓版正在开发中，[项目地址](https://github.com/umr-xiaomai/kgka_Music_hl)
 
 ## 为什么值得用
 
