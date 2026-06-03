@@ -12,8 +12,8 @@ namespace KugouAvaloniaPlayer;
 /// </summary>
 public class ViewLocator : IDataTemplate
 {
-    private static readonly IReadOnlyDictionary<Type, Func<Control>> ViewFactories =
-        new Dictionary<Type, Func<Control>>
+    private static readonly Dictionary<Type, Func<Control>> ViewFactories =
+        new()
         {
             [typeof(LoginViewModel)] = static () => new LoginView(),
             [typeof(SearchViewModel)] = static () => new SearchView(),

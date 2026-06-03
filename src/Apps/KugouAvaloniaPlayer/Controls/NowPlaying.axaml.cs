@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using KugouAvaloniaPlayer.ViewModels;
 
 namespace KugouAvaloniaPlayer.Controls;
@@ -12,6 +15,8 @@ public partial class NowPlaying : UserControl
 {
     private NowPlayingViewModel? _nowPlayingViewModel;
     private PlayerViewModel? _playerViewModel;
+    private Size _lastSharedBackgroundSize;
+    private Point _lastSharedBackgroundOffset;
 
     public NowPlaying()
     {
@@ -19,12 +24,45 @@ public partial class NowPlaying : UserControl
         DataContextChanged += OnDataContextChanged;
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        LayoutUpdated += OnLayoutUpdated;
+        UpdateSharedBackgroundFrame();
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         HideMoreFlyout();
         DetachMoreFlyoutLightDismissHandler();
+        LayoutUpdated -= OnLayoutUpdated;
         base.OnDetachedFromVisualTree(e);
         UnhookViewModel();
+    }
+
+    private void OnLayoutUpdated(object? sender, EventArgs e)
+    {
+        UpdateSharedBackgroundFrame();
+    }
+
+    private void UpdateSharedBackgroundFrame()
+    {
+        var target = this.GetVisualAncestors()
+            .OfType<Control>()
+            .FirstOrDefault(control => control.Name == "MainGrid");
+        if (target == null || target.Bounds.Width <= 0 || target.Bounds.Height <= 0)
+            return;
+
+        var offset = this.TranslatePoint(new Point(0, 0), target) ?? default;
+        var size = target.Bounds.Size;
+        if (_lastSharedBackgroundSize == size && _lastSharedBackgroundOffset == offset)
+            return;
+
+        _lastSharedBackgroundSize = size;
+        _lastSharedBackgroundOffset = offset;
+        SharedBackgroundFrame.Width = target.Bounds.Width;
+        SharedBackgroundFrame.Height = target.Bounds.Height;
+        SharedBackgroundFrame.RenderTransform = new TranslateTransform(-offset.X, -offset.Y);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

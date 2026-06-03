@@ -43,7 +43,9 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
         Player.PropertyChanged += OnPlayerPropertyChanged;
         NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
-        BackgroundOpacity = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundOpacity, 0.0, 1.0);
+        BackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
+        BackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
+        CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
         ApplyLyricStyleSettings(
             SettingsManager.Settings.PlayPageLyricUseCustomMainColor,
             SettingsManager.Settings.PlayPageLyricCustomMainColor,
@@ -70,9 +72,19 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
                 message.FontSize);
         });
 
-        WeakReferenceMessenger.Default.Register<NowPlayingBackgroundOpacityChangedMessage>(this, (_, message) =>
+        WeakReferenceMessenger.Default.Register<NowPlayingBackgroundBlurRadiusChangedMessage>(this, (_, message) =>
         {
-            BackgroundOpacity = message.Opacity;
+            BackgroundBlurRadius = message.Radius;
+        });
+
+        WeakReferenceMessenger.Default.Register<NowPlayingBackgroundSourceChangedMessage>(this, (_, message) =>
+        {
+            BackgroundSource = message.Source;
+        });
+
+        WeakReferenceMessenger.Default.Register<AppBackgroundSettingsChangedMessage>(this, (_, message) =>
+        {
+            CustomBackgroundImagePath = message.CustomImagePath;
         });
     }
 
@@ -88,8 +100,16 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public partial bool IsSingerMenuExpanded { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CoverBackgroundOpacity))]
-    public partial double BackgroundOpacity { get; set; } = 0.5;
+    public partial double BackgroundBlurRadius { get; set; } = 40;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NowPlayingBackgroundImageSource))]
+    public partial NowPlayingBackgroundSource BackgroundSource { get; set; } =
+        NowPlayingBackgroundSource.Cover;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NowPlayingBackgroundImageSource))]
+    public partial string? CustomBackgroundImagePath { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PortraitModeStatusText))]
@@ -190,7 +210,13 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     public bool IsStandardLayoutVisible => !HasPortraitBackground;
 
-    public double CoverBackgroundOpacity => HasPortraitBackground ? 0 : BackgroundOpacity;
+    public double BackgroundImageOpacity => HasPortraitBackground ? 0 : 1;
+
+    public string? NowPlayingBackgroundImageSource =>
+        BackgroundSource == NowPlayingBackgroundSource.CustomImage &&
+        !string.IsNullOrWhiteSpace(CustomBackgroundImagePath)
+            ? CustomBackgroundImagePath
+            : Player.DisplayedPlayingSong?.Cover;
 
     public int LyricsGridColumn => HasPortraitBackground ? 0 : 1;
 
@@ -279,6 +305,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasCurrentSinger));
         OnPropertyChanged(nameof(CanAddCurrentSongToPlaylist));
         OnPropertyChanged(nameof(CurrentSingerDisplayText));
+        OnPropertyChanged(nameof(NowPlayingBackgroundImageSource));
         IsSingerMenuExpanded = false;
         IsPortraitAvailable = false;
 
@@ -537,7 +564,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(HasPortraitBackground));
         OnPropertyChanged(nameof(IsStandardLayoutVisible));
-        OnPropertyChanged(nameof(CoverBackgroundOpacity));
+        OnPropertyChanged(nameof(BackgroundImageOpacity));
         OnPropertyChanged(nameof(LyricsGridColumn));
         OnPropertyChanged(nameof(LyricsGridColumnSpan));
         OnPropertyChanged(nameof(LyricsMargin));

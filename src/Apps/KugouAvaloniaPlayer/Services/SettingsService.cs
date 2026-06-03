@@ -11,6 +11,7 @@ namespace KugouAvaloniaPlayer.Services;
 [JsonSerializable(typeof(GlobalShortcutSettings))]
 [JsonSerializable(typeof(LyricAlignmentOption))]
 [JsonSerializable(typeof(NowPlayingLyricDisplayMode))]
+[JsonSerializable(typeof(NowPlayingBackgroundSource))]
 [JsonSerializable(typeof(LocalPlaylistMeta))]
 [JsonSerializable(typeof(JellyfinServerSettings))]
 [JsonSerializable(typeof(Dictionary<string, LocalPlaylistMeta>))]

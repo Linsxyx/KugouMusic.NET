@@ -13,17 +13,25 @@
         <Style Selector="Grid#Root">
             <Setter Property="IsHitTestVisible" Value="False" />
             <Setter Property="Opacity" Value="0" />
-            <Setter Property="RenderTransform" Value="translateY(200px)" />
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut" />
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.4" Easing="CubicEaseOut" />
                 </Transitions>
             </Setter>
         </Style>
         <Style Selector="Grid#Root.open">
             <Setter Property="IsHitTestVisible" Value="True" />
             <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Grid#NowPlayingForeground">
+            <Setter Property="RenderTransform" Value="translateY(200px)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Grid#NowPlayingForeground.open">
             <Setter Property="RenderTransform" Value="translateY(0)" />
         </Style>
 
@@ -128,28 +136,27 @@
                                  HorizontalAlignment="Left"
                                  VerticalAlignment="Top" />
             <Border Background="#FF000000" />
-            <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}"
-                                 Stretch="UniformToFill"
-                                 RenderTransformOrigin="0.5,0.5"
-                                 RenderTransform="scale(1.12)"
-                                 Opacity="{Binding CoverBackgroundOpacity}"
-                                 Classes="NowPlayingBackgroundLayer">
-                <Image.Effect>
-                    <BlurEffect Radius="40" />
-                </Image.Effect>
-            </Image>
-            <Image asyncImageLoader:ImageLoader.Source="{Binding PortraitBackgroundA}"
-                   Stretch="UniformToFill"
-                   RenderTransformOrigin="0.5,0.5"
-                   RenderTransform="scale(1.04)"
-                   Opacity="{Binding PortraitLayerAOpacity}"
-                   Classes="NowPlayingBackgroundLayer" />
-            <Image asyncImageLoader:ImageLoader.Source="{Binding PortraitBackgroundB}"
-                   Stretch="UniformToFill"
-                   RenderTransformOrigin="0.5,0.5"
-                   RenderTransform="scale(1.04)"
-                   Opacity="{Binding PortraitLayerBOpacity}"
-                   Classes="NowPlayingBackgroundLayer" />
+            <Panel x:Name="SharedBackgroundFrame"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Top"
+                   IsHitTestVisible="False">
+                <Image asyncImageLoader:ImageLoader.Source="{Binding NowPlayingBackgroundImageSource}"
+                       Stretch="UniformToFill"
+                       Opacity="{Binding BackgroundImageOpacity}"
+                       Classes="NowPlayingBackgroundLayer">
+                    <Image.Effect>
+                        <BlurEffect Radius="{Binding BackgroundBlurRadius}" />
+                    </Image.Effect>
+                </Image>
+                <Image asyncImageLoader:ImageLoader.Source="{Binding PortraitBackgroundA}"
+                       Stretch="UniformToFill"
+                       Opacity="{Binding PortraitLayerAOpacity}"
+                       Classes="NowPlayingBackgroundLayer" />
+                <Image asyncImageLoader:ImageLoader.Source="{Binding PortraitBackgroundB}"
+                       Stretch="UniformToFill"
+                       Opacity="{Binding PortraitLayerBOpacity}"
+                       Classes="NowPlayingBackgroundLayer" />
+            </Panel>
 
             <Grid IsHitTestVisible="False"
                   IsVisible="{Binding Player.IsNowPlayingVisualizerEnabled}"
@@ -202,7 +209,7 @@
                     Player="{Binding Player}" />
             </Grid>
 
-            <Border Background="#50000000" />
+            <Border Background="#33000000" />
             <Border>
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -213,7 +220,10 @@
                 </Border.Background>
             </Border>
         </Panel>
-        <Grid RowDefinitions="Auto, *" Margin="40">
+        <Grid x:Name="NowPlayingForeground"
+              Classes.open="{Binding IsOpen}"
+              RowDefinitions="Auto, *"
+              Margin="40">
             <StackPanel Grid.Row="0"
                         Orientation="Horizontal"
                         Spacing="12"

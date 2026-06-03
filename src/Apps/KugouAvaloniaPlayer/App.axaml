@@ -38,6 +38,7 @@
         <converters:EnumEqualityConverter x:Key="EnumEqualityConverter" />
         <converters:PlaylistSelectionConverter x:Key="PlaylistSelectionConverter" />
         <converters:PlaybackQualityDisplayConverter x:Key="PlaybackQualityDisplayConverter" />
+        <converters:NowPlayingBackgroundSourceConverter x:Key="NowPlayingBackgroundSourceConverter" />
         <converters:WordLiftTransformConverter x:Key="WordLiftTransformConverter" />
         <x:Boolean x:Key="KugouHeroBackgroundImageVisible">True</x:Boolean>
         <SolidColorBrush x:Key="KugouCustomBackgroundBrush" Color="Transparent" />

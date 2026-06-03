@@ -112,8 +112,12 @@ public partial class UserViewModel : PageViewModelBase
     public partial double PlayPageLyricFontSize { get; set; } = 26;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NowPlayingBackgroundOpacityDisplay))]
-    public partial double NowPlayingBackgroundOpacity { get; set; } = 0.5;
+    [NotifyPropertyChangedFor(nameof(NowPlayingBackgroundBlurRadiusDisplay))]
+    public partial double NowPlayingBackgroundBlurRadius { get; set; } = 40;
+
+    [ObservableProperty]
+    public partial NowPlayingBackgroundSource SelectedNowPlayingBackgroundSource { get; set; } =
+        NowPlayingBackgroundSource.Cover;
 
     [ObservableProperty]
     public partial string PlayPageSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
@@ -193,7 +197,8 @@ public partial class UserViewModel : PageViewModelBase
         LoadPlayPageLyricColorEditorFromSettings();
         LoadPlayPageLyricFontEditorFromSettings();
         LoadPlayPageLyricAlignmentFromSettings();
-        NowPlayingBackgroundOpacity = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundOpacity, 0.0, 1.0);
+        NowPlayingBackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
+        SelectedNowPlayingBackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
         ShortcutItems =
         [
             new GlobalShortcutItemViewModel(GlobalShortcutAction.PlayPause, "播放/暂停"),
@@ -224,6 +229,11 @@ public partial class UserViewModel : PageViewModelBase
 
     public string[] LyricColorModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
     public string[] LyricFontModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
+    public NowPlayingBackgroundSource[] NowPlayingBackgroundSourceOptions { get; } =
+    [
+        NowPlayingBackgroundSource.Cover,
+        NowPlayingBackgroundSource.CustomImage
+    ];
 
     public string[] LyricColorPalette { get; } =
     [
@@ -274,7 +284,7 @@ public partial class UserViewModel : PageViewModelBase
         new SolidColorBrush(ParseColorOrDefault(PlayPageLyricColorHexInput, Colors.Transparent));
 
     public string PlayPageLyricFontSizeDisplay => $"{Math.Round(PlayPageLyricFontSize):0}pt";
-    public string NowPlayingBackgroundOpacityDisplay => $"{Math.Round(NowPlayingBackgroundOpacity * 100):0}%";
+    public string NowPlayingBackgroundBlurRadiusDisplay => $"{Math.Round(NowPlayingBackgroundBlurRadius):0}px";
     public string CustomBackgroundImageOpacityDisplay => $"{Math.Round(CustomBackgroundImageOpacity * 100):0}%";
     public string CustomBackgroundImageStatus =>
         string.IsNullOrWhiteSpace(CustomBackgroundImagePath)
@@ -670,21 +680,30 @@ public partial class UserViewModel : PageViewModelBase
         NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
     }
 
-    partial void OnNowPlayingBackgroundOpacityChanged(double value)
+    partial void OnNowPlayingBackgroundBlurRadiusChanged(double value)
     {
-        OnPropertyChanged(nameof(NowPlayingBackgroundOpacityDisplay));
+        OnPropertyChanged(nameof(NowPlayingBackgroundBlurRadiusDisplay));
         if (_isApplyingSettingsSnapshot) return;
 
-        var clamped = Math.Clamp(value, 0.0, 1.0);
+        var clamped = Math.Clamp(value, 0.0, 80.0);
         if (Math.Abs(clamped - value) > double.Epsilon)
         {
-            NowPlayingBackgroundOpacity = clamped;
+            NowPlayingBackgroundBlurRadius = clamped;
             return;
         }
 
-        SettingsManager.Settings.NowPlayingBackgroundOpacity = clamped;
+        SettingsManager.Settings.NowPlayingBackgroundBlurRadius = clamped;
         SettingsManager.Save();
-        WeakReferenceMessenger.Default.Send(new NowPlayingBackgroundOpacityChangedMessage(clamped));
+        WeakReferenceMessenger.Default.Send(new NowPlayingBackgroundBlurRadiusChangedMessage(clamped));
+    }
+
+    partial void OnSelectedNowPlayingBackgroundSourceChanged(NowPlayingBackgroundSource value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.NowPlayingBackgroundSource = value;
+        SettingsManager.Save();
+        WeakReferenceMessenger.Default.Send(new NowPlayingBackgroundSourceChangedMessage(value));
     }
 
     public void SetCheckingUpdateState(bool isChecking)
@@ -771,7 +790,8 @@ public partial class UserViewModel : PageViewModelBase
             LoadPlayPageLyricColorEditorFromSettings();
             LoadPlayPageLyricFontEditorFromSettings();
             LoadPlayPageLyricAlignmentFromSettings();
-            NowPlayingBackgroundOpacity = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundOpacity, 0.0, 1.0);
+            NowPlayingBackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
+            SelectedNowPlayingBackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
         }
         finally
         {
@@ -795,7 +815,9 @@ public partial class UserViewModel : PageViewModelBase
         WeakReferenceMessenger.Default.Send(
             new DesktopLyricDoubleLineChangedMessage(SettingsManager.Settings.DesktopLyricDoubleLineEnabled));
         WeakReferenceMessenger.Default.Send(
-            new NowPlayingBackgroundOpacityChangedMessage(SettingsManager.Settings.NowPlayingBackgroundOpacity));
+            new NowPlayingBackgroundBlurRadiusChangedMessage(SettingsManager.Settings.NowPlayingBackgroundBlurRadius));
+        WeakReferenceMessenger.Default.Send(
+            new NowPlayingBackgroundSourceChangedMessage(SettingsManager.Settings.NowPlayingBackgroundSource));
         OnPropertyChanged(nameof(IsDarkMode));
     }
 

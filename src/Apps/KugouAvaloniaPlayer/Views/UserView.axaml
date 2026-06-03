@@ -153,6 +153,32 @@
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                 <StackPanel>
+                                    <TextBlock Text="播放页背景来源" FontWeight="DemiBold" />
+                                    <TextBlock Text="选择使用歌曲封面或已选择的自定义图片"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          MinWidth="220"
+                                          ItemsSource="{Binding NowPlayingBackgroundSourceOptions}"
+                                          SelectedItem="{Binding SelectedNowPlayingBackgroundSource}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="models:NowPlayingBackgroundSource">
+                                            <TextBlock
+                                                Text="{Binding Converter={StaticResource NowPlayingBackgroundSourceConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                    <ComboBox.SelectionBoxItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock
+                                                Text="{Binding Converter={StaticResource NowPlayingBackgroundSourceConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.SelectionBoxItemTemplate>
+                                </ComboBox>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
                                     <TextBlock Text="关闭主面板时" FontWeight="DemiBold" />
                                     <TextBlock Text="选择点击关闭按钮时的行为"
                                                FontSize="12"
@@ -614,20 +640,20 @@
 
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                         <StackPanel>
-                                            <TextBlock Text="写真背景透明度" FontWeight="DemiBold" />
-                                            <TextBlock Text="调整播放页面模糊背景的透明度"
+                                            <TextBlock Text="播放页背景模糊度" FontWeight="DemiBold" />
+                                            <TextBlock Text="调整播放页面背景图片的模糊强度"
                                                        FontSize="12"
                                                        Foreground="{DynamicResource SukiLowText}" />
                                         </StackPanel>
                                         <TextBlock Grid.Column="1"
-                                                   Text="{Binding NowPlayingBackgroundOpacityDisplay}"
+                                                   Text="{Binding NowPlayingBackgroundBlurRadiusDisplay}"
                                                    VerticalAlignment="Center" />
                                     </Grid>
 
                                     <Slider Minimum="0"
-                                            Maximum="1"
-                                            Value="{Binding NowPlayingBackgroundOpacity, Mode=TwoWay}"
-                                            TickFrequency="0.05"
+                                            Maximum="80"
+                                            Value="{Binding NowPlayingBackgroundBlurRadius, Mode=TwoWay}"
+                                            TickFrequency="5"
                                             Margin="0,0,0,4" Classes="Player" />
 
                                     <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />

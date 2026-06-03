@@ -40,6 +40,12 @@ public enum NowPlayingLyricDisplayMode
     LyricsWithRomanization
 }
 
+public enum NowPlayingBackgroundSource
+{
+    Cover,
+    CustomImage
+}
+
 public class GlobalShortcutSettings
 {
     public bool EnableGlobalShortcuts { get; set; } = true;
@@ -165,7 +171,9 @@ public class AppSettings
     public NowPlayingLyricDisplayMode PlayPageLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
 
-    public double NowPlayingBackgroundOpacity { get; set; } = 0.5;
+    public double NowPlayingBackgroundBlurRadius { get; set; } = 40;
+    public NowPlayingBackgroundSource NowPlayingBackgroundSource { get; set; } =
+        NowPlayingBackgroundSource.Cover;
 
     public GlobalShortcutSettings GlobalShortcuts { get; set; } = new();
 }

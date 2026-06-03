@@ -42,7 +42,9 @@ public record AppBackgroundSettingsChangedMessage(
     string? CustomImagePath,
     double CustomImageOpacity);
 
-public record NowPlayingBackgroundOpacityChangedMessage(double Opacity);
+public record NowPlayingBackgroundBlurRadiusChangedMessage(double Radius);
+
+public record NowPlayingBackgroundSourceChangedMessage(NowPlayingBackgroundSource Source);
 
 public enum LyricSettingsScope
 {
