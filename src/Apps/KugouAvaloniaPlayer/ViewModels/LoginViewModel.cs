@@ -1,4 +1,6 @@
 using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -34,6 +36,9 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
     public partial bool IsSendingCode { get; set; }
 
     [ObservableProperty]
+    public partial bool HasLoginAccountChoices { get; set; }
+
+    [ObservableProperty]
     public partial string Mobile { get; set; } = "";
 
     [ObservableProperty]
@@ -47,12 +52,24 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
     [ObservableProperty]
     public partial string StatusMessage { get; set; } = "";
 
+    public ObservableCollection<LoginAccountOptionViewModel> LoginAccountChoices { get; } = [];
+
+    partial void OnCodeChanged(string value)
+    {
+        ClearLoginAccountChoices();
+    }
+
     partial void OnIsQrLoginSelectedChanged(bool value)
     {
         if (value)
             _ = RefreshQrCode();
         else
             StopQrPolling();
+    }
+
+    partial void OnMobileChanged(string value)
+    {
+        ClearLoginAccountChoices();
     }
 
     [RelayCommand]
@@ -213,6 +230,17 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
     [RelayCommand]
     private async Task Login()
     {
+        await SubmitMobileLoginAsync(null);
+    }
+
+    [RelayCommand]
+    private async Task SelectLoginAccount(LoginAccountOptionViewModel account)
+    {
+        await SubmitMobileLoginAsync(account.UserId.ToString());
+    }
+
+    private async Task SubmitMobileLoginAsync(string? userid)
+    {
         if (string.IsNullOrWhiteSpace(Mobile) || Mobile.Length != 11)
         {
             StatusMessage = "请输入正确的手机号";
@@ -226,29 +254,31 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
         }
 
         IsLoggingIn = true;
-        StatusMessage = "正在登录...";
+        StatusMessage = userid is null ? "正在登录..." : "正在登录所选账号...";
+        if (userid is not null)
+            ClearLoginAccountChoices();
 
         try
         {
-            var result = await authClient.LoginByMobileAsync(Mobile, Code);
+            var result = await authClient.LoginByMobileAsync(Mobile, Code, userid);
             if (result is not null && result.Status == 1)
             {
-                StatusMessage = "登录成功";
-
-                try
-                {
-                    await deviceClient.InitDeviceAsync();
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError($"设备初始化失败: {ex.Message}");
-                }
-
-                WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
+                await CompleteLoginAsync();
+            }
+            else if (result?.RequiresUserSelection == true)
+            {
+                SetLoginAccountChoices(result);
+                StatusMessage = "请选择需要登录的账号";
             }
             else
             {
-                StatusMessage = "登录失败，若没有账号请先在酷狗音乐概念版App注册";
+                var errorMessage = result?.GetExtraString("error_msg")
+                                   ?? result?.GetExtraString("errmsg")
+                                   ?? result?.GetExtraString("msg")
+                                   ?? result?.GetExtraString("message");
+                StatusMessage = string.IsNullOrWhiteSpace(errorMessage)
+                    ? $"登录失败: {result?.ErrorCode?.ToString() ?? "未知错误"}"
+                    : $"登录失败: {errorMessage}";
             }
         }
         catch (Exception ex)
@@ -259,6 +289,51 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
         {
             IsLoggingIn = false;
         }
+    }
+
+    private async Task CompleteLoginAsync()
+    {
+        ClearLoginAccountChoices();
+        StatusMessage = "登录成功";
+
+        try
+        {
+            await deviceClient.InitDeviceAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"设备初始化失败: {ex.Message}");
+        }
+
+        WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
+    }
+
+    private void SetLoginAccountChoices(LoginResponse result)
+    {
+        LoginAccountChoices.Clear();
+        foreach (var account in result.Data?.InfoList ?? [])
+        {
+            var displayName = string.IsNullOrWhiteSpace(account.Nickname)
+                ? account.Username ?? account.UserId.ToString()
+                : account.Nickname;
+
+            LoginAccountChoices.Add(new LoginAccountOptionViewModel(
+                account.UserId,
+                displayName,
+                account.Pic,
+                account.Username));
+        }
+
+        HasLoginAccountChoices = LoginAccountChoices.Any();
+    }
+
+    private void ClearLoginAccountChoices()
+    {
+        if (LoginAccountChoices.Count == 0 && !HasLoginAccountChoices)
+            return;
+
+        LoginAccountChoices.Clear();
+        HasLoginAccountChoices = false;
     }
 
     private void StartCountdown()
@@ -274,3 +349,9 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
         });
     }
 }
+
+public sealed record LoginAccountOptionViewModel(
+    long UserId,
+    string DisplayName,
+    string? Avatar,
+    string? Username);

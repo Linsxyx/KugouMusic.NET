@@ -30,7 +30,7 @@ public class RawLoginApi(IKgTransport transport, KgSessionManager sessionManager
     /// <summary>
     ///     手机验证码登录 (对应原 LoginByMobileAsync)
     /// </summary>
-    public async Task<JsonElement> LoginByMobileAsync(string mobile, string code)
+    public async Task<JsonElement> LoginByMobileAsync(string mobile, string code, string? userid = null)
     {
         var session = sessionManager.Session;
         var dateTime = DateTimeOffset.Now.ToUnixTimeMilliseconds(); // ms
@@ -80,7 +80,10 @@ public class RawLoginApi(IKgTransport transport, KgSessionManager sessionManager
             ["gitversion"] = "5f0b7c4"
         };
 
-        if (session.UserId != "0") dataMap["userid"] = session.UserId;
+        var loginUserId = !string.IsNullOrWhiteSpace(userid)
+            ? userid
+            : session.UserId;
+        if (!string.IsNullOrWhiteSpace(loginUserId) && loginUserId != "0") dataMap["userid"] = loginUserId;
 
         var request = new KgRequest
         {

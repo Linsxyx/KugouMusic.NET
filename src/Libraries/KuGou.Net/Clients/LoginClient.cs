@@ -28,9 +28,9 @@ public class LoginClient(
     /// <summary>
     ///     手机验证码登录并保存 Token
     /// </summary>
-    public async Task<LoginResponse?> LoginByMobileAsync(string mobile, string code)
+    public async Task<LoginResponse?> LoginByMobileAsync(string mobile, string code, string? userid = null)
     {
-        var json = await rawApi.LoginByMobileAsync(mobile, code);
+        var json = await rawApi.LoginByMobileAsync(mobile, code, userid);
         var data = KgApiResponseParser.Parse<LoginResponse>(json, AppJsonContext.Default.LoginResponse);
         if (data is not null && data.Status == 1)
         {
@@ -44,9 +44,24 @@ public class LoginClient(
                 logger.LogInformation($"Token 登录成功! UserID: {newUserId}");
             }
         }
+        else if (data?.RequiresUserSelection == true)
+        {
+            return data;
+        }
+        else if (data is not null)
+        {
+            var errorMessage = data.GetExtraString("error_msg")
+                               ?? data.GetExtraString("errmsg")
+                               ?? data.GetExtraString("msg")
+                               ?? data.GetExtraString("message");
+            logger.LogWarning("[Auth] 手机验证码登录失败。Status: {Status}, ErrorCode: {ErrorCode}, Message: {Message}",
+                data.Status,
+                data.ErrorCode,
+                string.IsNullOrWhiteSpace(errorMessage) ? "无" : errorMessage);
+        }
         else
         {
-            logger.LogWarning("[Auth] 登录失败，若没有账号请先在酷狗音乐概念版App注册。");
+            logger.LogWarning("[Auth] 手机验证码登录失败，响应解析为空。");
         }
 
         return data;

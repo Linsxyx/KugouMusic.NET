@@ -4,6 +4,7 @@
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:converters="clr-namespace:KugouAvaloniaPlayer.Converters"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Views.LoginView"
              x:DataType="vm:LoginViewModel"
              MinWidth="280"
@@ -75,8 +76,50 @@
             <Button Classes="Standard"
                     Content="登录"
                     Command="{Binding LoginCommand}"
+                    IsEnabled="{Binding !IsLoggingIn}"
                     HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center" />
+
+            <StackPanel IsVisible="{Binding HasLoginAccountChoices}" Spacing="8">
+                <TextBlock Text="选择要登录的账号"
+                           FontSize="12"
+                           Foreground="{DynamicResource SukiLowText}" />
+                <ItemsControl ItemsSource="{Binding LoginAccountChoices}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LoginAccountOptionViewModel">
+                            <Button Classes="Basic"
+                                    Command="{Binding $parent[ItemsControl].DataContext.SelectLoginAccountCommand}"
+                                    CommandParameter="{Binding}"
+                                    IsEnabled="{Binding !$parent[ItemsControl].DataContext.IsLoggingIn}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Margin="0,0,0,8"
+                                    Padding="10">
+                                <Grid ColumnDefinitions="40,*" ColumnSpacing="10">
+                                    <Border Width="40"
+                                            Height="40"
+                                            CornerRadius="20"
+                                            ClipToBounds="True"
+                                            Background="{DynamicResource SukiBackground}">
+                                        <Image asyncImageLoader:ImageLoader.Source="{Binding Avatar}"
+                                               Stretch="UniformToFill" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                Spacing="2">
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   FontWeight="DemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding UserId}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource SukiLowText}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
 
             <!-- 状态信息 -->
             <TextBlock Text="{Binding StatusMessage}"

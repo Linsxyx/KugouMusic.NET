@@ -3,6 +3,8 @@ using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace KgWebApi.Net.Controllers;
 
@@ -16,10 +18,11 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
     /// <summary>
     ///     登录。
     /// </summary>
-    /// <param name="req">手机号和短信验证码。</param>
+    /// <param name="req">手机号、短信验证码，以及多账号登录时要选择的用户 id。</param>
     /// <returns>登录结果和账号 Token 信息。轮询此接口可获取二维码扫码状态, 408 为等待扫描，404 为已经扫描，403 为拒绝登录，405 为登录成功，402 为已过期</returns>
     [HttpPost("cellphone")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(MobileLoginAccountSelectionResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> LoginByMobile([FromBody] MobileLoginRequest req)
     {
         if (string.IsNullOrWhiteSpace(req.Mobile) || string.IsNullOrWhiteSpace(req.Code))
@@ -27,7 +30,11 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
 
         try
         {
-            var result = await loginClient.LoginByMobileAsync(req.Mobile, req.Code);
+            var selectedUserId = req.UserId?.ToString(CultureInfo.InvariantCulture);
+            var result = await loginClient.LoginByMobileAsync(req.Mobile, req.Code, selectedUserId);
+            if (result?.RequiresUserSelection == true)
+                return Ok(MobileLoginAccountSelectionResponse.From(result));
+
             return this.FromKgStatus(result);
         }
         catch (Exception ex)
@@ -95,4 +102,40 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
 
 public record MobileLoginRequest(
     [param: Required(AllowEmptyStrings = false)] string Mobile,
-    [param: Required(AllowEmptyStrings = false)] string Code);
+    [param: Required(AllowEmptyStrings = false)] string Code,
+    [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    long? UserId = null);
+
+public record MobileLoginAccountSelectionResponse(
+    int Status,
+    int ErrorCode,
+    bool RequiresUserSelection,
+    string Message,
+    IReadOnlyList<MobileLoginAccountDto> Accounts)
+{
+    public static MobileLoginAccountSelectionResponse From(LoginResponse response)
+    {
+        var accounts = response.Data?.InfoList
+            .Select(account => new MobileLoginAccountDto(
+                account.UserId,
+                account.Nickname,
+                account.Pic,
+                account.AppId,
+                account.Username))
+            .ToArray() ?? [];
+
+        return new MobileLoginAccountSelectionResponse(
+            response.Status ?? 0,
+            response.ErrorCode ?? 34175,
+            true,
+            "请选择需要登录的账号，并携带 userId 重新调用登录接口。",
+            accounts);
+    }
+}
+
+public record MobileLoginAccountDto(
+    long UserId,
+    string? Nickname,
+    string? Pic,
+    int AppId,
+    string? Username);
