@@ -68,14 +68,20 @@
                 <Button Cursor="Hand" Classes="Basic" ToolTip.Tip="播放"
                         Command="{Binding PlayCommand}"
                         CommandParameter="{Binding .}">
-                    <Svg Classes="ThemeSvgIcon" Path="/Assets/Play-2.svg" Width="15" Height="15" />
+                    <PathIcon Data="M0,0 L6,3 L0,6 Z"
+                              Width="15"
+                              Height="15"
+                              Foreground="{DynamicResource SukiLowText}" />
                 </Button>
 
                 <Button Cursor="Hand" x:Name="MoreButton"
                         Classes="Basic"
                         ToolTip.Tip="更多操作"
                         Click="MoreButton_OnClick">
-                    <Svg Classes="ThemeSvgIcon" Path="/Assets/More.svg" Width="25" Height="25" />
+                    <PathIcon Data="M12 20q-.825 0-1.412-.587T10 18t.588-1.412T12 16t1.413.588T14 18t-.587 1.413T12 20m0-6q-.825 0-1.412-.587T10 12t.588-1.412T12 10t1.413.588T14 12t-.587 1.413T12 14m0-6q-.825 0-1.412-.587T10 6t.588-1.412T12 4t1.413.588T14 6t-.587 1.413T12 8"
+                              Width="25"
+                              Height="25"
+                              Foreground="{DynamicResource SukiLowText}" />
                 </Button>
             </StackPanel>
         </Grid>

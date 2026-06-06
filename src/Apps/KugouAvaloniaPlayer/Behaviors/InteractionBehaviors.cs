@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
+using System.Runtime.CompilerServices; 
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -12,16 +13,16 @@ namespace KugouAvaloniaPlayer.Behaviors;
 
 public sealed class InteractionBehaviors
 {
-    private static readonly Dictionary<Control, EventHandler<VisualTreeAttachmentEventArgs>> AttachedHandlers = new();
-    private static readonly Dictionary<Control, EventHandler<VisualTreeAttachmentEventArgs>> DetachedHandlers = new();
-    private static readonly Dictionary<InputElement, EventHandler<KeyEventArgs>> EnterKeyHandlers = new();
-    private static readonly Dictionary<InputElement, EventHandler<KeyEventArgs>> KeyDownHandlers = new();
+    private static readonly ConditionalWeakTable<Control, EventHandler<VisualTreeAttachmentEventArgs>> AttachedHandlers = new();
+    private static readonly ConditionalWeakTable<Control, EventHandler<VisualTreeAttachmentEventArgs>> DetachedHandlers = new();
+    private static readonly ConditionalWeakTable<InputElement, EventHandler<KeyEventArgs>> EnterKeyHandlers = new();
+    private static readonly ConditionalWeakTable<InputElement, EventHandler<KeyEventArgs>> KeyDownHandlers = new();
 
-    private static readonly Dictionary<InputElement, EventHandler<PointerPressedEventArgs>> PointerPressedHandlers =
+    private static readonly ConditionalWeakTable<InputElement, EventHandler<PointerPressedEventArgs>> PointerPressedHandlers =
         new();
 
-    private static readonly Dictionary<InputElement, EventHandler<TappedEventArgs>> DoubleTappedHandlers = new();
-    private static readonly Dictionary<Control, EventHandler<ScrollChangedEventArgs>> NearBottomScrollHandlers = new();
+    private static readonly ConditionalWeakTable<InputElement, EventHandler<TappedEventArgs>> DoubleTappedHandlers = new();
+    private static readonly ConditionalWeakTable<Control, EventHandler<ScrollChangedEventArgs>> NearBottomScrollHandlers = new();
 
     private static readonly AttachedProperty<bool> HasExecutedAttachedCommandProperty =
         AvaloniaProperty.RegisterAttached<InteractionBehaviors, Control, bool>("HasExecutedAttachedCommand");
@@ -273,7 +274,7 @@ public sealed class InteractionBehaviors
                 control.SetValue(HasExecutedAttachedCommandProperty, true);
         };
 
-        AttachedHandlers[control] = handler;
+        AttachedHandlers.Add(control, handler);
         control.AttachedToVisualTree += handler;
     }
 
@@ -289,7 +290,7 @@ public sealed class InteractionBehaviors
             ExecuteCommand(control, GetDetachedFromVisualTreeCommand(control),
                 GetDetachedFromVisualTreeCommandParameter(control));
 
-        DetachedHandlers[control] = handler;
+        DetachedHandlers.Add(control, handler);
         control.DetachedFromVisualTree += handler;
     }
 
@@ -312,7 +313,7 @@ public sealed class InteractionBehaviors
                 args.Handled = true;
         };
 
-        EnterKeyHandlers[element] = handler;
+        EnterKeyHandlers.Add(element, handler);
         element.KeyDown += handler;
     }
 
@@ -335,7 +336,7 @@ public sealed class InteractionBehaviors
                 command.Execute(parameter);
         };
 
-        KeyDownHandlers[element] = handler;
+        KeyDownHandlers.Add(element, handler);
         element.KeyDown += handler;
     }
 
@@ -355,14 +356,17 @@ public sealed class InteractionBehaviors
                 args.Handled = true;
         };
 
-        PointerPressedHandlers[element] = handler;
+        PointerPressedHandlers.Add(element, handler);
         element.PointerPressed += handler;
     }
 
     private static void OnDoubleTappedCommandChanged(InputElement element, AvaloniaPropertyChangedEventArgs e)
     {
-        if (DoubleTappedHandlers.Remove(element, out var oldHandler))
+        if (DoubleTappedHandlers.TryGetValue(element, out var oldHandler))
+        {
             element.DoubleTapped -= oldHandler;
+            DoubleTappedHandlers.Remove(element);
+        }
 
         if (e.NewValue is not ICommand)
             return;
@@ -375,14 +379,17 @@ public sealed class InteractionBehaviors
                 args.Handled = true;
         };
 
-        DoubleTappedHandlers[element] = handler;
+        DoubleTappedHandlers.Add(element, handler);
         element.DoubleTapped += handler;
     }
 
     private static void OnScrollNearBottomCommandChanged(Control control, AvaloniaPropertyChangedEventArgs e)
     {
-        if (NearBottomScrollHandlers.Remove(control, out var oldHandler))
+        if (NearBottomScrollHandlers.TryGetValue(control, out var oldHandler))
+        {
             control.RemoveHandler(ScrollViewer.ScrollChangedEvent, oldHandler);
+            NearBottomScrollHandlers.Remove(control);
+        }
 
         if (e.NewValue is not ICommand)
             return;
@@ -402,7 +409,7 @@ public sealed class InteractionBehaviors
                 GetScrollNearBottomCommandParameter(control));
         };
 
-        NearBottomScrollHandlers[control] = handler;
+        NearBottomScrollHandlers.Add(control, handler);
         control.AddHandler(ScrollViewer.ScrollChangedEvent, handler, RoutingStrategies.Bubble);
     }
 
