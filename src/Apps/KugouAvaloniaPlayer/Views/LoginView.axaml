@@ -9,6 +9,7 @@
              x:DataType="vm:LoginViewModel"
              MinWidth="280"
              MaxWidth="420"
+             Name="Root"
              behaviors:InteractionBehaviors.DetachedFromVisualTreeCommand="{Binding StopQrPollingOnUnloadCommand}">
 
     <UserControl.Resources>
@@ -88,9 +89,9 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:LoginAccountOptionViewModel">
                             <Button Classes="Basic"
-                                    Command="{Binding $parent[ItemsControl].DataContext.SelectLoginAccountCommand}"
+                                    Command="{Binding #Root.((vm:LoginViewModel)DataContext).SelectLoginAccountCommand}"
                                     CommandParameter="{Binding}"
-                                    IsEnabled="{Binding !$parent[ItemsControl].DataContext.IsLoggingIn}"
+                                    IsEnabled="{Binding #Root.((vm:LoginViewModel)DataContext).IsLoggingIn}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Stretch"
                                     Margin="0,0,0,8"
