@@ -101,8 +101,11 @@ public class LoginController(LoginClient loginClient, ILogger<LoginController> l
 // ================= DTO 模型 =================
 
 public record MobileLoginRequest(
-    [param: Required(AllowEmptyStrings = false)] string Mobile,
-    [param: Required(AllowEmptyStrings = false)] string Code,
+    [param: Required(AllowEmptyStrings = false)] 
+    string Mobile,
+    [param: Required(AllowEmptyStrings = false)]
+    [param: RegularExpression(@"^\d{6}$")]
+    string Code,
     [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     long? UserId = null);
 

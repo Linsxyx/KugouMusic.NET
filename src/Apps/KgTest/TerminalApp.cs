@@ -535,7 +535,7 @@ internal sealed class TerminalApp : IAsyncDisposable
             var login = await _clients.Login.LoginByMobileAsync(mobile, code);
             _status = login?.Status == 1
                 ? "短信登录成功"
-                : $"短信登录失败：{login?.GetExtraString("error_msg") ?? login?.ErrorCode.ToString() ?? "未知错误"}";
+                : $"短信登录失败：{login?.FailureMessage ?? login?.ErrorCode.ToString() ?? "未知错误"}";
             _userName = await _data.GetUserDisplayNameAsync();
         }
         catch (Exception ex)

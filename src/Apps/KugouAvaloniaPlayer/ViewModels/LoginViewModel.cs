@@ -272,10 +272,7 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
             }
             else
             {
-                var errorMessage = result?.GetExtraString("error_msg")
-                                   ?? result?.GetExtraString("errmsg")
-                                   ?? result?.GetExtraString("msg")
-                                   ?? result?.GetExtraString("message");
+                var errorMessage = result?.FailureMessage;
                 StatusMessage = string.IsNullOrWhiteSpace(errorMessage)
                     ? $"登录失败: {result?.ErrorCode?.ToString() ?? "未知错误"}"
                     : $"登录失败: {errorMessage}";

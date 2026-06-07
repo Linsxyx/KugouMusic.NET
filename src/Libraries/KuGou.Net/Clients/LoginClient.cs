@@ -50,14 +50,10 @@ public class LoginClient(
         }
         else if (data is not null)
         {
-            var errorMessage = data.GetExtraString("error_msg")
-                               ?? data.GetExtraString("errmsg")
-                               ?? data.GetExtraString("msg")
-                               ?? data.GetExtraString("message");
             logger.LogWarning("[Auth] 手机验证码登录失败。Status: {Status}, ErrorCode: {ErrorCode}, Message: {Message}",
                 data.Status,
                 data.ErrorCode,
-                string.IsNullOrWhiteSpace(errorMessage) ? "无" : errorMessage);
+                string.IsNullOrWhiteSpace(data.FailureMessage) ? "无" : data.FailureMessage);
         }
         else
         {
