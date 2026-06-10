@@ -24,6 +24,10 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
+    private static readonly object CustomBackgroundImageSync = new();
+    private static Bitmap? s_cachedCustomBackgroundBitmap;
+    private static string? s_cachedCustomBackgroundPath;
+
     private readonly LoginClient _authClient;
     private readonly IAppUpdateService _appUpdateService;
     private readonly IDesktopLyricWindowService _desktopLyricWindowService;
@@ -206,11 +210,14 @@ public partial class MainWindowViewModel : ObservableObject
         hasCustomImage = false;
 
         if (!useCustomImage || string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+        {
+            ReleaseCachedCustomBackgroundBitmap();
             return Brushes.Transparent;
+        }
 
         try
         {
-            var brush = new ImageBrush(new Bitmap(path))
+            var brush = new ImageBrush(GetOrCreateCustomBackgroundBitmap(path))
             {
                 Stretch = Stretch.UniformToFill,
                 Opacity = opacity
@@ -220,7 +227,41 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch
         {
+            ReleaseCachedCustomBackgroundBitmap(path);
             return Brushes.Transparent;
+        }
+    }
+
+    private static Bitmap GetOrCreateCustomBackgroundBitmap(string path)
+    {
+        lock (CustomBackgroundImageSync)
+        {
+            if (s_cachedCustomBackgroundBitmap is not null &&
+                string.Equals(s_cachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase))
+            {
+                return s_cachedCustomBackgroundBitmap;
+            }
+
+            s_cachedCustomBackgroundBitmap?.Dispose();
+            s_cachedCustomBackgroundBitmap = new Bitmap(path);
+            s_cachedCustomBackgroundPath = path;
+            return s_cachedCustomBackgroundBitmap;
+        }
+    }
+
+    private static void ReleaseCachedCustomBackgroundBitmap(string? path = null)
+    {
+        lock (CustomBackgroundImageSync)
+        {
+            if (path is not null &&
+                !string.Equals(s_cachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            s_cachedCustomBackgroundBitmap?.Dispose();
+            s_cachedCustomBackgroundBitmap = null;
+            s_cachedCustomBackgroundPath = null;
         }
     }
 
