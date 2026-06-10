@@ -98,6 +98,7 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
         }
         catch (Exception ex)
         {
+            logger.LogWarning(ex, "获取二维码失败");
             QrStatusMessage = $"获取二维码出错: {ex.Message}";
             IsQrExpired = true;
         }
@@ -108,69 +109,79 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
         _qrPollingCts = new CancellationTokenSource();
         var token = _qrPollingCts.Token;
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
-            while (!token.IsCancellationRequested)
+            try
             {
-                await Task.Delay(2000, token);
-                if (token.IsCancellationRequested) break;
-
-                if (string.IsNullOrEmpty(_qrCodeKey)) continue;
-
-                try
+                while (!token.IsCancellationRequested)
                 {
-                    var status = await authClient.CheckQrStatusAsync(_qrCodeKey);
+                    await Task.Delay(2000, token);
+                    if (token.IsCancellationRequested) break;
 
-                    if (status?.QrStatus == QrLoginStatus.WaitingForScan)
+                    if (string.IsNullOrEmpty(_qrCodeKey)) continue;
+
+                    try
                     {
-                        Dispatcher.UIThread.Post(() => QrStatusMessage = "请使用酷狗音乐App扫码");
-                    }
-                    else if (status?.QrStatus == QrLoginStatus.WaitingForConfirm)
-                    {
-                        Dispatcher.UIThread.Post(() => QrStatusMessage = "扫码成功，请在手机上确认");
-                    }
-                    else if (status?.QrStatus == QrLoginStatus.Success)
-                    {
-                        Dispatcher.UIThread.Post(() =>
+                        var status = await authClient.CheckQrStatusAsync(_qrCodeKey);
+
+                        if (status?.QrStatus == QrLoginStatus.WaitingForScan)
                         {
-                            QrStatusMessage = "登录成功";
-                            StopQrPolling();
-
-                            _ = Task.Run(async () =>
+                            Dispatcher.UIThread.Post(() => QrStatusMessage = "请使用酷狗音乐App扫码");
+                        }
+                        else if (status?.QrStatus == QrLoginStatus.WaitingForConfirm)
+                        {
+                            Dispatcher.UIThread.Post(() => QrStatusMessage = "扫码成功，请在手机上确认");
+                        }
+                        else if (status?.QrStatus == QrLoginStatus.Success)
+                        {
+                            Dispatcher.UIThread.Post(() =>
                             {
-                                try
-                                {
-                                    await deviceClient.InitDeviceAsync();
-                                    await authClient.RefreshSessionAsync();
-                                }
-                                catch (Exception ex)
-                                {
-                                    logger.LogError($"设备验证失败: {ex.Message}");
-                                }
+                                QrStatusMessage = "登录成功";
+                                StopQrPolling();
 
-                                Dispatcher.UIThread.Post(() =>
+                                _ = Task.Run(async () =>
                                 {
-                                    WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
+                                    try
+                                    {
+                                        await deviceClient.InitDeviceAsync();
+                                        await authClient.RefreshSessionAsync();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        logger.LogError(ex, "设备验证失败");
+                                    }
+
+                                    Dispatcher.UIThread.Post(() =>
+                                    {
+                                        WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
+                                    });
                                 });
                             });
-                        });
-                        break;
-                    }
-                    else if (status?.QrStatus == QrLoginStatus.Expired)
-                    {
-                        Dispatcher.UIThread.Post(() =>
+                            break;
+                        }
+                        else if (status?.QrStatus == QrLoginStatus.Expired)
                         {
-                            QrStatusMessage = "二维码已过期，请点击刷新";
-                            IsQrExpired = true;
-                        });
-                        StopQrPolling();
-                        break;
+                            Dispatcher.UIThread.Post(() =>
+                            {
+                                QrStatusMessage = "二维码已过期，请点击刷新";
+                                IsQrExpired = true;
+                            });
+                            StopQrPolling();
+                            break;
+                        }
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        logger.LogError(ex, "轮询二维码登录状态出错");
                     }
                 }
-                catch
-                {
-                    logger.LogError("轮询出错");
-                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "二维码登录轮询任务异常退出");
             }
         }, token);
     }
@@ -299,7 +310,7 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
         }
         catch (Exception ex)
         {
-            logger.LogError($"设备初始化失败: {ex.Message}");
+            logger.LogError(ex, "设备初始化失败");
         }
 
         WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
@@ -336,12 +347,19 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
     private void StartCountdown()
     {
         Countdown = 60;
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
-            while (Countdown > 0)
+            try
             {
-                await Task.Delay(1000);
-                Countdown--;
+                while (Countdown > 0)
+                {
+                    await Task.Delay(1000);
+                    Countdown--;
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "验证码倒计时任务异常退出");
             }
         });
     }

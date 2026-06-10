@@ -395,7 +395,7 @@ public partial class SearchViewModel(
                     return;
                 }
 
-                if (data.Status != 1) logger.LogError($"Error : {data.ErrorCode}");
+                if (data.Status != 1) logger.LogError("Error : {data.ErrorCode}" ,data.ErrorCode);
                 var songs = data.Songs;
                 if (songs.Count < 100) _hasMoreDetails = false;
 

@@ -221,8 +221,15 @@ public partial class FavoritePlaylistService(
 
                     _ = Task.Run(async () =>
                     {
-                        await Task.Delay(3000);
-                        await LoadLikeListAsync();
+                        try
+                        {
+                            await Task.Delay(3000);
+                            await LoadLikeListAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "收藏成功后刷新喜欢列表失败");
+                        }
                     });
                     return true;
                 }
@@ -230,7 +237,7 @@ public partial class FavoritePlaylistService(
         }
         catch (Exception ex)
         {
-            logger.LogError("操作收藏失败: {Message}", ex.Message);
+            logger.LogError(ex, "操作收藏失败");
         }
 
         return currentIsLiked;
@@ -393,8 +400,15 @@ public partial class FavoritePlaylistService(
 
                     _ = Task.Run(async () =>
                     {
-                        await Task.Delay(3000);
-                        await LoadLikeListAsync();
+                        try
+                        {
+                            await Task.Delay(3000);
+                            await LoadLikeListAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "添加到喜欢歌单后刷新喜欢列表失败");
+                        }
                     });
                 }
 

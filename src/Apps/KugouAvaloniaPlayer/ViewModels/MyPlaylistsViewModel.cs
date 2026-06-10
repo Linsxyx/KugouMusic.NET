@@ -142,7 +142,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         }
         else
         {
-            _logger.LogError($"加载失败,err_code{onlinePlaylists?.ErrorCode}");
+            _logger.LogError("加载失败,err_code{onlinePlaylists.ErrorCode}" , onlinePlaylists?.Status);
             if (_favoritePlaylistService.TryGetLikePlaylistCache(out var cachedLike))
             {
                 Items.Add(cachedLike.Playlist);
@@ -267,7 +267,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                 return;
             }
 
-            if (data.Status != 1) _logger.LogWarning($"Error : {data.ErrorCode}");
+            if (data.Status != 1) _logger.LogWarning("Error : {data.ErrorCode}" ,data.Status);
             var songs = data.Songs;
 
             if (songs.Count < 100) _hasMoreSongs = false;

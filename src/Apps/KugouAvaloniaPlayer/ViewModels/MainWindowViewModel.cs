@@ -172,11 +172,18 @@ public partial class MainWindowViewModel : ObservableObject
                 message.CustomImageOpacity);
         });
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
-            await LoadLocalSessionOrLogin();
-            await GetDailyRecommendations();
-            if (SettingsManager.Settings.AutoCheckUpdate) await _appUpdateService.CheckForUpdatesAsync();
+            try
+            {
+                await LoadLocalSessionOrLogin();
+                await GetDailyRecommendations();
+                if (SettingsManager.Settings.AutoCheckUpdate) await _appUpdateService.CheckForUpdatesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "启动后台初始化任务失败");
+            }
         });
     }
 
@@ -397,12 +404,8 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 IsLoggedIn = true;
                 await LoadUserInfo();
-                _logger.LogInformation($"已加载本地用户: {session.UserId}");
-#if DEBUG
-                var defaultFontFamily = FontFamily.Default;
-                string defaultFontName = defaultFontFamily.Name;
-                _logger.LogInformation($"字体为{defaultFontName}");
-#endif
+                _logger.LogInformation("已加载本地用户: {session.UserId}" , session.UserId);
+
                 _ = Task.Run(async () =>
                 {
                     try
@@ -412,7 +415,7 @@ public partial class MainWindowViewModel : ObservableObject
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogInformation($"获取VIP失败: {ex.Message}");
+                        _logger.LogWarning(ex, "获取VIP或喜欢列表失败");
                     }
                 });
             }
@@ -424,7 +427,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            _logger.LogError($"登录初始化失败: {ex.Message}");
+            _logger.LogError(ex, "登录初始化失败");
             _authClient.LogOutAsync();
         }
     }
@@ -443,8 +446,9 @@ public partial class MainWindowViewModel : ObservableObject
                 _userViewModel.UserId = _sessionManager.Session.UserId;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "加载用户信息失败");
             ToastManager.CreateToast()
                 .OfType(NotificationType.Warning)
                 .WithTitle("加载用户失败")
@@ -467,7 +471,7 @@ public partial class MainWindowViewModel : ObservableObject
                 if (data is not null && data.Status == 1)
                     _logger.LogInformation("vip领取成功");
                 else
-                    _logger.LogError($"vip领取失败{data?.ErrorCode}");
+                    _logger.LogError("vip领取失败{data.ErrorCode}" , data?.ErrorCode);
                 await Task.Delay(1000);
                 await _userClient.UpgradeVipRewardAsync();
             }
@@ -502,7 +506,7 @@ public partial class MainWindowViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                _logger.LogError($"初始化VIP或喜欢列表失败: {ex.Message}");
+                _logger.LogError(ex, "初始化VIP或喜欢列表失败");
             }
         });
 

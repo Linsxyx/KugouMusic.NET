@@ -345,7 +345,7 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
         }
         catch (Exception ex)
         {
-            logger.LogError($"[DeletePlaylist] 解密响应失败: {ex.Message}");
+            logger.LogError(ex, "[DeletePlaylist] 解密响应失败");
         }
 
         return response;

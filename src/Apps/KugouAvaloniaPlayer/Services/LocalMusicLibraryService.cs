@@ -1186,11 +1186,11 @@ public sealed class LocalMusicLibraryService(
         }
         catch (CorruptFileException ex)
         {
-            logger.LogWarning("文件头伪装或损坏，已降级为文件名加载 [{File}]: {Message}", filePath, ex.Message);
+            logger.LogWarning(ex, "文件头伪装或损坏，已降级为文件名加载。 file={File}", filePath);
         }
         catch (Exception ex)
         {
-            logger.LogWarning("读取标签失败，已降级为文件名加载 [{File}]: {Message}", filePath, ex.Message);
+            logger.LogWarning(ex, "读取标签失败，已降级为文件名加载。 file={File}", filePath);
         }
 
         return new LocalTrackMetadata(title, artist, album, duration, coverPath);

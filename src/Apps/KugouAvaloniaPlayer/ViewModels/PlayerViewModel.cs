@@ -338,7 +338,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError($"播放出错: {ex.Message}");
+            _logger.LogError(ex, "播放出错");
             StopAndReset();
         }
         finally
@@ -401,7 +401,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private void HandlePlayError(SongItem song, int requestVersion)
     {
         _consecutiveFailures++;
-        _logger.LogWarning($"加载失败 ({_consecutiveFailures}/{MaxConsecutiveFailures}): {song.Name}");
+        _logger.LogWarning("加载失败 ({_consecutiveFailures}/{MaxConsecutiveFailures}): {song.Name}" ,_consecutiveFailures, MaxConsecutiveFailures,song.Name);
         _toastManager.CreateToast()
             .OfType(NotificationType.Warning)
             .WithTitle("加载失败")
@@ -414,7 +414,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             if (currentIndex >= 0)
             {
                 PlaybackQueue.RemoveAt(currentIndex);
-                _logger.LogInformation($"已从队列中移除失败歌曲: {song.Name}");
+                _logger.LogInformation("已从队列中移除失败歌曲: {song.Name}" ,song.Name);
             }
             if (PlaybackQueue.Count > 0)
             {

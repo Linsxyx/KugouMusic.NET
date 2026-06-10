@@ -286,7 +286,7 @@ public class RawLoginApi(IKgTransport transport, KgSessionManager sessionManager
         }
         catch (Exception ex)
         {
-            logger.LogError($"[RawLoginApi] 解密响应失败: {ex.Message}");
+            logger.LogError(ex, "[RawLoginApi] 解密响应失败");
         }
 
         return response;

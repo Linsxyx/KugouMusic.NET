@@ -117,7 +117,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         }
         catch (Exception ex)
         {
-            logger.LogError($"获取在线歌词失败: {ex.Message}");
+            logger.LogError(ex, "获取在线歌词失败");
         }
     }
 
@@ -152,7 +152,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         }
         catch (Exception ex)
         {
-            logger.LogError($"加载本地歌词失败: {ex.Message}");
+            logger.LogError(ex, "加载本地歌词失败");
         }
     }
 

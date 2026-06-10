@@ -126,7 +126,7 @@ public class RawDeviceApi(IKgTransport transport, KgSessionManager sessionManage
         }
         catch (Exception ex)
         {
-            logger.LogError($"[RawDeviceApi] 解密失败: {ex.Message}");
+            logger.LogError(ex, "[RawDeviceApi] 解密失败");
         }
 
         return response;

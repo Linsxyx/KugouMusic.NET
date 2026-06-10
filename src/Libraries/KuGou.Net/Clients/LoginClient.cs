@@ -41,7 +41,7 @@ public class LoginClient(
             if (!string.IsNullOrEmpty(newToken))
             {
                 sessionManager.UpdateAuth(newUserId, newToken, "0", "", t1);
-                logger.LogInformation($"Token 登录成功! UserID: {newUserId}");
+                logger.LogInformation("Token 登录成功! UserID: {newUserId}" ,newUserId);
             }
         }
         else if (data?.RequiresUserSelection == true)
@@ -90,9 +90,9 @@ public class LoginClient(
 
             sessionManager.UpdateAuth(newUserId!, newToken!, "0", "", "");
 
-            logger.LogInformation($"二维码登录成功! UserID: {newUserId}, Nickname: {res.Nickname}");
+            logger.LogInformation("二维码登录成功! UserID: {newUserId}, Nickname: {res.Nickname}" ,newUserId, res.Nickname);
         }
-        else if (res != null && res.QrStatus == QrLoginStatus.Expired)
+        else if (res is { QrStatus: QrLoginStatus.Expired })
         {
             logger.LogWarning("[Auth] 二维码已过期，请重新获取。");
         }
@@ -114,7 +114,7 @@ public class LoginClient(
             return new RefreshTokenResponse();
         }
 
-        logger.LogInformation($"[Auth] 正在尝试刷新 Token (User: {session.UserId})...");
+        logger.LogInformation("[Auth] 正在尝试刷新 Token (User: {session.UserId})..." ,session.UserId);
 
 
         var json = await rawApi.RefreshTokenAsync(session.UserId, session.Token, session.Dfid);
@@ -131,7 +131,7 @@ public class LoginClient(
             if (!string.IsNullOrEmpty(newToken))
             {
                 sessionManager.UpdateAuth(newUserId, newToken, vipType, "", t1);
-                logger.LogInformation($"Token 刷新成功! UserID: {newUserId}");
+                logger.LogInformation("Token 刷新成功! UserID: {newUserId}" ,newUserId);
             }
         }
 

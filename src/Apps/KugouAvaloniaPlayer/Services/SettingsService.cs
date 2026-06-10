@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using KugouAvaloniaPlayer.Models;
+using Serilog;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -59,10 +60,10 @@ public static class SettingsManager
             Settings = JsonSerializer.Deserialize(json, JsonContext.AppSettings) ?? new AppSettings();
             NormalizeSettings();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             Settings = new AppSettings();
-            //Console.WriteLine(ex.Message);
+            Log.Warning(ex, "加载应用设置失败，已使用默认设置。");
         }
     }
 
@@ -74,9 +75,9 @@ public static class SettingsManager
             AppSqliteStore.SaveValue(StoreScope, StoreKey, json);
             AppSqliteStore.DeleteFileIfExists(SettingsPath);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            //Console.WriteLine($"[SettingsManager] 保存配置文件失败: {ex.Message}");
+            Log.Warning(ex, "保存应用设置失败。");
         }
     }
 
@@ -107,8 +108,9 @@ public static class SettingsManager
             };
             Save();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Log.Warning(ex, "重置应用设置失败。");
         }
     }
 
