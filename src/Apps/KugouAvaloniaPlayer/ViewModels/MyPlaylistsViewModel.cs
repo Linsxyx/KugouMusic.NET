@@ -130,6 +130,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
                         ListId = item.ListId,
                         Count = item.Count,
                         Type = item.IsCollectedAlbum ? PlaylistType.Album : PlaylistType.Online,
+                        UserPlaylistType = item.Type,
                         Cover = string.IsNullOrWhiteSpace(item.Pic)
                             ? item.ListId != 2 ? DefaultCover : LikeCover
                             : item.Pic,

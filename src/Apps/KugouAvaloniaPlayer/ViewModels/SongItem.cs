@@ -155,5 +155,8 @@ public partial class PlaylistItem : ObservableObject
     public partial PlaylistType Type { get; set; }
 
     [ObservableProperty]
+    public partial int UserPlaylistType { get; set; }
+
+    [ObservableProperty]
     public partial bool IsSelected { get; set; }
 }

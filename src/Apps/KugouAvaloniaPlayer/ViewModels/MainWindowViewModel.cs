@@ -53,7 +53,10 @@ public partial class MainWindowViewModel : ObservableObject
     public partial bool IsLoggedIn { get; set; }
 
     [ObservableProperty]
-    public partial bool IsOnlinePlaylistsExpanded { get; set; } = true;
+    public partial bool IsCreatedPlaylistsExpanded { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool IsCollectedPlaylistsExpanded { get; set; }
 
     [ObservableProperty]
     public partial bool IsAlbumPlaylistsExpanded { get; set; }
@@ -277,7 +280,8 @@ public partial class MainWindowViewModel : ObservableObject
     private LoginViewModel LoginViewModel { get; }
     public MyPlaylistsViewModel PlaylistsViewModel { get; }
 
-    public AvaloniaList<PlaylistItem> SidebarOnlinePlaylists { get; } = new();
+    public AvaloniaList<PlaylistItem> SidebarCreatedPlaylists { get; } = new();
+    public AvaloniaList<PlaylistItem> SidebarCollectedPlaylists { get; } = new();
     public AvaloniaList<PlaylistItem> SidebarAlbumPlaylists { get; } = new();
 
     private void OnDesktopLyricWindowStateChanged(bool isOpen)
@@ -291,11 +295,21 @@ public partial class MainWindowViewModel : ObservableObject
         Dispatcher.UIThread.Post(() => IsDesktopLyricEnabled = isOpen);
     }
 
-    partial void OnIsOnlinePlaylistsExpandedChanged(bool value)
+    partial void OnIsCreatedPlaylistsExpandedChanged(bool value)
     {
         if (!value)
             return;
 
+        IsCollectedPlaylistsExpanded = false;
+        IsAlbumPlaylistsExpanded = false;
+    }
+
+    partial void OnIsCollectedPlaylistsExpandedChanged(bool value)
+    {
+        if (!value)
+            return;
+
+        IsCreatedPlaylistsExpanded = false;
         IsAlbumPlaylistsExpanded = false;
     }
 
@@ -304,7 +318,8 @@ public partial class MainWindowViewModel : ObservableObject
         if (!value)
             return;
 
-        IsOnlinePlaylistsExpanded = false;
+        IsCreatedPlaylistsExpanded = false;
+        IsCollectedPlaylistsExpanded = false;
     }
 
     partial void OnActivePageChanged(PageViewModelBase value)
@@ -591,7 +606,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var selected = PlaylistsViewModel.SelectedPlaylist;
 
-        foreach (var item in SidebarOnlinePlaylists)
+        foreach (var item in SidebarCreatedPlaylists)
+            item.IsSelected = IsSameItem(selected, item);
+        foreach (var item in SidebarCollectedPlaylists)
             item.IsSelected = IsSameItem(selected, item);
         foreach (var item in SidebarAlbumPlaylists)
             item.IsSelected = IsSameItem(selected, item);
@@ -613,13 +630,25 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void RefreshSidebarPlaylists()
     {
-        SidebarOnlinePlaylists.Clear();
+        SidebarCreatedPlaylists.Clear();
+        SidebarCollectedPlaylists.Clear();
         SidebarAlbumPlaylists.Clear();
 
-        SidebarOnlinePlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Online));
+        SidebarCreatedPlaylists.AddRange(PlaylistsViewModel.Items.Where(IsCreatedOnlinePlaylist));
+        SidebarCollectedPlaylists.AddRange(PlaylistsViewModel.Items.Where(IsCollectedOnlinePlaylist));
         SidebarAlbumPlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Album));
 
         UpdateSidebarSelection();
+    }
+
+    private static bool IsCreatedOnlinePlaylist(PlaylistItem item)
+    {
+        return item.Type == PlaylistType.Online && item.UserPlaylistType == 0;
+    }
+
+    private static bool IsCollectedOnlinePlaylist(PlaylistItem item)
+    {
+        return item.Type == PlaylistType.Online && item.UserPlaylistType != 0;
     }
 
     [RelayCommand]

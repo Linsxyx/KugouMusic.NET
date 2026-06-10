@@ -243,16 +243,41 @@
 
                     <StackPanel Spacing="6"
                                 MaxHeight="430">
-                        <ToggleButton Name="OnlinePlaylistsHeader"
+                        <ToggleButton Name="CreatedPlaylistsHeader"
                                       Classes="SidebarSectionHeader"
-                                      Content="我的歌单"
-                                      IsChecked="{Binding IsOnlinePlaylistsExpanded, Mode=TwoWay}" />
+                                      Content="创建的歌单"
+                                      IsChecked="{Binding IsCreatedPlaylistsExpanded, Mode=TwoWay}" />
                         <StackPanel Spacing="8"
-                                    IsVisible="{Binding IsOnlinePlaylistsExpanded}">
+                                    IsVisible="{Binding IsCreatedPlaylistsExpanded}">
                                     <ListBox Classes="SidebarPlaylistList"
                                              MaxHeight="320"
                                              SelectionMode="Single"
-                                             ItemsSource="{Binding SidebarOnlinePlaylists}">
+                                             ItemsSource="{Binding SidebarCreatedPlaylists}">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <VirtualizingStackPanel />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="vm:PlaylistItem">
+                                                <localControls:SidebarPlaylistItemControl
+                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                    DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                        </StackPanel>
+
+                        <ToggleButton Name="CollectedPlaylistsHeader"
+                                      Classes="SidebarSectionHeader"
+                                      Content="收藏的歌单"
+                                      IsChecked="{Binding IsCollectedPlaylistsExpanded, Mode=TwoWay}" />
+                        <StackPanel Spacing="8"
+                                    IsVisible="{Binding IsCollectedPlaylistsExpanded}">
+                                    <ListBox Classes="SidebarPlaylistList"
+                                             MaxHeight="320"
+                                             SelectionMode="Single"
+                                             ItemsSource="{Binding SidebarCollectedPlaylists}">
                                         <ListBox.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <VirtualizingStackPanel />
