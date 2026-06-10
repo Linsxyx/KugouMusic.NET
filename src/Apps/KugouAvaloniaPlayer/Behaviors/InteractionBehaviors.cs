@@ -17,6 +17,8 @@ public sealed class InteractionBehaviors
     private static readonly ConditionalWeakTable<Control, EventHandler<VisualTreeAttachmentEventArgs>> DetachedHandlers = new();
     private static readonly ConditionalWeakTable<InputElement, EventHandler<KeyEventArgs>> EnterKeyHandlers = new();
     private static readonly ConditionalWeakTable<InputElement, EventHandler<KeyEventArgs>> KeyDownHandlers = new();
+    private static readonly ConditionalWeakTable<InputElement, EventHandler<KeyEventArgs>> KeyUpHandlers = new();
+    private static readonly ConditionalWeakTable<InputElement, PendingKeyUpState> PendingKeyUps = new();
 
     private static readonly ConditionalWeakTable<InputElement, EventHandler<PointerPressedEventArgs>> PointerPressedHandlers =
         new();
@@ -320,7 +322,10 @@ public sealed class InteractionBehaviors
     private static void OnKeyDownCommandChanged(InputElement element, AvaloniaPropertyChangedEventArgs e)
     {
         if (KeyDownHandlers.Remove(element, out var oldHandler))
-            element.KeyDown -= oldHandler;
+            element.RemoveHandler(InputElement.KeyDownEvent, oldHandler);
+        if (KeyUpHandlers.Remove(element, out var oldKeyUpHandler))
+            element.RemoveHandler(InputElement.KeyUpEvent, oldKeyUpHandler);
+        PendingKeyUps.Remove(element);
 
         if (e.NewValue is not ICommand)
             return;
@@ -334,10 +339,24 @@ public sealed class InteractionBehaviors
             var parameter = new KeyDownCommandContext(GetKeyDownCommandParameter(element), args);
             if (command.CanExecute(parameter))
                 command.Execute(parameter);
+
+            if (args.Handled)
+                PendingKeyUps.GetOrCreateValue(element).Key = args.Key;
+        };
+
+        EventHandler<KeyEventArgs> keyUpHandler = (_, args) =>
+        {
+            if (!PendingKeyUps.TryGetValue(element, out var state) || state.Key != args.Key)
+                return;
+
+            args.Handled = true;
+            PendingKeyUps.Remove(element);
         };
 
         KeyDownHandlers.Add(element, handler);
-        element.KeyDown += handler;
+        KeyUpHandlers.Add(element, keyUpHandler);
+        element.AddHandler(InputElement.KeyDownEvent, handler, RoutingStrategies.Tunnel, true);
+        element.AddHandler(InputElement.KeyUpEvent, keyUpHandler, RoutingStrategies.Tunnel, true);
     }
 
     private static void OnPointerPressedCommandChanged(InputElement element, AvaloniaPropertyChangedEventArgs e)
@@ -438,4 +457,9 @@ public sealed class InteractionBehaviors
     }
 
     public sealed record KeyDownCommandContext(object? Parameter, KeyEventArgs EventArgs);
+
+    private sealed class PendingKeyUpState
+    {
+        public Key Key { get; set; }
+    }
 }
