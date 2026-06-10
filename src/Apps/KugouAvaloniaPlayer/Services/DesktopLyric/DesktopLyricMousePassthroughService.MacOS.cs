@@ -5,7 +5,7 @@ using Avalonia.Controls;
 
 namespace KugouAvaloniaPlayer.Services.DesktopLyric;
 
-public sealed class DesktopLyricMousePassthroughService : IDesktopLyricMousePassthroughService
+public sealed partial class DesktopLyricMousePassthroughService : IDesktopLyricMousePassthroughService
 {
     private static readonly IntPtr SelSetIgnoresMouseEvents = sel_registerName("setIgnoresMouseEvents:");
 
@@ -26,7 +26,7 @@ public sealed class DesktopLyricMousePassthroughService : IDesktopLyricMousePass
     [DllImport("/usr/lib/libobjc.A.dylib")]
     private static extern IntPtr sel_registerName(string name);
 
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
-    private static extern void objc_msgSend_bool(IntPtr receiver, IntPtr selector, [MarshalAs(UnmanagedType.I1)] bool arg1);
+    [LibraryImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static partial void objc_msgSend_bool(IntPtr receiver, IntPtr selector, [MarshalAs(UnmanagedType.I1)] bool arg1);
 }
 #endif

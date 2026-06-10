@@ -53,6 +53,7 @@ public sealed class LoginDialogService(ISukiDialogManager dialogManager, IUiDisp
 public sealed class DesktopLyricWindowService(
     IDesktopLyricViewModelFactory desktopLyricViewModelFactory,
     IDesktopLyricMousePassthroughService desktopLyricMousePassthroughService,
+    IDesktopLyricWindowChromeService desktopLyricWindowChromeService,
     IUiDispatcherService uiDispatcher)
     : IDesktopLyricWindowService
 {
@@ -104,7 +105,11 @@ public sealed class DesktopLyricWindowService(
 
         lyricViewModel.PropertyChanged += onLyricViewModelPropertyChanged;
 
-        lyricWindow.Opened += (_, _) => UpdateHitTestState(lyricWindow, lyricViewModel);
+        lyricWindow.Opened += (_, _) =>
+        {
+            desktopLyricWindowChromeService.HideFromWindowSwitcher(lyricWindow);
+            UpdateHitTestState(lyricWindow, lyricViewModel);
+        };
         lyricWindow.PositionChanged += (_, _) =>
         {
             if (_isSynchronizingWindowPositions) return;
@@ -178,6 +183,7 @@ public sealed class DesktopLyricWindowService(
             if (ReferenceEquals(_lockOverlayWindow, overlayWindow))
                 _lockOverlayWindow = null;
         };
+        overlayWindow.Opened += (_, _) => desktopLyricWindowChromeService.HideFromWindowSwitcher(overlayWindow);
 
         _lockOverlayWindow = overlayWindow;
         overlayWindow.Show();

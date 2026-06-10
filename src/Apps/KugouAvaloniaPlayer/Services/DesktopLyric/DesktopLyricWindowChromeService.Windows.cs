@@ -1,62 +1,32 @@
 #if KUGOU_WINDOWS
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Avalonia.Controls;
 
 namespace KugouAvaloniaPlayer.Services.DesktopLyric;
 
-public sealed partial class DesktopLyricMousePassthroughService : IDesktopLyricMousePassthroughService
+public sealed partial class DesktopLyricWindowChromeService : IDesktopLyricWindowChromeService
 {
     private const int GwlExStyle = -20;
-    private const long WsExTransparent = 0x20;
-    private const long WsExLayered = 0x80000;
+    private const long WsExToolWindow = 0x80;
+    private const long WsExAppWindow = 0x40000;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
     private const uint SwpNoZOrder = 0x0004;
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpFrameChanged = 0x0020;
 
-    private readonly Dictionary<IntPtr, IntPtr> _originalExStyles = new();
-
-    public bool IsSupported => true;
-    public bool SupportsSelectiveHitTesting => false;
-
-    public void Apply(Window window, DesktopLyricHitTestLayout layout)
+    public void HideFromWindowSwitcher(Window window)
     {
         var platformHandle = window.TryGetPlatformHandle();
-        if (platformHandle == null) return;
+        if (platformHandle == null || platformHandle.Handle == IntPtr.Zero) return;
 
         var hwnd = platformHandle.Handle;
         var currentStyle = GetWindowLongPtr(hwnd, GwlExStyle);
-        var enabled = layout.Mode != DesktopLyricHitTestMode.FullWindow;
+        var nextStyle = new IntPtr((currentStyle.ToInt64() | WsExToolWindow) & ~WsExAppWindow);
+        if (nextStyle == currentStyle) return;
 
-        if (enabled)
-        {
-            if (!_originalExStyles.ContainsKey(hwnd))
-                _originalExStyles[hwnd] = currentStyle;
-
-            var nextStyle = new IntPtr(currentStyle.ToInt64() | WsExLayered | WsExTransparent);
-            if (nextStyle == currentStyle) return;
-
-            SetWindowLongPtr(hwnd, GwlExStyle, nextStyle);
-            RefreshWindowStyle(hwnd);
-            return;
-        }
-
-        if (_originalExStyles.Remove(hwnd, out var originalStyle))
-        {
-            if (originalStyle == currentStyle) return;
-
-            SetWindowLongPtr(hwnd, GwlExStyle, originalStyle);
-            RefreshWindowStyle(hwnd);
-            return;
-        }
-
-        var fallbackStyle = new IntPtr(currentStyle.ToInt64() & ~WsExTransparent);
-        if (fallbackStyle == currentStyle) return;
-
-        SetWindowLongPtr(hwnd, GwlExStyle, fallbackStyle);
+        SetWindowLongPtr(hwnd, GwlExStyle, nextStyle);
         RefreshWindowStyle(hwnd);
     }
 
@@ -74,14 +44,12 @@ public sealed partial class DesktopLyricMousePassthroughService : IDesktopLyricM
 
     private static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex)
     {
-        if (IntPtr.Size == 8) return GetWindowLongPtr64(hWnd, nIndex);
-        return new IntPtr(GetWindowLong32(hWnd, nIndex));
+        return IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : new IntPtr(GetWindowLong32(hWnd, nIndex));
     }
 
     private static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr newLong)
     {
-        if (IntPtr.Size == 8) return SetWindowLongPtr64(hWnd, nIndex, newLong);
-        return new IntPtr(SetWindowLong32(hWnd, nIndex, newLong.ToInt32()));
+        return IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, newLong) : new IntPtr(SetWindowLong32(hWnd, nIndex, newLong.ToInt32()));
     }
 
     [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]

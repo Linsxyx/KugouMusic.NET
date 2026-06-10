@@ -5,7 +5,7 @@ using Avalonia.Controls;
 
 namespace KugouAvaloniaPlayer.Services.DesktopLyric;
 
-public sealed class DesktopLyricMousePassthroughService()
+public sealed partial class DesktopLyricMousePassthroughService()
     : IDesktopLyricMousePassthroughService
 {
     private const int ShapeInput = 2;
@@ -116,17 +116,17 @@ public sealed class DesktopLyricMousePassthroughService()
         }
     }
 
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XOpenDisplay(IntPtr displayName);
+    [LibraryImport("libX11.so.6")]
+    private static partial IntPtr XOpenDisplay(IntPtr displayName);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XCloseDisplay(IntPtr display);
+    [LibraryImport("libX11.so.6")]
+    private static partial int XCloseDisplay(IntPtr display);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XFlush(IntPtr display);
+    [LibraryImport("libX11.so.6")]
+    private static partial int XFlush(IntPtr display);
 
-    [DllImport("libXext.so.6")]
-    private static extern void XShapeCombineRectangles(
+    [LibraryImport("libXext.so.6")]
+    private static partial void XShapeCombineRectangles(
         IntPtr display,
         IntPtr window,
         int shapeKind,

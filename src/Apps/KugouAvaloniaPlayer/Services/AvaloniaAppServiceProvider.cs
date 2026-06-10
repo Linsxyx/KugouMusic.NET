@@ -36,6 +36,7 @@ namespace KugouAvaloniaPlayer.Services;
 [Singleton<INavigationService, NavigationService>]
 [Singleton<IMainWindowService, MainWindowService>]
 [Singleton<IDesktopLyricMousePassthroughService, DesktopLyricMousePassthroughService>]
+[Singleton<IDesktopLyricWindowChromeService, DesktopLyricWindowChromeService>]
 [Singleton<IDesktopLyricWindowService, DesktopLyricWindowService>]
 [Singleton<IGlobalShortcutService, GlobalShortcutServiceImpl>]
 [Singleton<ISystemMediaSessionService, SystemMediaSessionServiceImpl>]
@@ -71,13 +72,13 @@ namespace KugouAvaloniaPlayer.Services;
 [Singleton<PlayerViewModel>]
 public interface IAvaloniaAppServiceModule;
 
-[ServiceProvider(RootServices = new[]
-{
+[ServiceProvider(RootServices =
+[
     typeof(MainWindowViewModel),
     typeof(PlayerViewModel),
     typeof(IGlobalShortcutService),
     typeof(ISystemMediaSessionService)
-})]
+])]
 [Import<IKuGouServiceModule>]
 [Import<IAvaloniaAppServiceModule>]
 [Singleton<ISessionPersistence>(Instance = nameof(SessionPersistence))]
@@ -134,7 +135,7 @@ public sealed partial class AvaloniaAppServiceProvider
         return new UiDispatcherService(UiDispatcher);
     }
 
-    public IKgTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
+    public static IKgTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
     {
         var primaryHandler = new HttpClientHandler
         {

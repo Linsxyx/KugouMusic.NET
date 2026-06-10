@@ -252,40 +252,40 @@ public sealed partial class GlobalShortcutService
         return 0;
     }
 
-    [DllImport("libX11.so.6")]
-    private static extern int XInitThreads();
+    [LibraryImport("libX11.so.6")]
+    private static partial int XInitThreads();
 
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XOpenDisplay(IntPtr display_name);
+    [LibraryImport("libX11.so.6")]
+    private static partial IntPtr XOpenDisplay(IntPtr display_name);
 
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XDefaultRootWindow(IntPtr display);
+    [LibraryImport("libX11.so.6")]
+    private static partial IntPtr XDefaultRootWindow(IntPtr display);
 
     [DllImport("libX11.so.6")]
     private static extern void XGrabKey(IntPtr display, int keycode, uint modifiers, IntPtr grab_window,
         bool owner_events,
         int pointer_mode, int keyboard_mode);
 
-    [DllImport("libX11.so.6")]
-    private static extern void XUngrabKey(IntPtr display, int keycode, uint modifiers, IntPtr grab_window);
+    [LibraryImport("libX11.so.6")]
+    private static partial void XUngrabKey(IntPtr display, int keycode, uint modifiers, IntPtr grab_window);
 
-    [DllImport("libX11.so.6")]
-    private static extern int XPending(IntPtr display);
+    [LibraryImport("libX11.so.6")]
+    private static partial int XPending(IntPtr display);
 
-    [DllImport("libX11.so.6")]
-    private static extern void XNextEvent(IntPtr display, out XEvent xevent);
+    [LibraryImport("libX11.so.6")]
+    private static partial void XNextEvent(IntPtr display, out XEvent xevent);
 
-    [DllImport("libX11.so.6")]
-    private static extern byte XKeysymToKeycode(IntPtr display, IntPtr keysym);
+    [LibraryImport("libX11.so.6")]
+    private static partial byte XKeysymToKeycode(IntPtr display, IntPtr keysym);
 
-    [DllImport("libX11.so.6")]
-    private static extern void XFlush(IntPtr display);
+    [LibraryImport("libX11.so.6")]
+    private static partial void XFlush(IntPtr display);
 
     [DllImport("libX11.so.6")]
     private static extern void XSync(IntPtr display, bool discard);
 
-    [DllImport("libX11.so.6")]
-    private static extern IntPtr XSetErrorHandler(XErrorHandler handler);
+    [LibraryImport("libX11.so.6")]
+    private static partial IntPtr XSetErrorHandler(XErrorHandler handler);
 
     private sealed record LinuxShortcutRegistration(byte KeyCode, uint BaseModifiers);
 

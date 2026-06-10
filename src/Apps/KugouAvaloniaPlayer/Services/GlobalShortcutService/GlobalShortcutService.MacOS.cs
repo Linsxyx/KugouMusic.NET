@@ -213,11 +213,11 @@ public sealed partial class GlobalShortcutService
 
     private delegate int EventHandlerDelegate(IntPtr nextHandler, IntPtr theEvent, IntPtr userData);
 
-    [DllImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
-    private static extern IntPtr GetApplicationEventTarget();
+    [LibraryImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
+    private static partial IntPtr GetApplicationEventTarget();
 
-    [DllImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
-    private static extern int InstallEventHandler(
+    [LibraryImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
+    private static partial int InstallEventHandler(
         IntPtr target,
         EventHandlerDelegate handler,
         uint numTypes,
@@ -225,8 +225,8 @@ public sealed partial class GlobalShortcutService
         IntPtr userData,
         out IntPtr handlerRef);
 
-    [DllImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
-    private static extern int RegisterEventHotKey(
+    [LibraryImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
+    private static partial int RegisterEventHotKey(
         uint inHotKeyCode,
         uint inHotKeyModifiers,
         ref EventHotKeyId inHotKeyId,
@@ -234,11 +234,11 @@ public sealed partial class GlobalShortcutService
         uint inOptions,
         out IntPtr outRef);
 
-    [DllImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
-    private static extern int UnregisterEventHotKey(IntPtr inHotKey);
+    [LibraryImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
+    private static partial int UnregisterEventHotKey(IntPtr inHotKey);
 
-    [DllImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
-    private static extern int GetEventParameter(
+    [LibraryImport("/System/Library/Frameworks/Carbon.framework/Carbon")]
+    private static partial int GetEventParameter(
         IntPtr inEvent,
         uint inName,
         uint inDesiredType,
