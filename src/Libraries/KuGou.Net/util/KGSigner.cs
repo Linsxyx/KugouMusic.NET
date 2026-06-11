@@ -1,4 +1,5 @@
 using System.Text;
+using ZLinq;
 
 namespace KuGou.Net.util;
 
@@ -20,7 +21,7 @@ public static class KgSigner
 
         sb.Append(salt);
 
-        foreach (var kv in queryParams.OrderBy(x => x.Key, StringComparer.Ordinal))
+        foreach (var kv in queryParams.AsValueEnumerable().OrderBy(x => x.Key, StringComparer.Ordinal))
         {
             sb.Append(kv.Key);
             sb.Append('=');
@@ -54,7 +55,7 @@ public static class KgSigner
 
         sb.Append(webSalt);
 
-        foreach (var kv in paramsDict.OrderBy(x => x.Key, StringComparer.Ordinal))
+        foreach (var kv in paramsDict.AsValueEnumerable().OrderBy(x => x.Key, StringComparer.Ordinal))
         {
             sb.Append(kv.Key);
             sb.Append('=');

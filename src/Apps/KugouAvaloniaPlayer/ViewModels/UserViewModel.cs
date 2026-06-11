@@ -2,7 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using ZLinq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia.Input;
@@ -971,7 +971,7 @@ public partial class UserViewModel : PageViewModelBase
         if (!_availableLyricFonts.Contains(trimmed))
             return null;
 
-        return LyricFontFamilyOptions.FirstOrDefault(x =>
+        return LyricFontFamilyOptions.AsValueEnumerable().FirstOrDefault(x =>
             string.Equals(x, trimmed, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -1034,7 +1034,7 @@ public partial class UserViewModel : PageViewModelBase
     private static string[] LoadSystemFontFamilies()
     {
         return FontManager.Current.SystemFonts
-            .Select(f => f.Name)
+            .AsValueEnumerable().Select(f => f.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
@@ -1163,7 +1163,7 @@ public partial class UserViewModel : PageViewModelBase
         }
 
         var gestureText = GlobalShortcutParser.Format(gesture);
-        var conflict = ShortcutItems.FirstOrDefault(x =>
+        var conflict = ShortcutItems.AsValueEnumerable().FirstOrDefault(x =>
             x != item &&
             string.Equals(
                 GlobalShortcutParser.NormalizeText(SettingsManager.Settings.GlobalShortcuts.GetShortcut(x.Action)),

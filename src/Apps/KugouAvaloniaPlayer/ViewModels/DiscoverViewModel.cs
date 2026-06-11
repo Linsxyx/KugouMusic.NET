@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
@@ -137,7 +137,7 @@ public partial class DiscoverViewModel : PageViewModelBase
                 };
 
                 var subTags = category.Children
-                    .OrderBy(x => x.Sort)
+                    .AsValueEnumerable().OrderBy(x => x.Sort)
                     .Select((x, idx) => new PlaylistTag
                     {
                         Index = idx,
@@ -146,7 +146,7 @@ public partial class DiscoverViewModel : PageViewModelBase
                     })
                     .ToList();
 
-                if (subTags.Any())
+                if (subTags.Count != 0)
                     group.Son.AddRange(subTags);
 
                 Categories.Add(group);
@@ -262,7 +262,7 @@ public partial class DiscoverViewModel : PageViewModelBase
             if (result?.Playlists == null || result.Playlists.Count == 0)
                 return;
 
-            var items = result.Playlists.Select(MapDiscoverPlaylist).ToList();
+            var items = result.Playlists.AsValueEnumerable().Select(MapDiscoverPlaylist).ToList();
             Playlists.AddRange(items);
         }
         catch (Exception ex)
@@ -367,10 +367,10 @@ public partial class DiscoverViewModel : PageViewModelBase
             if (songs.Count < 100)
                 _hasMoreSongs = false;
 
-            var songItems = songs.Select(s => new SongItem
+            var songItems = songs.AsValueEnumerable().Select(s => new SongItem
             {
                 Name = s.Name,
-                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
                 Hash = s.Hash,
                 AlbumId = s.AlbumId,
                 AlbumName = s.Album?.Name ?? "",

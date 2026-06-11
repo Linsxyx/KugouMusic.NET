@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
+using ZLinq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -55,7 +55,7 @@ public sealed class JellyfinClient(IHttpClientFactory httpClientFactory, ILogger
         var payload = await ReadItemsResponseAsync(response, cancellationToken);
 
         return payload.Items
-            .Where(x => string.Equals(x.CollectionType, "music", StringComparison.OrdinalIgnoreCase))
+            .AsValueEnumerable().Where(x => string.Equals(x.CollectionType, "music", StringComparison.OrdinalIgnoreCase))
             .Select(x => new JellyfinLibrary(x.Id ?? string.Empty, x.Name ?? "Jellyfin 音乐库"))
             .Where(x => !string.IsNullOrWhiteSpace(x.Id))
             .ToList();
@@ -222,7 +222,7 @@ public sealed class JellyfinClient(IHttpClientFactory httpClientFactory, ILogger
     private static string ResolveArtist(JellyfinBaseItemDto item)
     {
         if (item.Artists is { Count: > 0 })
-            return string.Join(", ", item.Artists.Where(x => !string.IsNullOrWhiteSpace(x)));
+            return string.Join(", ", item.Artists.AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x)).ToArray());
 
         return string.IsNullOrWhiteSpace(item.AlbumArtist) ? "未知艺术家" : item.AlbumArtist!;
     }

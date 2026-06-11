@@ -125,7 +125,8 @@ public partial class App : Application
             cacheFolder,
             TimeSpan.FromDays(7),
             maxMemoryEntries: 200,
-            maxMemoryBytes: 32L * 1024 * 1024);
+            maxMemoryBytes: 32L * 1024 * 1024,
+            maxDiskBytes: 256L * 1024 * 1024);
 
         ImageLoader.AsyncImageLoader = _imageLoader;
 

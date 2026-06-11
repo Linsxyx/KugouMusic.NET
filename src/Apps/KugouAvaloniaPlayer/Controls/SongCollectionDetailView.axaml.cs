@@ -1,5 +1,5 @@
 using System.Collections;
-using System.Linq;
+using ZLinq;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
@@ -440,14 +440,14 @@ public partial class SongCollectionDetailView : UserControl
             return;
         }
 
-        var firstSong = Songs?.OfType<SongItem>().FirstOrDefault();
+        var firstSong = Songs?.AsValueEnumerable().OfType<SongItem>().FirstOrDefault();
         if (firstSong?.PlayCommand.CanExecute(null) == true)
             firstSong.PlayCommand.Execute(null);
     }
 
     private void AddLoadedSongsToQueue()
     {
-        var loadedSongs = Songs?.OfType<SongItem>().ToList() ?? [];
+        var loadedSongs = Songs?.AsValueEnumerable().OfType<SongItem>().ToList() ?? [];
         WeakReferenceMessenger.Default.Send(new AddLoadedSongsToQueueMessage(loadedSongs));
     }
 

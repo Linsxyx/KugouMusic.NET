@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using ZLinq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -269,7 +269,7 @@ public partial class FavoritePlaylistService(
                 return;
             }
 
-            var onlinePlaylists = playlists.Playlists.Where(p => !string.IsNullOrEmpty(p.ListCreateId) && p.Type == 0).ToList();
+            var onlinePlaylists = playlists.Playlists.AsValueEnumerable().Where(p => !string.IsNullOrEmpty(p.ListCreateId) && p.Type == 0).ToList();
             if (onlinePlaylists.Count == 0)
             {
                 ShowToast(NotificationType.Warning, "提示", "请先创建歌单");
@@ -280,7 +280,7 @@ public partial class FavoritePlaylistService(
                 song.Name,
                 song.Singer,
                 song.Cover,
-                onlinePlaylists.Select(AddToPlaylistDialogViewModel.ToPlaylistDialogItem),
+                onlinePlaylists.AsValueEnumerable().Select(AddToPlaylistDialogViewModel.ToPlaylistDialogItem).ToArray(),
                 userClient.GetPlaylistsAsync,
                 playlists.ListCount > playlists.Playlists.Count,
                 async selectedPlaylist =>
@@ -319,7 +319,7 @@ public partial class FavoritePlaylistService(
     {
         var cache = EnsureCacheForCurrentUser();
         var existing =
-            cache.Items.FirstOrDefault(x => string.Equals(x.Hash, song.Hash, StringComparison.OrdinalIgnoreCase));
+            cache.Items.AsValueEnumerable().FirstOrDefault(x => string.Equals(x.Hash, song.Hash, StringComparison.OrdinalIgnoreCase));
         if (existing != null)
         {
             existing.FileId = song.FileId == 0 ? existing.FileId : (int)song.FileId;
@@ -328,7 +328,7 @@ public partial class FavoritePlaylistService(
             existing.AlbumId = string.IsNullOrWhiteSpace(song.AlbumId) ? existing.AlbumId : song.AlbumId;
             existing.Cover = string.IsNullOrWhiteSpace(song.Cover) ? existing.Cover : song.Cover;
             existing.DurationSeconds = song.DurationSeconds > 0 ? song.DurationSeconds : existing.DurationSeconds;
-            existing.Singers = song.Singers?.ToList() ?? existing.Singers;
+            existing.Singers = song.Singers?.AsValueEnumerable().ToList() ?? existing.Singers;
             return;
         }
 
@@ -341,7 +341,7 @@ public partial class FavoritePlaylistService(
             AlbumId = song.AlbumId,
             Cover = song.Cover,
             DurationSeconds = song.DurationSeconds,
-            Singers = song.Singers?.ToList() ?? new List<SingerLite>()
+            Singers = song.Singers?.AsValueEnumerable().ToList() ?? new List<SingerLite>()
         });
     }
 
@@ -352,7 +352,7 @@ public partial class FavoritePlaylistService(
 
         lock (_likedHashes)
         {
-            var index = cache.Items.ToDictionary(x => x.Hash.ToLowerInvariant(), x => x);
+            var index = cache.Items.AsValueEnumerable().ToDictionary(x => x.Hash.ToLowerInvariant(), x => x);
             foreach (var hash in _likedHashes)
                 if (!index.ContainsKey(hash))
                     cache.Items.Add(new LikeSongCacheItem
@@ -362,7 +362,7 @@ public partial class FavoritePlaylistService(
                     });
 
             cache.Items = cache.Items
-                .Where(x => !string.IsNullOrWhiteSpace(x.Hash) && _likedHashes.Contains(x.Hash.ToLowerInvariant()))
+                .AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x.Hash) && _likedHashes.Contains(x.Hash.ToLowerInvariant()))
                 .ToList();
         }
 
@@ -446,13 +446,13 @@ public partial class FavoritePlaylistService(
             PlaylistIsDefault = likePlaylist.IsDefault,
             PlaylistCreateId = likePlaylist.ListCreateId,
             PlaylistCount = likePlaylist.Count,
-            Items = songs.Where(s => !string.IsNullOrWhiteSpace(s.Hash))
+            Items = songs.AsValueEnumerable().Where(s => !string.IsNullOrWhiteSpace(s.Hash))
                 .Select(s => new LikeSongCacheItem
                 {
                     Hash = s.Hash,
                     FileId = s.FileId,
                     Name = s.Name,
-                    Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                    Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
                     Singers = s.Singers,
                     AlbumId = s.AlbumId,
                     Cover = s.Cover,
@@ -524,7 +524,7 @@ public partial class FavoritePlaylistService(
             Cover = "avares://KugouAvaloniaPlayer/Assets/LikeList.jpg"
         };
 
-        var songs = cache.Items.Where(x => !string.IsNullOrWhiteSpace(x.Hash)).Select(x => new SongItem
+        var songs = cache.Items.AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x.Hash)).Select(x => new SongItem
         {
             Name = string.IsNullOrWhiteSpace(x.Name) ? "未知" : x.Name,
             Singer = string.IsNullOrWhiteSpace(x.Singer) ? "未知" : x.Singer,
@@ -544,7 +544,7 @@ public partial class FavoritePlaylistService(
             Songs = songs,
             UpdatedAt = cache.UpdatedAt,
             Source = cache.Source,
-            IsCompactCache = cache.Items.Any(x => string.IsNullOrWhiteSpace(x.Name)),
+            IsCompactCache = cache.Items.AsValueEnumerable().Any(x => string.IsNullOrWhiteSpace(x.Name)),
             UserId = cache.UserId
         };
     }
@@ -658,10 +658,10 @@ public partial class FavoritePlaylistService(
 
     private static UserPlaylistItem? ResolveLikePlaylist(List<UserPlaylistItem> playlists)
     {
-        return playlists.FirstOrDefault(x => x.ListId == 2)
-               ?? playlists.FirstOrDefault(x => x.IsDefault == 2)
-               ?? playlists.FirstOrDefault(x => x.Name.Contains("喜欢", StringComparison.OrdinalIgnoreCase))
-               ?? playlists.FirstOrDefault(x => x.Name.Contains("我喜欢", StringComparison.OrdinalIgnoreCase));
+        return playlists.AsValueEnumerable().FirstOrDefault(x => x.ListId == 2)
+               ?? playlists.AsValueEnumerable().FirstOrDefault(x => x.IsDefault == 2)
+               ?? playlists.AsValueEnumerable().FirstOrDefault(x => x.Name.Contains("喜欢", StringComparison.OrdinalIgnoreCase))
+               ?? playlists.AsValueEnumerable().FirstOrDefault(x => x.Name.Contains("我喜欢", StringComparison.OrdinalIgnoreCase));
     }
 }
 

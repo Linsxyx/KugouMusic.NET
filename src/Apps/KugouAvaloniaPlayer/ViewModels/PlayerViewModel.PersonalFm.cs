@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls.Notifications;
@@ -129,7 +129,7 @@ public partial class PlayerViewModel
 
     private Task PlayPersonalFmRequestAsync(PersonalFmPlaybackRequest request)
     {
-        return PlaySongAsync(request.Song, request.ContextList as IList<SongItem> ?? request.ContextList.ToList(), true);
+        return PlaySongAsync(request.Song, request.ContextList as IList<SongItem> ?? request.ContextList.AsValueEnumerable().ToList(), true);
     }
 
     private void OnPersonalFmServiceStateChanged()

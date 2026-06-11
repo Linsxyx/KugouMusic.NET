@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using KuGou.Net.Abstractions.Models;
@@ -86,7 +86,7 @@ public sealed class ExternalPlaylistImportService(
             if (target == null)
                 return new ExternalPlaylistImportResult { ErrorMessage = "创建成功，但未找到目标歌单，请稍后重试。" };
 
-            var sourceSongNames = parseResult.SongNames.AsEnumerable().Reverse().ToList();
+            var sourceSongNames = parseResult.SongNames.AsValueEnumerable().Reverse().ToList();
             var total = sourceSongNames.Count;
             var matchedSongs =
                 new List<(string SourceName, string Name, string Hash, string AlbumId, string MixSongId)>();
@@ -108,7 +108,7 @@ public sealed class ExternalPlaylistImportService(
                 try
                 {
                     var searchResult = await searchClient.SearchAsync(songName);
-                    var first = searchResult.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.Hash));
+                    var first = searchResult.AsValueEnumerable().FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.Hash));
                     if (first == null)
                     {
                         failedNames.Add(songName);
@@ -150,12 +150,14 @@ public sealed class ExternalPlaylistImportService(
                 Message = $"正在写入歌单 0/{matchedSongs.Count}"
             });
 
-            foreach (var chunk in matchedSongs.Chunk(SongBatchSize))
+            var chunks = matchedSongs.AsValueEnumerable().Chunk(SongBatchSize).ToList();
+
+            foreach (var chunk in chunks)
             {
                 try
                 {
                     var payload = chunk
-                        .Select(x => (x.Name, x.Hash, x.AlbumId, x.MixSongId))
+                        .AsValueEnumerable().Select(x => (x.Name, x.Hash, x.AlbumId, x.MixSongId))
                         .ToList();
 
                     var addResult = await playlistClient.AddSongsAsync(target.ListId.ToString(), payload);
@@ -164,7 +166,7 @@ public sealed class ExternalPlaylistImportService(
                 catch (Exception ex)
                 {
                     logger.LogWarning(ex, "批量添加歌曲失败。 targetListId={ListId}", target.ListId);
-                    failedNames.AddRange(chunk.Select(x => x.SourceName));
+                    failedNames.AddRange(chunk.AsValueEnumerable().Select(x => x.SourceName).ToArray());
                 }
 
                 addProcessed += chunk.Length;
@@ -182,7 +184,7 @@ public sealed class ExternalPlaylistImportService(
                 Total = total,
                 Matched = matchedSongs.Count,
                 Imported = imported,
-                FailedNames = failedNames.Distinct(StringComparer.Ordinal).ToList()
+                FailedNames = failedNames.AsValueEnumerable().Distinct(StringComparer.Ordinal).ToList()
             };
         }
         catch (Exception ex)
@@ -205,8 +207,8 @@ public sealed class ExternalPlaylistImportService(
 
             var playlists = await userClient.GetPlaylistsAsync();
             var target = playlists?.Playlists?
-                .Where(x => !string.IsNullOrWhiteSpace(x.ListCreateId)
-                            && string.Equals(x.Name, targetPlaylistName, StringComparison.Ordinal))
+                .AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x.ListCreateId)
+                                                && string.Equals(x.Name, targetPlaylistName, StringComparison.Ordinal))
                 .OrderByDescending(x => x.ListId)
                 .FirstOrDefault();
 

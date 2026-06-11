@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Linq;
+using ZLinq;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
@@ -1057,8 +1057,8 @@ public class LyricView : ItemsControl
         {
             null => [],
             IReadOnlyList<LyricLine> readOnlyList => readOnlyList,
-            IList<LyricLine> list => list.ToList(),
-            var enumerable => enumerable.ToList()
+            IList<LyricLine> list => list.AsValueEnumerable().ToList(),
+            var enumerable => enumerable.AsValueEnumerable().ToList()
         };
     }
 
@@ -1431,7 +1431,7 @@ public class LyricView : ItemsControl
 
     private void TrimStaleStates(HashSet<Control> activeContainers)
     {
-        var stale = _springStates.Keys.Where(x => !activeContainers.Contains(x)).ToArray();
+        var stale = _springStates.Keys.AsValueEnumerable().Where(x => !activeContainers.Contains(x)).ToArray();
         foreach (var container in stale)
             _springStates.Remove(container);
     }

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using KuGou.Net.Abstractions.Models;
@@ -32,7 +32,7 @@ public sealed class PersonalFmService(
     public bool IsActive => _session is { IsActive: true, CurrentSong: not null };
     public PersonalFmMode CurrentMode => _session.Mode;
     public PersonalFmSongPoolId CurrentSongPoolId => _session.SongPoolId;
-    public SongItem? UpcomingSong => _session.UpcomingSongs.FirstOrDefault();
+    public SongItem? UpcomingSong => _session.UpcomingSongs.AsValueEnumerable().FirstOrDefault();
 
     public IReadOnlyList<SongItem> GetDisplaySongs(int limit = 5)
     {
@@ -65,9 +65,9 @@ public sealed class PersonalFmService(
             : PersonalFmPresentation.ParseMode(response.Mode);
 
         return response.Songs
-            .Select(MapPersonalFmSong)
+            .AsValueEnumerable().Select(MapPersonalFmSong)
             .GroupBy(BuildSongIdentityKey)
-            .Select(group => group.First())
+            .Select(group => group.AsValueEnumerable().First())
             .Take(5)
             .ToList();
     }
@@ -85,12 +85,12 @@ public sealed class PersonalFmService(
         try
         {
             var preparedSongs = songs
-                .Select(PreparePersonalFmSong)
+                .AsValueEnumerable().Select(PreparePersonalFmSong)
                 .ToList();
 
             var targetSong = startSong == null
                 ? preparedSongs[0]
-                : preparedSongs.FirstOrDefault(song => BuildSongIdentityKey(song) == BuildSongIdentityKey(startSong)) ??
+                : preparedSongs.AsValueEnumerable().FirstOrDefault(song => BuildSongIdentityKey(song) == BuildSongIdentityKey(startSong)) ??
                   preparedSongs[0];
 
             _session.Reset(mode, songPoolId, preparedSongs, targetSong);
@@ -273,16 +273,16 @@ public sealed class PersonalFmService(
             if (response?.Songs == null || response.Songs.Count == 0)
                 return;
 
-            foreach (var song in response.Songs.Select(MapPersonalFmSong))
+            foreach (var song in response.Songs.AsValueEnumerable().Select(MapPersonalFmSong))
             {
                 var songKey = BuildSongIdentityKey(song);
                 if (_session.CurrentSong != null && BuildSongIdentityKey(_session.CurrentSong) == songKey)
                     continue;
 
-                if (_session.HistorySongs.Any(item => BuildSongIdentityKey(item) == songKey))
+                if (_session.HistorySongs.AsValueEnumerable().Any(item => BuildSongIdentityKey(item) == songKey))
                     continue;
 
-                if (_session.UpcomingSongs.Any(item => BuildSongIdentityKey(item) == songKey))
+                if (_session.UpcomingSongs.AsValueEnumerable().Any(item => BuildSongIdentityKey(item) == songKey))
                     continue;
 
                 _session.UpcomingSongs.Add(song);

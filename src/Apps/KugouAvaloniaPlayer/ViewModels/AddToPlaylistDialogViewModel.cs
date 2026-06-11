@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,7 +47,7 @@ public partial class AddToPlaylistDialogViewModel : ObservableObject
         _loadPlaylistsPageAsync = loadPlaylistsPageAsync;
         _confirmAction = confirmAction;
         _cancelAction = cancelAction;
-        _allPlaylists = playlists.ToList();
+        _allPlaylists = playlists.AsValueEnumerable().ToList();
         _hasMorePlaylists = hasMorePlaylists;
 
         foreach (var playlist in _allPlaylists)
@@ -139,7 +139,7 @@ public partial class AddToPlaylistDialogViewModel : ObservableObject
             }
 
             var pageItems = response.Playlists
-                .Where(p => !string.IsNullOrEmpty(p.ListCreateId) && p.Type == 0)
+                .AsValueEnumerable().Where(p => !string.IsNullOrEmpty(p.ListCreateId) && p.Type == 0)
                 .Select(ToPlaylistDialogItem)
                 .ToList();
 
@@ -165,8 +165,8 @@ public partial class AddToPlaylistDialogViewModel : ObservableObject
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
-            source = source.Where(x =>
-                x.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+            source = source.AsValueEnumerable().Where(x =>
+                x.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)).ToArray();
         }
 
         FilteredPlaylists.Clear();

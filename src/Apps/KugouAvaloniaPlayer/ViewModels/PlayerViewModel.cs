@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using AvaloniaLyrics;
@@ -205,7 +205,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         add => _visualizerService.Updated += value;
         remove => _visualizerService.Updated -= value;
     }
-    public string[] QualityOptions { get; } = AudioQuality.Ordered.ToArray();
+    public string[] QualityOptions { get; } = AudioQuality.Ordered.AsValueEnumerable().ToArray();
     public int DisplayPlaybackQueueCount => DisplayPlaybackQueue.Count;
     public bool HasDisplayPlaybackQueue => DisplayPlaybackQueue.Count > 0;
     public TimeSpan CurrentPosition => TimeSpan.FromSeconds(CurrentPositionSeconds);

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
@@ -206,7 +206,7 @@ public partial class SingerViewModel : PageViewModelBase
                 _hasMoreSongs = false;
 
             var songItems = result.Songs
-                .Where(item => !string.IsNullOrEmpty(item.Hash))
+                .AsValueEnumerable().Where(item => !string.IsNullOrEmpty(item.Hash))
                 .Select(item => new SongItem
                 {
                     Name = item.Name,
@@ -219,7 +219,7 @@ public partial class SingerViewModel : PageViewModelBase
                 })
                 .ToList();
 
-            if (songItems.Any())
+            if (songItems.AsValueEnumerable().Any())
                 Songs.AddRange(songItems);
 
             return true;
@@ -286,7 +286,7 @@ public partial class SingerViewModel : PageViewModelBase
                 _hasMoreAlbums = false;
 
             var albums = result.Albums
-                .Where(x => x.AlbumId > 0 && !string.IsNullOrWhiteSpace(x.AlbumName))
+                .AsValueEnumerable().Where(x => x.AlbumId > 0 && !string.IsNullOrWhiteSpace(x.AlbumName))
                 .Select(ToSingerAlbumItem)
                 .ToList();
 
@@ -361,10 +361,10 @@ public partial class SingerViewModel : PageViewModelBase
             if (songs == null)
                 return;
 
-            var songItems = songs.Select(s =>
+            var songItems = songs.AsValueEnumerable().Select(s =>
             {
                 var singerName = s.Singers.Count > 0
-                    ? string.Join("、", s.Singers.Select(x => x.Name))
+                    ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray())
                     : SingerName;
 
                 return new SongItem
@@ -386,7 +386,7 @@ public partial class SingerViewModel : PageViewModelBase
             if (_currentAlbumAuthorId <= 0)
             {
                 var authorId = songItems
-                    .SelectMany(x => x.Singers)
+                    .AsValueEnumerable().SelectMany(x => x.Singers)
                     .Select(x => x.Id)
                     .FirstOrDefault(x => x > 0);
                 if (authorId > 0)
@@ -457,7 +457,7 @@ public partial class SingerViewModel : PageViewModelBase
     private static SingerAlbumItem ToSingerAlbumItem(ArtistAlbumItem item)
     {
         var author = ResolveAlbumAuthorName(item);
-        var authorId = item.Authors.Select(x => x.AuthorId).FirstOrDefault(x => x > 0);
+        var authorId = item.Authors.AsValueEnumerable().Select(x => x.AuthorId).FirstOrDefault(x => x > 0);
         return new SingerAlbumItem(
             item.AlbumId,
             item.AlbumName,
@@ -479,7 +479,7 @@ public partial class SingerViewModel : PageViewModelBase
     private static string ResolveAlbumAuthorName(ArtistAlbumItem item)
     {
         return string.IsNullOrWhiteSpace(item.AuthorName)
-            ? string.Join("、", item.Authors.Select(x => x.AuthorName).Where(x => !string.IsNullOrWhiteSpace(x)))
+            ? string.Join("、", item.Authors.AsValueEnumerable().Select(x => x.AuthorName).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray())
             : item.AuthorName;
     }
 

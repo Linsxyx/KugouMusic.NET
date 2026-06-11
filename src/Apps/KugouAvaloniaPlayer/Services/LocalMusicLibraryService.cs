@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using ZLinq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -64,6 +64,7 @@ public sealed class LocalMusicLibraryService(
     private const string EmbeddedCoverCacheVersion = "thumb-v1";
     private const int EmbeddedCoverThumbnailWidth = 512;
     private const int EmbeddedCoverJpegQuality = 86;
+    private const long MaxLocalSongCoverCacheBytes = 256L * 1024 * 1024;
     public const string SourceTypeJellyfin = "Jellyfin";
 
     private static readonly string LocalSongCoverCacheDirectory = Path.Combine(
@@ -164,11 +165,11 @@ public sealed class LocalMusicLibraryService(
         var serverFingerprint = jellyfinClient.GetServerFingerprint(options.ServerUrl);
         var audioItems = await jellyfinClient.GetAudioItemsAsync(options, library.Id, progress, cancellationToken);
         var albumGroups = audioItems
-            .GroupBy(GetJellyfinAlbumKey)
+            .AsValueEnumerable().GroupBy(GetJellyfinAlbumKey)
             .Select(x => new JellyfinAlbumGroup(
                 x.Key,
-                GetJellyfinAlbumName(x.First()),
-                x.ToList()))
+                GetJellyfinAlbumName(x.AsValueEnumerable().First()),
+                x.AsValueEnumerable().ToList()))
             .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
@@ -242,7 +243,7 @@ public sealed class LocalMusicLibraryService(
                 });
             }
 
-            playlist.CoverPath = albumGroup.Items.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.CoverUrl))?.CoverUrl;
+            playlist.CoverPath = albumGroup.Items.AsValueEnumerable().FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.CoverUrl))?.CoverUrl;
             playlist.UpdatedAtUtc = DateTime.UtcNow;
             await UpdatePlaylistAsync(connection, transaction, playlist, cancellationToken);
             importedPlaylistIds.Add(playlist.Id);
@@ -318,7 +319,7 @@ public sealed class LocalMusicLibraryService(
             throw new DirectoryNotFoundException(folderPath);
 
         var files = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
-            .Where(IsSupportedAudioFile)
+            .AsValueEnumerable().Where(IsSupportedAudioFile)
             .ToList();
 
         await using var connection = await AppDatabase.CreateConnectionAsync(cancellationToken);
@@ -356,7 +357,7 @@ public sealed class LocalMusicLibraryService(
     public async Task AddFilesToPlaylistAsync(long playlistId, IEnumerable<string> filePaths, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync(cancellationToken);
-        var files = filePaths.Where(IsSupportedAudioFile).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var files = filePaths.AsValueEnumerable().Where(IsSupportedAudioFile).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (files.Count == 0)
             return;
 
@@ -426,7 +427,7 @@ public sealed class LocalMusicLibraryService(
         SettingsManager.Settings.LocalMusicFolders ??= new List<string>();
         SettingsManager.Settings.LocalPlaylistMetas ??= new Dictionary<string, LocalPlaylistMeta>();
 
-        var folders = SettingsManager.Settings.LocalMusicFolders.ToList();
+        var folders = SettingsManager.Settings.LocalMusicFolders.AsValueEnumerable().ToList();
         if (folders.Count == 0)
             return;
 
@@ -462,7 +463,7 @@ public sealed class LocalMusicLibraryService(
     private async Task ImportLegacyFolderAsync(string folderPath, LocalPlaylistMeta? meta, CancellationToken cancellationToken)
     {
         var files = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
-            .Where(IsSupportedAudioFile)
+            .AsValueEnumerable().Where(IsSupportedAudioFile)
             .ToList();
 
         await using var connection = await AppDatabase.CreateConnectionAsync(cancellationToken);
@@ -710,7 +711,7 @@ public sealed class LocalMusicLibraryService(
             }
         }
 
-        return libraries.ToList();
+        return libraries.AsValueEnumerable().ToList();
     }
 
     private static async Task<List<long>> GetPlaylistIdsBySourceRefPrefixAsync(
@@ -1174,7 +1175,7 @@ public sealed class LocalMusicLibraryService(
 
             var artists = tfile.Tag.Performers;
             if (artists is { Length: > 0 })
-                artist = string.Join(", ", artists.Where(x => !string.IsNullOrWhiteSpace(x)));
+                artist = string.Join(", ", artists.AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x)).ToArray());
 
             album = tfile.Tag.Album ?? "";
             duration = tfile.Properties?.Duration.TotalSeconds ?? 0;
@@ -1219,8 +1220,8 @@ public sealed class LocalMusicLibraryService(
     private static string? GetEmbeddedSongCoverSource(string songPath, File tagFile)
     {
         var picture = tagFile.Tag.Pictures?
-            .FirstOrDefault(x => x.Type == PictureType.FrontCover && x.Data.Count > 0)
-            ?? tagFile.Tag.Pictures?.FirstOrDefault(x => x.Data.Count > 0);
+                          .AsValueEnumerable().FirstOrDefault(x => x.Type == PictureType.FrontCover && x.Data.Count > 0)
+            ?? tagFile.Tag.Pictures?.AsValueEnumerable().FirstOrDefault(x => x.Data.Count > 0);
 
         if (picture == null)
             return null;
@@ -1234,7 +1235,14 @@ public sealed class LocalMusicLibraryService(
             var cachePath = Path.Combine(LocalSongCoverCacheDirectory, $"{cacheKey}.jpg");
 
             if (!System.IO.File.Exists(cachePath))
+            {
                 WriteEmbeddedCoverThumbnail(picture, cachePath);
+                TrimLocalSongCoverCache();
+            }
+            else
+            {
+                TouchCacheFile(cachePath);
+            }
 
             return cachePath;
         }
@@ -1253,6 +1261,62 @@ public sealed class LocalMusicLibraryService(
             BitmapInterpolationMode.HighQuality);
 
         bitmap.Save(cachePath, EmbeddedCoverJpegQuality);
+    }
+
+    private static void TrimLocalSongCoverCache()
+    {
+        try
+        {
+            var directory = new DirectoryInfo(LocalSongCoverCacheDirectory);
+            if (!directory.Exists)
+                return;
+
+            var files = directory
+                .EnumerateFiles("*.jpg")
+                .AsValueEnumerable().OrderByDescending(static x => x.LastWriteTimeUtc)
+                .ToList();
+            var totalBytes = files.AsValueEnumerable().Sum(static x => x.Length);
+            if (totalBytes <= MaxLocalSongCoverCacheBytes)
+                return;
+
+            foreach (var file in files.AsValueEnumerable().Reverse())
+            {
+                if (totalBytes <= MaxLocalSongCoverCacheBytes)
+                    break;
+
+                var length = file.Length;
+                TryDeleteCacheFile(file.FullName);
+                totalBytes -= length;
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
+    }
+
+    private static void TouchCacheFile(string cachePath)
+    {
+        try
+        {
+            System.IO.File.SetLastWriteTimeUtc(cachePath, DateTime.UtcNow);
+        }
+        catch
+        {
+            // Best effort recency update only.
+        }
+    }
+
+    private static void TryDeleteCacheFile(string cachePath)
+    {
+        try
+        {
+            System.IO.File.Delete(cachePath);
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
     }
 
     private static string GetStableHash(string value)

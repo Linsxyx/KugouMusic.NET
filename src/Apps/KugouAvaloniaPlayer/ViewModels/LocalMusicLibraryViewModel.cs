@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -101,7 +101,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         try
         {
             var localPlaylists = await _localMusicLibraryService.GetPlaylistsAsync();
-            LocalLibraryPlaylists.AddRange(localPlaylists.Select(ToLocalPlaylistItem));
+            LocalLibraryPlaylists.AddRange(localPlaylists.AsValueEnumerable().Select(ToLocalPlaylistItem).ToArray());
         }
         catch (Exception ex)
         {
@@ -138,7 +138,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         {
             var tracks = await _localMusicLibraryService.GetPlaylistTracksAsync(playlistId);
             SelectedPlaylistSongs.Clear();
-            SelectedPlaylistSongs.AddRange(tracks.Select(ToSongItem));
+            SelectedPlaylistSongs.AddRange(tracks.AsValueEnumerable().Select(ToSongItem).ToArray());
             item.Count = tracks.Count;
             item.Subtitle = $"{tracks.Count} 首歌曲";
         }
@@ -260,7 +260,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         {
             var playlist = await _localMusicLibraryService.CreatePlaylistAsync(name);
             await LoadLocalLibraryAsync();
-            var item = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == playlist.Id.ToString());
+            var item = LocalLibraryPlaylists.AsValueEnumerable().FirstOrDefault(x => x.Id == playlist.Id.ToString());
             if (item != null)
                 await OpenPlaylist(item);
 
@@ -294,12 +294,13 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
 
         try
         {
-            var target = SelectedPlaylist?.Type == PlaylistType.Local ? SelectedPlaylist : LocalLibraryPlaylists.FirstOrDefault();
+            var target = SelectedPlaylist?.Type == PlaylistType.Local ? SelectedPlaylist : LocalLibraryPlaylists
+                .AsValueEnumerable().FirstOrDefault();
             if (target == null)
             {
                 var playlist = await _localMusicLibraryService.CreatePlaylistAsync("本地歌曲");
                 await LoadLocalLibraryAsync();
-                target = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == playlist.Id.ToString());
+                target = LocalLibraryPlaylists.AsValueEnumerable().FirstOrDefault(x => x.Id == playlist.Id.ToString());
             }
 
             if (target == null || !long.TryParse(target.Id, out var playlistId))
@@ -308,7 +309,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             await _localMusicLibraryService.AddFilesToPlaylistAsync(playlistId, files);
             await LoadLocalLibraryAsync();
 
-            target = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == playlistId.ToString());
+            target = LocalLibraryPlaylists.AsValueEnumerable().FirstOrDefault(x => x.Id == playlistId.ToString());
             if (target != null)
                 await OpenPlaylist(target);
 
@@ -353,7 +354,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         {
             var imported = await _localMusicLibraryService.ImportFolderAsync(path);
             await LoadLocalLibraryAsync();
-            var item = LocalLibraryPlaylists.FirstOrDefault(x => x.Id == imported.Id.ToString());
+            var item = LocalLibraryPlaylists.AsValueEnumerable().FirstOrDefault(x => x.Id == imported.Id.ToString());
             if (item != null)
                 await OpenPlaylist(item);
 
@@ -400,12 +401,12 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
 
             if (SelectedPlaylist?.Type == PlaylistType.Local &&
                 long.TryParse(SelectedPlaylist.Id, out var playlistId) &&
-                refreshed.Any(x => x.Id == playlistId))
+                refreshed.AsValueEnumerable().Any(x => x.Id == playlistId))
             {
                 await LoadLocalPlaylistSongsAsync(SelectedPlaylist);
             }
 
-            var songCount = refreshed.Sum(x => x.TrackCount);
+            var songCount = refreshed.AsValueEnumerable().Sum(x => x.TrackCount);
             _toastManager.CreateToast()
                 .OfType(NotificationType.Success)
                 .WithTitle("刷新完成")
@@ -506,14 +507,14 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             }
 
             await LoadLocalLibraryAsync();
-            var firstImported = imported.FirstOrDefault();
+            var firstImported = imported.AsValueEnumerable().FirstOrDefault();
             var item = firstImported == null
                 ? null
-                : LocalLibraryPlaylists.FirstOrDefault(x => x.Id == firstImported.Id.ToString());
+                : LocalLibraryPlaylists.AsValueEnumerable().FirstOrDefault(x => x.Id == firstImported.Id.ToString());
             if (item != null)
                 await OpenPlaylist(item);
 
-            var importedSongCount = imported.Sum(x => x.TrackCount);
+            var importedSongCount = imported.AsValueEnumerable().Sum(x => x.TrackCount);
             _toastManager.CreateToast()
                 .OfType(NotificationType.Success)
                 .WithTitle("导入完成")

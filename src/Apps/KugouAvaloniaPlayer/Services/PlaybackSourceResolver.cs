@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using KuGou.Net.Abstractions;
@@ -56,7 +56,7 @@ public sealed class PlaybackSourceResolver(
         if (playData == null || playData.Status != 1)
             return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.Unavailable);
 
-        var url = playData.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+        var url = playData.Urls?.AsValueEnumerable().FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
         return string.IsNullOrWhiteSpace(url)
             ? PlaybackSourceResult.Failed(PlaybackSourceFailureReason.EmptyUrl)
             : PlaybackSourceResult.Remote(url);
@@ -77,7 +77,7 @@ public sealed class PlaybackSourceResolver(
             return requestedQuality;
 
         var highestSupportedQualityRank = EnumerateSupportedQualities(privileges)
-            .Select(AudioQuality.GetRank)
+            .AsValueEnumerable().Select(AudioQuality.GetRank)
             .Where(rank => rank >= 0)
             .DefaultIfEmpty(-1)
             .Max();

@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using SimpleAudio;
@@ -61,13 +61,13 @@ public partial class PlayerViewModel
         if (_tailTelemetry.Count == 0)
             return null;
 
-        var points = _tailTelemetry.Where(x => x.PositionSeconds >= _tailTelemetry[^1].PositionSeconds - 8.0).ToList();
+        var points = _tailTelemetry.AsValueEnumerable().Where(x => x.PositionSeconds >= _tailTelemetry[^1].PositionSeconds - 8.0).ToList();
         if (points.Count == 0)
             return null;
 
-        var peakRms = points.Max(x => x.Rms);
+        var peakRms = points.AsValueEnumerable().Max(x => x.Rms);
         var silenceThreshold = Math.Max(peakRms * 0.18, 0.0025);
-        var lastActive = points.LastOrDefault(x => x.Rms >= silenceThreshold);
+        var lastActive = points.AsValueEnumerable().LastOrDefault(x => x.Rms >= silenceThreshold);
         var lastPoint = points[^1];
         var tailSilenceSec = lastActive.PositionSeconds <= 0
             ? 0
@@ -75,8 +75,8 @@ public partial class PlayerViewModel
 
         return new TailPlaybackMetrics
         {
-            TailRms = points.Average(x => x.Rms),
-            TailBrightness = points.Average(x => x.Brightness),
+            TailRms = points.AsValueEnumerable().Average(x => x.Rms),
+            TailBrightness = points.AsValueEnumerable().Average(x => x.Brightness),
             TailSilenceSec = tailSilenceSec
         };
     }

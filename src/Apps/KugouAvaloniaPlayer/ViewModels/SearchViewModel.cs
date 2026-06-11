@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
@@ -139,7 +139,7 @@ public partial class SearchViewModel(
                 return;
 
             var groups = response.Categories
-                .Select((category, groupIndex) => new SearchHotTagGroup
+                .AsValueEnumerable().Select((category, groupIndex) => new SearchHotTagGroup
                 {
                     Index = groupIndex,
                     Name = category.Name
@@ -149,7 +149,7 @@ public partial class SearchViewModel(
             for (var i = 0; i < groups.Count; i++)
             {
                 var keywords = response.Categories[i].Keywords
-                    .Where(k => !string.IsNullOrWhiteSpace(k.Keyword))
+                    .AsValueEnumerable().Where(k => !string.IsNullOrWhiteSpace(k.Keyword))
                     .Select((k, keywordIndex) => new SearchHotTagItem
                     {
                         Index = keywordIndex,
@@ -399,9 +399,9 @@ public partial class SearchViewModel(
                 var songs = data.Songs;
                 if (songs.Count < 100) _hasMoreDetails = false;
 
-                var songItems = songs.Select(s =>
+                var songItems = songs.AsValueEnumerable().Select(s =>
                 {
-                    var singerName = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知";
+                    var singerName = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知";
                     return new SongItem
                     {
                         Name = s.Name,
@@ -415,7 +415,7 @@ public partial class SearchViewModel(
                     };
                 }).ToList();
 
-                if (songItems.Any())
+                if (songItems.AsValueEnumerable().Any())
                     DetailSongs.AddRange(songItems);
             }
             else if (_currentDetailType == DetailType.Album)
@@ -426,10 +426,10 @@ public partial class SearchViewModel(
 
                 if (songs != null)
                 {
-                    var songItems = songs.Select(s =>
+                    var songItems = songs.AsValueEnumerable().Select(s =>
                     {
                         var singerName = s.Singers.Count > 0
-                            ? string.Join("、", s.Singers.Select(x => x.Name))
+                            ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray())
                             : "未知";
 
                         return new SongItem
@@ -445,12 +445,12 @@ public partial class SearchViewModel(
                         };
                     }).ToList();
 
-                    if (songItems.Any())
+                    if (songItems.AsValueEnumerable().Any())
                     {
                         if (_currentAlbumAuthorId <= 0)
                         {
                             var authorId = songItems
-                                .SelectMany(x => x.Singers)
+                                .AsValueEnumerable().SelectMany(x => x.Singers)
                                 .Select(x => x.Id)
                                 .FirstOrDefault(x => x > 0);
                             if (authorId > 0)

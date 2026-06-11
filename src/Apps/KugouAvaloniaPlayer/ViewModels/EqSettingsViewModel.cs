@@ -1,5 +1,5 @@
 using System.Collections.ObjectModel;
-using System.Linq;
+using ZLinq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KugouAvaloniaPlayer.Services;
@@ -58,7 +58,7 @@ public partial class EqSettingsViewModel : ObservableObject
     {
         if (_isInitializing) return;
 
-        var gains = Bands.Select(b => b.Value).ToArray();
+        var gains = Bands.AsValueEnumerable().Select(b => b.Value).ToArray();
         // 更新到设置中
         SettingsManager.Settings.CustomEqGains = gains;
         SettingsManager.Settings.EQPreset = "自定义";

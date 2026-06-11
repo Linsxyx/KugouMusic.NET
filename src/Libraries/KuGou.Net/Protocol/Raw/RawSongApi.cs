@@ -5,6 +5,7 @@ using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Protocol.Session;
 using KuGou.Net.Protocol.Transport;
 using KuGou.Net.util;
+using ZLinq;
 
 namespace KuGou.Net.Protocol.Raw;
 
@@ -460,8 +461,8 @@ public class RawSongApi(IKgTransport transport, KgSessionManager sessionManager)
     private static string BuildSortedParamString(Dictionary<string, string> parameters, string separator)
     {
         return string.Join(separator, parameters
-            .OrderBy(x => x.Key, StringComparer.Ordinal)
-            .Select(x => $"{x.Key}={x.Value}"));
+            .AsValueEnumerable().OrderBy(x => x.Key, StringComparer.Ordinal)
+            .Select(x => $"{x.Key}={x.Value}").ToArray());
     }
 
     private static string CalcAndroidRawSignature(Dictionary<string, string> parameters)

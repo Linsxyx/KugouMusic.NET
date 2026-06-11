@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using ZLinq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,11 +16,13 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
 {
     private const int DefaultMaxMemoryEntries = 200;
     private const long DefaultMaxMemoryBytes = 32L * 1024 * 1024;
+    private const long DefaultMaxDiskBytes = 256L * 1024 * 1024;
 
     private readonly string _cacheFolder;
     private readonly TimeSpan _diskCacheLifetime;
     private readonly int _maxMemoryEntries;
     private readonly long _maxMemoryBytes;
+    private readonly long _maxDiskBytes;
     private readonly object _sync = new();
     private readonly Dictionary<string, CacheEntry> _memoryCache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Task<byte[]?>> _pendingLoads = new(StringComparer.Ordinal);
@@ -32,12 +35,14 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
         string cacheFolder,
         TimeSpan diskCacheLifetime,
         int maxMemoryEntries = DefaultMaxMemoryEntries,
-        long maxMemoryBytes = DefaultMaxMemoryBytes)
+        long maxMemoryBytes = DefaultMaxMemoryBytes,
+        long maxDiskBytes = DefaultMaxDiskBytes)
     {
         _cacheFolder = cacheFolder;
         _diskCacheLifetime = diskCacheLifetime;
         _maxMemoryEntries = Math.Max(1, maxMemoryEntries);
         _maxMemoryBytes = Math.Max(1, maxMemoryBytes);
+        _maxDiskBytes = Math.Max(1, maxDiskBytes);
     }
 
     public BoundedDiskCachedWebImageLoader(
@@ -46,13 +51,15 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
         string cacheFolder,
         TimeSpan diskCacheLifetime,
         int maxMemoryEntries = DefaultMaxMemoryEntries,
-        long maxMemoryBytes = DefaultMaxMemoryBytes)
+        long maxMemoryBytes = DefaultMaxMemoryBytes,
+        long maxDiskBytes = DefaultMaxDiskBytes)
         : base(httpClient, disposeHttpClient)
     {
         _cacheFolder = cacheFolder;
         _diskCacheLifetime = diskCacheLifetime;
         _maxMemoryEntries = Math.Max(1, maxMemoryEntries);
         _maxMemoryBytes = Math.Max(1, maxMemoryBytes);
+        _maxDiskBytes = Math.Max(1, maxDiskBytes);
     }
 
     public override async Task<Bitmap?> ProvideImageAsync(string url)
@@ -196,6 +203,7 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
                 return null;
             }
 
+            TouchCacheFile(fileInfo);
             return await File.ReadAllBytesAsync(fileInfo.FullName).ConfigureAwait(false);
         }
         catch
@@ -208,8 +216,12 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
     {
         try
         {
+            if (bytes.LongLength > _maxDiskBytes)
+                return;
+
             Directory.CreateDirectory(_cacheFolder);
             await File.WriteAllBytesAsync(GetCachePath(url), bytes).ConfigureAwait(false);
+            TrimDiskCache();
         }
         catch
         {
@@ -247,6 +259,50 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
         catch
         {
             // Best effort cleanup only.
+        }
+    }
+
+    private void TrimDiskCache()
+    {
+        try
+        {
+            var directory = new DirectoryInfo(_cacheFolder);
+            if (!directory.Exists)
+                return;
+
+            var files = directory
+                .EnumerateFiles()
+                .AsValueEnumerable().OrderByDescending(static x => x.LastWriteTimeUtc)
+                .ToList();
+            var totalBytes = files.AsValueEnumerable().Sum(static x => x.Length);
+            if (totalBytes <= _maxDiskBytes)
+                return;
+
+            foreach (var file in files.AsValueEnumerable().Reverse())
+            {
+                if (totalBytes <= _maxDiskBytes)
+                    break;
+
+                var length = file.Length;
+                TryDelete(file.FullName);
+                totalBytes -= length;
+            }
+        }
+        catch
+        {
+            // Best effort cleanup only.
+        }
+    }
+
+    private static void TouchCacheFile(FileInfo fileInfo)
+    {
+        try
+        {
+            fileInfo.LastWriteTimeUtc = DateTime.UtcNow;
+        }
+        catch
+        {
+            // Best effort recency update only.
         }
     }
 

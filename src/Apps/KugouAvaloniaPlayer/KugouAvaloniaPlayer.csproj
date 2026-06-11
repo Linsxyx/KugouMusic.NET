@@ -48,6 +48,7 @@
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="Jab" PrivateAssets="all"/>
+        <PackageReference Include="MemoryPack" />
         <PackageReference Include="Microsoft.Data.Sqlite" />
         <PackageReference Include="Serilog"/>
         <PackageReference Include="Serilog.Extensions.Logging"/>
@@ -61,6 +62,7 @@
         <PackageReference Include="TagLibSharp"/>
         <PackageReference Include="Tmds.DBus.Protocol"/>
         <PackageReference Include="Velopack" />
+        <PackageReference Include="ZLinq" />
     </ItemGroup>
 
     <ItemGroup>

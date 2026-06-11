@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Windows.Input;
 using System.Runtime.CompilerServices; 
 using Avalonia;
@@ -440,7 +440,7 @@ public sealed class InteractionBehaviors
         if (host is ScrollViewer hostScrollViewer)
             return hostScrollViewer;
 
-        return host.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+        return host.GetVisualDescendants().AsValueEnumerable().OfType<ScrollViewer>().FirstOrDefault();
     }
 
     private static bool ExecuteCommand(AvaloniaObject source, ICommand? command, object? parameter)

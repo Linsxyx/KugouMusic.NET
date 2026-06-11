@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
@@ -64,14 +64,14 @@ public partial class RankViewModel : PageViewModelBase
             var response = await _rankClient.GetAllRanksAsync();
             if (response?.Info != null)
             {
-                var items = response.Info.Select(r => new RankItem
+                var items = response.Info.AsValueEnumerable().Select(r => new RankItem
                 {
                     RankId = r.FileId,
                     Name = r.Name,
                     Cover = string.IsNullOrWhiteSpace(r.Cover) ? DefaultCover : r.Cover
                 }).ToList();
 
-                if (items.Any()) Ranks.AddRange(items);
+                if (items.AsValueEnumerable().Any()) Ranks.AddRange(items);
             }
         }
         catch (Exception ex)
@@ -135,10 +135,10 @@ public partial class RankViewModel : PageViewModelBase
             {
                 if (response.RankSongLists.Count < 100) _hasMoreSongs = false;
 
-                var songItems = response.RankSongLists.Select(s => new SongItem
+                var songItems = response.RankSongLists.AsValueEnumerable().Select(s => new SongItem
                 {
                     Name = s.Name,
-                    Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                    Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
                     Hash = s.Hash,
                     AlbumId = s.AlbumId.ToString(),
                     AlbumName = s.Album?.Name ?? "",
@@ -148,7 +148,7 @@ public partial class RankViewModel : PageViewModelBase
                     DurationSeconds = s.DurationMs / 1000.0
                 }).ToList();
 
-                if (songItems.Any())
+                if (songItems.AsValueEnumerable().Any())
                     SelectedRankSongs.AddRange(songItems);
             }
         }

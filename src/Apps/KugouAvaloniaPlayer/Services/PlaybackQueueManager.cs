@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using Avalonia.Collections;
 using KugouAvaloniaPlayer.ViewModels;
 
@@ -21,7 +21,7 @@ public class PlaybackQueueManager
     /// </summary>
     public void SetupQueue(SongItem song, IList<SongItem>? contextList)
     {
-        if (contextList != null && contextList.Any())
+        if (contextList != null && contextList.AsValueEnumerable().Any())
         {
             const int maxQueueSize = 300;
             OriginalQueue.Clear();
@@ -37,15 +37,15 @@ public class PlaybackQueueManager
                 {
                     var start = Math.Max(0, currentIndex - maxQueueSize / 2);
                     var count = Math.Min(contextList.Count - start, maxQueueSize);
-                    targetList = contextList.Skip(start).Take(count);
+                    targetList = contextList.AsValueEnumerable().Skip(start).Take(count).ToArray();
                 }
                 else
                 {
-                    targetList = contextList.Take(maxQueueSize);
+                    targetList = contextList.AsValueEnumerable().Take(maxQueueSize).ToArray();
                 }
             }
 
-            var finalList = targetList.ToList();
+            var finalList = targetList.AsValueEnumerable().ToList();
             OriginalQueue.AddRange(finalList);
 
             if (IsShuffleMode)
@@ -161,7 +161,7 @@ public class PlaybackQueueManager
 
         if (IsShuffleMode)
         {
-            var songsToShuffle = PlaybackQueue.Where(x => x != currentSong).ToList();
+            var songsToShuffle = PlaybackQueue.AsValueEnumerable().Where(x => x != currentSong).ToList();
             var n = songsToShuffle.Count;
             while (n > 1)
             {

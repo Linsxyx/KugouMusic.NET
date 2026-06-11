@@ -1,6 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -332,7 +332,7 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
                 account.Username));
         }
 
-        HasLoginAccountChoices = LoginAccountChoices.Any();
+        HasLoginAccountChoices = LoginAccountChoices.AsValueEnumerable().Any();
     }
 
     private void ClearLoginAccountChoices()

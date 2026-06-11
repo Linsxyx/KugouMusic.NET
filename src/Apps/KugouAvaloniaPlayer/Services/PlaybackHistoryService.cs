@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using ZLinq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -32,7 +32,7 @@ public sealed class PlaybackHistoryService(
         try
         {
             var cache = EnsureCacheForCurrentUser();
-            return cache.Items.Select(ToSongItem).ToList();
+            return cache.Items.AsValueEnumerable().Select(ToSongItem).ToList();
         }
         finally
         {
@@ -55,7 +55,7 @@ public sealed class PlaybackHistoryService(
             var key = GetHistoryKey(item);
 
             cache.Items = cache.Items
-                .Where(x => !string.Equals(GetHistoryKey(x), key, StringComparison.OrdinalIgnoreCase))
+                .AsValueEnumerable().Where(x => !string.Equals(GetHistoryKey(x), key, StringComparison.OrdinalIgnoreCase))
                 .Prepend(item)
                 .Take(MaxHistoryCount)
                 .ToList();
@@ -134,9 +134,9 @@ public sealed class PlaybackHistoryService(
                 ? DateTimeOffset.Now.ToString("O")
                 : model.UpdatedAt;
             model.Items = model.Items
-                .Where(x => !string.IsNullOrWhiteSpace(x.Hash) ||
-                            !string.IsNullOrWhiteSpace(x.LocalFilePath) ||
-                            !string.IsNullOrWhiteSpace(x.Name))
+                .AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x.Hash) ||
+                                                !string.IsNullOrWhiteSpace(x.LocalFilePath) ||
+                                                !string.IsNullOrWhiteSpace(x.Name))
                 .Take(MaxHistoryCount)
                 .ToList();
 
@@ -186,7 +186,7 @@ public sealed class PlaybackHistoryService(
             FileId = song.FileId,
             Name = song.Name,
             Singer = song.Singer,
-            Singers = song.Singers?.ToList() ?? new List<SingerLite>(),
+            Singers = song.Singers?.AsValueEnumerable().ToList() ?? new List<SingerLite>(),
             AlbumId = song.AlbumId,
             AlbumName = song.AlbumName,
             AudioId = song.AudioId,

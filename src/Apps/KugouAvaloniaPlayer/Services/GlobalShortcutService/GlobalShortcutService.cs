@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
+using ZLinq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using KugouAvaloniaPlayer.Models;
@@ -263,14 +263,14 @@ public sealed partial class GlobalShortcutService(
         var desired = ParseSettings(settings, out var parseResults);
         ApplyDesiredGestures(desired, parseResults, true);
         return new GlobalShortcutApplyResult(
-            parseResults.Values.All(x => x.IsRegistered || x.FailureKind == GlobalShortcutRegistrationFailureKind.None),
+            parseResults.Values.AsValueEnumerable().All(x => x.IsRegistered || x.FailureKind == GlobalShortcutRegistrationFailureKind.None),
             CurrentResults);
     }
 
     public GlobalShortcutApplyResult TryApplySettings(GlobalShortcutSettings settings)
     {
         var desired = ParseSettings(settings, out var parseResults);
-        if (parseResults.Values.Any(x => x.FailureKind == GlobalShortcutRegistrationFailureKind.InvalidGesture))
+        if (parseResults.Values.AsValueEnumerable().Any(x => x.FailureKind == GlobalShortcutRegistrationFailureKind.InvalidGesture))
             return new GlobalShortcutApplyResult(false, parseResults);
 
         if (!IsSupported)
@@ -279,7 +279,7 @@ public sealed partial class GlobalShortcutService(
             return new GlobalShortcutApplyResult(true, CurrentResults);
         }
 
-        var previous = _activeGestures.ToDictionary(x => x.Key, x => x.Value);
+        var previous = _activeGestures.AsValueEnumerable().ToDictionary(x => x.Key, x => x.Value);
         var success = ApplyDesiredGestures(desired, parseResults, false);
         if (success)
             return new GlobalShortcutApplyResult(true, CurrentResults);
@@ -290,7 +290,7 @@ public sealed partial class GlobalShortcutService(
 
     public void UnregisterAll()
     {
-        foreach (var action in _activeGestures.Keys.ToArray())
+        foreach (var action in _activeGestures.Keys.AsValueEnumerable().ToArray())
             UnregisterPlatformShortcut(action);
 
         _activeGestures.Clear();

@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -148,7 +148,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
         get
         {
             var previewNames = PersonalFmSongs
-                .Skip(1)
+                .AsValueEnumerable().Skip(1)
                 .Take(3)
                 .Select(song => song.Name)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -273,7 +273,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
         if (PersonalFmSongs.Count == 0)
             return;
 
-        await _player.StartPersonalFmAsync(PersonalFmSongs.ToList(), SelectedFmMode, SelectedFmSongPoolId,
+        await _player.StartPersonalFmAsync(PersonalFmSongs.AsValueEnumerable().ToList(), SelectedFmMode, SelectedFmSongPoolId,
             CurrentFmPreviewSong ?? PersonalFmSongs[0]);
         SyncFmStateFromPlayer();
     }
@@ -284,7 +284,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
         if (song == null || IsFmLoading || !CanUsePersonalFm)
             return;
 
-        await _player.StartPersonalFmAsync(PersonalFmSongs.ToList(), SelectedFmMode, SelectedFmSongPoolId, song);
+        await _player.StartPersonalFmAsync(PersonalFmSongs.AsValueEnumerable().ToList(), SelectedFmMode, SelectedFmSongPoolId, song);
         SyncFmStateFromPlayer();
     }
 
@@ -322,7 +322,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
 
             Songs.Clear();
             Songs.AddRange(response.Songs
-                .Select(item => new SongItem
+                .AsValueEnumerable().Select(item => new SongItem
                 {
                     Name = item.Name,
                     Singer = item.SingerName,
@@ -333,7 +333,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
                     Singers = item.Singers,
                     Cover = string.IsNullOrWhiteSpace(item.SizableCover) ? DefaultCover : item.SizableCover,
                     DurationSeconds = item.Duration
-                }));
+                }).ToArray());
         }
         catch (Exception ex)
         {
@@ -376,12 +376,12 @@ public partial class DailyRecommendViewModel : PageViewModelBase
 
             PersonalFmSongs.Clear();
             PersonalFmSongs.AddRange(songs);
-            CurrentFmPreviewSong = PersonalFmSongs.FirstOrDefault();
+            CurrentFmPreviewSong = PersonalFmSongs.AsValueEnumerable().FirstOrDefault();
             RaiseFmCollectionStateChanged();
 
             if (restartIfActive && PersonalFmSongs.Count > 0)
             {
-                await _player.StartPersonalFmAsync(PersonalFmSongs.ToList(), SelectedFmMode, SelectedFmSongPoolId,
+                await _player.StartPersonalFmAsync(PersonalFmSongs.AsValueEnumerable().ToList(), SelectedFmMode, SelectedFmSongPoolId,
                     CurrentFmPreviewSong);
                 SyncFmStateFromPlayer();
             }
@@ -433,7 +433,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
                 SelectedFmSongPoolId = _player.CurrentPersonalFmSongPoolId;
                 PersonalFmSongs.Clear();
                 PersonalFmSongs.AddRange(_player.GetPersonalFmDisplaySongs(5));
-                CurrentFmPreviewSong = PersonalFmSongs.FirstOrDefault();
+                CurrentFmPreviewSong = PersonalFmSongs.AsValueEnumerable().FirstOrDefault();
                 RaiseFmCollectionStateChanged();
             }
 

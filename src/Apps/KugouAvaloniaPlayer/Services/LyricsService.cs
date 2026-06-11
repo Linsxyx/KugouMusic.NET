@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using ZLinq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -84,34 +84,29 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             if (!searchJson.TryGetProperty("candidates", out var candidatesElem) ||
                 candidatesElem.ValueKind != JsonValueKind.Array) return;
 
-            var candidates = candidatesElem.EnumerateArray().ToList();
+            var candidates = candidatesElem.EnumerateArray().AsValueEnumerable().ToList();
             if (candidates.Count == 0) return;
 
-            var bestMatch = candidates.First();
+            var bestMatch = candidates.AsValueEnumerable().First();
             var id = bestMatch.GetProperty("id").GetString();
             var key = bestMatch.GetProperty("accesskey").GetString();
             var fmt = bestMatch.TryGetProperty("fmt", out var f) ? f.GetString() ?? "krc" : "krc";
+            var ext = NormalizeLyricExtension(fmt);
 
             if (id != null && key != null)
             {
+                if (PersistentLyricParseCache.TryLoadOnline(id, key, ext, out var cachedLines))
+                {
+                    AddLyricLines(cachedLines);
+                    return;
+                }
+
                 var lyricResult = await lyricClient.GetLyricAsync(id, key, fmt);
                 if (!string.IsNullOrEmpty(lyricResult.DecodedContent))
                 {
-                    var krc = KrcParser.Parse(lyricResult.DecodedContent);
-                    foreach (var line in krc.Lines)
-                    {
-                        var lyricLine = new LyricLineViewModel
-                        {
-                            Content = line.Content,
-                            Translation = line.Translation,
-                            Romanization = line.Romanization,
-                            StartTime = line.StartTime,
-                            Duration = line.Duration,
-                            IsActive = false
-                        };
-                        MapKrcWords(lyricLine, line.Words);
-                        AddLyricLine(lyricLine);
-                    }
+                    var lines = ParseLyricContent(lyricResult.DecodedContent, ext);
+                    PersistentLyricParseCache.SaveOnline(id, key, ext, lines.AsValueEnumerable().Select(ToParsedLyricLine).ToList());
+                    AddLyricLines(lines);
                 }
             }
         }
@@ -136,7 +131,16 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             var lyricFilePath = FindLyricFile(directory, audioFileName, audioFileNameWithoutExt);
             if (lyricFilePath != null)
             {
-                lines = await ParseLyricFileAsync(lyricFilePath, Path.GetExtension(lyricFilePath).ToLowerInvariant());
+                var ext = Path.GetExtension(lyricFilePath).ToLowerInvariant();
+                if (PersistentLyricParseCache.TryLoadLocalFile(lyricFilePath, ext, out var cachedLines))
+                {
+                    lines = cachedLines.AsValueEnumerable().Select(ToLyricLineViewModel).ToList();
+                }
+                else
+                {
+                    lines = await ParseLyricFileAsync(lyricFilePath, ext);
+                    PersistentLyricParseCache.SaveLocalFile(lyricFilePath, ext, lines.AsValueEnumerable().Select(ToParsedLyricLine).ToList());
+                }
             }
             else
             {
@@ -144,11 +148,23 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
                 if (string.IsNullOrWhiteSpace(embeddedLyrics))
                     return;
 
-                lines = ParseLyricContent(embeddedLyrics, DetectEmbeddedLyricFormat(embeddedLyrics));
+                var ext = DetectEmbeddedLyricFormat(embeddedLyrics);
+                if (PersistentLyricParseCache.TryLoadEmbedded(audioFilePath, ext, embeddedLyrics, out var cachedLines))
+                {
+                    lines = cachedLines.AsValueEnumerable().Select(ToLyricLineViewModel).ToList();
+                }
+                else
+                {
+                    lines = ParseLyricContent(embeddedLyrics, ext);
+                    PersistentLyricParseCache.SaveEmbedded(
+                        audioFilePath,
+                        ext,
+                        embeddedLyrics,
+                        lines.AsValueEnumerable().Select(ToParsedLyricLine).ToList());
+                }
             }
 
-            foreach (var line in lines)
-                AddLyricLine(line);
+            AddLyricLines(lines);
         }
         catch (Exception ex)
         {
@@ -161,14 +177,14 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         var extensions = new[] { ".krc", ".lrc", ".vtt" };
         var searchPatterns = new List<Func<string?>>
         {
-            () => extensions.Select(ext => Path.Combine(directory, audioFileName + ext)).FirstOrDefault(File.Exists),
-            () => extensions.Select(ext => Path.Combine(directory, audioFileNameWithoutExt + ext))
+            () => extensions.AsValueEnumerable().Select(ext => Path.Combine(directory, audioFileName + ext)).FirstOrDefault(File.Exists),
+            () => extensions.AsValueEnumerable().Select(ext => Path.Combine(directory, audioFileNameWithoutExt + ext))
                 .FirstOrDefault(File.Exists),
             () =>
             {
                 var allLyricFiles = Directory.GetFiles(directory, "*.*")
-                    .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
-                return allLyricFiles.FirstOrDefault(f =>
+                    .AsValueEnumerable().Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant())).ToList();
+                return allLyricFiles.AsValueEnumerable().FirstOrDefault(f =>
                     Path.GetFileNameWithoutExtension(f).ToLowerInvariant()
                         .Contains(audioFileNameWithoutExt.ToLowerInvariant()));
             }
@@ -220,6 +236,12 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         return ".txt";
     }
 
+    private static string NormalizeLyricExtension(string? value)
+    {
+        var normalized = string.IsNullOrWhiteSpace(value) ? ".krc" : value.Trim().ToLowerInvariant();
+        return normalized.StartsWith(".", StringComparison.Ordinal) ? normalized : "." + normalized;
+    }
+
     private static List<LyricLineViewModel> ParseLyricContent(string content, string ext)
     {
         var result = new List<LyricLineViewModel>();
@@ -227,7 +249,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         bool IsNumericLine(string line)
         {
             return !string.IsNullOrWhiteSpace(line) &&
-                   line.Trim().All(c => char.IsDigit(c) || char.IsWhiteSpace(c));
+                   line.Trim().AsValueEnumerable().All(c => char.IsDigit(c) || char.IsWhiteSpace(c));
         }
 
 
@@ -284,7 +306,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
                 }
             }
 
-            lrcLines = lrcLines.OrderBy(x => x.StartTime).ToList();
+            lrcLines = lrcLines.AsValueEnumerable().OrderBy(x => x.StartTime).ToList();
 
             for (var i = 0; i < lrcLines.Count; i++)
             {
@@ -360,7 +382,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             const int plainLineDurationMs = 5000;
             var plainLines = content
                 .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim())
+                .AsValueEnumerable().Select(x => x.Trim())
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .ToList();
 
@@ -377,7 +399,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             }
         }
 
-        return result.OrderBy(x => x.StartTime).ToList();
+        return result.AsValueEnumerable().OrderBy(x => x.StartTime).ToList();
     }
 
     private static LyricLineViewModel CreateLrcLine(string text, long startTime)
@@ -561,6 +583,18 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         RenderLyricLines.Add(ConvertToRenderLine(line));
     }
 
+    private void AddLyricLines(IEnumerable<LyricLineViewModel> lines)
+    {
+        foreach (var line in lines)
+            AddLyricLine(line);
+    }
+
+    private void AddLyricLines(IEnumerable<ParsedLyricLine> lines)
+    {
+        foreach (var line in lines)
+            AddLyricLine(ToLyricLineViewModel(line));
+    }
+
     private static LyricLine ConvertToRenderLine(LyricLineViewModel line)
     {
         return new LyricLine
@@ -570,8 +604,8 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             Romanization = string.IsNullOrWhiteSpace(line.Romanization) ? null : line.Romanization,
             Start = TimeSpan.FromMilliseconds(line.StartTime),
             Duration = TimeSpan.FromMilliseconds(line.Duration),
-            Words = line.Words.Select(ConvertToRenderWord).ToArray(),
-            TranslationWords = line.TranslationWords.Select(ConvertToRenderWord).ToArray()
+            Words = line.Words.AsValueEnumerable().Select(ConvertToRenderWord).ToArray(),
+            TranslationWords = line.TranslationWords.AsValueEnumerable().Select(ConvertToRenderWord).ToArray()
         };
     }
 
@@ -582,6 +616,65 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             Text = word.Text,
             Start = TimeSpan.FromMilliseconds(word.StartTime),
             Duration = TimeSpan.FromMilliseconds(word.Duration)
+        };
+    }
+
+    private static ParsedLyricLine ToParsedLyricLine(LyricLineViewModel line)
+    {
+        return new ParsedLyricLine
+        {
+            Content = line.Content,
+            Translation = line.Translation,
+            Romanization = line.Romanization,
+            StartTime = line.StartTime,
+            Duration = line.Duration,
+            HasWordLevelTranslation = line.HasWordLevelTranslation,
+            IsKrcWordLevel = line.IsKrcWordLevel,
+            Words = line.Words.AsValueEnumerable().Select(ToParsedLyricWord).ToList(),
+            TranslationWords = line.TranslationWords.AsValueEnumerable().Select(ToParsedLyricWord).ToList()
+        };
+    }
+
+    private static ParsedLyricWord ToParsedLyricWord(LyricWordViewModel word)
+    {
+        return new ParsedLyricWord
+        {
+            Text = word.Text,
+            StartTime = word.StartTime,
+            Duration = word.Duration
+        };
+    }
+
+    private static LyricLineViewModel ToLyricLineViewModel(ParsedLyricLine line)
+    {
+        var viewModel = new LyricLineViewModel
+        {
+            Content = line.Content,
+            Translation = line.Translation,
+            Romanization = line.Romanization,
+            StartTime = line.StartTime,
+            Duration = line.Duration,
+            HasWordLevelTranslation = line.HasWordLevelTranslation,
+            IsKrcWordLevel = line.IsKrcWordLevel,
+            IsActive = false
+        };
+
+        foreach (var word in line.Words)
+            viewModel.Words.Add(ToLyricWordViewModel(word));
+
+        foreach (var word in line.TranslationWords)
+            viewModel.TranslationWords.Add(ToLyricWordViewModel(word));
+
+        return viewModel;
+    }
+
+    private static LyricWordViewModel ToLyricWordViewModel(ParsedLyricWord word)
+    {
+        return new LyricWordViewModel
+        {
+            Text = word.Text,
+            StartTime = word.StartTime,
+            Duration = word.Duration
         };
     }
 }

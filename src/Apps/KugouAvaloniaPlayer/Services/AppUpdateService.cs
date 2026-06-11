@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -64,8 +64,8 @@ public sealed class AppUpdateService(
             logger.LogInformation("可用更新源选择结果: {Sources}",
                 updateSources.Count == 0
                     ? "无"
-                    : string.Join("; ", updateSources.Select(source =>
-                        $"{source.SourceName}({source.UpdateInfo.TargetFullRelease.Version}, Priority={source.Priority})")));
+                    : string.Join("; ", updateSources.AsValueEnumerable().Select(source =>
+                        $"{source.SourceName}({source.UpdateInfo.TargetFullRelease.Version}, Priority={source.Priority})").ToArray()));
 
             if (updateSources.Count == 0)
             {
@@ -103,20 +103,20 @@ public sealed class AppUpdateService(
 
     private async Task<List<CheckedUpdateSource>> CheckAllSourcesAsync(IEnumerable<UpdateSourceCandidate> candidates)
     {
-        var checkResults = await Task.WhenAll(candidates.Select(CheckSourceAsync));
+        var checkResults = await Task.WhenAll(candidates.AsValueEnumerable().Select(CheckSourceAsync).ToArray());
         var checkedSources = checkResults
-            .Where(result => result.CheckedSource is not null)
+            .AsValueEnumerable().Where(result => result.CheckedSource is not null)
             .Select(result => result.CheckedSource!)
             .ToList();
 
         var failedSources = checkResults
-            .Where(result => result.Error is not null)
+            .AsValueEnumerable().Where(result => result.Error is not null)
             .ToList();
         if (checkedSources.Count == 0 && failedSources.Count > 0)
         {
             logger.LogWarning("所有更新源检查失败: {Failures}",
-                string.Join("; ", failedSources.Select(result =>
-                    $"{result.SourceName}: {DescribeException(result.Error!)}")));
+                string.Join("; ", failedSources.AsValueEnumerable().Select(result =>
+                    $"{result.SourceName}: {DescribeException(result.Error!)}").ToArray()));
         }
 
         return checkedSources;
@@ -159,7 +159,7 @@ public sealed class AppUpdateService(
     private static IReadOnlyList<AvailableUpdateSource> SelectBestVersionSources(IEnumerable<CheckedUpdateSource> checkedSources)
     {
         var availableSources = checkedSources
-            .Where(source => source.UpdateInfo != null)
+            .AsValueEnumerable().Where(source => source.UpdateInfo != null)
             .Select(source => new AvailableUpdateSource(
                 source.SourceName,
                 source.UpdateManager,
@@ -174,7 +174,7 @@ public sealed class AppUpdateService(
 
         var bestVersion = availableSources[0].UpdateInfo.TargetFullRelease.Version;
         return availableSources
-            .Where(source => source.UpdateInfo.TargetFullRelease.Version.Equals(bestVersion))
+            .AsValueEnumerable().Where(source => source.UpdateInfo.TargetFullRelease.Version.Equals(bestVersion))
             .ToList();
     }
 
@@ -324,7 +324,7 @@ public sealed class AppUpdateService(
             updateInfo.DeltasToTarget.Length,
             updateInfo.DeltasToTarget.Length == 0
                 ? "无"
-                : string.Join(" -> ", updateInfo.DeltasToTarget.Select(FormatAsset)),
+                : string.Join(" -> ", updateInfo.DeltasToTarget.AsValueEnumerable().Select(FormatAsset).ToArray()),
             updateInfo.IsDowngrade);
     }
 
@@ -333,7 +333,7 @@ public sealed class AppUpdateService(
         return $"Target={FormatAsset(updateInfo.TargetFullRelease)}; " +
                $"Base={(updateInfo.BaseRelease is null ? "null" : FormatAsset(updateInfo.BaseRelease))}; " +
                $"Deltas={updateInfo.DeltasToTarget.Length}; " +
-               $"DeltaList={(updateInfo.DeltasToTarget.Length == 0 ? "无" : string.Join(" -> ", updateInfo.DeltasToTarget.Select(FormatAsset)))}; " +
+               $"DeltaList={(updateInfo.DeltasToTarget.Length == 0 ? "无" : string.Join(" -> ", updateInfo.DeltasToTarget.AsValueEnumerable().Select(FormatAsset).ToArray()))}; " +
                $"IsDowngrade={updateInfo.IsDowngrade}";
     }
 

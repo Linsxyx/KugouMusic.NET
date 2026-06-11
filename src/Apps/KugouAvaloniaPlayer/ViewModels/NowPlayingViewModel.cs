@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -644,7 +644,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         if (response == null)
             return [];
 
-        var authors = response.Authors.ToList();
+        var authors = response.Authors.AsValueEnumerable().ToList();
         if (authors.Count == 0)
             return [];
 
@@ -652,11 +652,11 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         foreach (var author in authors)
         {
             foreach (var pair in author.Images)
-                urls.AddRange(pair.Value.Select(x => NormalizePortraitUrl(x.SizablePortrait)));
+                urls.AddRange(pair.Value.AsValueEnumerable().Select(x => NormalizePortraitUrl(x.SizablePortrait)).ToArray());
         }
 
         return urls
-            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

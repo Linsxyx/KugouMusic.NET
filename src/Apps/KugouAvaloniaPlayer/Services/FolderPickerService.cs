@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -79,6 +79,6 @@ public sealed class FolderPickerService : IFolderPickerService
             FileTypeFilter = [AudioFiles, FilePickerFileTypes.All]
         });
 
-        return files.Select(x => x.Path.LocalPath).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+        return files.AsValueEnumerable().Select(x => x.Path.LocalPath).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
     }
 }

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -163,7 +163,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         if (playlists.Count <= 2)
             return playlists;
 
-        return playlists.Take(2).Concat(playlists.Skip(2).Reverse());
+        return playlists.AsValueEnumerable().Take(2).Concat(playlists.AsValueEnumerable().Skip(2).Reverse()).ToArray();
     }
 
     private async Task<UserPlaylistResponse?> LoadAllOnlinePlaylistsAsync()
@@ -282,10 +282,10 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
             if (songs.Count < 100) _hasMoreSongs = false;
 
-            var songItems = songs.Select(s => new SongItem
+            var songItems = songs.AsValueEnumerable().Select(s => new SongItem
             {
                 Name = s.Name,
-                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
                 Hash = s.Hash,
                 AlbumId = s.AlbumId,
                 AlbumName = s.Album?.Name ?? "",
@@ -325,10 +325,10 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
             if (songs.Count < 50) _hasMoreSongs = false;
 
-            var songItems = songs.Select(s => new SongItem
+            var songItems = songs.AsValueEnumerable().Select(s => new SongItem
             {
                 Name = s.Name,
-                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
                 Hash = s.Hash,
                 AlbumId = s.AlbumId,
                 AlbumName = s.AlbumInfo.AlbumName,
@@ -436,7 +436,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
             WeakReferenceMessenger.Default.Send(new RefreshPlaylistsMessage());
 
-            var preview = string.Join("、", importResult.FailedNames.Take(10));
+            var preview = string.Join("、", importResult.FailedNames.AsValueEnumerable().Take(10).ToArray());
             var summary =
                 $"来源：{parseResult.SourcePlatform}\n总计 {importResult.Total} 首，匹配 {importResult.Matched} 首，成功导入 {importResult.Imported} 首。";
             if (importResult.FailedNames.Count > 0)
@@ -553,7 +553,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
     private bool RemoveOnlinePlaylistLocally(PlaylistItem item)
     {
-        var target = Items.FirstOrDefault(x =>
+        var target = Items.AsValueEnumerable().FirstOrDefault(x =>
             (x.Type == PlaylistType.Online || x.Type == PlaylistType.Album) &&
             (x.ListId == item.ListId || (!string.IsNullOrEmpty(item.Id) && x.Id == item.Id)));
 
@@ -664,10 +664,10 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                 return;
             }
 
-            var songItems = (firstPage.Songs ?? new List<PlaylistSong>()).Select(s => new SongItem
+            var songItems = (firstPage.Songs ?? new List<PlaylistSong>()).AsValueEnumerable().Select(s => new SongItem
             {
                 Name = s.Name,
-                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.Select(x => x.Name)) : "未知",
+                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
                 Hash = s.Hash,
                 AlbumId = s.AlbumId,
                 AlbumName = s.Album?.Name ?? "",

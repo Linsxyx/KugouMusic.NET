@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
+using ZLinq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -488,7 +488,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (history is { Status: 1 })
         {
             var todayStr = DateTime.Now.ToString("yyyy-MM-dd");
-            var todayRecord = history.Items.FirstOrDefault(x => x.Day == todayStr);
+            var todayRecord = history.Items.AsValueEnumerable().FirstOrDefault(x => x.Day == todayStr);
             if (todayRecord == null)
             {
                 var data = await _userClient.ReceiveOneDayVipAsync();
@@ -662,9 +662,9 @@ public partial class MainWindowViewModel : ObservableObject
         SidebarCollectedPlaylists.Clear();
         SidebarAlbumPlaylists.Clear();
 
-        SidebarCreatedPlaylists.AddRange(PlaylistsViewModel.Items.Where(IsCreatedOnlinePlaylist));
-        SidebarCollectedPlaylists.AddRange(PlaylistsViewModel.Items.Where(IsCollectedOnlinePlaylist));
-        SidebarAlbumPlaylists.AddRange(PlaylistsViewModel.Items.Where(x => x.Type == PlaylistType.Album));
+        SidebarCreatedPlaylists.AddRange(PlaylistsViewModel.Items.AsValueEnumerable().Where(IsCreatedOnlinePlaylist).ToArray());
+        SidebarCollectedPlaylists.AddRange(PlaylistsViewModel.Items.AsValueEnumerable().Where(IsCollectedOnlinePlaylist).ToArray());
+        SidebarAlbumPlaylists.AddRange(PlaylistsViewModel.Items.AsValueEnumerable().Where(x => x.Type == PlaylistType.Album).ToArray());
 
         UpdateSidebarSelection();
     }
@@ -694,7 +694,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (_navigationService.GoBack())
             return;
 
-        var dailyVm = Pages.OfType<DailyRecommendViewModel>().FirstOrDefault();
+        var dailyVm = Pages.AsValueEnumerable().OfType<DailyRecommendViewModel>().FirstOrDefault();
         if (dailyVm != null) _navigationService.NavigateRoot(dailyVm);
     }
 

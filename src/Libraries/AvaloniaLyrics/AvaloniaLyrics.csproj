@@ -8,5 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" />
+    <PackageReference Include="ZLinq" />
   </ItemGroup>
 </Project>

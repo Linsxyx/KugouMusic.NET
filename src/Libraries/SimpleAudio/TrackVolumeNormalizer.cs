@@ -24,14 +24,16 @@ public static class TrackVolumeNormalizer
             return Task.FromResult(1.0f);
         }
 
-        var lazy = GainCache.GetOrAdd(source, _ => new Lazy<Task<float>>(
+        var cacheKey = PersistentAudioAnalysisCache.GetNormalizationGainMemoryKey(source, isLocal)
+                       ?? source;
+        var lazy = GainCache.GetOrAdd(cacheKey, _ => new Lazy<Task<float>>(
             () => EstimateGainInternalAsync(source, isLocal, durationSeconds, cancellationToken),
             LazyThreadSafetyMode.ExecutionAndPublication));
 
-        return ResolveAsync(source, lazy);
+        return ResolveAsync(cacheKey, lazy);
     }
 
-    private static async Task<float> ResolveAsync(string source, Lazy<Task<float>> lazy)
+    private static async Task<float> ResolveAsync(string cacheKey, Lazy<Task<float>> lazy)
     {
         try
         {
@@ -39,7 +41,7 @@ public static class TrackVolumeNormalizer
         }
         catch
         {
-            GainCache.TryRemove(source, out _);
+            GainCache.TryRemove(cacheKey, out _);
             return 1.0f;
         }
     }
@@ -50,6 +52,12 @@ public static class TrackVolumeNormalizer
         double durationSeconds,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (PersistentAudioAnalysisCache.TryLoadNormalizationGain(source, isLocal, out var cachedGain))
+        {
+            return Task.FromResult(cachedGain);
+        }
+
         return Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -94,6 +102,7 @@ public static class TrackVolumeNormalizer
                     gain = ApplyTruePeakLimit(gain, truePeakLinear);
                 }
 
+                PersistentAudioAnalysisCache.SaveNormalizationGain(source, isLocal, gain);
                 return gain;
             }
             finally

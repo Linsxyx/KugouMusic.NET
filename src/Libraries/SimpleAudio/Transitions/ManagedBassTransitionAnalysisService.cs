@@ -189,7 +189,9 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             return TrackAnalysisSnapshot.Empty;
         }
 
-        var lazy = _analysisCache.GetOrAdd(track.Source, _ => new Lazy<Task<TrackAnalysisSnapshot>>(
+        var cacheKey = PersistentAudioAnalysisCache.GetTrackAnalysisMemoryKey(track.Source, track.IsLocal)
+                       ?? track.Source;
+        var lazy = _analysisCache.GetOrAdd(cacheKey, _ => new Lazy<Task<TrackAnalysisSnapshot>>(
             () => AnalyzeTrackInternalAsync(track, ct), LazyThreadSafetyMode.ExecutionAndPublication));
 
         try
@@ -198,14 +200,20 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         }
         catch
         {
-            _analysisCache.TryRemove(track.Source, out _);
+            _analysisCache.TryRemove(cacheKey, out _);
             return TrackAnalysisSnapshot.Empty;
         }
     }
 
     private async Task<TrackAnalysisSnapshot> AnalyzeTrackInternalAsync(PreparedTrack track, CancellationToken ct)
     {
-        return await Task.Run(() =>
+        ct.ThrowIfCancellationRequested();
+        if (PersistentAudioAnalysisCache.TryLoadTrackAnalysis(track.Source, track.IsLocal, out var cached))
+        {
+            return cached;
+        }
+
+        var analysis = await Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();
             var flags = BassFlags.Decode | BassFlags.Float | BassFlags.Prescan;
@@ -269,6 +277,9 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
                 Bass.StreamFree(handle);
             }
         }, ct).ConfigureAwait(false);
+
+        PersistentAudioAnalysisCache.SaveTrackAnalysis(track.Source, track.IsLocal, analysis);
+        return analysis;
     }
 
     private static int CreateDecodeStream(string source, bool isLocal, BassFlags flags)

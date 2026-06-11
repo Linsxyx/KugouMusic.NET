@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
+using ZLinq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -48,7 +48,7 @@ public partial class NowPlaying : UserControl
     private void UpdateSharedBackgroundFrame()
     {
         var target = this.GetVisualAncestors()
-            .OfType<Control>()
+            .AsValueEnumerable().OfType<Control>()
             .FirstOrDefault(control => control.Name == "MainGrid");
         if (target == null || target.Bounds.Width <= 0 || target.Bounds.Height <= 0)
             return;
