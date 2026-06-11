@@ -19,7 +19,7 @@ using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class MyPlaylistsViewModel : PageViewModelBase
+public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 {
     private const int UserPlaylistPageSize = 100;
     private const int MaxUserPlaylistPages = 200;
@@ -49,6 +49,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     public partial bool IsShowingSongs { get; set; }
 
     private CancellationTokenSource? _refreshPlaylistsCts;
+    private bool _isDisposed;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOnlinePlaylist))]
@@ -112,12 +113,18 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     [RelayCommand]
     private async Task LoadAllPlaylists()
     {
+        if (_isDisposed)
+            return;
+
         Items.Clear();
 
         if (!_userClient.IsLoggedIn())
             return;
 
         var onlinePlaylists = await LoadAllOnlinePlaylistsAsync();
+        if (_isDisposed)
+            return;
+
         if (onlinePlaylists is not null && onlinePlaylists.Status == 1)
         {
             var onlineItems = new List<PlaylistItem>();
@@ -197,6 +204,9 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     [RelayCommand]
     private async Task OpenPlaylist(PlaylistItem item)
     {
+        if (_isDisposed)
+            return;
+
         if (item.Type == PlaylistType.AddButton) return;
 
         SelectedPlaylist = item;
@@ -565,6 +575,9 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
 
     private async Task SchedulePlaylistsRefreshAsync(string reason, int delayMs)
     {
+        if (_isDisposed)
+            return;
+
         _refreshPlaylistsCts?.Cancel();
         _refreshPlaylistsCts?.Dispose();
         var cts = new CancellationTokenSource();
@@ -573,7 +586,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
         try
         {
             await Task.Delay(delayMs, cts.Token);
-            if (cts.IsCancellationRequested) return;
+            if (cts.IsCancellationRequested || _isDisposed) return;
             await LoadAllPlaylists();
         }
         catch (OperationCanceledException)
@@ -635,9 +648,15 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     {
         try
         {
+            if (_isDisposed)
+                return;
+
             await _favoritePlaylistService.LoadLikeListAsync();
 
             var firstPage = await _playlistClient.GetSongsAsync(openedItem.Id, 1, 100);
+            if (_isDisposed)
+                return;
+
             if (firstPage is null || firstPage.Status != 1)
             {
                 _logger.LogWarning("打开“我喜欢”后远端接管失败，保留本地列表。 err_code={ErrorCode}, hadLocalSnapshot={HadLocalSnapshot}",
@@ -683,6 +702,18 @@ public partial class MyPlaylistsViewModel : PageViewModelBase
     private static bool IsLikePlaylist(PlaylistItem item)
     {
         return item.ListId == 2 || string.Equals(item.Name, "我喜欢", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+        _refreshPlaylistsCts?.Cancel();
+        _refreshPlaylistsCts?.Dispose();
+        _refreshPlaylistsCts = null;
+        WeakReferenceMessenger.Default.UnregisterAll(this);
     }
 
 }

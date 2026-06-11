@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using AsyncImageLoader;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -23,6 +24,7 @@ public partial class App : Application
 {
     private SerilogLoggerFactory? _loggerFactory;
     private AvaloniaAppServiceProvider? _serviceProvider;
+    private BoundedDiskCachedWebImageLoader? _imageLoader;
 
     public override void Initialize()
     {
@@ -37,6 +39,7 @@ public partial class App : Application
         ConfigureLogging();
         try
         {
+            ConfigureImageLoader();
             SimpleAudioPlayer.Initialize();
 
             _loggerFactory = new SerilogLoggerFactory(Log.Logger, true);
@@ -79,6 +82,7 @@ public partial class App : Application
                     globalShortcutService.UnregisterAll();
                     systemMediaSessionService.Shutdown();
                     ShutdownTrayIcon();
+                    _imageLoader?.Dispose();
                     SimpleAudioPlayer.Free();
                     _serviceProvider?.Dispose();
                     _loggerFactory?.Dispose();
@@ -107,6 +111,26 @@ public partial class App : Application
 
         if (theme != null)
             SukiTheme.GetInstance().ChangeBaseTheme(theme);
+    }
+
+    private void ConfigureImageLoader()
+    {
+        var cacheFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "kugou",
+            "image-cache");
+
+        var previousLoader = ImageLoader.AsyncImageLoader;
+        _imageLoader = new BoundedDiskCachedWebImageLoader(
+            cacheFolder,
+            TimeSpan.FromDays(7),
+            maxMemoryEntries: 200,
+            maxMemoryBytes: 32L * 1024 * 1024);
+
+        ImageLoader.AsyncImageLoader = _imageLoader;
+
+        if (!ReferenceEquals(previousLoader, _imageLoader))
+            previousLoader.Dispose();
     }
 
     private static void ConfigureLogging()
