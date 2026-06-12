@@ -186,6 +186,10 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
 
+### v2.8.3
+- 支持快速回到当前播放的歌曲
+- 保存播放模式和是否打开桌面歌词
+- 修复控制栏上的按钮偏移
 
 ### v2.8.2
 - 修复无法录入带有空格键的快捷键
@@ -199,13 +203,6 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 - 支持导入Jellyfin媒体库
 - 搜索页面显示完整的搜索结果
 - 修复部分页面歌单和专辑显示不完全
-
-### v2.4.0
-- 优化音频可视化频谱，减少卡顿
-- 支持歌词快速跳转
-
-
-
 
 ## 开发者入口
 
