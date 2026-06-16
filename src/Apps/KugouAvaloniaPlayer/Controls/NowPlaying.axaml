@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:chrome="clr-namespace:Avalonia.Controls.Chrome;assembly=Avalonia.Controls"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
@@ -220,40 +221,81 @@
                 </Border.Background>
             </Border>
         </Panel>
+        <Border Height="72"
+                VerticalAlignment="Top"
+                Background="Transparent"
+                chrome:WindowDecorationProperties.ElementRole="TitleBar" />
         <Grid x:Name="NowPlayingForeground"
               Classes.open="{Binding IsOpen}"
               RowDefinitions="Auto, *"
               Margin="40">
-            <StackPanel Grid.Row="0"
-                        Orientation="Horizontal"
-                        Spacing="12"
-                        HorizontalAlignment="Left"
-                        Margin="0,10,0,0">
-                <Button Cursor="Hand"
-                        Command="{Binding CloseCommand}"
-                        Classes="Basic">
-                    <Border Background="#30FFFFFF" CornerRadius="20" Padding="15,8">
-                        <PathIcon Data="{x:Static suki:Icons.ChevronDown}" Foreground="White" Width="15" Height="15" />
-                    </Border>
-                </Button>
+            <Grid Grid.Row="0"
+                  ColumnDefinitions="Auto,*"
+                  Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="12"
+                            HorizontalAlignment="Left">
+                    <Button Cursor="Hand"
+                            Command="{Binding CloseCommand}"
+                            Classes="Basic">
+                        <Border Background="#30FFFFFF" CornerRadius="20" Padding="15,8">
+                            <PathIcon Data="{x:Static suki:Icons.ChevronDown}" Foreground="White" Width="15" Height="15" />
+                        </Border>
+                    </Button>
 
-                <Button Cursor="Hand"
-                        Command="{Binding TogglePortraitModeCommand}"
-                        Classes="Basic"
-                        ToolTip.Tip="写真模式"
-                        IsVisible="{Binding IsPortraitAvailable}">
-                    <Border Classes="PortraitModeButton"
-                            Classes.active="{Binding IsPortraitModeEnabled}"
-                            CornerRadius="20"
-                            Padding="12,8">
-                        <Svg Path="/Assets/portrait-mode.svg"
-                             Css="path { stroke: white; fill: none; } circle { stroke: white; fill: none; }"
-                             Width="25"
-                             Height="25"
-                             Opacity="0.9" />
-                    </Border>
-                </Button>
-            </StackPanel>
+                    <Button Cursor="Hand"
+                            Command="{Binding TogglePortraitModeCommand}"
+                            Classes="Basic"
+                            ToolTip.Tip="写真模式"
+                            IsVisible="{Binding IsPortraitAvailable}">
+                        <Border Classes="PortraitModeButton"
+                                Classes.active="{Binding IsPortraitModeEnabled}"
+                                CornerRadius="20"
+                                Padding="12,8">
+                            <Svg Path="/Assets/portrait-mode.svg"
+                                 Css="path { stroke: white; fill: none; } circle { stroke: white; fill: none; }"
+                                 Width="25"
+                                 Height="25"
+                                 Opacity="0.9" />
+                        </Border>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            Margin="0,-100,-25,0"
+                            HorizontalAlignment="Right">
+                    <Button Classes="Basic"
+                            Cursor="Hand"
+                            Command="{Binding RequestWindowMinimizeCommand}"
+                            ToolTip.Tip="最小化">
+                        <PathIcon Data="{x:Static suki:Icons.WindowMinimize}"
+                                  Foreground="White"
+                                  Width="13"
+                                  Height="13"
+                                  Margin="0,0,0,4" />
+                    </Button>
+                    <Button Classes="Basic"
+                            Cursor="Hand"
+                            Command="{Binding RequestWindowToggleMaximizeCommand}"
+                            ToolTip.Tip="最大化/还原">
+                        <PathIcon Data="{x:Static suki:Icons.WindowMaximize}"
+                                  Foreground="White"
+                                  Width="13"
+                                  Height="13" />
+                    </Button>
+                    <Button Classes="Basic"
+                            Cursor="Hand"
+                            Command="{Binding RequestWindowCloseCommand}"
+                            ToolTip.Tip="关闭">
+                        <PathIcon Data="{x:Static suki:Icons.WindowClose}"
+                                  Foreground="White"
+                                  Width="13"
+                                  Height="13" />
+                    </Button>
+                </StackPanel>
+            </Grid>
 
             <Grid Grid.Row="1" ColumnDefinitions="4*, 6*" Margin="0,30,0,28">
 

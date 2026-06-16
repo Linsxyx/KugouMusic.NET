@@ -22,6 +22,8 @@ public record AuthStateChangedMessage(bool IsLoggedIn);
 
 public record RequestNavigateBackMessage;
 
+public record MainWindowChromeActionMessage(MainWindowChromeAction Action);
+
 public record RefreshPlaylistsMessage;
 
 public record LyricStyleSettingsChangedMessage(
@@ -50,4 +52,11 @@ public enum LyricSettingsScope
 {
     Desktop,
     PlayPage
+}
+
+public enum MainWindowChromeAction
+{
+    Minimize,
+    ToggleMaximize,
+    Close
 }

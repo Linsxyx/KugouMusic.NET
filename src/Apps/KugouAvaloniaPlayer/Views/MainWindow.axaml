@@ -17,6 +17,7 @@
                  BackgroundStyle="Bubble"
                  CanFullScreen="True"
                  CanMaximize="True"
+                 IsTitleBarVisible="{Binding !NowPlaying.IsOpen}"
                  TitleBarVisibilityOnFullScreen="AutoHidden">
 
     <suki:SukiWindow.RightWindowTitleBarControls>

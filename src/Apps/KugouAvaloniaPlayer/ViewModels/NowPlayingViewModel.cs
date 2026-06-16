@@ -297,6 +297,24 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             WeakReferenceMessenger.Default.Send(new ShowPlaylistDialogMessage(song));
     }
 
+    [RelayCommand]
+    private void RequestWindowMinimize()
+    {
+        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Minimize));
+    }
+
+    [RelayCommand]
+    private void RequestWindowToggleMaximize()
+    {
+        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.ToggleMaximize));
+    }
+
+    [RelayCommand]
+    private void RequestWindowClose()
+    {
+        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Close));
+    }
+
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(PlayerViewModel.DisplayedPlayingSong))
