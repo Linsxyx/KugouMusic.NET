@@ -7,9 +7,9 @@ namespace KugouAvaloniaPlayer.Services;
 public sealed class NavigationService : INavigationService
 {
     private const int MaxHistoryDepth = 4;
-    private readonly Stack<PageViewModelBase> _stack = new();
+    private readonly Stack<NavigationEntry> _stack = new();
 
-    public PageViewModelBase? CurrentPage => _stack.Count > 0 ? _stack.Peek() : null;
+    public PageViewModelBase? CurrentPage => _stack.Count > 0 ? _stack.Peek().Page : null;
 
     public bool CanGoBack => _stack.Count > 1;
 
@@ -17,17 +17,27 @@ public sealed class NavigationService : INavigationService
 
     public void NavigateRoot(PageViewModelBase page)
     {
-        _stack.Clear();
-        _stack.Push(page);
+        DisposeEntries(_stack);
+        _stack.Push(new NavigationEntry(page, false));
         CurrentPageChanged?.Invoke(CurrentPage);
     }
 
     public void Navigate(PageViewModelBase page)
     {
+        Navigate(page, disposeOnRemoval: false);
+    }
+
+    public void NavigateTransient(PageViewModelBase page)
+    {
+        Navigate(page, disposeOnRemoval: true);
+    }
+
+    private void Navigate(PageViewModelBase page, bool disposeOnRemoval)
+    {
         if (CurrentPage == page)
             return;
 
-        _stack.Push(page);
+        _stack.Push(new NavigationEntry(page, disposeOnRemoval));
         TrimHistory();
         CurrentPageChanged?.Invoke(CurrentPage);
     }
@@ -37,7 +47,7 @@ public sealed class NavigationService : INavigationService
         if (!CanGoBack)
             return false;
 
-        _stack.Pop();
+        DisposeEntry(_stack.Pop());
         CurrentPageChanged?.Invoke(CurrentPage);
         return true;
     }
@@ -52,5 +62,22 @@ public sealed class NavigationService : INavigationService
 
         for (var i = MaxHistoryDepth - 1; i >= 0; i--)
             _stack.Push(newestToOldest[i]);
+
+        for (var i = MaxHistoryDepth; i < newestToOldest.Length; i++)
+            DisposeEntry(newestToOldest[i]);
     }
+
+    private static void DisposeEntries(Stack<NavigationEntry> entries)
+    {
+        while (entries.Count > 0)
+            DisposeEntry(entries.Pop());
+    }
+
+    private static void DisposeEntry(NavigationEntry entry)
+    {
+        if (entry.DisposeOnRemoval)
+            (entry.Page as IDisposable)?.Dispose();
+    }
+
+    private sealed record NavigationEntry(PageViewModelBase Page, bool DisposeOnRemoval);
 }

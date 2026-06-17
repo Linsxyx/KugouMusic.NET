@@ -12,5 +12,6 @@ public interface INavigationService
 
     void NavigateRoot(PageViewModelBase page);
     void Navigate(PageViewModelBase page);
+    void NavigateTransient(PageViewModelBase page);
     bool GoBack();
 }

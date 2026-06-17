@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ZLinq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
@@ -15,7 +16,7 @@ using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class SingerViewModel : PageViewModelBase
+public partial class SingerViewModel : PageViewModelBase, IDisposable
 {
     private const string HotSortText = "热门";
     private const string NewSortText = "最新";
@@ -37,6 +38,10 @@ public partial class SingerViewModel : PageViewModelBase
     private bool _hasMoreAlbumSongs = true;
     private long _currentAlbumId;
     private long _currentAlbumAuthorId;
+    private bool _isDisposed;
+    private int _albumRequestVersion;
+    private int _albumSongsRequestVersion;
+    private int _songRequestVersion;
 
     [ObservableProperty]
     public partial string CurrentSortText { get; set; } = HotSortText;
@@ -119,6 +124,9 @@ public partial class SingerViewModel : PageViewModelBase
 
     partial void OnCurrentSortTextChanged(string value)
     {
+        if (_isDisposed)
+            return;
+
         if (value == AlbumsText)
         {
             IsAlbumBrowserVisible = true;
@@ -148,11 +156,17 @@ public partial class SingerViewModel : PageViewModelBase
 
     private async Task LoadSongsAsync()
     {
+        if (_isDisposed)
+            return;
+
+        var requestVersion = Interlocked.Increment(ref _songRequestVersion);
         IsLoading = true;
 
         try
         {
             var json = await _artistClient.GetDetailAsync(_authorId);
+            if (!IsCurrentRequest(requestVersion, _songRequestVersion))
+                return;
 
             if (json != null && json.Status == 1)
                 SingerAvatar = string.IsNullOrWhiteSpace(json.Cover)
@@ -164,7 +178,7 @@ public partial class SingerViewModel : PageViewModelBase
 
             var firstPage = 1;
 
-            var success = await LoadMoreSongsInternal(firstPage);
+            var success = await LoadMoreSongsInternal(firstPage, requestVersion);
 
             if (success)
                 _currentPage = firstPage;
@@ -172,25 +186,27 @@ public partial class SingerViewModel : PageViewModelBase
         finally
         {
             // 确保无论如何最后取消加载状态
-            IsLoading = false;
+            if (IsCurrentRequest(requestVersion, _songRequestVersion))
+                IsLoading = false;
         }
     }
 
     [RelayCommand]
     private async Task LoadMore()
     {
-        if (IsLoadingMore || IsLoading || !_hasMoreSongs)
+        if (_isDisposed || IsLoadingMore || IsLoading || !_hasMoreSongs)
             return;
 
         var nextPage = _currentPage + 1;
+        var requestVersion = _songRequestVersion;
 
-        var success = await LoadMoreSongsInternal(nextPage);
+        var success = await LoadMoreSongsInternal(nextPage, requestVersion);
 
         if (success)
             _currentPage = nextPage;
     }
 
-    private async Task<bool> LoadMoreSongsInternal(int page)
+    private async Task<bool> LoadMoreSongsInternal(int page, int requestVersion)
     {
         IsLoadingMore = true;
         try
@@ -198,6 +214,8 @@ public partial class SingerViewModel : PageViewModelBase
             var sort = IsHotSort ? "hot" : "new";
             var result = await _artistClient.GetAudiosAsync(
                 _authorId, page, 100, sort);
+            if (!IsCurrentRequest(requestVersion, _songRequestVersion))
+                return false;
 
             if (result?.Songs == null)
                 return false;
@@ -226,13 +244,19 @@ public partial class SingerViewModel : PageViewModelBase
         }
         catch (Exception ex)
         {
+            if (_isDisposed)
+                return false;
+
             _logger.LogWarning(ex, "加载歌手歌曲失败，authorId={AuthorId}, page={Page}", _authorId, page);
             return false;
         }
         finally
         {
-            IsLoading = false;
-            IsLoadingMore = false;
+            if (IsCurrentRequest(requestVersion, _songRequestVersion))
+            {
+                IsLoading = false;
+                IsLoadingMore = false;
+            }
         }
     }
 
@@ -246,39 +270,51 @@ public partial class SingerViewModel : PageViewModelBase
     [RelayCommand]
     private async Task LoadMoreAlbums()
     {
-        if (IsLoadingAlbums || IsLoadingMoreAlbums || !_hasMoreAlbums)
+        if (_isDisposed || IsLoadingAlbums || IsLoadingMoreAlbums || !_hasMoreAlbums)
             return;
 
         var nextPage = _currentAlbumPage + 1;
-        var success = await LoadMoreAlbumsInternal(nextPage);
+        var requestVersion = _albumRequestVersion;
+        var success = await LoadMoreAlbumsInternal(nextPage, requestVersion);
         if (success)
             _currentAlbumPage = nextPage;
     }
 
     private async Task LoadAlbumsAsync()
     {
+        if (_isDisposed)
+            return;
+
+        var requestVersion = Interlocked.Increment(ref _albumRequestVersion);
         IsLoadingAlbums = true;
 
         try
         {
+            if (!IsCurrentRequest(requestVersion, _albumRequestVersion))
+                return;
+
             Albums.Clear();
             _currentAlbumPage = 1;
             _hasMoreAlbums = true;
 
-            await LoadMoreAlbumsInternal(_currentAlbumPage);
+            await LoadMoreAlbumsInternal(_currentAlbumPage, requestVersion);
         }
         finally
         {
-            IsLoadingAlbums = false;
+            if (IsCurrentRequest(requestVersion, _albumRequestVersion))
+                IsLoadingAlbums = false;
         }
     }
 
-    private async Task<bool> LoadMoreAlbumsInternal(int page)
+    private async Task<bool> LoadMoreAlbumsInternal(int page, int requestVersion)
     {
         IsLoadingMoreAlbums = true;
         try
         {
             var result = await _artistClient.GetAlbumsAsync(_authorId, page, 50, "new");
+            if (!IsCurrentRequest(requestVersion, _albumRequestVersion))
+                return false;
+
             if (result?.Albums == null)
                 return false;
 
@@ -297,21 +333,26 @@ public partial class SingerViewModel : PageViewModelBase
         }
         catch (Exception ex)
         {
+            if (_isDisposed)
+                return false;
+
             _logger.LogWarning(ex, "加载歌手专辑失败，authorId={AuthorId}, page={Page}", _authorId, page);
             return false;
         }
         finally
         {
-            IsLoadingMoreAlbums = false;
+            if (IsCurrentRequest(requestVersion, _albumRequestVersion))
+                IsLoadingMoreAlbums = false;
         }
     }
 
     [RelayCommand]
     private async Task OpenAlbum(SingerAlbumItem? item)
     {
-        if (item == null)
+        if (_isDisposed || item == null)
             return;
 
+        var requestVersion = Interlocked.Increment(ref _albumSongsRequestVersion);
         _currentAlbumId = item.AlbumId;
         _currentAlbumAuthorId = item.AuthorId;
         if (_currentAlbumAuthorId <= 0 && long.TryParse(_authorId, out var authorId))
@@ -331,30 +372,34 @@ public partial class SingerViewModel : PageViewModelBase
 
         try
         {
-            await LoadMoreAlbumSongsInternal();
+            await LoadMoreAlbumSongsInternal(requestVersion);
         }
         finally
         {
-            IsLoadingAlbumSongs = false;
+            if (IsCurrentRequest(requestVersion, _albumSongsRequestVersion))
+                IsLoadingAlbumSongs = false;
         }
     }
 
     [RelayCommand]
     private async Task LoadMoreAlbumSongs()
     {
-        if (IsLoadingAlbumSongs || IsLoadingMoreAlbumSongs || !_hasMoreAlbumSongs || _currentAlbumId <= 0)
+        if (_isDisposed || IsLoadingAlbumSongs || IsLoadingMoreAlbumSongs || !_hasMoreAlbumSongs || _currentAlbumId <= 0)
             return;
 
         _currentAlbumDetailPage++;
-        await LoadMoreAlbumSongsInternal();
+        await LoadMoreAlbumSongsInternal(_albumSongsRequestVersion);
     }
 
-    private async Task LoadMoreAlbumSongsInternal()
+    private async Task LoadMoreAlbumSongsInternal(int requestVersion)
     {
         IsLoadingMoreAlbumSongs = true;
         try
         {
             var songs = await _albumClient.GetSongsAsync(_currentAlbumId.ToString(), _currentAlbumDetailPage, 50);
+            if (!IsCurrentRequest(requestVersion, _albumSongsRequestVersion))
+                return;
+
             if (songs == null || songs.Count < 50)
                 _hasMoreAlbumSongs = false;
 
@@ -397,6 +442,9 @@ public partial class SingerViewModel : PageViewModelBase
         }
         catch (Exception ex)
         {
+            if (_isDisposed)
+                return;
+
             _logger.LogError(ex, "加载歌手专辑详情失败，albumId={AlbumId}, page={Page}",
                 _currentAlbumId, _currentAlbumDetailPage);
             if (_currentAlbumDetailPage > 1)
@@ -404,13 +452,17 @@ public partial class SingerViewModel : PageViewModelBase
         }
         finally
         {
-            IsLoadingMoreAlbumSongs = false;
+            if (IsCurrentRequest(requestVersion, _albumSongsRequestVersion))
+                IsLoadingMoreAlbumSongs = false;
         }
     }
 
     [RelayCommand]
     private void BackToAlbums()
     {
+        if (_isDisposed)
+            return;
+
         IsAlbumDetailVisible = false;
         IsAlbumBrowserVisible = true;
         AlbumSongs.Clear();
@@ -419,7 +471,7 @@ public partial class SingerViewModel : PageViewModelBase
     [RelayCommand]
     private async Task CollectAlbum()
     {
-        if (_currentAlbumId <= 0 || string.IsNullOrWhiteSpace(AlbumDetailTitle))
+        if (_isDisposed || _currentAlbumId <= 0 || string.IsNullOrWhiteSpace(AlbumDetailTitle))
             return;
 
         try
@@ -428,6 +480,9 @@ public partial class SingerViewModel : PageViewModelBase
                 AlbumDetailTitle,
                 _currentAlbumId,
                 _currentAlbumAuthorId);
+
+            if (_isDisposed)
+                return;
 
             if (result == null)
                 return;
@@ -443,6 +498,9 @@ public partial class SingerViewModel : PageViewModelBase
         }
         catch (Exception ex)
         {
+            if (_isDisposed)
+                return;
+
             _logger.LogError(ex, "收藏歌手专辑失败，albumId={AlbumId}", _currentAlbumId);
             _toastManager.CreateToast()
                 .OfType(NotificationType.Error)
@@ -492,6 +550,26 @@ public partial class SingerViewModel : PageViewModelBase
             return item.PublishDate;
 
         return author;
+    }
+
+    private bool IsCurrentRequest(int requestVersion, int currentVersion)
+    {
+        return !_isDisposed && requestVersion == currentVersion;
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+        Interlocked.Increment(ref _songRequestVersion);
+        Interlocked.Increment(ref _albumRequestVersion);
+        Interlocked.Increment(ref _albumSongsRequestVersion);
+
+        Songs.Clear();
+        Albums.Clear();
+        AlbumSongs.Clear();
     }
 }
 

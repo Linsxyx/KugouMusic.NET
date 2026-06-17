@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using ZLinq;
-using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
@@ -24,9 +24,9 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private static readonly object CustomBackgroundImageSync = new();
-    private static Bitmap? s_cachedCustomBackgroundBitmap;
-    private static string? s_cachedCustomBackgroundPath;
+    private static readonly Lock CustomBackgroundImageSync = new();
+    private static Bitmap? _sCachedCustomBackgroundBitmap;
+    private static string? _sCachedCustomBackgroundPath;
 
     private readonly LoginClient _authClient;
     private readonly IAppUpdateService _appUpdateService;
@@ -153,7 +153,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             NowPlaying.CloseCommand.Execute(null);
             var singerVm = singerViewModelFactory1.Create(m.Singer.Id.ToString(), m.Singer.Name);
-            _navigationService.Navigate(singerVm);
+            _navigationService.NavigateTransient(singerVm);
         });
 
         WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (_, m) =>
@@ -220,11 +220,9 @@ public partial class MainWindowViewModel : ObservableObject
         var brush = CreateCustomBackgroundBrush(useCustomImage, path, opacity, out var hasCustomImage);
         Dispatcher.UIThread.Post(() =>
         {
-            if (Avalonia.Application.Current is { } app)
-            {
-                app.Resources["KugouCustomBackgroundBrush"] = brush;
-                app.Resources["KugouHeroBackgroundImageVisible"] = !hasCustomImage;
-            }
+            if (Avalonia.Application.Current is not { } app) return;
+            app.Resources["KugouCustomBackgroundBrush"] = brush;
+            app.Resources["KugouHeroBackgroundImageVisible"] = !hasCustomImage;
         });
 
         return hasCustomImage;
@@ -265,16 +263,16 @@ public partial class MainWindowViewModel : ObservableObject
     {
         lock (CustomBackgroundImageSync)
         {
-            if (s_cachedCustomBackgroundBitmap is not null &&
-                string.Equals(s_cachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase))
+            if (_sCachedCustomBackgroundBitmap is not null &&
+                string.Equals(_sCachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase))
             {
-                return s_cachedCustomBackgroundBitmap;
+                return _sCachedCustomBackgroundBitmap;
             }
 
-            s_cachedCustomBackgroundBitmap?.Dispose();
-            s_cachedCustomBackgroundBitmap = new Bitmap(path);
-            s_cachedCustomBackgroundPath = path;
-            return s_cachedCustomBackgroundBitmap;
+            _sCachedCustomBackgroundBitmap?.Dispose();
+            _sCachedCustomBackgroundBitmap = new Bitmap(path);
+            _sCachedCustomBackgroundPath = path;
+            return _sCachedCustomBackgroundBitmap;
         }
     }
 
@@ -283,18 +281,18 @@ public partial class MainWindowViewModel : ObservableObject
         lock (CustomBackgroundImageSync)
         {
             if (path is not null &&
-                !string.Equals(s_cachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(_sCachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
-            s_cachedCustomBackgroundBitmap?.Dispose();
-            s_cachedCustomBackgroundBitmap = null;
-            s_cachedCustomBackgroundPath = null;
+            _sCachedCustomBackgroundBitmap?.Dispose();
+            _sCachedCustomBackgroundBitmap = null;
+            _sCachedCustomBackgroundPath = null;
         }
     }
 
-    public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+    //public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
     public PlayerViewModel Player { get; }
     public NowPlayingViewModel NowPlaying { get; }
@@ -412,13 +410,6 @@ public partial class MainWindowViewModel : ObservableObject
         _navigationService.Navigate(page);
     }
 
-
-    /*public PlaylistItem SidebarAddPlaylistItem { get; } = new()
-    {
-        Name = "新建/添加",
-        Type = PlaylistType.AddButton
-    };*/
-
     // --- 登录相关 ---
     private async Task LoadLocalSessionOrLogin()
     {
@@ -490,23 +481,25 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var todayStr = DateTime.Now.ToString("yyyy-MM-dd");
             var todayRecord = history.Items.AsValueEnumerable().FirstOrDefault(x => x.Day == todayStr);
-            if (todayRecord == null)
+            switch (todayRecord)
             {
-                var data = await _userClient.ReceiveOneDayVipAsync();
-                if (data is not null && data.Status == 1)
-                    _logger.LogInformation("vip领取成功");
-                else
-                    _logger.LogError("vip领取失败{data.ErrorCode}" , data?.ErrorCode);
-                await Task.Delay(1000);
-                await _userClient.UpgradeVipRewardAsync();
-            }
-            else if (todayRecord is { VipType: "tvip" })
-            {
-                await _userClient.UpgradeVipRewardAsync();
-            }
-            else
-            {
-                _logger.LogInformation("今日已领取vip");
+                case null:
+                {
+                    var data = await _userClient.ReceiveOneDayVipAsync();
+                    if (data is not null && data.Status == 1)
+                        _logger.LogInformation("vip领取成功");
+                    else
+                        _logger.LogError("vip领取失败{data.ErrorCode}" , data?.ErrorCode);
+                    await Task.Delay(1000);
+                    await _userClient.UpgradeVipRewardAsync();
+                    break;
+                }
+                case { VipType: "tvip" }:
+                    await _userClient.UpgradeVipRewardAsync();
+                    break;
+                default:
+                    _logger.LogInformation("今日已领取vip");
+                    break;
             }
         }
     }

@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class DailyRecommendViewModel : PageViewModelBase
+public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
 {
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private readonly RecommendClient _discoveryClient;
@@ -24,6 +25,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
     private readonly KgSessionManager _sessionManager;
     private readonly ISukiToastManager _toastManager;
     private CancellationTokenSource? _fmPreviewLoadCancellation;
+    private bool _isDisposed;
     private int _fmPreviewRequestVersion;
 
     [ObservableProperty]
@@ -58,14 +60,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase
         _logger = logger;
 
         _player.PersonalFmStateChanged += SyncFmStateFromPlayer;
-        _player.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(PlayerViewModel.IsPlayingAudio) or nameof(PlayerViewModel.CurrentPlayingSong))
-            {
-                OnPropertyChanged(nameof(IsFmPlaying));
-                OnPropertyChanged(nameof(FmPlayIconPath));
-            }
-        };
+        _player.PropertyChanged += OnPlayerPropertyChanged;
     }
 
     public override string DisplayName => "每日推荐";
@@ -424,8 +419,14 @@ public partial class DailyRecommendViewModel : PageViewModelBase
 
     private void SyncFmStateFromPlayer()
     {
+        if (_isDisposed)
+            return;
+
         void Update()
         {
+            if (_isDisposed)
+                return;
+
             IsFmActive = _player.IsPersonalFmSessionActive;
             if (IsFmActive)
             {
@@ -457,6 +458,18 @@ public partial class DailyRecommendViewModel : PageViewModelBase
             Update();
         else
             Dispatcher.UIThread.Post(Update);
+    }
+
+    private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_isDisposed)
+            return;
+
+        if (e.PropertyName is not (nameof(PlayerViewModel.IsPlayingAudio) or nameof(PlayerViewModel.CurrentPlayingSong)))
+            return;
+
+        OnPropertyChanged(nameof(IsFmPlaying));
+        OnPropertyChanged(nameof(FmPlayIconPath));
     }
 
     partial void OnSelectedFmModeChanged(PersonalFmMode value)
@@ -495,6 +508,17 @@ public partial class DailyRecommendViewModel : PageViewModelBase
         }
 
         cts.Dispose();
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+        _player.PersonalFmStateChanged -= SyncFmStateFromPlayer;
+        _player.PropertyChanged -= OnPlayerPropertyChanged;
+        CancelAndDisposeFmPreviewLoad();
     }
 
     private void ShowToast(string title, string content, NotificationType type)
