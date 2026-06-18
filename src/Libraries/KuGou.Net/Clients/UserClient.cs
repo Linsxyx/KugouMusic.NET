@@ -99,20 +99,22 @@ public class UserClient(RawUserApi rawApi, KgSessionManager sessionManager)
         return await rawApi.GetFollowSingerListAsync(uid, token);
     }
 
-    public async Task<JsonElement?> GetCloudAsync(int page = 1, int pageSize = 30)
+    public async Task<UserCloudResponse?> GetCloudAsync(int page = 1, int pageSize = 30)
     {
         if (!IsLoggedIn()) return null;
         var session = sessionManager.Session;
         var mid = string.IsNullOrWhiteSpace(session.Mid) || session.Mid == "-"
             ? KgUtils.CalcNewMid(session.Dfid)
             : session.Mid;
-        return await rawApi.GetCloudAsync(session.UserId, session.Token, mid, page, pageSize);
+        var json = await rawApi.GetCloudAsync(session.UserId, session.Token, mid, page, pageSize);
+        return KgApiResponseParser.Parse<UserCloudResponse>(json, AppJsonContext.Default.UserCloudResponse);
     }
 
-    public Task<JsonElement> GetCloudUrlAsync(string hash, string? albumAudioId = null, string? audioId = null,
-        string? name = null)
+    public async Task<UserCloudUrlResponse?> GetCloudUrlAsync(string hash, string? albumAudioId = null,
+        string? audioId = null, string? name = null)
     {
-        return rawApi.GetCloudUrlAsync(hash, albumAudioId, audioId, name);
+        var json = await rawApi.GetCloudUrlAsync(hash, albumAudioId, audioId, name);
+        return KgApiResponseParser.Parse<UserCloudUrlResponse>(json, AppJsonContext.Default.UserCloudUrlResponse);
     }
 
     public async Task<JsonElement?> GetFollowMessagesAsync(string artistId, int pageSize = 30)

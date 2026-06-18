@@ -90,6 +90,7 @@ public class UserController(UserClient userClient) : ControllerBase
     /// <param name="pagesize">每页页数。</param>
     /// <returns>用户云盘音乐列表。</returns>
     [HttpGet("cloud")]
+    [ProducesResponseType(typeof(UserCloudResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> UserCloud(
         [FromQuery] int page = 1,
         [FromQuery] int pagesize = 30)
@@ -107,6 +108,7 @@ public class UserController(UserClient userClient) : ControllerBase
     /// <param name="name">云盘音乐名称。</param>
     /// <returns>用户云盘音乐 URL。</returns>
     [HttpGet("cloud/url")]
+    [ProducesResponseType(typeof(UserCloudUrlResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> UserCloudUrl(
         [FromQuery][Required(AllowEmptyStrings = false)] string hash,
         [FromQuery(Name = "album_audio_id")] string? albumAudioId = null,

@@ -32,31 +32,35 @@ public class LyricClient(RawLyricApi rawApi)
         string? decodedContent = null;
         string? decodedTrans = null;
 
-        if (decode)
+        if (!decode)
+            return new LyricResult(
+                json.GetProperty("content").GetString(),
+                decodedContent,
+                decodedTrans,
+                json
+            );
+        if (json.TryGetProperty("content", out var contentElem)
+            && contentElem.ValueKind == JsonValueKind.String)
         {
-            if (json.TryGetProperty("content", out var contentElem)
-                && contentElem.ValueKind == JsonValueKind.String)
+            var base64 = contentElem.GetString();
+            if (!string.IsNullOrEmpty(base64))
             {
-                var base64 = contentElem.GetString();
-                if (!string.IsNullOrEmpty(base64))
-                {
-                    var contentType = json.TryGetProperty("contenttype", out var t)
-                        ? t.GetInt32()
-                        : 0;
+                var contentType = json.TryGetProperty("contenttype", out var t)
+                    ? t.GetInt32()
+                    : 0;
 
-                    decodedContent =
-                        fmt == "lrc" || contentType != 0
-                            ? Encoding.UTF8.GetString(Convert.FromBase64String(base64))
-                            : KgCrypto.DecodeLyrics(base64);
-                }
+                decodedContent =
+                    fmt == "lrc" || contentType != 0
+                        ? Encoding.UTF8.GetString(Convert.FromBase64String(base64))
+                        : KgCrypto.DecodeLyrics(base64);
             }
-
-            if (json.TryGetProperty("trans", out var transElem)
-                && transElem.ValueKind == JsonValueKind.String)
-                decodedTrans = Encoding.UTF8.GetString(
-                    Convert.FromBase64String(transElem.GetString()!)
-                );
         }
+
+        if (json.TryGetProperty("trans", out var transElem)
+            && transElem.ValueKind == JsonValueKind.String)
+            decodedTrans = Encoding.UTF8.GetString(
+                Convert.FromBase64String(transElem.GetString()!)
+            );
 
         return new LyricResult(
             json.GetProperty("content").GetString(),
