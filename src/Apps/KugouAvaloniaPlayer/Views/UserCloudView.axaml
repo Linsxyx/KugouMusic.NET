@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
+             mc:Ignorable="d"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             x:Class="KugouAvaloniaPlayer.Views.UserCloudView"
+             x:DataType="vm:UserCloudViewModel"
+             behaviors:InteractionBehaviors.AttachedToVisualTreeCommand="{Binding LoadCloudCommand}"
+             behaviors:InteractionBehaviors.AttachedToVisualTreeCommandRunOnce="False">
+
+    <Grid Margin="15">
+        <localControls:SongCollectionDetailView
+            Cover="{Binding Cover}"
+            Title="{Binding Title}"
+            Subtitle="{Binding Subtitle}"
+            Songs="{Binding Songs}"
+            LoadMoreCommand="{Binding LoadMoreCommand}"
+            IsLoading="{Binding IsLoading}"
+            IsLoadingMore="{Binding IsLoadingMore}"
+            ShowAddLoadedSongsToQueueButton="True"
+            ShowBackButton="False"
+            LoadingText="正在读取云盘歌曲..."
+            LoadingMoreText="正在加载更多云盘歌曲..."
+            ListMargin="0" />
+    </Grid>
+</UserControl>

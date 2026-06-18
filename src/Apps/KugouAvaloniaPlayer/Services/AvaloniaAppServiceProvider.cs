@@ -47,6 +47,7 @@ namespace KugouAvaloniaPlayer.Services;
 [Singleton<IAppUpdateService, AppUpdateService>]
 [Transient<LoginViewModel>]
 [Transient<SearchViewModel>]
+[Transient<UserCloudViewModel>]
 [Transient<UserViewModel>]
 [Transient<NowPlayingViewModel>]
 [Transient<MainWindowViewModel>]
@@ -97,6 +98,7 @@ public interface IAvaloniaAppServiceModule;
 [Singleton<ILogger<SingerViewModel>>(Factory = nameof(CreateSingerViewModelLogger))]
 [Singleton<ILogger<AppUpdateService>>(Factory = nameof(CreateAppUpdateServiceLogger))]
 [Singleton<ILogger<SearchViewModel>>(Factory = nameof(CreateSearchViewModelLogger))]
+[Singleton<ILogger<UserCloudViewModel>>(Factory = nameof(CreateUserCloudViewModelLogger))]
 [Singleton<ILogger<RankViewModel>>(Factory = nameof(CreateRankViewModelLogger))]
 [Singleton<ILogger<LoginViewModel>>(Factory = nameof(CreateLoginViewModelLogger))]
 [Singleton<ILogger<PlayerViewModel>>(Factory = nameof(CreatePlayerViewModelLogger))]
@@ -160,6 +162,7 @@ public sealed partial class AvaloniaAppServiceProvider
     public ILogger<SingerViewModel> CreateSingerViewModelLogger() => LoggerFactory.CreateLogger<SingerViewModel>();
     public ILogger<AppUpdateService> CreateAppUpdateServiceLogger() => LoggerFactory.CreateLogger<AppUpdateService>();
     public ILogger<SearchViewModel> CreateSearchViewModelLogger() => LoggerFactory.CreateLogger<SearchViewModel>();
+    public ILogger<UserCloudViewModel> CreateUserCloudViewModelLogger() => LoggerFactory.CreateLogger<UserCloudViewModel>();
     public ILogger<RankViewModel> CreateRankViewModelLogger() => LoggerFactory.CreateLogger<RankViewModel>();
     public ILogger<LoginViewModel> CreateLoginViewModelLogger() => LoggerFactory.CreateLogger<LoginViewModel>();
     public ILogger<PlayerViewModel> CreatePlayerViewModelLogger() => LoggerFactory.CreateLogger<PlayerViewModel>();

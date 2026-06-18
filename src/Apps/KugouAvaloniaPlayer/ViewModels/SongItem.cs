@@ -14,6 +14,9 @@ public partial class SongItem : ObservableObject
     public partial string AlbumId { get; set; } = "";
 
     [ObservableProperty]
+    public partial long AlbumAudioId { get; set; }
+
+    [ObservableProperty]
     public partial string AlbumName { get; set; } = "";
 
     [ObservableProperty]

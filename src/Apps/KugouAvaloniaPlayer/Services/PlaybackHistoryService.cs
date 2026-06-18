@@ -188,6 +188,7 @@ public sealed class PlaybackHistoryService(
             Singer = song.Singer,
             Singers = song.Singers?.AsValueEnumerable().ToList() ?? new List<SingerLite>(),
             AlbumId = song.AlbumId,
+            AlbumAudioId = song.AlbumAudioId,
             AlbumName = song.AlbumName,
             AudioId = song.AudioId,
             Cover = song.Cover,
@@ -208,6 +209,7 @@ public sealed class PlaybackHistoryService(
             Singer = string.IsNullOrWhiteSpace(item.Singer) ? "未知" : item.Singer,
             Hash = item.Hash,
             AlbumId = item.AlbumId,
+            AlbumAudioId = item.AlbumAudioId,
             AlbumName = item.AlbumName,
             AudioId = item.AudioId,
             FileId = item.FileId,
@@ -251,6 +253,7 @@ public sealed class PlaybackHistoryItem
     public string Singer { get; set; } = "";
     public List<SingerLite> Singers { get; set; } = new();
     public string AlbumId { get; set; } = "";
+    public long AlbumAudioId { get; set; }
     public string AlbumName { get; set; } = "";
     public long AudioId { get; set; }
     public string? Cover { get; set; }

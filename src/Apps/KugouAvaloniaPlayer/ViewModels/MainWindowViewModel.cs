@@ -36,6 +36,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ILoginDialogService _loginDialogService;
     private readonly INavigationService _navigationService;
     private readonly SearchViewModel _searchViewModel;
+    private readonly UserCloudViewModel _userCloudViewModel;
     private readonly KgSessionManager _sessionManager;
     private readonly UserClient _userClient;
     private readonly UserViewModel _userViewModel;
@@ -93,6 +94,7 @@ public partial class MainWindowViewModel : ObservableObject
         NowPlayingViewModel nowPlaying,
         LoginViewModel loginViewModel,
         SearchViewModel searchViewModel,
+        UserCloudViewModel userCloudViewModel,
         UserViewModel userViewModel,
         RankViewModel rankViewModel,
         DailyRecommendViewModel dailyRecommendViewModel,
@@ -115,6 +117,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         LoginViewModel = loginViewModel;
         _searchViewModel = searchViewModel;
+        _userCloudViewModel = userCloudViewModel;
         _userViewModel = userViewModel;
         PlaylistsViewModel = myPlaylistsViewModel;
         _logger = logger;
@@ -132,6 +135,7 @@ public partial class MainWindowViewModel : ObservableObject
         Pages.Add(discoverViewModel);
         Pages.Add(rankViewModel);
         Pages.Add(_searchViewModel);
+        Pages.Add(_userCloudViewModel);
         _navigationService.CurrentPageChanged += OnNavigationCurrentPageChanged;
         _navigationService.NavigateRoot(_dailyRecommendViewModel);
         ActivePage = _dailyRecommendViewModel;
@@ -515,6 +519,9 @@ public partial class MainWindowViewModel : ObservableObject
         await LoadUserInfo();
         _logger.LogInformation("登录成功");
 
+        if (ReferenceEquals(ActivePage, _userCloudViewModel))
+            await _userCloudViewModel.LoadCloudCommand.ExecuteAsync(null);
+
         _ = Task.Run(async () =>
         {
             try
@@ -543,6 +550,7 @@ public partial class MainWindowViewModel : ObservableObject
             _userViewModel.UserId = string.Empty;
             _userViewModel.VipStatus = "未开通";
             Player.ClearPersonalFmSession();
+            _userCloudViewModel.LoadCloudCommand.Execute(null);
             _ = _dailyRecommendViewModel.OnAuthStateChangedAsync();
             _logger.LogInformation("已退出登录");
 
@@ -715,6 +723,8 @@ public partial class MainWindowViewModel : ObservableObject
                 currentSongList = discoverVm.SelectedPlaylistSongs;
             else if (ActivePage is SearchViewModel searchVm)
                 currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
+            else if (ActivePage is UserCloudViewModel userCloudVm)
+                currentSongList = userCloudVm.Songs;
             else if (ActivePage is SingerViewModel singerVm)
                 currentSongList = singerVm.IsAlbumDetailVisible ? singerVm.AlbumSongs : singerVm.Songs;
             else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)

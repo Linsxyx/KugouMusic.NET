@@ -9,6 +9,7 @@ using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Services.Jellyfin;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +22,7 @@ public interface IPlaybackSourceResolver
 
 public sealed class PlaybackSourceResolver(
     SongClient songClient,
+    UserClient userClient,
     KgSessionManager sessionManager,
     IJellyfinClient jellyfinClient,
     ILogger<PlaybackSourceResolver> logger)
@@ -47,6 +49,22 @@ public sealed class PlaybackSourceResolver(
 
         if (string.IsNullOrEmpty(sessionManager.Session.Token) || sessionManager.Session.UserId == "0")
             return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.LoginRequired);
+
+        if (song.PlaybackSource == SongPlaybackSource.UserCloud)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var cloudData = await userClient.GetCloudUrlAsync(
+                song.Hash,
+                song.AlbumAudioId > 0 ? song.AlbumAudioId.ToString() : null,
+                song.AudioId > 0 ? song.AudioId.ToString() : null,
+                song.Name);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (cloudData == null || cloudData.Status != 1 || string.IsNullOrWhiteSpace(cloudData.Url))
+                return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.Unavailable);
+
+            return PlaybackSourceResult.Remote(cloudData.Url);
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
         var effectiveQuality = await ResolvePlaybackQualityAsync(song, quality, cancellationToken);

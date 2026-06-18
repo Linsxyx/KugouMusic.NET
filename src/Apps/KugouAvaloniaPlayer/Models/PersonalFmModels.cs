@@ -7,7 +7,8 @@ namespace KugouAvaloniaPlayer.Models;
 public enum SongPlaybackSource
 {
     Default,
-    PersonalFm
+    PersonalFm,
+    UserCloud
 }
 
 public enum PersonalFmMode

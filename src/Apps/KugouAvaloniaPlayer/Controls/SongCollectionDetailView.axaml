@@ -237,6 +237,7 @@
 
                     <Button Command="{Binding #Root.BackCommand}"
                             Classes="Basic HeroIconButton"
+                            IsVisible="{Binding #Root.ShowBackButton}"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Top"
                             Cursor="Hand"

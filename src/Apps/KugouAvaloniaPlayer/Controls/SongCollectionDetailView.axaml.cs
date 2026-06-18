@@ -63,6 +63,9 @@ public partial class SongCollectionDetailView : UserControl
     public static readonly StyledProperty<ICommand?> BackCommandProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(BackCommand));
 
+    public static readonly StyledProperty<bool> ShowBackButtonProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(ShowBackButton), true);
+
     public static readonly StyledProperty<ICommand?> PlayFirstCommandProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(PlayFirstCommand));
 
@@ -236,6 +239,12 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(BackCommandProperty);
         set => SetValue(BackCommandProperty, value);
+    }
+
+    public bool ShowBackButton
+    {
+        get => GetValue(ShowBackButtonProperty);
+        set => SetValue(ShowBackButtonProperty, value);
     }
 
     public ICommand? PlayFirstCommand
