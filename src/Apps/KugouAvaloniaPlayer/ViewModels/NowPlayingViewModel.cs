@@ -440,7 +440,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "加载 NowPlaying 写真失败");
+            _logger.LogWarning(ex, "加载 NowPlayingView 写真失败");
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 if (!cancellationToken.IsCancellationRequested)

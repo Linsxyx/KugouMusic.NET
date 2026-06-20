@@ -1,24 +1,24 @@
 using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using ZLinq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using KugouAvaloniaPlayer.ViewModels;
+using ZLinq;
 
-namespace KugouAvaloniaPlayer.Controls;
+namespace KugouAvaloniaPlayer.Views;
 
-public partial class NowPlaying : UserControl
+public partial class NowPlayingView : UserControl
 {
     private NowPlayingViewModel? _nowPlayingViewModel;
     private PlayerViewModel? _playerViewModel;
     private Size _lastSharedBackgroundSize;
     private Point _lastSharedBackgroundOffset;
 
-    public NowPlaying()
+    public NowPlayingView()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;

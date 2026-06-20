@@ -186,6 +186,12 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
 
+### v2.9.1
+- 修复自定义均衡器出错导致启动失败
+- 添加轻量级歌词滚动动画选项
+- 添加主窗口状态保存与恢复功能
+- 播放页添加全屏功能
+
 ### v2.8.3
 - 支持快速回到当前播放的歌曲
 - 保存播放模式和是否打开桌面歌词
@@ -198,11 +204,6 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 - 修复本地内嵌封面歌曲图片加载导致的内存泄露
 - 桌面歌词窗口支持在窗口切换器中隐藏
 - 将我的歌单拆分为创建的歌单"和收藏的歌单
-
-### v2.6.0
-- 支持导入Jellyfin媒体库
-- 搜索页面显示完整的搜索结果
-- 修复部分页面歌单和专辑显示不完全
 
 ## 开发者入口
 

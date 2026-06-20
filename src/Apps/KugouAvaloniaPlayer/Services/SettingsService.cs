@@ -136,5 +136,19 @@ public static class SettingsManager
             : Settings.CustomBackgroundImagePath;
         Settings.CustomBackgroundImageOpacity = Math.Clamp(Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
         Settings.MusicVolume = Math.Clamp(Settings.MusicVolume, 0f, 1f);
+        Settings.CustomEqGains = NormalizeCustomEqGains(Settings.CustomEqGains);
+    }
+
+    private static float[] NormalizeCustomEqGains(float[]? gains)
+    {
+        if (gains is { Length: AppSettings.CustomEqBandCount })
+            return gains;
+
+        var normalized = new float[AppSettings.CustomEqBandCount];
+        if (gains == null)
+            return normalized;
+
+        Array.Copy(gains, normalized, Math.Min(gains.Length, normalized.Length));
+        return normalized;
     }
 }

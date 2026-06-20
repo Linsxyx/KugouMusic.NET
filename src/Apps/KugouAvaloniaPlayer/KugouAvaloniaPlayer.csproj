@@ -96,18 +96,22 @@
         <Compile Update="Controls\MediaCard.axaml.cs">
             <DependentUpon>MediaCard.axaml</DependentUpon>
         </Compile>
-        <Compile Update="Controls\EqSettingsControl.axaml.cs">
-            <DependentUpon>EqSettingsControl.axaml</DependentUpon>
-            <SubType>Code</SubType>
-        </Compile>
         <Compile Update="Views\DiscoverView.axaml.cs">
             <DependentUpon>DiscoverView.axaml</DependentUpon>
         </Compile>
         <Compile Update="Views\DesktopLyricLockOverlayWindow.axaml.cs">
           <DependentUpon>DesktopLyricLockOverlayWindow.axaml</DependentUpon>
         </Compile>
-        <Compile Update="Controls\NowPlaying.MoreFlyout.cs">
-          <DependentUpon>NowPlaying.axaml</DependentUpon>
+        <Compile Update="Views\EqSettingsView.axaml.cs">
+          <DependentUpon>EqSettingsView.axaml</DependentUpon>
+          <SubType>Code</SubType>
+        </Compile>
+        <Compile Update="Views\NowPlayingView.axaml.cs">
+          <DependentUpon>NowPlayingView.axaml</DependentUpon>
+          <SubType>Code</SubType>
+        </Compile>
+        <Compile Update="Views\NowPlayingView.MoreFlyout.cs">
+          <DependentUpon>NowPlayingView.axaml</DependentUpon>
         </Compile>
     </ItemGroup>
 </Project>

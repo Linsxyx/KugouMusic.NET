@@ -142,6 +142,8 @@ public class GlobalShortcutSettings
 
 public class AppSettings
 {
+    public const int CustomEqBandCount = 10;
+
     public const string ThemeDefault = "Default";
     public const string ThemeDark = "Dark";
     public const string ThemeLight = "Light";
@@ -173,7 +175,7 @@ public class AppSettings
 
     public float MusicVolume { get; set; } = 0.8f;
 
-    public float[] CustomEqGains { get; set; } = new float[10];
+    public float[] CustomEqGains { get; set; } = new float[CustomEqBandCount];
 
     public bool DesktopLyricUseCustomMainColor { get; set; }
     public string DesktopLyricCustomMainColor { get; set; } = "#FFFFFFFF";

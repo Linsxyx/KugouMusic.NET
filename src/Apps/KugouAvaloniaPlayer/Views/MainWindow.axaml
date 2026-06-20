@@ -6,6 +6,7 @@
                  xmlns:suki="https://github.com/kikipoulet/SukiUI"
                  xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
                  xmlns:localControls="clr-namespace:KugouAvaloniaPlayer.Controls"
+                 xmlns:views="clr-namespace:KugouAvaloniaPlayer.Views"
                  mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
                  x:Class="KugouAvaloniaPlayer.Views.MainWindow"
                  MinHeight="600"
@@ -359,7 +360,7 @@
         </suki:SukiSideMenu>
 
         <localControls:BottomPlaybackControl />
-        <localControls:NowPlaying DataContext="{Binding NowPlaying}" ZIndex="300" />
+        <views:NowPlayingView DataContext="{Binding NowPlaying}" ZIndex="300" />
 
     </Grid>
 

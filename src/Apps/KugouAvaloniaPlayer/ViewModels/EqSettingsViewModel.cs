@@ -33,12 +33,13 @@ public partial class EqSettingsViewModel : ObservableObject
         _player = player;
         var savedGains = SettingsManager.Settings.CustomEqGains;
 
+        _isInitializing = true;
         for (var i = 0; i < 10; i++)
             Bands.Add(new EqBandViewModel(this)
             {
                 Index = i,
                 Frequency = FreqLabels[i],
-                Value = savedGains[i]
+                Value = i < savedGains.Length ? savedGains[i] : 0
             });
         _isInitializing = false;
     }

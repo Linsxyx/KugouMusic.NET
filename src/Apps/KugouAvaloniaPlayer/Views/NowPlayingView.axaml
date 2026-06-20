@@ -7,7 +7,7 @@
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
              xmlns:controls1="clr-namespace:KugouAvaloniaPlayer.Controls"
-             x:Class="KugouAvaloniaPlayer.Controls.NowPlaying"
+             x:Class="KugouAvaloniaPlayer.Views.NowPlayingView"
              x:DataType="vm:NowPlayingViewModel">
 
     <UserControl.Styles>

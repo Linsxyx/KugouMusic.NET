@@ -20,6 +20,7 @@ using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
 using SukiUI;
 using SukiUI.Dialogs;
+using EqSettingsView = KugouAvaloniaPlayer.Views.EqSettingsView;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -176,33 +177,41 @@ public partial class UserViewModel : PageViewModelBase
         _folderPickerService = folderPickerService;
 
         Player = player;
-        SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
-        AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
-        UseCustomBackgroundImage = SettingsManager.Settings.UseCustomBackgroundImage;
-        CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
-        CustomBackgroundImageOpacity = Math.Clamp(SettingsManager.Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
-        EnableGlobalShortcuts = SettingsManager.Settings.GlobalShortcuts.EnableGlobalShortcuts;
         EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
-
-        var preset = SettingsManager.Settings.EQPreset;
-        SelectedEQPreset = Array.Exists(EQPresetOptions, x => x == preset) ? preset : "原声";
-
-        EnableSurround = SettingsManager.Settings.EnableSurround;
-        EnableVolumeNormalization = SettingsManager.Settings.EnableVolumeNormalization;
-        EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
-        EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
-        UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
-        DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
         LyricFontFamilyOptions = LoadSystemFontFamilies();
         _availableLyricFonts = new HashSet<string>(LyricFontFamilyOptions, StringComparer.OrdinalIgnoreCase);
         UserId = _sessionManager.Session.UserId;
-        LoadDesktopLyricColorEditorFromSettings();
-        LoadDesktopLyricFontEditorFromSettings();
-        LoadPlayPageLyricColorEditorFromSettings();
-        LoadPlayPageLyricFontEditorFromSettings();
-        LoadPlayPageLyricAlignmentFromSettings();
-        NowPlayingBackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
-        SelectedNowPlayingBackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
+        _isApplyingSettingsSnapshot = true;
+        try
+        {
+            SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
+            AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
+            UseCustomBackgroundImage = SettingsManager.Settings.UseCustomBackgroundImage;
+            CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
+            CustomBackgroundImageOpacity = Math.Clamp(SettingsManager.Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
+            EnableGlobalShortcuts = SettingsManager.Settings.GlobalShortcuts.EnableGlobalShortcuts;
+
+            var preset = SettingsManager.Settings.EQPreset;
+            SelectedEQPreset = Array.Exists(EQPresetOptions, x => x == preset) ? preset : "原声";
+
+            EnableSurround = SettingsManager.Settings.EnableSurround;
+            EnableVolumeNormalization = SettingsManager.Settings.EnableVolumeNormalization;
+            EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
+            EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
+            UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
+            DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
+            LoadDesktopLyricColorEditorFromSettings();
+            LoadDesktopLyricFontEditorFromSettings();
+            LoadPlayPageLyricColorEditorFromSettings();
+            LoadPlayPageLyricFontEditorFromSettings();
+            LoadPlayPageLyricAlignmentFromSettings();
+            NowPlayingBackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
+            SelectedNowPlayingBackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
+        }
+        finally
+        {
+            _isApplyingSettingsSnapshot = false;
+        }
         ShortcutItems =
         [
             new GlobalShortcutItemViewModel(GlobalShortcutAction.PlayPause, "播放/暂停"),
@@ -727,7 +736,7 @@ public partial class UserViewModel : PageViewModelBase
     [RelayCommand]
     private void OpenEqSettings()
     {
-        var eqSettings = new EqSettingsControl
+        var eqSettings = new EqSettingsView
         {
             DataContext = _eqSettingsViewModel
         };

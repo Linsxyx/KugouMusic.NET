@@ -1,15 +1,14 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using KugouAvaloniaPlayer.ViewModels;
 
-namespace KugouAvaloniaPlayer.Controls;
+namespace KugouAvaloniaPlayer.Views;
 
-public partial class NowPlaying
+public partial class NowPlayingView
 {
     private Flyout? _moreFlyout;
     private TopLevel? _moreFlyoutLightDismissTopLevel;
