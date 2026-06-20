@@ -16,7 +16,7 @@
             <Setter Property="Opacity" Value="0" />
             <Setter Property="Transitions">
                 <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.32" Easing="CubicEaseOut" />
                 </Transitions>
             </Setter>
         </Style>
@@ -25,10 +25,10 @@
             <Setter Property="Opacity" Value="1" />
         </Style>
         <Style Selector="Grid#NowPlayingForeground">
-            <Setter Property="RenderTransform" Value="translateY(200px)" />
+            <Setter Property="RenderTransform" Value="translateY(72px)" />
             <Setter Property="Transitions">
                 <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.4" Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.48" Easing="CubicEaseOut" />
                 </Transitions>
             </Setter>
         </Style>
