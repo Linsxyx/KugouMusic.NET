@@ -1,65 +1,15 @@
 using System.Net;
-using Jab;
 using KuGou.Net.Clients;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Infrastructure.Http.Handlers;
-using KuGou.Net.Protocol.Raw;
 using KuGou.Net.Protocol.Session;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Pure.DI;
+using static Pure.DI.Lifetime;
 
 namespace KuGou.Net.Infrastructure;
 
-[ServiceProviderModule]
-[Transient<RawSearchApi>]
-[Transient<RawLoginApi>]
-[Transient<RawPlaylistApi>]
-[Transient<RawUserApi>]
-[Transient<RawDeviceApi>]
-[Transient<RawLyricApi>]
-[Transient<RawRankApi>]
-[Transient<RawAlbumApi>]
-[Transient<RawSongApi>]
-[Transient<RawArtistApi>]
-[Transient<RawCommentApi>]
-[Transient<RawFmApi>]
-[Transient<RawMediaCatalogApi>]
-[Transient<RawReportApi>]
-[Transient<RawDiscoveryApi>]
-[Transient<RecommendClient>]
-[Transient<RankClient>]
-[Transient<SearchClient>]
-[Transient<LoginClient>]
-[Transient<PlaylistClient>]
-[Transient<UserClient>]
-[Transient<RegisterClient>]
-[Transient<LyricClient>]
-[Transient<AlbumClient>]
-[Transient<SongClient>]
-[Transient<ArtistClient>]
-[Transient<CommentClient>]
-[Transient<FmClient>]
-[Transient<VideoClient>]
-[Transient<LongAudioClient>]
-[Transient<IpClient>]
-[Transient<SceneClient>]
-[Transient<ThemeClient>]
-[Transient<ReportClient>]
-public interface IKuGouServiceModule;
-
-[ServiceProvider]
-[Import<IKuGouServiceModule>]
-[Singleton<ISessionPersistence>(Instance = nameof(SessionPersistence))]
-[Singleton<CookieContainer>(Instance = nameof(CookieContainer))]
-[Singleton<ILoggerFactory>(Instance = nameof(LoggerFactory))]
-[Singleton<KgSessionManager>]
-[Transient<KgSignatureHandler>]
-[Transient<IKgTransport>(Factory = nameof(CreateTransport))]
-[Singleton<ILogger<RawLoginApi>>(Factory = nameof(CreateRawLoginApiLogger))]
-[Singleton<ILogger<RawPlaylistApi>>(Factory = nameof(CreateRawPlaylistApiLogger))]
-[Singleton<ILogger<RawDeviceApi>>(Factory = nameof(CreateRawDeviceApiLogger))]
-[Singleton<ILogger<LoginClient>>(Factory = nameof(CreateLoginClientLogger))]
-[Singleton<ILogger<RegisterClient>>(Factory = nameof(CreateRegisterClientLogger))]
 public sealed partial class KuGouServiceProvider
 {
     public ISessionPersistence SessionPersistence { get; set; } = new InMemorySessionPersistence();
@@ -68,7 +18,46 @@ public sealed partial class KuGouServiceProvider
 
     public ILoggerFactory LoggerFactory { get; set; } = NullLoggerFactory.Instance;
 
-    public IKgTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
+    private void Setup()
+    {
+        DI.Setup(nameof(KuGouServiceProvider))
+            .Bind<ISessionPersistence>().As(Singleton).To(_ => SessionPersistence)
+            .Bind<CookieContainer>().As(Singleton).To(_ => CookieContainer)
+            .Bind<ILoggerFactory>().As(Singleton).To(_ => LoggerFactory)
+            .Bind<KgSessionManager>().As(Singleton).To<KgSessionManager>()
+            .Bind<KgSignatureHandler>().To<KgSignatureHandler>()
+            .Bind<IKgTransport>().To((CookieContainer cookieContainer, KgSignatureHandler signatureHandler) =>
+                CreateTransport(cookieContainer, signatureHandler))
+            .Bind<ILogger<TT>>().As(Singleton).To((ILoggerFactory loggerFactory) => loggerFactory.CreateLogger<TT>())
+            .Root<KgSessionManager>()
+            .Root<RecommendClient>()
+            .Root<RankClient>()
+            .Root<SearchClient>()
+            .Root<LoginClient>()
+            .Root<PlaylistClient>()
+            .Root<UserClient>()
+            .Root<RegisterClient>()
+            .Root<LyricClient>()
+            .Root<AlbumClient>()
+            .Root<SongClient>()
+            .Root<ArtistClient>()
+            .Root<CommentClient>()
+            .Root<FmClient>()
+            .Root<VideoClient>()
+            .Root<LongAudioClient>()
+            .Root<IpClient>()
+            .Root<SceneClient>()
+            .Root<ThemeClient>()
+            .Root<ReportClient>();
+    }
+
+    public TService GetService<TService>()
+        where TService : class
+    {
+        return Resolve<TService>();
+    }
+
+    public static KgHttpTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
     {
         var primaryHandler = new HttpClientHandler
         {
@@ -82,14 +71,4 @@ public sealed partial class KuGouServiceProvider
         var client = new HttpClient(signatureHandler, disposeHandler: true);
         return new KgHttpTransport(client);
     }
-
-    public ILogger<RawLoginApi> CreateRawLoginApiLogger() => LoggerFactory.CreateLogger<RawLoginApi>();
-
-    public ILogger<RawPlaylistApi> CreateRawPlaylistApiLogger() => LoggerFactory.CreateLogger<RawPlaylistApi>();
-
-    public ILogger<RawDeviceApi> CreateRawDeviceApiLogger() => LoggerFactory.CreateLogger<RawDeviceApi>();
-
-    public ILogger<LoginClient> CreateLoginClientLogger() => LoggerFactory.CreateLogger<LoginClient>();
-
-    public ILogger<RegisterClient> CreateRegisterClientLogger() => LoggerFactory.CreateLogger<RegisterClient>();
 }

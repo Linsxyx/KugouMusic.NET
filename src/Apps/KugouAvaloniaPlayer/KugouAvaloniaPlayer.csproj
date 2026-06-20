@@ -47,9 +47,12 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm"/>
-        <PackageReference Include="Jab" PrivateAssets="all"/>
         <PackageReference Include="MemoryPack" />
         <PackageReference Include="Microsoft.Data.Sqlite" />
+        <PackageReference Include="Pure.DI">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="Serilog"/>
         <PackageReference Include="Serilog.Extensions.Logging"/>
         <PackageReference Include="Serilog.Sinks.Async" />

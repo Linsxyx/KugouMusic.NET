@@ -1,8 +1,6 @@
 using KgWebApi.Net.Data;
 using KgWebApi.Net.Services;
 using KuGou.Net.Infrastructure.Http;
-using KuGou.Net.Infrastructure.Http.Handlers;
-using KuGou.Net.Protocol.Session;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -42,6 +40,9 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
+var composition = new WebApiKuGouServiceProvider();
+builder.Host.UseServiceProviderFactory(composition);
+
 var configuredConnectionString = builder.Configuration.GetConnectionString("KgWebApi");
 var sqliteConnectionString = !string.IsNullOrWhiteSpace(configuredConnectionString)
     ? configuredConnectionString
@@ -50,7 +51,8 @@ var sqliteConnectionString = !string.IsNullOrWhiteSpace(configuredConnectionStri
 
 // 注册控制器
 builder.Services
-    .AddControllers();
+    .AddMvc()
+    .AddControllersAsServices();
 
 builder.Services.AddHttpClient(WebApiKgHttpClientNames.KuGou)
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
@@ -63,14 +65,7 @@ builder.Services.AddHttpClient(WebApiKgHttpClientNames.KuGou)
     })
     .SetHandlerLifetime(Timeout.InfiniteTimeSpan);
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IKgWebSessionContext, KgWebSessionContext>();
 builder.Services.AddDbContext<KgWebApiDbContext>(options => options.UseSqlite(sqliteConnectionString));
-
-builder.Services.AddScoped<ISessionPersistence, KgWebSessionPersistence>();
-builder.Services.AddScoped(_ => new CookieContainer());
-builder.Services.AddScoped<KgSessionManager>();
-builder.Services.AddScoped<KgSignatureHandler>();
-builder.Services.AddScoped<IKgTransport, WebApiKgTransport>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -80,7 +75,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-builder.Services.AddWebApiKuGouServices();
 
 builder.Services.AddOpenApi(options =>
 {

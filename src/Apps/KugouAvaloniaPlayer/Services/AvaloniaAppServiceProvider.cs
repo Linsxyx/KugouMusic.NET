@@ -1,13 +1,9 @@
 using System.Net;
 using System.Net.Http;
 using Avalonia.Threading;
-using Jab;
-using KuGou.Net.Clients;
 using KuGou.Net.ExternalPlaylists;
-using KuGou.Net.Infrastructure;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Infrastructure.Http.Handlers;
-using KuGou.Net.Protocol.Raw;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
@@ -15,115 +11,16 @@ using KugouAvaloniaPlayer.Services.Jellyfin;
 using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
+using Pure.DI;
 using SimpleAudio;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
+using static Pure.DI.Lifetime;
 using GlobalShortcutServiceImpl = KugouAvaloniaPlayer.Services.GlobalShortcutService.GlobalShortcutService;
 using SystemMediaSessionServiceImpl = KugouAvaloniaPlayer.Services.SystemMediaSession.SystemMediaSessionService;
 
 namespace KugouAvaloniaPlayer.Services;
 
-[ServiceProviderModule]
-[Singleton<ISukiToastManager, SukiToastManager>]
-[Singleton<ISukiDialogManager, SukiDialogManager>]
-[Singleton<IHttpClientFactory, SimpleHttpClientFactory>]
-[Singleton<ICreatePlaylistDialogService, CreatePlaylistDialogService>]
-[Singleton<IExternalPlaylistParser, ExternalPlaylistParser>]
-[Singleton<IExternalPlaylistParseStrategy, NeteasePlaylistParseStrategy>]
-[Singleton<IExternalPlaylistParseStrategy, QqMusicPlaylistParseStrategy>]
-[Singleton<IExternalPlaylistImportService, ExternalPlaylistImportService>]
-[Singleton<ILoginDialogService, LoginDialogService>]
-[Singleton<INavigationService, NavigationService>]
-[Singleton<IMainWindowService, MainWindowService>]
-[Singleton<IDesktopLyricMousePassthroughService, DesktopLyricMousePassthroughService>]
-[Singleton<IDesktopLyricWindowChromeService, DesktopLyricWindowChromeService>]
-[Singleton<IDesktopLyricWindowService, DesktopLyricWindowService>]
-[Singleton<IGlobalShortcutService, GlobalShortcutServiceImpl>]
-[Singleton<ISystemMediaSessionService, SystemMediaSessionServiceImpl>]
-[Singleton<IFolderPickerService, FolderPickerService>]
-[Singleton<IJellyfinClient, JellyfinClient>]
-[Singleton<ILocalMusicLibraryService, LocalMusicLibraryService>]
-[Singleton<IGitHubReleaseService, GitHubReleaseService>]
-[Singleton<IAppUpdateService, AppUpdateService>]
-[Transient<LoginViewModel>]
-[Transient<SearchViewModel>]
-[Transient<UserCloudViewModel>]
-[Transient<UserViewModel>]
-[Transient<NowPlayingViewModel>]
-[Transient<MainWindowViewModel>]
-[Transient<DailyRecommendViewModel>]
-[Transient<HistoryViewModel>]
-[Transient<DiscoverViewModel>]
-[Transient<LocalMusicLibraryViewModel>]
-[Transient<MyPlaylistsViewModel>]
-[Transient<EqSettingsViewModel>]
-[Transient<RankViewModel>]
-[Transient<ISingerViewModelFactory, SingerViewModelFactory>]
-[Singleton<IDesktopLyricViewModelFactory, DesktopLyricViewModelFactory>]
-[Singleton<PlaybackQueueManager>]
-[Singleton<PlaybackQueueCacheService>]
-[Singleton<LyricsService>]
-[Singleton<FavoritePlaylistService>]
-[Singleton<PlaybackHistoryService>]
-[Singleton<PersonalFmService>]
-[Singleton<PlaybackAudioEffectsService>]
-[Singleton<PlaybackVisualizerService>]
-[Singleton<IPlaybackSourceResolver, PlaybackSourceResolver>]
-[Singleton<IPlaybackCoordinator, PlaybackCoordinator>]
-[Singleton<ITransitionAnalysisService, ManagedBassTransitionAnalysisService>]
-[Singleton<PlayerViewModel>]
-public interface IAvaloniaAppServiceModule;
-
-[ServiceProvider(RootServices =
-[
-    typeof(MainWindowViewModel),
-    typeof(PlayerViewModel),
-    typeof(IGlobalShortcutService),
-    typeof(ISystemMediaSessionService)
-])]
-[Import<IKuGouServiceModule>]
-[Import<IAvaloniaAppServiceModule>]
-[Singleton<ISessionPersistence>(Instance = nameof(SessionPersistence))]
-[Singleton<CookieContainer>(Instance = nameof(CookieContainer))]
-[Singleton<ILoggerFactory>(Instance = nameof(LoggerFactory))]
-[Singleton<IUiDispatcherService>(Factory = nameof(CreateUiDispatcherService))]
-[Singleton<KgSessionManager>]
-[Transient<KgSignatureHandler>]
-[Singleton<IKgTransport>(Factory = nameof(CreateTransport))]
-[Singleton<ILogger<RawLoginApi>>(Factory = nameof(CreateRawLoginApiLogger))]
-[Singleton<ILogger<RawPlaylistApi>>(Factory = nameof(CreateRawPlaylistApiLogger))]
-[Singleton<ILogger<RawDeviceApi>>(Factory = nameof(CreateRawDeviceApiLogger))]
-[Singleton<ILogger<LoginClient>>(Factory = nameof(CreateLoginClientLogger))]
-[Singleton<ILogger<RegisterClient>>(Factory = nameof(CreateRegisterClientLogger))]
-[Singleton<ILogger<SingerViewModel>>(Factory = nameof(CreateSingerViewModelLogger))]
-[Singleton<ILogger<AppUpdateService>>(Factory = nameof(CreateAppUpdateServiceLogger))]
-[Singleton<ILogger<SearchViewModel>>(Factory = nameof(CreateSearchViewModelLogger))]
-[Singleton<ILogger<UserCloudViewModel>>(Factory = nameof(CreateUserCloudViewModelLogger))]
-[Singleton<ILogger<RankViewModel>>(Factory = nameof(CreateRankViewModelLogger))]
-[Singleton<ILogger<LoginViewModel>>(Factory = nameof(CreateLoginViewModelLogger))]
-[Singleton<ILogger<PlayerViewModel>>(Factory = nameof(CreatePlayerViewModelLogger))]
-[Singleton<ILogger<NowPlayingViewModel>>(Factory = nameof(CreateNowPlayingViewModelLogger))]
-[Singleton<ILogger<DiscoverViewModel>>(Factory = nameof(CreateDiscoverViewModelLogger))]
-[Singleton<ILogger<LocalMusicLibraryViewModel>>(Factory = nameof(CreateLocalMusicLibraryViewModelLogger))]
-[Singleton<ILogger<MyPlaylistsViewModel>>(Factory = nameof(CreateMyPlaylistsViewModelLogger))]
-[Singleton<ILogger<MainWindowViewModel>>(Factory = nameof(CreateMainWindowViewModelLogger))]
-[Singleton<ILogger<DailyRecommendViewModel>>(Factory = nameof(CreateDailyRecommendViewModelLogger))]
-[Singleton<ILogger<FavoritePlaylistService>>(Factory = nameof(CreateFavoritePlaylistServiceLogger))]
-[Singleton<ILogger<ExternalPlaylistImportService>>(Factory = nameof(CreateExternalPlaylistImportServiceLogger))]
-[Singleton<ILogger<NeteasePlaylistParseStrategy>>(Factory = nameof(CreateNeteasePlaylistParseStrategyLogger))]
-[Singleton<ILogger<QqMusicPlaylistParseStrategy>>(Factory = nameof(CreateQqMusicPlaylistParseStrategyLogger))]
-[Singleton<ILogger<GitHubReleaseService>>(Factory = nameof(CreateGitHubReleaseServiceLogger))]
-[Singleton<ILogger<GlobalShortcutServiceImpl>>(Factory = nameof(CreateGlobalShortcutServiceLogger))]
-[Singleton<ILogger<LyricsService>>(Factory = nameof(CreateLyricsServiceLogger))]
-[Singleton<ILogger<PlaybackSourceResolver>>(Factory = nameof(CreatePlaybackSourceResolverLogger))]
-[Singleton<ILogger<PlaybackCoordinator>>(Factory = nameof(CreatePlaybackCoordinatorLogger))]
-[Singleton<ILogger<PlaybackAudioEffectsService>>(Factory = nameof(CreatePlaybackAudioEffectsServiceLogger))]
-[Singleton<ILogger<PersonalFmService>>(Factory = nameof(CreatePersonalFmServiceLogger))]
-[Singleton<ILogger<PlaybackHistoryService>>(Factory = nameof(CreatePlaybackHistoryServiceLogger))]
-[Singleton<ILogger<PlaybackQueueCacheService>>(Factory = nameof(CreatePlaybackQueueCacheServiceLogger))]
-[Singleton<ILogger<SystemMediaSessionServiceImpl>>(Factory = nameof(CreateSystemMediaSessionServiceLogger))]
-[Singleton<ILogger<JellyfinClient>>(Factory = nameof(CreateJellyfinClientLogger))]
-[Singleton<ILogger<LocalMusicLibraryService>>(Factory = nameof(CreateLocalMusicLibraryServiceLogger))]
 public sealed partial class AvaloniaAppServiceProvider
 {
     public ISessionPersistence SessionPersistence { get; init; } = new KugouSessionPersistence();
@@ -134,12 +31,83 @@ public sealed partial class AvaloniaAppServiceProvider
 
     public required Dispatcher UiDispatcher { get; init; }
 
-    public IUiDispatcherService CreateUiDispatcherService()
+    [System.Diagnostics.Conditional("DI")]
+    private void Setup() => DI.Setup(nameof(AvaloniaAppServiceProvider))
+        .Root<MainWindowViewModel>()
+        .Root<PlayerViewModel>()
+        .Root<IGlobalShortcutService>()
+        .Root<ISystemMediaSessionService>()
+
+        .Bind<ISessionPersistence>().As(Singleton).To(_ => SessionPersistence)
+        .Bind<CookieContainer>().As(Singleton).To(_ => CookieContainer)
+        .Bind<ILoggerFactory>().As(Singleton).To(_ => LoggerFactory)
+        .Bind<Dispatcher>().As(Singleton).To(_ => UiDispatcher)
+        .Bind<IUiDispatcherService>().As(Singleton).To<UiDispatcherService>()
+        .Bind<ILogger<TT>>().As(Singleton).To((ILoggerFactory loggerFactory) => loggerFactory.CreateLogger<TT>())
+
+        .Bind<KgSessionManager>().As(Singleton).To<KgSessionManager>()
+        .Bind<KgSignatureHandler>().To<KgSignatureHandler>()
+        .Bind<IKgTransport>().As(Singleton).To((CookieContainer cookieContainer, KgSignatureHandler signatureHandler) =>
+            CreateTransport(cookieContainer, signatureHandler))
+
+        .Bind<ISukiToastManager>().As(Singleton).To<SukiToastManager>()
+        .Bind<ISukiDialogManager>().As(Singleton).To<SukiDialogManager>()
+        .Bind<IHttpClientFactory>().As(Singleton).To<SimpleHttpClientFactory>()
+        .Bind<ICreatePlaylistDialogService>().As(Singleton).To<CreatePlaylistDialogService>()
+        .Bind<IExternalPlaylistParser>().As(Singleton).To<ExternalPlaylistParser>()
+        .Bind<IExternalPlaylistParseStrategy>().As(Singleton).To<NeteasePlaylistParseStrategy>()
+        .Bind<IExternalPlaylistParseStrategy>("QQ").As(Singleton).To<QqMusicPlaylistParseStrategy>()
+        .Bind<IExternalPlaylistImportService>().As(Singleton).To<ExternalPlaylistImportService>()
+        .Bind<ILoginDialogService>().As(Singleton).To<LoginDialogService>()
+        .Bind<INavigationService>().As(Singleton).To<NavigationService>()
+        .Bind<IMainWindowService>().As(Singleton).To<MainWindowService>()
+        .Bind<IDesktopLyricMousePassthroughService>().As(Singleton).To<DesktopLyricMousePassthroughService>()
+        .Bind<IDesktopLyricWindowChromeService>().As(Singleton).To<DesktopLyricWindowChromeService>()
+        .Bind<IDesktopLyricWindowService>().As(Singleton).To<DesktopLyricWindowService>()
+        .Bind<IGlobalShortcutService>().As(Singleton).To<GlobalShortcutServiceImpl>()
+        .Bind<ISystemMediaSessionService>().As(Singleton).To<SystemMediaSessionServiceImpl>()
+        .Bind<IFolderPickerService>().As(Singleton).To<FolderPickerService>()
+        .Bind<IJellyfinClient>().As(Singleton).To<JellyfinClient>()
+        .Bind<ILocalMusicLibraryService>().As(Singleton).To<LocalMusicLibraryService>()
+        .Bind<IGitHubReleaseService>().As(Singleton).To<GitHubReleaseService>()
+        .Bind<IAppUpdateService>().As(Singleton).To<AppUpdateService>()
+        .Bind<ISingerViewModelFactory>().To<SingerViewModelFactory>()
+        .Bind<IDesktopLyricViewModelFactory>().As(Singleton).To<DesktopLyricViewModelFactory>()
+
+        .Bind<PlaybackQueueManager>().As(Singleton).To<PlaybackQueueManager>()
+        .Bind<PlaybackQueueCacheService>().As(Singleton).To<PlaybackQueueCacheService>()
+        .Bind<LyricsService>().As(Singleton).To<LyricsService>()
+        .Bind<FavoritePlaylistService>().As(Singleton).To<FavoritePlaylistService>()
+        .Bind<PlaybackHistoryService>().As(Singleton).To<PlaybackHistoryService>()
+        .Bind<PersonalFmService>().As(Singleton).To<PersonalFmService>()
+        .Bind<PlaybackAudioEffectsService>().As(Singleton).To<PlaybackAudioEffectsService>()
+        .Bind<PlaybackVisualizerService>().As(Singleton).To<PlaybackVisualizerService>()
+        .Bind<IPlaybackSourceResolver>().As(Singleton).To<PlaybackSourceResolver>()
+        .Bind<IPlaybackCoordinator>().As(Singleton).To<PlaybackCoordinator>()
+        .Bind<ITransitionAnalysisService>().As(Singleton).To<ManagedBassTransitionAnalysisService>()
+        .Bind<PlayerViewModel>().As(Singleton).To<PlayerViewModel>()
+
+        .Bind<LoginViewModel>().To<LoginViewModel>()
+        .Bind<SearchViewModel>().To<SearchViewModel>()
+        .Bind<UserCloudViewModel>().To<UserCloudViewModel>()
+        .Bind<UserViewModel>().To<UserViewModel>()
+        .Bind<NowPlayingViewModel>().To<NowPlayingViewModel>()
+        .Bind<MainWindowViewModel>().To<MainWindowViewModel>()
+        .Bind<DailyRecommendViewModel>().To<DailyRecommendViewModel>()
+        .Bind<HistoryViewModel>().To<HistoryViewModel>()
+        .Bind<DiscoverViewModel>().To<DiscoverViewModel>()
+        .Bind<LocalMusicLibraryViewModel>().To<LocalMusicLibraryViewModel>()
+        .Bind<MyPlaylistsViewModel>().To<MyPlaylistsViewModel>()
+        .Bind<EqSettingsViewModel>().To<EqSettingsViewModel>()
+        .Bind<RankViewModel>().To<RankViewModel>();
+
+    public TService GetService<TService>()
+        where TService : class
     {
-        return new UiDispatcherService(UiDispatcher);
+        return Resolve<TService>();
     }
 
-    public static IKgTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
+    private static KgHttpTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
     {
         var primaryHandler = new HttpClientHandler
         {
@@ -153,39 +121,4 @@ public sealed partial class AvaloniaAppServiceProvider
         var client = new HttpClient(signatureHandler, disposeHandler: true);
         return new KgHttpTransport(client);
     }
-
-    public ILogger<RawLoginApi> CreateRawLoginApiLogger() => LoggerFactory.CreateLogger<RawLoginApi>();
-    public ILogger<RawPlaylistApi> CreateRawPlaylistApiLogger() => LoggerFactory.CreateLogger<RawPlaylistApi>();
-    public ILogger<RawDeviceApi> CreateRawDeviceApiLogger() => LoggerFactory.CreateLogger<RawDeviceApi>();
-    public ILogger<LoginClient> CreateLoginClientLogger() => LoggerFactory.CreateLogger<LoginClient>();
-    public ILogger<RegisterClient> CreateRegisterClientLogger() => LoggerFactory.CreateLogger<RegisterClient>();
-    public ILogger<SingerViewModel> CreateSingerViewModelLogger() => LoggerFactory.CreateLogger<SingerViewModel>();
-    public ILogger<AppUpdateService> CreateAppUpdateServiceLogger() => LoggerFactory.CreateLogger<AppUpdateService>();
-    public ILogger<SearchViewModel> CreateSearchViewModelLogger() => LoggerFactory.CreateLogger<SearchViewModel>();
-    public ILogger<UserCloudViewModel> CreateUserCloudViewModelLogger() => LoggerFactory.CreateLogger<UserCloudViewModel>();
-    public ILogger<RankViewModel> CreateRankViewModelLogger() => LoggerFactory.CreateLogger<RankViewModel>();
-    public ILogger<LoginViewModel> CreateLoginViewModelLogger() => LoggerFactory.CreateLogger<LoginViewModel>();
-    public ILogger<PlayerViewModel> CreatePlayerViewModelLogger() => LoggerFactory.CreateLogger<PlayerViewModel>();
-    public ILogger<NowPlayingViewModel> CreateNowPlayingViewModelLogger() => LoggerFactory.CreateLogger<NowPlayingViewModel>();
-    public ILogger<DiscoverViewModel> CreateDiscoverViewModelLogger() => LoggerFactory.CreateLogger<DiscoverViewModel>();
-    public ILogger<LocalMusicLibraryViewModel> CreateLocalMusicLibraryViewModelLogger() => LoggerFactory.CreateLogger<LocalMusicLibraryViewModel>();
-    public ILogger<MyPlaylistsViewModel> CreateMyPlaylistsViewModelLogger() => LoggerFactory.CreateLogger<MyPlaylistsViewModel>();
-    public ILogger<MainWindowViewModel> CreateMainWindowViewModelLogger() => LoggerFactory.CreateLogger<MainWindowViewModel>();
-    public ILogger<DailyRecommendViewModel> CreateDailyRecommendViewModelLogger() => LoggerFactory.CreateLogger<DailyRecommendViewModel>();
-    public ILogger<FavoritePlaylistService> CreateFavoritePlaylistServiceLogger() => LoggerFactory.CreateLogger<FavoritePlaylistService>();
-    public ILogger<ExternalPlaylistImportService> CreateExternalPlaylistImportServiceLogger() => LoggerFactory.CreateLogger<ExternalPlaylistImportService>();
-    public ILogger<NeteasePlaylistParseStrategy> CreateNeteasePlaylistParseStrategyLogger() => LoggerFactory.CreateLogger<NeteasePlaylistParseStrategy>();
-    public ILogger<QqMusicPlaylistParseStrategy> CreateQqMusicPlaylistParseStrategyLogger() => LoggerFactory.CreateLogger<QqMusicPlaylistParseStrategy>();
-    public ILogger<GitHubReleaseService> CreateGitHubReleaseServiceLogger() => LoggerFactory.CreateLogger<GitHubReleaseService>();
-    public ILogger<GlobalShortcutServiceImpl> CreateGlobalShortcutServiceLogger() => LoggerFactory.CreateLogger<GlobalShortcutServiceImpl>();
-    public ILogger<LyricsService> CreateLyricsServiceLogger() => LoggerFactory.CreateLogger<LyricsService>();
-    public ILogger<PlaybackSourceResolver> CreatePlaybackSourceResolverLogger() => LoggerFactory.CreateLogger<PlaybackSourceResolver>();
-    public ILogger<PlaybackCoordinator> CreatePlaybackCoordinatorLogger() => LoggerFactory.CreateLogger<PlaybackCoordinator>();
-    public ILogger<PlaybackAudioEffectsService> CreatePlaybackAudioEffectsServiceLogger() => LoggerFactory.CreateLogger<PlaybackAudioEffectsService>();
-    public ILogger<PersonalFmService> CreatePersonalFmServiceLogger() => LoggerFactory.CreateLogger<PersonalFmService>();
-    public ILogger<PlaybackHistoryService> CreatePlaybackHistoryServiceLogger() => LoggerFactory.CreateLogger<PlaybackHistoryService>();
-    public ILogger<PlaybackQueueCacheService> CreatePlaybackQueueCacheServiceLogger() => LoggerFactory.CreateLogger<PlaybackQueueCacheService>();
-    public ILogger<SystemMediaSessionServiceImpl> CreateSystemMediaSessionServiceLogger() => LoggerFactory.CreateLogger<SystemMediaSessionServiceImpl>();
-    public ILogger<JellyfinClient> CreateJellyfinClientLogger() => LoggerFactory.CreateLogger<JellyfinClient>();
-    public ILogger<LocalMusicLibraryService> CreateLocalMusicLibraryServiceLogger() => LoggerFactory.CreateLogger<LocalMusicLibraryService>();
 }

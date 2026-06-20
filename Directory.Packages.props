@@ -11,7 +11,6 @@
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.0.3" />
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.1" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageVersion Include="Jab" Version="0.12.0" />
     <PackageVersion Include="ManagedBass" Version="4.1.0-prerelease" />
     <PackageVersion Include="ManagedBass.Fx" Version="4.1.0-prerelease" />
     <PackageVersion Include="ManagedBass.Loud" Version="4.1.0-prerelease" />
@@ -20,6 +19,8 @@
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="11.0.0-preview.5.26302.115" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
+    <PackageVersion Include="Pure.DI" Version="2.4.3" />
+    <PackageVersion Include="Pure.DI.MS" Version="2.4.3" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.12.8" />
     <PackageVersion Include="Serilog" Version="4.3.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
