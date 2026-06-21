@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 using Tmds.DBus.Protocol;
@@ -220,30 +222,30 @@ public sealed class SystemMediaSessionService(
         switch (context.Request.MemberAsString)
         {
             case "Next":
-                DispatchPlayerCommand(player => player.PlayNextCommand.Execute(null));
+                DispatchPlaybackControl(PlaybackControlAction.NextTrack);
                 ReplyEmpty(context);
                 break;
             case "Previous":
-                DispatchPlayerCommand(player => player.PlayPreviousCommand.Execute(null));
+                DispatchPlaybackControl(PlaybackControlAction.PreviousTrack);
                 ReplyEmpty(context);
                 break;
             case "Pause":
                 DispatchPlayerCommand(player =>
                 {
                     if (player.IsPlayingAudio)
-                        player.TogglePlayPauseCommand.Execute(null);
+                        WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
                 });
                 ReplyEmpty(context);
                 break;
             case "PlayPause":
-                DispatchPlayerCommand(player => player.TogglePlayPauseCommand.Execute(null));
+                DispatchPlaybackControl(PlaybackControlAction.TogglePlayPause);
                 ReplyEmpty(context);
                 break;
             case "Stop":
                 DispatchPlayerCommand(player =>
                 {
                     if (player.IsPlayingAudio)
-                        player.TogglePlayPauseCommand.Execute(null);
+                        WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
                     player.CurrentPositionSeconds = 0;
                 });
                 ReplyEmpty(context);
@@ -252,7 +254,7 @@ public sealed class SystemMediaSessionService(
                 DispatchPlayerCommand(player =>
                 {
                     if (!player.IsPlayingAudio)
-                        player.TogglePlayPauseCommand.Execute(null);
+                        WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
                 });
                 ReplyEmpty(context);
                 break;
@@ -492,6 +494,21 @@ public sealed class SystemMediaSessionService(
             catch (Exception ex)
             {
                 logger.LogDebug(ex, "执行 Linux MPRIS 播放器命令失败。");
+            }
+        });
+    }
+
+    private void DispatchPlaybackControl(PlaybackControlAction action)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(action));
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "发送 Linux MPRIS 播放控制消息失败。");
             }
         });
     }

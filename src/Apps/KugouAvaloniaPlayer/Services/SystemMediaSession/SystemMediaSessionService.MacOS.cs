@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 
@@ -290,8 +292,8 @@ public sealed class SystemMediaSessionService(
     {
         s_currentInstance?.DispatchPlayerCommand(player =>
         {
-            if (!player.IsPlayingAudio && player.TogglePlayPauseCommand.CanExecute(null))
-                player.TogglePlayPauseCommand.Execute(null);
+            if (!player.IsPlayingAudio)
+                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
         });
         return RemoteCommandSuccess;
     }
@@ -300,39 +302,27 @@ public sealed class SystemMediaSessionService(
     {
         s_currentInstance?.DispatchPlayerCommand(player =>
         {
-            if (player.IsPlayingAudio && player.TogglePlayPauseCommand.CanExecute(null))
-                player.TogglePlayPauseCommand.Execute(null);
+            if (player.IsPlayingAudio)
+                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
         });
         return RemoteCommandSuccess;
     }
 
     private static long HandleTogglePlayPauseCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
     {
-        s_currentInstance?.DispatchPlayerCommand(player =>
-        {
-            if (player.TogglePlayPauseCommand.CanExecute(null))
-                player.TogglePlayPauseCommand.Execute(null);
-        });
+        s_currentInstance?.DispatchPlaybackControl(PlaybackControlAction.TogglePlayPause);
         return RemoteCommandSuccess;
     }
 
     private static long HandleNextCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
     {
-        s_currentInstance?.DispatchPlayerCommand(player =>
-        {
-            if (player.PlayNextCommand.CanExecute(null))
-                player.PlayNextCommand.Execute(null);
-        });
+        s_currentInstance?.DispatchPlaybackControl(PlaybackControlAction.NextTrack);
         return RemoteCommandSuccess;
     }
 
     private static long HandlePreviousCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
     {
-        s_currentInstance?.DispatchPlayerCommand(player =>
-        {
-            if (player.PlayPreviousCommand.CanExecute(null))
-                player.PlayPreviousCommand.Execute(null);
-        });
+        s_currentInstance?.DispatchPlaybackControl(PlaybackControlAction.PreviousTrack);
         return RemoteCommandSuccess;
     }
 
@@ -415,6 +405,21 @@ public sealed class SystemMediaSessionService(
         var buffer = Marshal.AllocHGlobal(bytes.Length);
         Marshal.Copy(bytes, 0, buffer, bytes.Length);
         return buffer;
+    }
+
+    private void DispatchPlaybackControl(PlaybackControlAction action)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(action));
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "发送 macOS 系统媒体控件播放控制消息失败。");
+            }
+        });
     }
 
     private const int RtldLazy = 1;

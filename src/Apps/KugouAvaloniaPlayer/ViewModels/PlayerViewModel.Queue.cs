@@ -375,6 +375,6 @@ public partial class PlayerViewModel
             return;
         }
 
-        Dispatcher.UIThread.Post(() => PlayNextCommand.Execute(null));
+        Dispatcher.UIThread.Post(() => _ = PlayNext());
     }
 }

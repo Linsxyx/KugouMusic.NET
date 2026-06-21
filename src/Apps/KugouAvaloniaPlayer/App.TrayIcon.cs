@@ -3,6 +3,8 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
+using CommunityToolkit.Mvvm.Messaging;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 
@@ -37,13 +39,16 @@ partial class App
         var sep1 = new NativeMenuItemSeparator();
 
         var prevItem = new NativeMenuItem("上一首");
-        prevItem.Click += (s, e) => player.PlayPreviousCommand.Execute(null);
+        prevItem.Click += (s, e) =>
+            WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
 
         _playPauseItem = new NativeMenuItem("播放");
-        _playPauseItem.Click += (s, e) => player.TogglePlayPauseCommand.Execute(null);
+        _playPauseItem.Click += (s, e) =>
+            WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
 
         var nextItem = new NativeMenuItem("下一首");
-        nextItem.Click += (s, e) => player.PlayNextCommand.Execute(null);
+        nextItem.Click += (s, e) =>
+            WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.NextTrack));
 
         var sep2 = new NativeMenuItemSeparator();
 

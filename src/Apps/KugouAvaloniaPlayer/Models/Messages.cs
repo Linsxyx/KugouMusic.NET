@@ -24,6 +24,8 @@ public record RequestNavigateBackMessage;
 
 public record MainWindowChromeActionMessage(MainWindowChromeAction Action);
 
+public record PlaybackControlMessage(PlaybackControlAction Action);
+
 public record RefreshPlaylistsMessage;
 
 public record LyricStyleSettingsChangedMessage(
@@ -62,4 +64,11 @@ public enum MainWindowChromeAction
     ToggleFullScreen,
     ToggleMaximize,
     Close
+}
+
+public enum PlaybackControlAction
+{
+    TogglePlayPause,
+    PreviousTrack,
+    NextTrack
 }

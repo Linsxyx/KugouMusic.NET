@@ -193,6 +193,8 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             (_, m) => AddLoadedSongsToQueue(m.Songs));
         WeakReferenceMessenger.Default.Register<ShowPlaylistDialogMessage>(this,
             (_, m) => _ = ShowPlaylistDialogSafelyAsync(m.Song));
+        WeakReferenceMessenger.Default.Register<PlaybackControlMessage>(this,
+            (_, m) => HandlePlaybackControlMessage(m.Action));
 
         _queueManager.PlaybackQueue.CollectionChanged += OnPlaybackQueueCollectionChanged;
         _personalFmService.StateChanged += OnPersonalFmServiceStateChanged;
@@ -452,6 +454,22 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             .Dismiss().After(TimeSpan.FromSeconds(3))
             .Dismiss().ByClicking()
             .Queue();
+    }
+
+    private void HandlePlaybackControlMessage(PlaybackControlAction action)
+    {
+        switch (action)
+        {
+            case PlaybackControlAction.TogglePlayPause:
+                TogglePlayPause();
+                break;
+            case PlaybackControlAction.PreviousTrack:
+                _ = PlayPrevious();
+                break;
+            case PlaybackControlAction.NextTrack:
+                _ = PlayNext();
+                break;
+        }
     }
 
 }

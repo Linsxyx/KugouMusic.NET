@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using ZLinq;
 using Avalonia.Controls;
 using Avalonia.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -404,16 +405,13 @@ public sealed partial class GlobalShortcutService(
             switch (action)
             {
                 case GlobalShortcutAction.PlayPause:
-                    if (playerViewModel.TogglePlayPauseCommand.CanExecute(null))
-                        playerViewModel.TogglePlayPauseCommand.Execute(null);
+                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
                     break;
                 case GlobalShortcutAction.PreviousTrack:
-                    if (playerViewModel.PlayPreviousCommand.CanExecute(null))
-                        playerViewModel.PlayPreviousCommand.Execute(null);
+                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
                     break;
                 case GlobalShortcutAction.NextTrack:
-                    if (playerViewModel.PlayNextCommand.CanExecute(null))
-                        playerViewModel.PlayNextCommand.Execute(null);
+                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.NextTrack));
                     break;
                 case GlobalShortcutAction.ShowMainWindow:
                     mainWindowService.ShowMainWindow();
