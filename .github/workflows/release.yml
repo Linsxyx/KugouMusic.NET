@@ -47,7 +47,6 @@ jobs:
             "-p:BUILD_VERSION=$CLEAN_VERSION" \
             -r ${{ matrix.rid }} \
             --self-contained true \
-            -p:PublishSingleFile=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o ./publish
@@ -170,7 +169,6 @@ jobs:
             "-p:BUILD_VERSION=$VERSION" \
             -r "$RID" \
             --self-contained true \
-            -p:PublishSingleFile=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o ./publish/macos
@@ -422,7 +420,7 @@ jobs:
             echo "- Windows: [KugouAvaloniaPlayer-win-x64.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-x64.exe)"
             echo "- Linux x64: [KugouAvaloniaPlayer-linux-x64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-x64.AppImage)"
             echo "- Linux arm64: [KugouAvaloniaPlayer-linux-arm64.tar.gz](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-arm64.tar.gz)"
-            echo "- macOS Apple Silicon: [KugouAvaloniaPlayer-mac-arm64.app.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-arm64.app.zip)"
+            echo "- macOS Apple Silicon: [KugouAvaloniaPlayer-mac-arm64-Setup.pkg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-arm64-Setup.pkg)"
             echo "- macOS Intel: [KugouAvaloniaPlayer-mac-x64.app.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-x64.app.zip)"
             echo
             cat RELEASE_NOTES.md
