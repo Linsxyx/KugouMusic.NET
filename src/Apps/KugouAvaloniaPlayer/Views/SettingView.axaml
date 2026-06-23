@@ -7,6 +7,7 @@
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models"
+             xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio"
              mc:Ignorable="d"
              d:DesignWidth="900"
              d:DesignHeight="620"
@@ -248,6 +249,47 @@
                             <TextBlock Text="播放与音效"
                                        FontWeight="SemiBold"
                                        FontSize="16" />
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
+                                    <TextBlock Text="输出设备" FontWeight="DemiBold" />
+                                    <TextBlock Text="选择播放声音输出到哪个系统音频设备"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                    <TextBlock Text="{Binding OutputDeviceStatus}"
+                                               IsVisible="{Binding IsOutputDeviceStatusVisible}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <Grid Grid.Column="1"
+                                      ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="8"
+                                      MinWidth="280">
+                                    <ComboBox Grid.Column="0"
+                                              ItemsSource="{Binding OutputDeviceOptions}"
+                                              SelectedItem="{Binding SelectedOutputDevice}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="simpleAudio:AudioOutputDevice">
+                                                <TextBlock Text="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                        <ComboBox.SelectionBoxItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ComboBox.SelectionBoxItemTemplate>
+                                    </ComboBox>
+                                    <Button Grid.Column="1"
+                                            Classes="Basic"
+                                            Cursor="Hand"
+                                            Command="{Binding RefreshOutputDevicesCommand}"
+                                            ToolTip.Tip="刷新输出设备列表">
+                                        <PathIcon Data="{x:Static suki:Icons.Refresh}"
+                                                  Width="16"
+                                                  Height="16" />
+                                    </Button>
+                                </Grid>
+                            </Grid>
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                 <StackPanel>

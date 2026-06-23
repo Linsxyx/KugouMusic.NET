@@ -9,6 +9,10 @@ public partial class SimpleAudioPlayer
     private const float DefaultHighShelfCenterHz = 4800f;
     private const float DefaultLowPassCutoffHz = 18000f;
     private static readonly float[] EQFreqs = [141f, 234f, 469f, 844f, 1300f, 2200f, 3700f, 5800f, 9000f, 13800f];
+    private static readonly object BassDeviceGate = new();
+    private static bool _bassDeviceConfigurationApplied;
+    private static int _actualSystemDefaultDeviceId = Bass.DefaultDevice;
+    private static int _preferredOutputDeviceId = Bass.DefaultDevice;
 
     private readonly DSPProcedure _stereoDspProc;
     private readonly PlayerRuntimeState _state = new();
@@ -146,46 +150,92 @@ public partial class SimpleAudioPlayer
 
     public event Action? PlaybackEnded;
 
-    public static void Initialize()
+    public static void Initialize(int preferredDeviceId = Bass.DefaultDevice)
     {
-        if (Bass.CurrentDevice == -1)
+        lock (BassDeviceGate)
         {
-            if (!Bass.Init(-1, 44100, DeviceInitFlags.Default, IntPtr.Zero))
+            ConfigureBassDeviceEnumeration();
+            _preferredOutputDeviceId = preferredDeviceId;
+
+            if (!TryInitializeOutputDevice(preferredDeviceId, out _))
             {
-                Console.WriteLine($"[BASS Init Error] {Bass.LastError}");
+                _preferredOutputDeviceId = Bass.DefaultDevice;
+                TryInitializeOutputDevice(Bass.DefaultDevice, out _);
             }
+
+            Bass.PluginLoad(GetBassPluginName("bassflac"));
+            Bass.PluginLoad(GetBassPluginName("bassdsd"));
+            Bass.PluginLoad(GetBassPluginName("bassloud"));
+            Bass.PluginLoad(GetBassPluginName("basswebm"));
+            if (!OperatingSystem.IsMacOS())
+            {
+                Bass.PluginLoad(GetBassPluginName("bass_aac"));
+            }
+
+            try
+            {
+                _ = BassFx.Version;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BASS_FX Load Error] {ex.Message}");
+            }
+
+            try
+            {
+                _ = BassLoud.Version;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[BASS_LOUD Load Error] {ex.Message}");
+            }
+
+            Bass.Configure(Configuration.NetBufferLength, 5000);
+            Bass.Configure(Configuration.NetPreBuffer, 20);
+            Bass.Configure(Configuration.NetReadTimeOut, 10000);
+        }
+    }
+
+    public static IReadOnlyList<AudioOutputDevice> GetOutputDevices()
+    {
+        lock (BassDeviceGate)
+        {
+            ConfigureBassDeviceEnumeration();
+
+            var devices = new List<AudioOutputDevice> { AudioOutputDevice.SystemDefault };
+            for (var deviceId = 1; Bass.GetDeviceInfo(deviceId, out var info); deviceId++)
+            {
+                if (!info.IsEnabled || info.IsLoopback || IsBassDefaultDeviceEntry(deviceId, info))
+                {
+                    continue;
+                }
+
+                devices.Add(new AudioOutputDevice(
+                    deviceId,
+                    string.IsNullOrWhiteSpace(info.Name) ? $"输出设备 {deviceId}" : info.Name,
+                    info.Driver,
+                    false));
+            }
+
+            return devices;
+        }
+    }
+
+    public static bool IsOutputDeviceAvailable(int deviceId)
+    {
+        if (deviceId == Bass.DefaultDevice)
+        {
+            return true;
         }
 
-        Bass.PluginLoad(GetBassPluginName("bassflac"));
-        Bass.PluginLoad(GetBassPluginName("bassdsd"));
-        Bass.PluginLoad(GetBassPluginName("bassloud"));
-        Bass.PluginLoad(GetBassPluginName("basswebm"));
-        if (!OperatingSystem.IsMacOS())
+        lock (BassDeviceGate)
         {
-            Bass.PluginLoad(GetBassPluginName("bass_aac"));
+            ConfigureBassDeviceEnumeration();
+            return Bass.GetDeviceInfo(deviceId, out var info) &&
+                   info.IsEnabled &&
+                   !info.IsLoopback &&
+                   !IsBassDefaultDeviceEntry(deviceId, info);
         }
-
-        try
-        {
-            _ = BassFx.Version;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[BASS_FX Load Error] {ex.Message}");
-        }
-
-        try
-        {
-            _ = BassLoud.Version;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[BASS_LOUD Load Error] {ex.Message}");
-        }
-
-        Bass.Configure(Configuration.NetBufferLength, 5000);
-        Bass.Configure(Configuration.NetPreBuffer, 20);
-        Bass.Configure(Configuration.NetReadTimeOut, 10000);
     }
 
     public bool IsPlaying => Stream != 0 && Bass.ChannelIsActive(Stream) == PlaybackState.Playing;
@@ -195,4 +245,93 @@ public partial class SimpleAudioPlayer
     public bool IsStopped => Stream == 0 || Bass.ChannelIsActive(Stream) == PlaybackState.Stopped;
 
     public bool IsStalled => Stream != 0 && Bass.ChannelIsActive(Stream) == PlaybackState.Stalled;
+
+    internal static bool TryInitializeOutputDevice(int requestedDeviceId, out int actualDeviceId)
+    {
+        actualDeviceId = requestedDeviceId;
+        var deviceId = ResolveOutputDeviceId(requestedDeviceId);
+
+        if (deviceId != Bass.DefaultDevice &&
+            (!Bass.GetDeviceInfo(deviceId, out var info) || !info.IsEnabled || info.IsLoopback))
+        {
+            Console.WriteLine($"[BASS Device Error] output device {requestedDeviceId} is not available");
+            return false;
+        }
+
+        var isInitialized = deviceId != Bass.DefaultDevice &&
+                            Bass.GetDeviceInfo(deviceId, out var deviceInfo) &&
+                            deviceInfo.IsInitialized;
+        if (!isInitialized)
+        {
+            if (!Bass.Init(deviceId, 44100, DeviceInitFlags.Default, IntPtr.Zero))
+            {
+                Console.WriteLine($"[BASS Init Error] device={requestedDeviceId}, error={Bass.LastError}");
+                return false;
+            }
+        }
+        else
+        {
+            Bass.CurrentDevice = deviceId;
+        }
+
+        actualDeviceId = Bass.CurrentDevice;
+        if (requestedDeviceId == Bass.DefaultDevice)
+        {
+            _actualSystemDefaultDeviceId = actualDeviceId;
+        }
+
+        return actualDeviceId != Bass.DefaultDevice;
+    }
+
+    private static void ConfigureBassDeviceEnumeration()
+    {
+        if (_bassDeviceConfigurationApplied)
+        {
+            return;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            Bass.Configure(Configuration.IncludeDefaultDevice, true);
+            Bass.Configure(Configuration.UnicodeDeviceInformation, true);
+        }
+
+        _bassDeviceConfigurationApplied = true;
+    }
+
+    private static bool IsBassDefaultDeviceEntry(int deviceId, DeviceInfo info)
+    {
+        return deviceId == 1 &&
+               info.IsDefault &&
+               string.Equals(info.Name, "Default", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ResolveOutputDeviceId(int requestedDeviceId)
+    {
+        if (requestedDeviceId != Bass.DefaultDevice)
+        {
+            return requestedDeviceId;
+        }
+
+        var defaultEntryDeviceId = FindBassDefaultDeviceEntry();
+        if (defaultEntryDeviceId > 0)
+        {
+            return defaultEntryDeviceId;
+        }
+
+        return _actualSystemDefaultDeviceId > 0 ? _actualSystemDefaultDeviceId : Bass.DefaultDevice;
+    }
+
+    private static int FindBassDefaultDeviceEntry()
+    {
+        for (var deviceId = 1; Bass.GetDeviceInfo(deviceId, out var info); deviceId++)
+        {
+            if (IsBassDefaultDeviceEntry(deviceId, info))
+            {
+                return deviceId;
+            }
+        }
+
+        return Bass.DefaultDevice;
+    }
 }

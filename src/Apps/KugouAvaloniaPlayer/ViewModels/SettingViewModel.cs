@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using ZLinq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ using KugouAvaloniaPlayer.Behaviors;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
+using SimpleAudio;
 using SukiUI;
 using SukiUI.Dialogs;
 using EqSettingsView = KugouAvaloniaPlayer.Views.EqSettingsView;
@@ -53,6 +55,7 @@ public partial class SettingViewModel : PageViewModelBase
     private readonly UserClient _userClient;
 
     private bool _isApplyingSettingsSnapshot;
+    private int _lastAppliedOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
 
     [ObservableProperty]
     public partial bool AutoCheckUpdate { get; set; }
@@ -98,6 +101,10 @@ public partial class SettingViewModel : PageViewModelBase
     public partial bool EnableVolumeNormalization { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOutputDeviceStatusVisible))]
+    public partial string OutputDeviceStatus { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial bool IsCheckingUpdate { get; set; }
 
     [ObservableProperty]
@@ -121,6 +128,9 @@ public partial class SettingViewModel : PageViewModelBase
     [ObservableProperty]
     public partial NowPlayingBackgroundSource SelectedNowPlayingBackgroundSource { get; set; } =
         NowPlayingBackgroundSource.Cover;
+
+    [ObservableProperty]
+    public partial AudioOutputDevice? SelectedOutputDevice { get; set; }
 
     [ObservableProperty]
     public partial string PlayPageSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
@@ -198,6 +208,7 @@ public partial class SettingViewModel : PageViewModelBase
             EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
             EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
             UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
+            RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
             LoadDesktopLyricColorEditorFromSettings();
             LoadDesktopLyricFontEditorFromSettings();
@@ -266,6 +277,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string[] LyricFontFamilyOptions { get; }
     public GlobalShortcutItemViewModel[] ShortcutItems { get; }
     public ObservableCollection<ReleaseNoteItemViewModel> RecentReleaseNotes { get; } = [];
+    public ObservableCollection<AudioOutputDevice> OutputDeviceOptions { get; } = [];
 
     public PlayerViewModel Player { get; }
 
@@ -288,6 +300,7 @@ public partial class SettingViewModel : PageViewModelBase
     public bool IsAccountSection => SelectedSettingsSection == SettingsSectionAccount;
     public bool HasReleaseNotes => RecentReleaseNotes.Count > 0;
     public bool IsReleaseNotesStatusVisible => IsLoadingReleaseNotes || !HasReleaseNotes;
+    public bool IsOutputDeviceStatusVisible => !string.IsNullOrWhiteSpace(OutputDeviceStatus);
 
     public IBrush DesktopLyricColorPreviewBrush =>
         new SolidColorBrush(ParseColorOrDefault(DesktopLyricColorHexInput, Colors.Transparent));
@@ -545,6 +558,30 @@ public partial class SettingViewModel : PageViewModelBase
         Player.SetNowPlayingVisualizerEnabled(value);
     }
 
+    partial void OnSelectedOutputDeviceChanged(AudioOutputDevice? value)
+    {
+        if (_isApplyingSettingsSnapshot || value == null) return;
+
+        OutputDeviceStatus = string.Empty;
+        if (Player.SetOutputDevice(value.DeviceId))
+        {
+            _lastAppliedOutputDeviceId = value.DeviceId;
+            SettingsManager.Settings.AudioOutputDeviceId = value.DeviceId;
+            SettingsManager.Save();
+            return;
+        }
+
+        OutputDeviceStatus = "输出设备切换失败，已尝试恢复到系统默认设备。";
+        if (Player.SetOutputDevice(AppSettings.SystemDefaultAudioOutputDeviceId))
+        {
+            _lastAppliedOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
+            SettingsManager.Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
+            SettingsManager.Save();
+        }
+
+        SelectOutputDeviceSilently(_lastAppliedOutputDeviceId);
+    }
+
     partial void OnUseLightweightNowPlayingLyricScrollChanged(bool value)
     {
         if (_isApplyingSettingsSnapshot) return;
@@ -733,6 +770,23 @@ public partial class SettingViewModel : PageViewModelBase
     }
 
     [RelayCommand]
+    private void RefreshOutputDevices()
+    {
+        var preferredDeviceId = SelectedOutputDevice?.DeviceId ?? SettingsManager.Settings.AudioOutputDeviceId;
+        RefreshOutputDeviceOptions(preferredDeviceId);
+        if (SelectedOutputDevice?.DeviceId != preferredDeviceId)
+        {
+            OutputDeviceStatus = "原输出设备不可用，已回到系统默认设备。";
+            SettingsManager.Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
+            SettingsManager.Save();
+            ApplySavedOutputDevice();
+            return;
+        }
+
+        OutputDeviceStatus = "输出设备列表已刷新。";
+    }
+
+    [RelayCommand]
     private void OpenEqSettings()
     {
         var eqSettings = new EqSettingsView
@@ -805,6 +859,7 @@ public partial class SettingViewModel : PageViewModelBase
             EnableSeamlessTransition = SettingsManager.Settings.EnableSeamlessTransition;
             EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
             UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
+            RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
 
             LoadDesktopLyricColorEditorFromSettings();
@@ -825,6 +880,7 @@ public partial class SettingViewModel : PageViewModelBase
         Player.SetVolumeNormalizationEnabled(EnableVolumeNormalization);
         Player.SetSeamlessTransitionEnabled(EnableSeamlessTransition);
         Player.SetNowPlayingVisualizerEnabled(EnableNowPlayingVisualizer);
+        ApplySavedOutputDevice();
         _eqSettingsViewModel.ReloadFromSettings();
 
         var shortcutApplyResult = _globalShortcutService.TryApplySettings(SettingsManager.Settings.GlobalShortcuts);
@@ -849,6 +905,57 @@ public partial class SettingViewModel : PageViewModelBase
     {
         SettingsManager.Save();
         NotifyBackgroundSettingsChanged();
+    }
+
+    private void RefreshOutputDeviceOptions(int preferredDeviceId)
+    {
+        OutputDeviceOptions.Clear();
+        foreach (var device in SimpleAudioPlayer.GetOutputDevices())
+        {
+            OutputDeviceOptions.Add(device);
+        }
+
+        var selected = OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == preferredDeviceId) ??
+                       OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
+                       AudioOutputDevice.SystemDefault;
+        SelectOutputDeviceSilently(selected.DeviceId);
+    }
+
+    private void SelectOutputDeviceSilently(int deviceId)
+    {
+        var selected = OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == deviceId) ??
+                       OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
+                       AudioOutputDevice.SystemDefault;
+
+        var wasApplyingSettingsSnapshot = _isApplyingSettingsSnapshot;
+        _isApplyingSettingsSnapshot = true;
+        try
+        {
+            SelectedOutputDevice = selected;
+        }
+        finally
+        {
+            _isApplyingSettingsSnapshot = wasApplyingSettingsSnapshot;
+        }
+    }
+
+    private void ApplySavedOutputDevice()
+    {
+        var deviceId = SettingsManager.Settings.AudioOutputDeviceId;
+        if (Player.SetOutputDevice(deviceId))
+        {
+            _lastAppliedOutputDeviceId = deviceId;
+            OutputDeviceStatus = string.Empty;
+            SelectOutputDeviceSilently(deviceId);
+            return;
+        }
+
+        _lastAppliedOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
+        SettingsManager.Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
+        SettingsManager.Save();
+        Player.SetOutputDevice(AppSettings.SystemDefaultAudioOutputDeviceId);
+        OutputDeviceStatus = "保存的输出设备不可用，已回到系统默认设备。";
+        SelectOutputDeviceSilently(AppSettings.SystemDefaultAudioOutputDeviceId);
     }
 
     private static void NotifyBackgroundSettingsChanged()

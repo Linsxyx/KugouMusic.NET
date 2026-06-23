@@ -201,6 +201,11 @@ public partial class PlayerViewModel
             _audioEffectsService.DisableVolumeNormalization();
     }
 
+    public bool SetOutputDevice(int deviceId)
+    {
+        return _player.SetOutputDevice(deviceId);
+    }
+
     public async Task<bool> SwitchQualityAsync(string? quality)
     {
         if (string.IsNullOrWhiteSpace(quality) || !QualityOptions.Contains(quality, StringComparer.OrdinalIgnoreCase))

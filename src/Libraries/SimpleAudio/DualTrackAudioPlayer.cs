@@ -142,6 +142,14 @@ public sealed class DualTrackAudioPlayer : IDisposable
         _standbyDeck.SetVolume(volume);
     }
 
+    public bool SetOutputDevice(int deviceId)
+    {
+        var activeChanged = _activeDeck.SetOutputDevice(deviceId);
+        var standbyChanged = _standbyDeck.SetOutputDevice(deviceId);
+        var fadingChanged = _fadingDeck?.SetOutputDevice(deviceId) ?? true;
+        return activeChanged && standbyChanged && fadingChanged;
+    }
+
     public float GetVolume()
     {
         return _activeDeck.GetVolume();

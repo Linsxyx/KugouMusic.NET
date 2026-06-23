@@ -40,11 +40,11 @@ public partial class App : Application
         try
         {
             ConfigureImageLoader();
-            SimpleAudioPlayer.Initialize();
+            SettingsManager.Load();
+            SimpleAudioPlayer.Initialize(SettingsManager.Settings.AudioOutputDeviceId);
 
             _loggerFactory = new SerilogLoggerFactory(Log.Logger, true);
 
-            SettingsManager.Load();
             ApplySavedTheme();
             _serviceProvider = new AvaloniaAppServiceProvider
             {

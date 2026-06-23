@@ -9,14 +9,25 @@ public partial class SimpleAudioPlayer : IDisposable
         Stop();
 
         var flags = BassFlags.Default | BassFlags.Float;
+        lock (BassDeviceGate)
+        {
+            if (!TryInitializeOutputDevice(_preferredOutputDeviceId, out _))
+            {
+                _preferredOutputDeviceId = Bass.DefaultDevice;
+                if (!TryInitializeOutputDevice(Bass.DefaultDevice, out _))
+                {
+                    return false;
+                }
+            }
 
-        if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            Stream = Bass.CreateStream(url, 0, flags, null, IntPtr.Zero);
-        }
-        else if (File.Exists(url))
-        {
-            Stream = Bass.CreateStream(url, 0, 0, flags);
+            if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                Stream = Bass.CreateStream(url, 0, flags, null, IntPtr.Zero);
+            }
+            else if (File.Exists(url))
+            {
+                Stream = Bass.CreateStream(url, 0, 0, flags);
+            }
         }
 
         if (Stream == 0)
@@ -80,7 +91,57 @@ public partial class SimpleAudioPlayer : IDisposable
 
     public static void Free()
     {
-        Bass.Free();
+        lock (BassDeviceGate)
+        {
+            for (var deviceId = 1; Bass.GetDeviceInfo(deviceId, out var info); deviceId++)
+            {
+                if (!info.IsInitialized)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    Bass.CurrentDevice = deviceId;
+                    Bass.Free();
+                }
+                catch
+                {
+                    // Best-effort shutdown; process exit will release any remaining native handles.
+                }
+            }
+        }
+    }
+
+    public bool SetOutputDevice(int deviceId)
+    {
+        lock (BassDeviceGate)
+        {
+            if (!TryInitializeOutputDevice(deviceId, out var actualDeviceId))
+            {
+                return false;
+            }
+
+            _preferredOutputDeviceId = deviceId;
+            if (Stream == 0)
+            {
+                return true;
+            }
+
+            if (Bass.ChannelGetDevice(Stream) == actualDeviceId)
+            {
+                return true;
+            }
+
+            if (Bass.ChannelSetDevice(Stream, actualDeviceId))
+            {
+                UpdateActualVolume();
+                return true;
+            }
+
+            Console.WriteLine($"[BASS ChannelSetDevice Error] device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}");
+            return false;
+        }
     }
 
     public void SetVolume(float volume)

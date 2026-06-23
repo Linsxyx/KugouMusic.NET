@@ -143,6 +143,7 @@ public class GlobalShortcutSettings
 public class AppSettings
 {
     public const int CustomEqBandCount = 10;
+    public const int SystemDefaultAudioOutputDeviceId = -1;
 
     public const string ThemeDefault = "Default";
     public const string ThemeDark = "Dark";
@@ -172,6 +173,8 @@ public class AppSettings
     public bool EnableNowPlayingVisualizer { get; set; }
 
     public bool UseLightweightNowPlayingLyricScroll { get; set; }
+
+    public int AudioOutputDeviceId { get; set; } = SystemDefaultAudioOutputDeviceId;
 
     public float MusicVolume { get; set; } = 0.8f;
 

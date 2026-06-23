@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using KugouAvaloniaPlayer.Models;
 using Serilog;
+using SimpleAudio;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -136,6 +137,8 @@ public static class SettingsManager
             : Settings.CustomBackgroundImagePath;
         Settings.CustomBackgroundImageOpacity = Math.Clamp(Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
         Settings.MusicVolume = Math.Clamp(Settings.MusicVolume, 0f, 1f);
+        if (!SimpleAudioPlayer.IsOutputDeviceAvailable(Settings.AudioOutputDeviceId))
+            Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
         Settings.CustomEqGains = NormalizeCustomEqGains(Settings.CustomEqGains);
     }
 
