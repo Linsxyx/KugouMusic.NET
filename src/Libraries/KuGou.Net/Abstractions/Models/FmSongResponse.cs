@@ -81,6 +81,7 @@ public record FmSongItem : KgBaseModel
     public long AudioId { get; set; }
 
     [property: JsonPropertyName("album_id")]
+    [property: JsonConverter(typeof(EmptyStringLongJsonConverter))]
     public long AlbumId { get; set; }
 
     [property: JsonPropertyName("album_audio_id")]
@@ -152,4 +153,39 @@ public record FmTrackerInfo
 
     [JsonPropertyName("open_time")]
     public string OpenTime { get; set; } = "";
+}
+
+internal sealed class EmptyStringLongJsonConverter : JsonConverter<long>
+{
+    public override long Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.Number => reader.GetInt64(),
+            JsonTokenType.String => ParseStringValue(reader.GetString()),
+            JsonTokenType.Null => 0,
+            _ => throw new JsonException(
+                $"Unexpected token {reader.TokenType} when parsing a flexible long value.")
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, long value, JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue(value);
+    }
+
+    private static long ParseStringValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return 0;
+        }
+
+        if (long.TryParse(value, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new JsonException($"Cannot parse '{value}' as a long value.");
+    }
 }
