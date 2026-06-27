@@ -23,6 +23,7 @@ public partial class SearchViewModel(
 {
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string DefaultCardCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
+    private const int PlaylistSongPageSize = 200;
     private string _currentDetailId = "";
     private long _currentAlbumAuthorId;
     private long _currentAlbumId;
@@ -386,7 +387,7 @@ public partial class SearchViewModel(
         {
             if (_currentDetailType == DetailType.Playlist)
             {
-                var data = await playlistClient.GetSongsAsync(_currentDetailId, _currentDetailPage, 100);
+                var data = await playlistClient.GetSongsAsync(_currentDetailId, _currentDetailPage, PlaylistSongPageSize);
                 if (data == null)
                 {
                     logger.LogWarning("Playlist detail response is null. detailId={DetailId} page={Page}",
@@ -397,7 +398,7 @@ public partial class SearchViewModel(
 
                 if (data.Status != 1) logger.LogError("Error : {data.ErrorCode}" ,data.ErrorCode);
                 var songs = data.Songs;
-                if (songs.Count < 100) _hasMoreDetails = false;
+                if (songs.Count < PlaylistSongPageSize) _hasMoreDetails = false;
 
                 var songItems = songs.AsValueEnumerable().Select(s =>
                 {

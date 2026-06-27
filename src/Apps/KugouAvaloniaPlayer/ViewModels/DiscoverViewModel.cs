@@ -64,6 +64,7 @@ public partial class DiscoverViewModel : PageViewModelBase
 {
     private const string DefaultCardCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
+    private const int PlaylistSongPageSize = 200;
     private readonly RecommendClient _discoveryClient;
     private readonly ILogger<DiscoverViewModel> _logger;
     private readonly PlaylistClient _playlistClient;
@@ -353,7 +354,7 @@ public partial class DiscoverViewModel : PageViewModelBase
         IsLoadingMoreSongs = true;
         try
         {
-            var data = await _playlistClient.GetSongsAsync(SelectedPlaylist.GlobalId, _songPage, 100);
+            var data = await _playlistClient.GetSongsAsync(SelectedPlaylist.GlobalId, _songPage, PlaylistSongPageSize);
             if (data == null)
             {
                 _logger.LogWarning("LoadMoreSongs returned null response. playlist={Playlist} page={Page}",
@@ -364,7 +365,7 @@ public partial class DiscoverViewModel : PageViewModelBase
 
             if (data.Status != 1) _logger.LogError("Error : {data.ErrorCode}" , data.ErrorCode);
             var songs = data.Songs;
-            if (songs.Count < 100)
+            if (songs.Count < PlaylistSongPageSize)
                 _hasMoreSongs = false;
 
             var songItems = songs.AsValueEnumerable().Select(s => new SongItem

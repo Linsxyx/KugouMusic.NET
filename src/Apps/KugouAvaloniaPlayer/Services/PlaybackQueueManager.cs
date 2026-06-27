@@ -8,6 +8,7 @@ namespace KugouAvaloniaPlayer.Services;
 
 public class PlaybackQueueManager
 {
+    private const int MaxQueueSize = 1000;
     private readonly Random _random = new();
 
     public AvaloniaList<SongItem> PlaybackQueue { get; } = new();
@@ -23,25 +24,24 @@ public class PlaybackQueueManager
     {
         if (contextList != null && contextList.AsValueEnumerable().Any())
         {
-            const int maxQueueSize = 300;
             OriginalQueue.Clear();
             PlaybackQueue.Clear();
 
             IEnumerable<SongItem> targetList = contextList;
 
             // 列表过大时截取当前歌曲附近的部分，防止内存爆炸
-            if (contextList.Count > maxQueueSize)
+            if (contextList.Count > MaxQueueSize)
             {
                 var currentIndex = contextList.IndexOf(song);
                 if (currentIndex >= 0)
                 {
-                    var start = Math.Max(0, currentIndex - maxQueueSize / 2);
-                    var count = Math.Min(contextList.Count - start, maxQueueSize);
+                    var start = Math.Max(0, currentIndex - MaxQueueSize / 2);
+                    var count = Math.Min(contextList.Count - start, MaxQueueSize);
                     targetList = contextList.AsValueEnumerable().Skip(start).Take(count).ToArray();
                 }
                 else
                 {
-                    targetList = contextList.AsValueEnumerable().Take(maxQueueSize).ToArray();
+                    targetList = contextList.AsValueEnumerable().Take(MaxQueueSize).ToArray();
                 }
             }
 

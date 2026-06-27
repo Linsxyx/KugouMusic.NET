@@ -22,6 +22,7 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 {
     private const int UserPlaylistPageSize = 100;
+    private const int PlaylistSongPageSize = 200;
     private const int MaxUserPlaylistPages = 200;
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
@@ -37,7 +38,10 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
     private readonly UserClient _userClient;
 
     private int _currentPage = 1;
+    private CancellationTokenSource? _playlistBackgroundLoadCts;
+    private int _playlistLoadVersion;
     private bool _hasMoreSongs = true;
+    private bool _isBackgroundLoading;
     [ObservableProperty]
     public partial bool IsImportingExternalPlaylist { get; set; }
 
@@ -99,6 +103,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
     [RelayCommand]
     private void GoBack()
     {
+        CancelPlaylistBackgroundLoad();
         IsShowingSongs = false;
         SelectedPlaylist = null;
         SelectedPlaylistSongs.Clear();
@@ -107,6 +112,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
     [RelayCommand]
     private void BackFromPlaylist()
     {
+        CancelPlaylistBackgroundLoad();
         WeakReferenceMessenger.Default.Send(new RequestNavigateBackMessage());
     }
 
@@ -209,6 +215,9 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
         if (item.Type == PlaylistType.AddButton) return;
 
+        CancelPlaylistBackgroundLoad();
+        var loadVersion = Interlocked.Increment(ref _playlistLoadVersion);
+
         SelectedPlaylist = item;
         IsShowingSongs = true;
         SelectedPlaylistSongs.Clear();
@@ -233,13 +242,22 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                         likeCache.Source, likeCache.Songs.Count, likeCache.UpdatedAt);*/
                 }
 
-                _ = RefreshLikePlaylistAfterOpenAsync(item, loadedLocal);
-                if (!loadedLocal)
-                    await LoadMoreSongsInternal();
+                if (loadedLocal)
+                {
+                    _ = RefreshLikePlaylistAfterOpenAsync(item, hadLocalSnapshot: true, loadVersion);
+                }
+                else
+                {
+                    var loaded = await LoadOnlinePlaylistPageAsync(item, 1, replaceExisting: false, loadVersion);
+                    if (loaded)
+                        StartPlaylistBackgroundLoad(item, loadVersion);
+                }
             }
             else
             {
-                await LoadMoreSongsInternal();
+                var loaded = await LoadOnlinePlaylistPageAsync(item, 1, replaceExisting: false, loadVersion);
+                if (loaded)
+                    StartPlaylistBackgroundLoad(item, loadVersion);
             }
         }
         else if (item.Type == PlaylistType.Album)
@@ -253,59 +271,175 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
     {
         if ((SelectedPlaylist?.Type != PlaylistType.Online && SelectedPlaylist?.Type != PlaylistType.Album) ||
             IsLoadingMore || !_hasMoreSongs ||
-            _isLikePlaylistLocalMode)
+            _isLikePlaylistLocalMode ||
+            _isBackgroundLoading)
             return;
 
         _currentPage++;
         if (SelectedPlaylist?.Type == PlaylistType.Album)
             await LoadAlbumSongsAsync();
         else
-            await LoadMoreSongsInternal();
+        {
+            var selectedPlaylist = SelectedPlaylist;
+            if (selectedPlaylist != null)
+                await LoadOnlinePlaylistPageAsync(selectedPlaylist, _currentPage, replaceExisting: false, _playlistLoadVersion);
+        }
     }
 
-    private async Task LoadMoreSongsInternal()
+    private async Task<bool> LoadOnlinePlaylistPageAsync(PlaylistItem playlist, int page, bool replaceExisting, int loadVersion)
     {
-        if (SelectedPlaylist == null) return;
+        if (_isDisposed)
+            return false;
 
         IsLoadingMore = true;
         try
         {
-            var data = await _playlistClient.GetSongsAsync(SelectedPlaylist.Id, _currentPage, 100);
+            var data = await _playlistClient.GetSongsAsync(playlist.Id, page, PlaylistSongPageSize);
+            if (!IsCurrentPlaylistLoad(playlist, loadVersion))
+                return false;
+
             if (data is null)
             {
-                _currentPage = Math.Max(1, _currentPage - 1);
-                return;
+                if (!replaceExisting && page > 1)
+                    _currentPage = Math.Max(1, page - 1);
+
+                return false;
             }
 
-            if (data.Status != 1) _logger.LogWarning("Error : {data.ErrorCode}" ,data.Status);
-            var songs = data.Songs;
-
-            if (songs.Count < 100) _hasMoreSongs = false;
-
-            var songItems = songs.AsValueEnumerable().Select(s => new SongItem
+            if (data.Status != 1)
             {
-                Name = s.Name,
-                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
-                Hash = s.Hash,
-                AlbumId = s.AlbumId,
-                AlbumName = s.Album?.Name ?? "",
-                FileId = s.FileId, // 保存 FileId 用于删除
-                Singers = s.Singers,
-                Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
-                DurationSeconds = s.DurationMs / 1000.0
-            }).ToList();
+                _logger.LogWarning("加载歌单分页失败。 playlistId={PlaylistId}, page={Page}, error={ErrorCode}",
+                    playlist.Id, page, data.ErrorCode);
+                if (!replaceExisting && page > 1)
+                    _currentPage = Math.Max(1, page - 1);
 
-            if (songItems.Count > 0)
-                SelectedPlaylistSongs.AddRange(songItems);
+                return false;
+            }
+
+            var songs = data.Songs;
+            var hasMoreSongs = songs.Count >= PlaylistSongPageSize;
+
+            var songItems = MapPlaylistSongs(songs);
+            if (!IsCurrentPlaylistLoad(playlist, loadVersion))
+                return false;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (!IsCurrentPlaylistLoad(playlist, loadVersion))
+                    return;
+
+                if (replaceExisting)
+                    SelectedPlaylistSongs.Clear();
+
+                if (songItems.Count > 0)
+                    SelectedPlaylistSongs.AddRange(songItems);
+
+                _currentPage = page;
+                _hasMoreSongs = hasMoreSongs;
+                if (replaceExisting)
+                    _isLikePlaylistLocalMode = false;
+            });
+
+            return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _currentPage--;
+            if (!replaceExisting && page > 1)
+                _currentPage = Math.Max(1, page - 1);
+
+            _logger.LogWarning(ex, "加载歌单分页异常。 playlistId={PlaylistId}, page={Page}", playlist.Id, page);
+            return false;
         }
         finally
         {
             IsLoadingMore = false;
         }
+    }
+
+    private List<SongItem> MapPlaylistSongs(IReadOnlyList<PlaylistSong> songs)
+    {
+        return songs.AsValueEnumerable().Select(s => new SongItem
+        {
+            Name = s.Name,
+            Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
+            Hash = s.Hash,
+            AlbumId = s.AlbumId,
+            AlbumName = s.Album?.Name ?? "",
+            FileId = s.FileId,
+            Singers = s.Singers,
+            Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
+            DurationSeconds = s.DurationMs / 1000.0
+        }).ToList();
+    }
+
+    private void StartPlaylistBackgroundLoad(PlaylistItem playlist, int loadVersion)
+    {
+        if (_isDisposed || playlist.Type != PlaylistType.Online || !IsCurrentPlaylistLoad(playlist, loadVersion) || !_hasMoreSongs)
+            return;
+
+        CancelPlaylistBackgroundLoad();
+
+        var cts = new CancellationTokenSource();
+        _playlistBackgroundLoadCts = cts;
+        _isBackgroundLoading = true;
+        _ = CompletePlaylistInBackgroundAsync(playlist, loadVersion, cts);
+    }
+
+    private async Task CompletePlaylistInBackgroundAsync(PlaylistItem playlist, int loadVersion, CancellationTokenSource cts)
+    {
+        try
+        {
+            while (!cts.IsCancellationRequested && !_isDisposed && IsCurrentPlaylistLoad(playlist, loadVersion) && _hasMoreSongs)
+            {
+                var nextPage = _currentPage + 1;
+                var loaded = await LoadOnlinePlaylistPageAsync(playlist, nextPage, replaceExisting: false, loadVersion);
+                if (!loaded)
+                    break;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "后台补全歌单失败。 playlistId={PlaylistId}", playlist.Id);
+        }
+        finally
+        {
+            if (ReferenceEquals(_playlistBackgroundLoadCts, cts))
+            {
+                _playlistBackgroundLoadCts = null;
+                _isBackgroundLoading = false;
+                cts.Dispose();
+            }
+        }
+    }
+
+    private bool IsCurrentPlaylistLoad(PlaylistItem playlist, int loadVersion)
+    {
+        return !_isDisposed &&
+               IsShowingSongs &&
+               _playlistLoadVersion == loadVersion &&
+               SelectedPlaylist?.Type == playlist.Type &&
+               SelectedPlaylist.Id == playlist.Id &&
+               SelectedPlaylist.ListId == playlist.ListId;
+    }
+
+    private void CancelPlaylistBackgroundLoad()
+    {
+        var cts = _playlistBackgroundLoadCts;
+        _playlistBackgroundLoadCts = null;
+        _isBackgroundLoading = false;
+
+        if (cts == null)
+            return;
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        cts.Dispose();
     }
 
     private async Task LoadAlbumSongsAsync()
@@ -564,6 +698,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         if (SelectedPlaylist != null &&
             (SelectedPlaylist.ListId == target.ListId || SelectedPlaylist.Id == target.Id))
         {
+            CancelPlaylistBackgroundLoad();
             SelectedPlaylist = null;
             SelectedPlaylistSongs.Clear();
             IsShowingSongs = false;
@@ -644,17 +779,19 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         }
     }
 
-    private async Task RefreshLikePlaylistAfterOpenAsync(PlaylistItem openedItem, bool hadLocalSnapshot)
+    private async Task RefreshLikePlaylistAfterOpenAsync(PlaylistItem openedItem, bool hadLocalSnapshot, int loadVersion)
     {
         try
         {
-            if (_isDisposed)
+            if (_isDisposed || !IsCurrentPlaylistLoad(openedItem, loadVersion))
                 return;
 
             await _favoritePlaylistService.LoadLikeListAsync();
+            if (!IsCurrentPlaylistLoad(openedItem, loadVersion))
+                return;
 
-            var firstPage = await _playlistClient.GetSongsAsync(openedItem.Id, 1, 100);
-            if (_isDisposed)
+            var firstPage = await _playlistClient.GetSongsAsync(openedItem.Id, 1, PlaylistSongPageSize);
+            if (_isDisposed || !IsCurrentPlaylistLoad(openedItem, loadVersion))
                 return;
 
             if (firstPage is null || firstPage.Status != 1)
@@ -664,31 +801,24 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                 return;
             }
 
-            var songItems = (firstPage.Songs ?? new List<PlaylistSong>()).AsValueEnumerable().Select(s => new SongItem
-            {
-                Name = s.Name,
-                Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
-                Hash = s.Hash,
-                AlbumId = s.AlbumId,
-                AlbumName = s.Album?.Name ?? "",
-                FileId = s.FileId,
-                Singers = s.Singers,
-                Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
-                DurationSeconds = s.DurationMs / 1000.0
-            }).ToList();
+            var remoteSongs = firstPage.Songs ?? new List<PlaylistSong>();
+            var songItems = MapPlaylistSongs(remoteSongs);
+            var hasMoreSongs = remoteSongs.Count >= PlaylistSongPageSize;
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (SelectedPlaylist == null || !IsLikePlaylist(SelectedPlaylist) ||
-                    SelectedPlaylist.Id != openedItem.Id)
+                if (!IsCurrentPlaylistLoad(openedItem, loadVersion) || SelectedPlaylist == null || !IsLikePlaylist(SelectedPlaylist))
                     return;
 
                 SelectedPlaylistSongs.Clear();
                 SelectedPlaylistSongs.AddRange(songItems);
                 _currentPage = 1;
-                _hasMoreSongs = songItems.Count >= 100;
+                _hasMoreSongs = hasMoreSongs;
                 _isLikePlaylistLocalMode = false;
             });
+
+            if (hasMoreSongs)
+                StartPlaylistBackgroundLoad(openedItem, loadVersion);
 
             /*_logger.LogInformation("打开“我喜欢”后远端分页接管成功: songs={SongCount}, hasMore={HasMore}",
                 songItems.Count, _hasMoreSongs);*/
@@ -710,6 +840,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             return;
 
         _isDisposed = true;
+        CancelPlaylistBackgroundLoad();
         _refreshPlaylistsCts?.Cancel();
         _refreshPlaylistsCts?.Dispose();
         _refreshPlaylistsCts = null;
