@@ -6,9 +6,11 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using ATL;
 using AsyncImageLoader.Loaders;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using KugouAvaloniaPlayer.Converters;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -17,6 +19,7 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
     private const int DefaultMaxMemoryEntries = 200;
     private const long DefaultMaxMemoryBytes = 32L * 1024 * 1024;
     private const long DefaultMaxDiskBytes = 256L * 1024 * 1024;
+    private const int EmbeddedCoverDecodeWidth = 128;
 
     private readonly string _cacheFolder;
     private readonly TimeSpan _diskCacheLifetime;
@@ -25,6 +28,8 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
     private readonly long _maxDiskBytes;
     private readonly object _sync = new();
     private readonly Dictionary<string, CacheEntry> _memoryCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, WeakReference<Bitmap>> _embeddedBitmapCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Task<Bitmap?>> _pendingEmbeddedLoads = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Task<byte[]?>> _pendingLoads = new(StringComparer.Ordinal);
     private readonly LinkedList<string> _leastRecentlyUsed = new();
 
@@ -69,6 +74,9 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
 
     public override async Task<Bitmap?> ProvideImageAsync(string url, IStorageProvider? storageProvider = null)
     {
+        if (LocalImageSourceHelper.TryGetEmbeddedCoverFilePath(url, out var embeddedTrackPath))
+            return await GetEmbeddedCoverBitmapAsync(url, embeddedTrackPath!).ConfigureAwait(false);
+
         if (!IsWebUrl(url))
             return await base.ProvideImageAsync(url, storageProvider).ConfigureAwait(false);
 
@@ -78,6 +86,84 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
 
         using var stream = new MemoryStream(bytes, writable: false);
         return new Bitmap(stream);
+    }
+
+    private async Task<Bitmap?> GetEmbeddedCoverBitmapAsync(string sourceKey, string trackPath)
+    {
+        if (TryGetEmbeddedBitmapFromMemory(sourceKey, out var cachedBitmap))
+            return cachedBitmap;
+
+        var loadTask = GetOrCreateEmbeddedLoadTask(sourceKey, trackPath);
+        try
+        {
+            return await loadTask.ConfigureAwait(false);
+        }
+        finally
+        {
+            RemovePendingEmbeddedLoad(sourceKey, loadTask);
+        }
+    }
+
+    private bool TryGetEmbeddedBitmapFromMemory(string sourceKey, out Bitmap? bitmap)
+    {
+        lock (_sync)
+        {
+            if (_embeddedBitmapCache.TryGetValue(sourceKey, out var weakReference) &&
+                weakReference.TryGetTarget(out bitmap))
+            {
+                return true;
+            }
+
+            bitmap = null;
+            return false;
+        }
+    }
+
+    private Task<Bitmap?> GetOrCreateEmbeddedLoadTask(string sourceKey, string trackPath)
+    {
+        lock (_sync)
+        {
+            if (_pendingEmbeddedLoads.TryGetValue(sourceKey, out var existingTask))
+                return existingTask;
+
+            var loadTask = LoadEmbeddedCoverBitmapAsync(sourceKey, trackPath);
+            _pendingEmbeddedLoads[sourceKey] = loadTask;
+            return loadTask;
+        }
+    }
+
+    private async Task<Bitmap?> LoadEmbeddedCoverBitmapAsync(string sourceKey, string trackPath)
+    {
+        if (TryGetEmbeddedBitmapFromMemory(sourceKey, out var cachedBitmap))
+            return cachedBitmap;
+
+        var bitmap = await Task.Run(() =>
+        {
+            try
+            {
+                var track = new Track(trackPath);
+                var picture = track.EmbeddedPictures.Count > 0 ? track.EmbeddedPictures[0] : null;
+                if (picture?.PictureData == null || picture.PictureData.Length == 0)
+                    return null;
+
+                using var stream = new MemoryStream(picture.PictureData, writable: false);
+                return Bitmap.DecodeToWidth(stream, EmbeddedCoverDecodeWidth, BitmapInterpolationMode.LowQuality);
+            }
+            catch
+            {
+                return null;
+            }
+        }).ConfigureAwait(false);
+
+        if (bitmap == null)
+            return null;
+
+        lock (_sync)
+        {
+            _embeddedBitmapCache[sourceKey] = new WeakReference<Bitmap>(bitmap);
+        }
+
+        return bitmap;
     }
 
     private async Task<byte[]?> GetExternalImageBytesAsync(string url)
@@ -241,6 +327,15 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
         {
             if (_pendingLoads.TryGetValue(url, out var currentTask) && ReferenceEquals(currentTask, loadTask))
                 _pendingLoads.Remove(url);
+        }
+    }
+
+    private void RemovePendingEmbeddedLoad(string sourceKey, Task<Bitmap?> loadTask)
+    {
+        lock (_sync)
+        {
+            if (_pendingEmbeddedLoads.TryGetValue(sourceKey, out var currentTask) && ReferenceEquals(currentTask, loadTask))
+                _pendingEmbeddedLoads.Remove(sourceKey);
         }
     }
 

@@ -63,7 +63,8 @@
                                     ClipToBounds="True"
                                     Width="48"
                                     Height="48">
-                                <Image asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover}"
+                                <Image Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource LocalCachedBitmapConverter}}"
+                                       asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
                                        behaviors:ImageRenderOptions.InterpolationSource="{Binding Player.DisplayedPlayingSong.Cover}"
                                        Stretch="UniformToFill" />
                             </Border>
