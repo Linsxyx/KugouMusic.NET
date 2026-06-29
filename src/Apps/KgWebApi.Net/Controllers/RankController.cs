@@ -58,4 +58,16 @@ public class RankController(RankClient rankClient) : ControllerBase
         var result = await rankClient.GetRankSongsAsync(rankid, page, pagesize);
         return Ok(result);
     }
+    
+    /// <summary>
+    ///     获取排行榜推荐列表
+    /// </summary>
+    /// <returns>榜单列表。</returns>
+    [HttpGet("top")]
+    [ProducesResponseType(typeof(RankListResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRankTop()
+    {
+        var result = await rankClient.GetRecommendedRanksAsync();
+        return Ok(result);
+    }
 }

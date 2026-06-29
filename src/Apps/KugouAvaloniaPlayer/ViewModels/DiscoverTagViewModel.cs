@@ -91,7 +91,7 @@ public partial class DiscoverTagViewModel : PageViewModelBase
         _ = LoadTagsAsync();
     }
 
-    public override string DisplayName => "发现歌单";
+    public override string DisplayName => "主题歌单";
     public override string Icon => "/Assets/tag-svgrepo-com.svg";
 
     public AvaloniaList<DiscoverPlaylistTagGroup> Categories { get; } = [];

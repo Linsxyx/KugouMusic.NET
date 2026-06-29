@@ -22,30 +22,13 @@ public class PlaybackQueueManager
     /// </summary>
     public void SetupQueue(SongItem song, IList<SongItem>? contextList)
     {
-        if (contextList != null && contextList.AsValueEnumerable().Any())
+        if (contextList is { Count: > 0 })
         {
             OriginalQueue.Clear();
             PlaybackQueue.Clear();
 
-            IEnumerable<SongItem> targetList = contextList;
+            var finalList = TakeWindowAround(contextList, song, MaxQueueSize);
 
-            // 列表过大时截取当前歌曲附近的部分，防止内存爆炸
-            if (contextList.Count > MaxQueueSize)
-            {
-                var currentIndex = contextList.IndexOf(song);
-                if (currentIndex >= 0)
-                {
-                    var start = Math.Max(0, currentIndex - MaxQueueSize / 2);
-                    var count = Math.Min(contextList.Count - start, MaxQueueSize);
-                    targetList = contextList.AsValueEnumerable().Skip(start).Take(count).ToArray();
-                }
-                else
-                {
-                    targetList = contextList.AsValueEnumerable().Take(MaxQueueSize).ToArray();
-                }
-            }
-
-            var finalList = targetList.AsValueEnumerable().ToList();
             OriginalQueue.AddRange(finalList);
 
             if (IsShuffleMode)
@@ -53,13 +36,7 @@ public class PlaybackQueueManager
                 var shuffleList = new List<SongItem>(finalList);
                 shuffleList.Remove(song);
 
-                var n = shuffleList.Count;
-                while (n > 1)
-                {
-                    n--;
-                    var k = _random.Next(n + 1);
-                    (shuffleList[k], shuffleList[n]) = (shuffleList[n], shuffleList[k]);
-                }
+                ShuffleInPlace(shuffleList);
 
                 PlaybackQueue.Add(song);
                 PlaybackQueue.AddRange(shuffleList);
@@ -196,6 +173,60 @@ public class PlaybackQueueManager
 
             PlaybackQueue.Clear();
             PlaybackQueue.AddRange(OriginalQueue);
+        }
+    }
+    
+    private static List<SongItem> TakeWindowAround(
+        IList<SongItem> source,
+        SongItem current,
+        int maxCount)
+    {
+        if (source.Count <= maxCount)
+            return source.AsValueEnumerable().ToList();
+
+        var currentIndex = source.IndexOf(current);
+        if (currentIndex < 0)
+        {
+            return source
+                .AsValueEnumerable()
+                .Take(maxCount)
+                .ToList();
+        }
+        
+        var before = maxCount / 2;
+        var after = maxCount - before - 1;
+
+        var start = currentIndex - before;
+        var end = currentIndex + after;
+        
+        if (start < 0)
+        {
+            end += -start;
+            start = 0;
+        }
+        
+        if (end >= source.Count)
+        {
+            var overflow = end - source.Count + 1;
+            start = Math.Max(0, start - overflow);
+            end = source.Count - 1;
+        }
+
+        var count = end - start + 1;
+
+        return source
+            .AsValueEnumerable()
+            .Skip(start)
+            .Take(count)
+            .ToList();
+    }
+    
+    private void ShuffleInPlace(List<SongItem> list)
+    {
+        for (var i = list.Count - 1; i > 0; i--)
+        {
+            var j = _random.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
         }
     }
 }

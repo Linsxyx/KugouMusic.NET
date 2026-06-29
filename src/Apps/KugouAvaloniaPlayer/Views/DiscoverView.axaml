@@ -69,15 +69,11 @@
                           Padding="0,0,0,40">
                 <StackPanel Spacing="26">
                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,-4">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="发现"
-                                       FontSize="30"
-                                       FontWeight="ExtraBold"
-                                       Foreground="{DynamicResource DiscoverSectionTitleBrush}" />
-                            <TextBlock Text="为你挑出今天值得打开的歌"
-                                       FontSize="14"
-                                       Foreground="{DynamicResource DiscoverSectionCaptionBrush}" />
-                        </StackPanel>
+                        <TextBlock Text="探索发现"
+                                   FontSize="30"
+                                   FontWeight="ExtraBold"
+                                   Foreground="{DynamicResource DiscoverSectionTitleBrush}" />
+                           
 
                         <Button Grid.Column="1"
                                 Classes="Basic"

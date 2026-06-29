@@ -151,7 +151,7 @@ public partial class DiscoverViewModel : PageViewModelBase
         _ = LoadContentAsync();
     }
 
-    public override string DisplayName => "发现";
+    public override string DisplayName => "探索发现";
     public override string Icon => "/Assets/tag-svgrepo-com.svg";
 
     public bool CanCollectSelectedPlaylist => SelectedPlaylist is not null;
