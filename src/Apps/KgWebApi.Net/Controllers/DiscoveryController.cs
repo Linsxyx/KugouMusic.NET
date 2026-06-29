@@ -122,9 +122,10 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
     /// <summary>
     ///     歌曲推荐。
     /// </summary>
-    /// <param name="cardId">推荐卡片 id。</param>
+    /// <param name="cardId">推荐卡片 id。1：对应安卓 精选好歌随心听 || 私人专属好歌，2：对应安卓 经典怀旧金曲，3：对应安卓 热门好歌精选，4：对应安卓 小众宝藏佳作，5：未知，6：对应 vip 专属推荐</param>
     /// <returns>歌曲推荐内容。</returns>
     [HttpGet("top/card")]
+    [ProducesResponseType(typeof(TopCardResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTopCard([FromQuery(Name = "card_id")] int cardId = 1)
     {
         var res = await recommendClient.GetTopCardAsync(cardId);
@@ -132,19 +133,17 @@ public class DiscoveryController(RecommendClient recommendClient) : ControllerBa
     }
 
     /*/// <summary>
-    ///     歌曲推荐
+    ///     歌曲推荐(概念版)
     /// </summary>
-    /// <param name="cardId">推荐卡片 id。</param>
-    /// <param name="pagesize">每页页数。</param>
-    /// <param name="tagId">标签 id。</param>
+    /// <param name="cardId">推荐卡片 id。 3006: VIP 专属推荐，3001: 私人专属好歌，3004: 小众宝藏佳作，3014: 喜欢这首歌的 TA 也喜欢，3101: 概念 er 新推，3005: 潮流尝鲜</param>
     /// <returns>概念版歌曲推荐内容。</returns>
     [HttpGet("top/card/youth")]
     public async Task<IActionResult> GetTopCardYouth(
-        [FromQuery(Name = "card_id")] int cardId = 3005,
+        [FromQuery(Name = "card_id")] int cardId = 3005/*,
         [FromQuery] int pagesize = 30,
-        [FromQuery(Name = "tagid")] string? tagId = null)
+        [FromQuery(Name = "tagid")] string? tagId = null#1#)
     {
-        var res = await recommendClient.GetTopCardYouthAsync(cardId, pagesize, tagId);
+        var res = await recommendClient.GetTopCardYouthAsync(cardId);
         return Ok(res);
     }*/
 

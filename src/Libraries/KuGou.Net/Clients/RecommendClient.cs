@@ -96,9 +96,14 @@ public class RecommendClient(RawDiscoveryApi rawApi, KgSessionManager sessionMan
         return await rawApi.GetTopAlbumsAsync(sessionManager.Session.Token, page, pageSize);
     }
 
-    public async Task<JsonElement> GetTopCardAsync(int cardId = 1)
+    public async Task<TopCardResponse?> GetTopCardAsync(int cardId = 1)
     {
-        return await rawApi.GetTopCardAsync(GetUserId(), sessionManager.Session.Mid, cardId);
+        var json = await rawApi.GetTopCardAsync(GetUserId(), sessionManager.Session.Mid, cardId);
+        
+        return KgApiResponseParser.Parse<TopCardResponse>(
+            json, 
+            AppJsonContext.Default.TopCardResponse
+        );
     }
 
     public async Task<JsonElement> GetTopCardYouthAsync(int cardId = 3005, int pageSize = 30, string? tagId = null)
