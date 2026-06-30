@@ -79,6 +79,7 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(List<RankSongAudioInfo>))]
 [JsonSerializable(typeof(List<RankSongAuthor>))]
 [JsonSerializable(typeof(RankListResponse))]
+[JsonSerializable(typeof(RankLTopResponse))]
 [JsonSerializable(typeof(TopCardResponse))]
 [JsonSerializable(typeof(TopCardSong))]
 [JsonSerializable(typeof(List<TopCardSong>))]
@@ -129,6 +130,8 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(PrivilegeLiteResponse))]
 [JsonSerializable(typeof(PrivilegeLiteData))]
 [JsonSerializable(typeof(List<PrivilegeLiteData>))]
+[JsonSerializable(typeof(RankListSongPreview))]
+[JsonSerializable(typeof(List<RankListSongPreview>))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }

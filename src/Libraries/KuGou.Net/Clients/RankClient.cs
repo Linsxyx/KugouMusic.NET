@@ -21,10 +21,10 @@ public class RankClient(RawRankApi rawApi)
     /// <summary>
     ///     获取推荐榜单
     /// </summary>
-    public async Task<RankListResponse?> GetRecommendedRanksAsync()
+    public async Task<RankLTopResponse?> GetRecommendedRanksAsync()
     {
         var json = await rawApi.GetRankTopAsync();
-        return KgApiResponseParser.Parse<RankListResponse>(json, AppJsonContext.Default.RankListResponse);
+        return KgApiResponseParser.Parse<RankLTopResponse>(json, AppJsonContext.Default.RankLTopResponse);
     }
 
     public Task<JsonElement> GetAllRanksRawAsync(int withSong = 1)

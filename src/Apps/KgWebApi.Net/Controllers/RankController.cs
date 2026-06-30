@@ -64,7 +64,7 @@ public class RankController(RankClient rankClient) : ControllerBase
     /// </summary>
     /// <returns>榜单列表。</returns>
     [HttpGet("top")]
-    [ProducesResponseType(typeof(RankListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(RankLTopResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRankTop()
     {
         var result = await rankClient.GetRecommendedRanksAsync();

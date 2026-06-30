@@ -1,10 +1,9 @@
 using System;
 using System.ComponentModel;
-using System.Linq;
+using ZLinq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
@@ -287,7 +286,7 @@ public sealed class DesktopLyricWindowService(
 
     private static bool IsVisibleOnAnyScreen(Window window, PixelPoint position)
     {
-        return window.Screens.All.Any(screen =>
+        return window.Screens.All.AsValueEnumerable().Any(screen =>
             screen.Bounds.Contains(position) || screen.WorkingArea.Contains(position));
     }
 }

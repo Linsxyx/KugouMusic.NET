@@ -2,7 +2,6 @@ using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using ZLinq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -917,16 +916,16 @@ public partial class SettingViewModel : PageViewModelBase
             OutputDeviceOptions.Add(device);
         }
 
-        var selected = OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == preferredDeviceId) ??
-                       OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
+        var selected = OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == preferredDeviceId) ??
+                       OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
                        AudioOutputDevice.SystemDefault;
         SelectOutputDeviceSilently(selected.DeviceId);
     }
 
     private void SelectOutputDeviceSilently(int deviceId)
     {
-        var selected = OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == deviceId) ??
-                       OutputDeviceOptions.FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
+        var selected = OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == deviceId) ??
+                       OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
                        AudioOutputDevice.SystemDefault;
 
         var wasApplyingSettingsSnapshot = _isApplyingSettingsSnapshot;

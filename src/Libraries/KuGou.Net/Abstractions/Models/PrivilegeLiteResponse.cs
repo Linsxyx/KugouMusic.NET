@@ -144,7 +144,10 @@ public record PrivilegeTransParam
     public string HashMultitrack { get; set; } = string.Empty;
 
     [property: JsonPropertyName("union_cover")]
-    public string UnionCover { get; set; } = string.Empty;
+    public string? UnionCover {
+        get => field?.Replace("{size}", "400");
+        set;
+    }
 
     [property: JsonPropertyName("ogg_128_hash")]
     public string Ogg128Hash { get; set; } = string.Empty;

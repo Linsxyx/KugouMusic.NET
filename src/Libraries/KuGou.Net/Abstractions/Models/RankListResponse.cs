@@ -38,4 +38,38 @@ public record RankListItem
     /// </summary>
     [property: JsonPropertyName("rankname")]
     public string Name { get; set; } = "";
+    
+    [property: JsonPropertyName("songinfo")]
+    public List<RankListSongPreview> SongPreviews { get; set; } = [];
+}
+
+
+/// <summary>
+/// 榜单列表中附带的歌曲预览信息
+/// </summary>
+public record RankListSongPreview
+{
+    /// <summary>
+    /// 歌曲名
+    /// </summary>
+    [property: JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// 歌手名
+    /// </summary>
+    [property: JsonPropertyName("author")]
+    public string Author { get; set; } = "";
+
+    /// <summary>
+    /// 完整组合名称（通常是 "歌手 - 歌名"）
+    /// </summary>
+    [property: JsonPropertyName("songname")]
+    public string SongName { get; set; } = "";
+
+    [property: JsonPropertyName("album_audio_id")]
+    public long AlbumAudioId { get; set; }
+    
+    [property: JsonPropertyName("trans_param")]
+    public PrivilegeTransParam? TransParam { get; set; }
 }
