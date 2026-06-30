@@ -11,11 +11,17 @@
 
     <Grid Margin="15">
         <Grid IsVisible="{Binding !IsShowingSongs}" RowDefinitions="Auto, *">
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,20">
-                <TextBlock Text="排行榜" FontSize="28" FontWeight="ExtraBold" />
-                <Button Classes="Basic" Command="{Binding LoadAllRanksCommand}" Cursor="Hand">
-                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="{DynamicResource SukiLowText}" />
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,20">
+                <Button Classes="Basic"
+                        Command="{Binding NavigateBackCommand}"
+                        Cursor="Hand"
+                        ToolTip.Tip="返回发现">
+                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}" />
                 </Button>
+                <TextBlock Text="排行榜"
+                           FontSize="28"
+                           FontWeight="ExtraBold"
+                           VerticalAlignment="Center" />
             </StackPanel>
 
             <ScrollViewer Grid.Row="1" Padding="0,0,0,-50">

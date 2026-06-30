@@ -96,7 +96,6 @@ public partial class MainWindowViewModel : ObservableObject
         SearchViewModel searchViewModel,
         UserCloudViewModel userCloudViewModel,
         SettingViewModel settingViewModel,
-        RankViewModel rankViewModel,
         DailyRecommendViewModel dailyRecommendViewModel,
         HistoryViewModel historyViewModel,
         DiscoverViewModel discoverViewModel,
@@ -133,7 +132,6 @@ public partial class MainWindowViewModel : ObservableObject
         Pages.Add(historyViewModel);
         Pages.Add(localMusicLibraryViewModel);
         Pages.Add(discoverViewModel);
-        Pages.Add(rankViewModel);
         Pages.Add(_searchViewModel);
         Pages.Add(_userCloudViewModel);
         _navigationService.CurrentPageChanged += OnNavigationCurrentPageChanged;

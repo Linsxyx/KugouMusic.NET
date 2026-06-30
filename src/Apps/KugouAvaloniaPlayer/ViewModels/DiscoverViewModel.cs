@@ -76,6 +76,27 @@ public partial class DiscoverPlaylist : ObservableObject
     }
 }
 
+public sealed class DiscoverRankSongPreview
+{
+    public int Index { get; init; }
+
+    public string Name { get; init; } = "";
+}
+
+public partial class DiscoverRankCard : ObservableObject
+{
+    [ObservableProperty]
+    public partial string Cover { get; set; } = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
+
+    [ObservableProperty]
+    public partial string Name { get; set; } = "";
+
+    [ObservableProperty]
+    public partial long RankId { get; set; }
+
+    public AvaloniaList<DiscoverRankSongPreview> TopSongs { get; } = [];
+}
+
 public partial class DiscoverViewModel : PageViewModelBase
 {
     private const string DefaultCardCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
@@ -98,6 +119,8 @@ public partial class DiscoverViewModel : PageViewModelBase
     private readonly ILogger<DiscoverViewModel> _logger;
     private readonly INavigationService _navigationService;
     private readonly PlaylistClient _playlistClient;
+    private readonly RankClient _rankClient;
+    private readonly RankViewModel _rankViewModel;
     private readonly ISukiToastManager _toastManager;
     private DetailSource _detailSource = DetailSource.None;
     private bool _hasMoreSongs = true;
@@ -137,6 +160,8 @@ public partial class DiscoverViewModel : PageViewModelBase
     public DiscoverViewModel(
         PlaylistClient playlistClient,
         RecommendClient discoveryClient,
+        RankClient rankClient,
+        RankViewModel rankViewModel,
         IDiscoverTagViewModelFactory discoverTagViewModelFactory,
         INavigationService navigationService,
         ISukiToastManager toastManager,
@@ -144,6 +169,8 @@ public partial class DiscoverViewModel : PageViewModelBase
     {
         _playlistClient = playlistClient;
         _discoveryClient = discoveryClient;
+        _rankClient = rankClient;
+        _rankViewModel = rankViewModel;
         _discoverTagViewModelFactory = discoverTagViewModelFactory;
         _navigationService = navigationService;
         _toastManager = toastManager;
@@ -156,9 +183,13 @@ public partial class DiscoverViewModel : PageViewModelBase
 
     public bool CanCollectSelectedPlaylist => SelectedPlaylist is not null;
     public AvaloniaList<DiscoverPlaylist> Playlists { get; } = [];
+    public AvaloniaList<DiscoverRankCard> RankCards { get; } = [];
     public AvaloniaList<SongItem> SelectedDetailSongs { get; } = [];
     public AvaloniaList<SongItem> SelectedPlaylistSongs => SelectedDetailSongs;
     public AvaloniaList<DiscoverTopCard> TopCards { get; } = [];
+
+    [ObservableProperty]
+    public partial bool IsRanksLoading { get; set; }
 
     partial void OnSelectedPlaylistChanged(DiscoverPlaylist? value)
     {
@@ -172,7 +203,7 @@ public partial class DiscoverViewModel : PageViewModelBase
 
         try
         {
-            await Task.WhenAll(LoadTopCardsAsync(), LoadRecommendedPlaylistsAsync(version));
+            await Task.WhenAll(LoadTopCardsAsync(), LoadRecommendedPlaylistsAsync(version), LoadRankCardsAsync(version));
         }
         finally
         {
@@ -191,6 +222,24 @@ public partial class DiscoverViewModel : PageViewModelBase
     private void OpenPlaylistTags()
     {
         _navigationService.NavigateTransient(_discoverTagViewModelFactory.Create());
+    }
+
+    [RelayCommand]
+    private void OpenRanksPage()
+    {
+        _rankViewModel.ShowRankList();
+        _navigationService.Navigate(_rankViewModel);
+    }
+
+    [RelayCommand]
+    private async Task OpenRankCard(DiscoverRankCard? card)
+    {
+        if (card is null)
+            return;
+
+        var openTask = _rankViewModel.OpenRankDetailFromPreviousPageAsync(card.RankId, card.Name, card.Cover);
+        _navigationService.Navigate(_rankViewModel);
+        await openTask;
     }
 
     [RelayCommand]
@@ -362,6 +411,55 @@ public partial class DiscoverViewModel : PageViewModelBase
         }
     }
 
+    private async Task LoadRankCardsAsync(int version)
+    {
+        IsRanksLoading = true;
+        try
+        {
+            var recommendedTask = _rankClient.GetRecommendedRanksAsync();
+            var allRanksTask = _rankClient.GetAllRanksAsync();
+
+            await Task.WhenAll(recommendedTask, allRanksTask);
+
+            if (version != _playlistLoadVersion)
+                return;
+
+            var recommended = recommendedTask.Result?.Info;
+            var allRanks = allRanksTask.Result?.Info;
+
+            RankCards.Clear();
+
+            if (recommended == null || recommended.Count == 0 || allRanks == null || allRanks.Count == 0)
+                return;
+
+            var rankById = allRanks
+                .AsValueEnumerable()
+                .GroupBy(rank => rank.FileId)
+                .ToDictionary(group => group.Key, group => group.AsValueEnumerable().First());
+
+            var cards = recommended
+                .AsValueEnumerable()
+                .Select(rank => rankById.GetValueOrDefault(rank.FileId, rank))
+                .Where(rank => rank.FileId > 0)
+                .Select(MapRankCard)
+                .Where(card => !string.IsNullOrWhiteSpace(card.Name))
+                .Take(6)
+                .ToList();
+
+            RankCards.AddRange(cards);
+        }
+        catch (Exception ex)
+        {
+            if (version == _playlistLoadVersion)
+                _logger.LogWarning(ex, "加载推荐排行榜失败");
+        }
+        finally
+        {
+            if (version == _playlistLoadVersion)
+                IsRanksLoading = false;
+        }
+    }
+
     private async Task LoadMoreSongsInternal()
     {
         if (SelectedPlaylist == null)
@@ -482,6 +580,36 @@ public partial class DiscoverViewModel : PageViewModelBase
             PlayCount = item.PlayCount,
             CreatorName = item.CreatorName
         };
+    }
+
+    private static DiscoverRankCard MapRankCard(RankListItem item)
+    {
+        var firstSong = item.SongPreviews.AsValueEnumerable().FirstOrDefault();
+        var songCover = firstSong?.TransParam?.UnionCover;
+
+        var card = new DiscoverRankCard
+        {
+            RankId = item.FileId,
+            Name = item.Name,
+            Cover = string.IsNullOrWhiteSpace(songCover)
+                ? string.IsNullOrWhiteSpace(item.Cover) ? DefaultSongCover : item.Cover
+                : songCover
+        };
+
+        var topSongs = item.SongPreviews
+            .AsValueEnumerable()
+            .Select(song => string.IsNullOrWhiteSpace(song.Name) ? song.SongName : song.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Take(3)
+            .Select((name, index) => new DiscoverRankSongPreview
+            {
+                Index = index + 1,
+                Name = name
+            })
+            .ToList();
+
+        card.TopSongs.AddRange(topSongs);
+        return card;
     }
 
     private void ShowWarning(string title, string content)

@@ -6,6 +6,7 @@ using Avalonia.Controls.Notifications;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SukiUI.Toasts;
 
@@ -27,11 +28,13 @@ public partial class RankViewModel : PageViewModelBase
 {
     private const string DefaultCover = "avares://KugouAvaloniaPlayer/Assets/Default.png";
     private readonly ILogger<RankViewModel> _logger;
+    private readonly INavigationService _navigationService;
     private readonly RankClient _rankClient;
     private readonly ISukiToastManager _toastManager;
 
     private int _currentPage = 1;
     private bool _hasMoreSongs = true;
+    private RankDetailBackTarget _detailBackTarget = RankDetailBackTarget.RankList;
     [ObservableProperty]
     public partial bool IsLoadingMore { get; set; }
 
@@ -41,9 +44,14 @@ public partial class RankViewModel : PageViewModelBase
     [ObservableProperty]
     public partial RankItem? SelectedRank { get; set; }
 
-    public RankViewModel(RankClient rankClient, ISukiToastManager toastManager, ILogger<RankViewModel> logger)
+    public RankViewModel(
+        RankClient rankClient,
+        INavigationService navigationService,
+        ISukiToastManager toastManager,
+        ILogger<RankViewModel> logger)
     {
         _rankClient = rankClient;
+        _navigationService = navigationService;
         _toastManager = toastManager;
         _logger = logger;
         _ = LoadAllRanks();
@@ -54,6 +62,49 @@ public partial class RankViewModel : PageViewModelBase
 
     public AvaloniaList<RankItem> Ranks { get; } = new();
     public AvaloniaList<SongItem> SelectedRankSongs { get; } = new();
+
+    public void ShowRankList()
+    {
+        _detailBackTarget = RankDetailBackTarget.RankList;
+        ClearDetail();
+    }
+
+    public Task OpenRankDetailFromPreviousPageAsync(long rankId, string? fallbackName = null, string? fallbackCover = null)
+    {
+        if (rankId <= 0)
+            return Task.CompletedTask;
+
+        var rank = new RankItem
+        {
+            RankId = rankId,
+            Name = fallbackName ?? "",
+            Cover = string.IsNullOrWhiteSpace(fallbackCover) ? DefaultCover : fallbackCover
+        };
+
+        return OpenRankDetailAsync(rank, RankDetailBackTarget.PreviousPage);
+    }
+
+    public async Task OpenRankFromListByIdAsync(
+        long rankId,
+        string? fallbackName = null,
+        string? fallbackCover = null)
+    {
+        if (rankId <= 0)
+            return;
+
+        if (Ranks.Count == 0)
+            await LoadAllRanks();
+
+        var rank = Ranks.AsValueEnumerable().FirstOrDefault(item => item.RankId == rankId)
+                   ?? new RankItem
+                   {
+                       RankId = rankId,
+                       Name = fallbackName ?? "",
+                       Cover = string.IsNullOrWhiteSpace(fallbackCover) ? DefaultCover : fallbackCover
+                   };
+
+        await OpenRankDetailAsync(rank, RankDetailBackTarget.RankList);
+    }
 
     [RelayCommand]
     private async Task LoadAllRanks()
@@ -88,16 +139,33 @@ public partial class RankViewModel : PageViewModelBase
     [RelayCommand]
     private void GoBack()
     {
-        IsShowingSongs = false;
-        SelectedRank = null;
-        SelectedRankSongs.Clear();
+        if (_detailBackTarget == RankDetailBackTarget.PreviousPage)
+        {
+            _navigationService.GoBack();
+            _detailBackTarget = RankDetailBackTarget.RankList;
+            return;
+        }
+
+        ClearDetail();
+    }
+
+    [RelayCommand]
+    private void NavigateBack()
+    {
+        _navigationService.GoBack();
     }
 
     [RelayCommand]
     private async Task OpenRank(RankItem? item)
     {
+        await OpenRankDetailAsync(item, RankDetailBackTarget.RankList);
+    }
+
+    private async Task OpenRankDetailAsync(RankItem? item, RankDetailBackTarget backTarget)
+    {
         if (item is null) return;
 
+        _detailBackTarget = backTarget;
         SelectedRank = item;
         IsShowingSongs = true;
         SelectedRankSongs.Clear();
@@ -107,6 +175,13 @@ public partial class RankViewModel : PageViewModelBase
         IsLoadingMore = false;
 
         await LoadMoreSongsInternal();
+    }
+
+    private void ClearDetail()
+    {
+        IsShowingSongs = false;
+        SelectedRank = null;
+        SelectedRankSongs.Clear();
     }
 
     [RelayCommand]
@@ -160,5 +235,11 @@ public partial class RankViewModel : PageViewModelBase
         {
             IsLoadingMore = false;
         }
+    }
+
+    private enum RankDetailBackTarget
+    {
+        RankList,
+        PreviousPage
     }
 }
