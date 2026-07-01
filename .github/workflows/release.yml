@@ -48,7 +48,7 @@ jobs:
             -r ${{ matrix.rid }} \
             --self-contained true \
             -p:DebugType=None \
-            -p:PublishAot=true 
+            -p:PublishAot=true \
             -p:DebugSymbols=false \
             -o ./publish
 
