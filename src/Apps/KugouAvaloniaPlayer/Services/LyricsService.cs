@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 using ATL;
 using AvaloniaLyrics;
 using Avalonia.Collections;
-using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Services.LyricsParsing;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 
@@ -174,7 +174,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
 
     private string? FindLyricFile(string directory, string audioFileName, string audioFileNameWithoutExt)
     {
-        var extensions = new[] { ".krc", ".lrc", ".vtt" };
+        var extensions = new[] { ".krc", ".lrc", ".qrc", ".vtt", ".yrc" };
         var searchPatterns = new List<Func<string?>>
         {
             () => extensions.AsValueEnumerable().Select(ext => Path.Combine(directory, audioFileName + ext)).FirstOrDefault(File.Exists),
@@ -202,7 +202,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
     private async Task<List<LyricLineViewModel>> ParseLyricFileAsync(string filePath, string ext)
     {
         var content = await File.ReadAllTextAsync(filePath);
-        return ParseLyricContent(content, ext);
+        return LyricParserRegistry.Parse(content, ext);
     }
 
     private static string? ReadEmbeddedLyrics(string audioFilePath)
@@ -248,6 +248,14 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
             return ".vtt";
         }
 
+        if (Regex.IsMatch(content, @"(?m)^\[\d+,\d+\]\("))
+        {
+            return ".yrc";
+        }
+
+        if (Regex.IsMatch(content, @"(?m)^\[\d+,\d+\].*?\(\d+,\d+\)"))
+            return ".qrc";
+
         if (Regex.IsMatch(content, @"(?m)^\[\d+,\d+\]"))
             return ".krc";
 
@@ -265,337 +273,7 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
 
     private static List<LyricLineViewModel> ParseLyricContent(string content, string ext)
     {
-        var result = new List<LyricLineViewModel>();
-
-        bool IsNumericLine(string line)
-        {
-            return !string.IsNullOrWhiteSpace(line) &&
-                   line.Trim().AsValueEnumerable().All(c => char.IsDigit(c) || char.IsWhiteSpace(c));
-        }
-
-
-        if (ext == ".krc")
-        {
-            var krc = KrcParser.Parse(content);
-            foreach (var line in krc.Lines)
-            {
-                var lyricLine = new LyricLineViewModel
-                {
-                    Content = line.Content,
-                    Translation = line.Translation,
-                    Romanization = line.Romanization,
-                    StartTime = line.StartTime,
-                    Duration = line.Duration,
-                    IsActive = false
-                };
-                MapKrcWords(lyricLine, line.Words);
-                result.Add(lyricLine);
-            }
-        }
-        else if (ext == ".lrc")
-        {
-            var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            var regex = new Regex(@"\[(\d{1,3}):(\d{2})(?:[.:](\d{1,4}))?\]");
-            var lrcLines = new List<LyricLineViewModel>();
-
-            foreach (var line in lines)
-            {
-                var matches = regex.Matches(line);
-                if (matches.Count > 0)
-                {
-                    var text = line.Substring(matches[matches.Count - 1].Index + matches[matches.Count - 1].Length)
-                        .Trim();
-
-                    foreach (Match match in matches)
-                    {
-                        var m = int.Parse(match.Groups[1].Value);
-                        var s = int.Parse(match.Groups[2].Value);
-                        var ms = 0;
-                        var msStr = match.Groups[3].Value;
-                        if (!string.IsNullOrEmpty(msStr))
-                        {
-                            ms = int.Parse(msStr);
-                            if (msStr.Length == 1) ms *= 100;
-                            else if (msStr.Length == 2) ms *= 10;
-                            else if (msStr.Length == 4) ms /= 10;
-                        }
-
-                        var time = m * 60000 + s * 1000 + ms;
-
-                        lrcLines.Add(CreateLrcLine(text, time));
-                    }
-                }
-            }
-
-            lrcLines = lrcLines.AsValueEnumerable().OrderBy(x => x.StartTime).ToList();
-
-            for (var i = 0; i < lrcLines.Count; i++)
-            {
-                if (i < lrcLines.Count - 1)
-                    lrcLines[i].Duration = lrcLines[i + 1].StartTime - lrcLines[i].StartTime;
-                else
-                    lrcLines[i].Duration = 5000;
-
-                CompleteEnhancedLrcWordDurations(lrcLines[i]);
-            }
-
-            result.AddRange(lrcLines);
-        }
-        else if (ext == ".vtt")
-        {
-            var lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-            var regex = new Regex(@"(\d{2}:)?(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2}:)?(\d{2}):(\d{2})\.(\d{3})");
-
-            for (var i = 0; i < lines.Length; i++)
-            {
-                var match = regex.Match(lines[i]);
-                if (match.Success)
-                {
-                    var startH = string.IsNullOrEmpty(match.Groups[1].Value)
-                        ? 0
-                        : int.Parse(match.Groups[1].Value.TrimEnd(':'));
-                    var startM = int.Parse(match.Groups[2].Value);
-                    var startS = int.Parse(match.Groups[3].Value);
-                    var startMs = int.Parse(match.Groups[4].Value);
-
-                    var endH = string.IsNullOrEmpty(match.Groups[5].Value)
-                        ? 0
-                        : int.Parse(match.Groups[5].Value.TrimEnd(':'));
-                    var endM = int.Parse(match.Groups[6].Value);
-                    var endS = int.Parse(match.Groups[7].Value);
-                    var endMs = int.Parse(match.Groups[8].Value);
-
-                    var startTime = startH * 3600000 + startM * 60000 + startS * 1000 + startMs;
-                    var endTime = endH * 3600000 + endM * 60000 + endS * 1000 + endMs;
-
-                    var textLines = new List<string>();
-                    i++;
-
-                    while (i < lines.Length && !regex.IsMatch(lines[i]))
-                    {
-                        var currentLine = lines[i].Trim();
-
-                        if (!string.IsNullOrEmpty(currentLine) &&
-                            !currentLine.Contains("WEBVTT") &&
-                            !currentLine.StartsWith("NOTE") &&
-                            !IsNumericLine(currentLine))
-                            textLines.Add(currentLine);
-                        i++;
-                    }
-
-                    i--;
-
-                    var text = string.Join("\n", textLines).Trim();
-                    if (!string.IsNullOrEmpty(text))
-                        result.Add(new LyricLineViewModel
-                        {
-                            Content = text,
-                            StartTime = startTime,
-                            Duration = endTime - startTime,
-                            Translation = "",
-                            IsActive = false
-                        });
-                }
-            }
-        }
-        else if (ext == ".txt")
-        {
-            const int plainLineDurationMs = 5000;
-            var plainLines = content
-                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
-                .AsValueEnumerable().Select(x => x.Trim())
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .ToList();
-
-            for (var i = 0; i < plainLines.Count; i++)
-            {
-                result.Add(new LyricLineViewModel
-                {
-                    Content = plainLines[i],
-                    StartTime = i * plainLineDurationMs,
-                    Duration = plainLineDurationMs,
-                    Translation = "",
-                    IsActive = false
-                });
-            }
-        }
-
-        return result.AsValueEnumerable().OrderBy(x => x.StartTime).ToList();
-    }
-
-    private static LyricLineViewModel CreateLrcLine(string text, long startTime)
-    {
-        var line = new LyricLineViewModel
-        {
-            Content = StripEnhancedLrcTags(text),
-            StartTime = startTime,
-            Translation = "",
-            IsActive = false
-        };
-
-        MapEnhancedLrcWords(line, text);
-        return line;
-    }
-
-    private static void MapEnhancedLrcWords(LyricLineViewModel line, string text)
-    {
-        if (TryMapRelativeEnhancedLrcWords(line, text))
-            return;
-
-        TryMapAbsoluteEnhancedLrcWords(line, text);
-    }
-
-    private static bool TryMapRelativeEnhancedLrcWords(LyricLineViewModel line, string text)
-    {
-        var matches = Regex.Matches(text, @"<(\d+),(\d+)(?:,\d+)?>");
-        if (matches.Count == 0)
-            return false;
-
-        foreach (Match match in matches)
-        {
-            var segment = GetTextUntilNextMatch(text, match, matches);
-            if (string.IsNullOrEmpty(segment))
-                continue;
-
-            line.Words.Add(new LyricWordViewModel
-            {
-                Text = segment,
-                StartTime = line.StartTime + double.Parse(match.Groups[1].Value),
-                Duration = double.Parse(match.Groups[2].Value)
-            });
-        }
-
-        line.IsKrcWordLevel = line.Words.Count > 0;
-        return line.IsKrcWordLevel;
-    }
-
-    private static bool TryMapAbsoluteEnhancedLrcWords(LyricLineViewModel line, string text)
-    {
-        var matches = Regex.Matches(text, @"<(\d{1,3}):(\d{2})(?:[.:](\d{1,4}))?>");
-        if (matches.Count == 0)
-            return false;
-
-        for (var i = 0; i < matches.Count; i++)
-        {
-            var match = matches[i];
-            var segment = GetTextUntilNextMatch(text, match, matches);
-            if (string.IsNullOrEmpty(segment))
-                continue;
-
-            var startTime = ParseLrcTime(match);
-            var duration = i < matches.Count - 1
-                ? Math.Max(0, ParseLrcTime(matches[i + 1]) - startTime)
-                : 0;
-
-            line.Words.Add(new LyricWordViewModel
-            {
-                Text = segment,
-                StartTime = startTime,
-                Duration = duration
-            });
-        }
-
-        line.IsKrcWordLevel = line.Words.Count > 0;
-        return line.IsKrcWordLevel;
-    }
-
-    private static string GetTextUntilNextMatch(string text, Match match, MatchCollection matches)
-    {
-        var start = match.Index + match.Length;
-        var nextStart = text.Length;
-        foreach (Match next in matches)
-        {
-            if (next.Index > match.Index)
-            {
-                nextStart = next.Index;
-                break;
-            }
-        }
-
-        return text[start..nextStart];
-    }
-
-    private static void CompleteEnhancedLrcWordDurations(LyricLineViewModel line)
-    {
-        if (!line.IsKrcWordLevel || line.Words.Count == 0)
-            return;
-
-        var lineEnd = line.StartTime + Math.Max(0, line.Duration);
-        for (var i = 0; i < line.Words.Count; i++)
-        {
-            var word = line.Words[i];
-            if (word.Duration > 0)
-                continue;
-
-            var nextStart = i < line.Words.Count - 1 ? line.Words[i + 1].StartTime : lineEnd;
-            word.Duration = Math.Max(80, nextStart - word.StartTime);
-        }
-    }
-
-    private static string StripEnhancedLrcTags(string text)
-    {
-        return Regex.Replace(
-                Regex.Replace(text, @"<\d+,\d+(?:,\d+)?>", ""),
-                @"<\d{1,3}:\d{2}(?:[.:]\d{1,4})?>",
-                "")
-            .Trim();
-    }
-
-    private static double ParseLrcTime(Match match)
-    {
-        var minutes = int.Parse(match.Groups[1].Value);
-        var seconds = int.Parse(match.Groups[2].Value);
-        var milliseconds = 0;
-        var msText = match.Groups[3].Value;
-        if (!string.IsNullOrEmpty(msText))
-        {
-            milliseconds = int.Parse(msText);
-            if (msText.Length == 1) milliseconds *= 100;
-            else if (msText.Length == 2) milliseconds *= 10;
-            else if (msText.Length == 4) milliseconds /= 10;
-        }
-
-        return minutes * 60000 + seconds * 1000 + milliseconds;
-    }
-
-    private static void MapKrcWords(LyricLineViewModel line, IReadOnlyList<KrcWord> words)
-    {
-        if (words.Count == 0) return;
-
-        line.IsKrcWordLevel = true;
-        foreach (var word in words)
-            line.Words.Add(new LyricWordViewModel
-            {
-                Text = word.Text,
-                StartTime = word.StartTime,
-                Duration = word.Duration
-            });
-
-        MapKrcTranslationWords(line);
-    }
-
-    private static void MapKrcTranslationWords(LyricLineViewModel line)
-    {
-        if (string.IsNullOrWhiteSpace(line.Translation) || line.Duration <= 0) return;
-
-        var chars = line.Translation.ToCharArray();
-        if (chars.Length == 0) return;
-
-        line.HasWordLevelTranslation = true;
-
-        var perCharDuration = Math.Max(40, line.Duration / chars.Length);
-        for (var i = 0; i < chars.Length; i++)
-        {
-            var startTime = line.StartTime + i * perCharDuration;
-            if (startTime > line.StartTime + line.Duration) startTime = line.StartTime + line.Duration;
-
-            line.TranslationWords.Add(new LyricWordViewModel
-            {
-                Text = chars[i].ToString(),
-                StartTime = startTime,
-                Duration = perCharDuration
-            });
-        }
+        return LyricParserRegistry.Parse(content, ext);
     }
 
     private void AddLyricLine(LyricLineViewModel line)
