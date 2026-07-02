@@ -1,13 +1,18 @@
 using System;
+#if KUGOU_WINDOWS
+using System.ComponentModel;
+#endif
+using System.IO;
 using ZLinq;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Rendering;
+using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
 using SukiUI.Controls;
+using Size = Avalonia.Size;
 
 namespace KugouAvaloniaPlayer.Views;
 
@@ -15,6 +20,13 @@ public partial class MainWindow : SukiWindow
 {
     private PixelPoint? _lastNormalPosition;
     private Size? _lastNormalSize;
+
+#if KUGOU_WINDOWS
+    private WindowsTaskbarThumbnailToolbar? _taskbarToolbar;
+    private bool _taskbarButtonsInitialized;
+    private PlayerViewModel? _taskbarPlayer;
+#endif
+
 
     public MainWindow()
     {
@@ -25,12 +37,10 @@ public partial class MainWindow : SukiWindow
                                             | RendererDebugOverlays.LayoutTimeGraph
                                             | RendererDebugOverlays.RenderTimeGraph;
 #endif*/
-        
+
         PositionChanged += (_, _) => CaptureNormalBounds();
-        WeakReferenceMessenger.Default.Register<MainWindowChromeActionMessage>(this, (_, message) =>
-        {
-            ApplyChromeAction(message.Action);
-        });
+        WeakReferenceMessenger.Default.Register<MainWindowChromeActionMessage>(this,
+            (_, message) => { ApplyChromeAction(message.Action); });
     }
 
     public bool CanClose { get; set; }
@@ -54,8 +64,27 @@ public partial class MainWindow : SukiWindow
 
     protected override void OnClosed(EventArgs e)
     {
+#if KUGOU_WINDOWS
+        if (_taskbarPlayer != null)
+        {
+            _taskbarPlayer.PropertyChanged -= OnTaskbarPlayerPropertyChanged;
+            _taskbarPlayer = null;
+        }
+
+        _taskbarToolbar?.Dispose();
+        _taskbarToolbar = null;
+#endif
+
         WeakReferenceMessenger.Default.UnregisterAll(this);
         base.OnClosed(e);
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+#if KUGOU_WINDOWS
+        InitializeTaskbarThumbnailToolbar();
+#endif
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -175,4 +204,97 @@ public partial class MainWindow : SukiWindow
                && width > 0
                && height > 0;
     }
+
+#if KUGOU_WINDOWS
+    private void InitializeTaskbarThumbnailToolbar()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        if (_taskbarButtonsInitialized)
+            return;
+
+        var platformHandle = TryGetPlatformHandle();
+        if (platformHandle is null)
+            return;
+
+        if (platformHandle.HandleDescriptor != "HWND")
+            return;
+
+        var hwnd = platformHandle.Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var baseDir = AppContext.BaseDirectory;
+        var previousIconPath = Path.Combine(baseDir, "Assets", "prev.ico");
+        var playIconPath = Path.Combine(baseDir, "Assets", "play.ico");
+        var pauseIconPath = Path.Combine(baseDir, "Assets", "pause.ico");
+        var nextIconPath = Path.Combine(baseDir, "Assets", "next.ico");
+        var heartGreyIconPath = Path.Combine(baseDir, "Assets", "heart_grey.ico");
+        var heartRedIconPath = Path.Combine(baseDir, "Assets", "heart_red.ico");
+
+        _taskbarToolbar = new WindowsTaskbarThumbnailToolbar(
+            this,
+            hwnd,
+            previousIconPath,
+            playIconPath,
+            pauseIconPath,
+            nextIconPath,
+            heartGreyIconPath,
+            heartRedIconPath,
+            HandleTaskbarThumbnailButtonClick);
+
+        if (!_taskbarToolbar.Initialize()) return;
+        if (DataContext is MainWindowViewModel { Player: { } player })
+        {
+            _taskbarPlayer = player;
+            _taskbarPlayer.PropertyChanged += OnTaskbarPlayerPropertyChanged;
+            _taskbarToolbar.UpdatePlayPause(player.IsPlayingAudio);
+            _taskbarToolbar.UpdateLike(player.IsLiked, player.CurrentPlayingSong != null);
+        }
+
+        _taskbarButtonsInitialized = true;
+    }
+
+    private void OnTaskbarPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_taskbarToolbar == null || _taskbarPlayer == null)
+            return;
+
+        switch (e.PropertyName)
+        {
+            case nameof(PlayerViewModel.IsPlayingAudio):
+                _taskbarToolbar.UpdatePlayPause(_taskbarPlayer.IsPlayingAudio);
+                return;
+            case nameof(PlayerViewModel.IsLiked) or nameof(PlayerViewModel.CurrentPlayingSong):
+                _taskbarToolbar.UpdateLike(_taskbarPlayer.IsLiked, _taskbarPlayer.CurrentPlayingSong != null);
+                break;
+        }
+    }
+
+    private static void HandleTaskbarThumbnailButtonClick(uint buttonId)
+    {
+        switch (buttonId)
+        {
+            case WindowsTaskbarThumbnailToolbar.PreviousButtonId:
+                WeakReferenceMessenger.Default.Send(
+                    new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
+                break;
+
+            case WindowsTaskbarThumbnailToolbar.PlayPauseButtonId:
+                WeakReferenceMessenger.Default.Send(
+                    new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                break;
+
+            case WindowsTaskbarThumbnailToolbar.NextButtonId:
+                WeakReferenceMessenger.Default.Send(
+                    new PlaybackControlMessage(PlaybackControlAction.NextTrack));
+                break;
+            case WindowsTaskbarThumbnailToolbar.LikeButtonId:
+                if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow.DataContext: MainWindowViewModel { Player: { } player } })
+                    player.ToggleLikeCommand.Execute(null);
+                break;
+        }
+    }
+#endif
 }

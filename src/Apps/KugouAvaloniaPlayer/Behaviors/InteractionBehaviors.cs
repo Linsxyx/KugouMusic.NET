@@ -8,6 +8,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using Key = Avalonia.Input.Key;
+using KeyEventArgs = Avalonia.Input.KeyEventArgs;
 
 namespace KugouAvaloniaPlayer.Behaviors;
 

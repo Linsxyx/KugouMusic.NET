@@ -21,6 +21,10 @@
         <DefineConstants>$(DefineConstants);KUGOU_WINDOWS</DefineConstants>
     </PropertyGroup>
 
+    <!--<PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>-->
+
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
         <DefineConstants>$(DefineConstants);KUGOU_MACOS</DefineConstants>
     </PropertyGroup>
@@ -63,6 +67,7 @@
         <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
         <PackageReference Include="Tmds.DBus.Protocol"/>
         <PackageReference Include="Velopack" />
+       <!-- <PackageReference Include="WindowsAPICodePack" />-->
         <PackageReference Include="ZLinq" />
         <PackageReference Include="z440.atl.core" />
     </ItemGroup>
@@ -71,6 +76,10 @@
         <ProjectReference Include="..\..\Libraries\AvaloniaLyrics\AvaloniaLyrics.csproj"/>
         <ProjectReference Include="..\..\Libraries\SimpleAudio\SimpleAudio.csproj"/>
         <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Content Include="Assets\*.ico" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="Native\KugouTaskbarNative.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Condition="Exists('Native\KugouTaskbarNative.dll')" />
     </ItemGroup>
 
     <ItemGroup>
