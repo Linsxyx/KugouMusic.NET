@@ -41,6 +41,8 @@ public partial class MainWindow : SukiWindow
         PositionChanged += (_, _) => CaptureNormalBounds();
         WeakReferenceMessenger.Default.Register<MainWindowChromeActionMessage>(this,
             (_, message) => { ApplyChromeAction(message.Action); });
+        WeakReferenceMessenger.Default.Register<ShowMainWindowMessage>(this,
+            (_, _) => ShowAndActivateWindow());
     }
 
     public bool CanClose { get; set; }
@@ -295,6 +297,11 @@ public partial class MainWindow : SukiWindow
                     player.ToggleLikeCommand.Execute(null);
                 break;
         }
+    }
+
+    private void ShowAndActivateWindow()
+    {
+        MainWindowPresentationHelper.ShowAndActivate(this);
     }
 #endif
 }

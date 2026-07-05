@@ -22,6 +22,8 @@ public record AuthStateChangedMessage(bool IsLoggedIn);
 
 public record RequestNavigateBackMessage;
 
+public record ShowMainWindowMessage;
+
 public record MainWindowChromeActionMessage(MainWindowChromeAction Action);
 
 public record PlaybackControlMessage(PlaybackControlAction Action);

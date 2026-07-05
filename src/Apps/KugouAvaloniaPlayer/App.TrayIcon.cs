@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 
@@ -100,14 +101,7 @@ partial class App
 
     private void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        if (desktop.MainWindow == null) return;
-
-        if (desktop.MainWindow.WindowState == WindowState.Minimized)
-            desktop.MainWindow.WindowState = WindowState.Normal;
-
-        if (!desktop.MainWindow.IsVisible) desktop.MainWindow.Show();
-
-        desktop.MainWindow.Activate();
+        MainWindowPresentationHelper.ShowAndActivate(desktop.MainWindow);
     }
 
     private void ShutdownTrayIcon()

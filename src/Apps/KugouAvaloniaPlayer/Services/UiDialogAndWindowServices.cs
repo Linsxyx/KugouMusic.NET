@@ -30,6 +30,23 @@ public interface IMainWindowService
     void ShowMainWindow();
 }
 
+internal static class MainWindowPresentationHelper
+{
+    public static void ShowAndActivate(Window? window)
+    {
+        if (window == null)
+            return;
+
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
+
+        if (!window.IsVisible)
+            window.Show();
+
+        window.Activate();
+    }
+}
+
 public sealed class LoginDialogService(ISukiDialogManager dialogManager, IUiDispatcherService uiDispatcher) : ILoginDialogService
 {
     public void ShowLoginDialog(LoginViewModel loginViewModel)
@@ -298,16 +315,6 @@ public sealed class MainWindowService : IMainWindowService
 
     public void ShowMainWindow()
     {
-        var window = MainWindow;
-        if (window == null)
-            return;
-
-        if (window.WindowState == WindowState.Minimized)
-            window.WindowState = WindowState.Normal;
-
-        if (!window.IsVisible)
-            window.Show();
-
-        window.Activate();
+        MainWindowPresentationHelper.ShowAndActivate(MainWindow);
     }
 }

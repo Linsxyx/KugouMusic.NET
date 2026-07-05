@@ -8,6 +8,7 @@ using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
 using KugouAvaloniaPlayer.Services.Jellyfin;
+using KugouAvaloniaPlayer.Services.Startup;
 using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -37,6 +38,8 @@ public sealed partial class AvaloniaAppServiceProvider
         .Root<PlayerViewModel>()
         .Root<IGlobalShortcutService>()
         .Root<ISystemMediaSessionService>()
+        .Root<IStartupActivationServer>()
+        .Root<IStartupActivationService>()
 
         .Bind<ISessionPersistence>().As(Singleton).To(_ => SessionPersistence)
         .Bind<CookieContainer>().As(Singleton).To(_ => CookieContainer)
@@ -61,6 +64,8 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<ILoginDialogService>().As(Singleton).To<LoginDialogService>()
         .Bind<INavigationService>().As(Singleton).To<NavigationService>()
         .Bind<IMainWindowService>().As(Singleton).To<MainWindowService>()
+        .Bind<IStartupActivationService>().As(Singleton).To<StartupActivationService>()
+        .Bind<IStartupActivationServer>().As(Singleton).To<StartupActivationServer>()
         .Bind<IDesktopLyricMousePassthroughService>().As(Singleton).To<DesktopLyricMousePassthroughService>()
         .Bind<IDesktopLyricWindowChromeService>().As(Singleton).To<DesktopLyricWindowChromeService>()
         .Bind<IDesktopLyricWindowService>().As(Singleton).To<DesktopLyricWindowService>()

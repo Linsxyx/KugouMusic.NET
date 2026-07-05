@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
+using KugouAvaloniaPlayer.Services.Startup;
 using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
@@ -55,6 +56,7 @@ public partial class App : Application
 
             var vm = services.GetService<MainWindowViewModel>();
             var playerVm = services.GetService<PlayerViewModel>();
+            var startupActivationServer = services.GetService<IStartupActivationServer>();
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var mainWindow = new MainWindow
@@ -75,15 +77,18 @@ public partial class App : Application
                 }
 
                 mainWindow.Opened += InitializeGlobalShortcuts;
+                startupActivationServer.Start();
 
                 InitializeTrayIcon(playerVm, desktop, vm);
                 desktop.Exit += (s, e) =>
                 {
+                    startupActivationServer.Stop();
                     globalShortcutService.UnregisterAll();
                     systemMediaSessionService.Shutdown();
                     ShutdownTrayIcon();
                     _imageLoader?.Dispose();
                     SimpleAudioPlayer.Free();
+                    Program.ShutdownStartupCoordinator();
                     _serviceProvider?.Dispose();
                     _loggerFactory?.Dispose();
                     Log.CloseAndFlush();
