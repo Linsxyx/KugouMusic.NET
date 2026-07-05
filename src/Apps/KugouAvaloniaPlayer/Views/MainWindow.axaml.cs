@@ -299,9 +299,10 @@ public partial class MainWindow : SukiWindow
         }
     }
 
+#endif
+
     private void ShowAndActivateWindow()
     {
         MainWindowPresentationHelper.ShowAndActivate(this);
     }
-#endif
 }
