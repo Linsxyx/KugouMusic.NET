@@ -14,7 +14,6 @@ using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 using Serilog;
-using Serilog.Events;
 using Serilog.Extensions.Logging;
 using SimpleAudio;
 using SukiUI;
@@ -37,7 +36,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        ConfigureLogging();
+        CrashReporting.ConfigureLogging();
+        CrashReporting.RegisterUiThreadHandler();
         try
         {
             ConfigureImageLoader();
@@ -139,35 +139,4 @@ public partial class App : Application
             previousLoader.Dispose();
     }
 
-    private static void ConfigureLogging()
-    {
-        var appData = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "kugou",
-            "logs");
-
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.Extensions.Http", LogEventLevel.Warning)
-            .MinimumLevel.Override("Avalonia", LogEventLevel.Warning)
-            .Enrich.FromLogContext()
-#if DEBUG
-            .WriteTo.Async(a => a.Debug(outputTemplate:
-                "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}"))
-            .WriteTo.Async(a => a.Console(outputTemplate:
-                "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}"))
-#else
-            .WriteTo.Async(a => a.File(
-    Path.Combine(appData, "kg-.log"),
-    rollingInterval: RollingInterval.Day,
-    retainedFileCountLimit: 20,
-    retainedFileTimeLimit: TimeSpan.FromDays(14),
-    fileSizeLimitBytes: 10 * 1024 * 1024,
-    rollOnFileSizeLimit: true,
-    outputTemplate:
-    "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}"))
-#endif
-            .CreateLogger();
-    }
 }

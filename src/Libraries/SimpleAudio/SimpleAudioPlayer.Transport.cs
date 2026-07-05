@@ -5,9 +5,12 @@ namespace SimpleAudio;
 
 public partial class SimpleAudioPlayer : IDisposable
 {
+    public string? LastErrorDetail { get; private set; }
+
     public bool Load(string url)
     {
         Stop();
+        LastErrorDetail = null;
 
         var flags = BassFlags.Default | BassFlags.Float;
         var sourceFlags = flags | BassFlags.Decode;
@@ -19,6 +22,7 @@ public partial class SimpleAudioPlayer : IDisposable
                 _preferredOutputDeviceId = Bass.DefaultDevice;
                 if (!TryInitializeOutputDevice(Bass.DefaultDevice, out _))
                 {
+                    LastErrorDetail = $"音频输出设备初始化失败，preferredDevice={_preferredOutputDeviceId}";
                     return false;
                 }
             }
@@ -40,6 +44,8 @@ public partial class SimpleAudioPlayer : IDisposable
 
         if (Stream == 0)
         {
+            LastErrorDetail =
+                $"BASS CreateStream 失败: path={url}, extension={Path.GetExtension(url)}, error={Bass.LastError}";
             Console.WriteLine($"[BASS CreateStream Error] path={url}, extension={Path.GetExtension(url)}, error={Bass.LastError}");
             return false;
         }
@@ -73,6 +79,7 @@ public partial class SimpleAudioPlayer : IDisposable
         {
             if (!Bass.ChannelPlay(Stream))
             {
+                LastErrorDetail = $"BASS ChannelPlay 失败: error={Bass.LastError}";
                 Console.WriteLine($"[Play Error] {Bass.LastError}");
             }
         }
@@ -129,6 +136,7 @@ public partial class SimpleAudioPlayer : IDisposable
         {
             if (!TryInitializeOutputDevice(deviceId, out var actualDeviceId))
             {
+                LastErrorDetail = $"音频输出设备切换失败，device={deviceId}";
                 return false;
             }
 
@@ -150,6 +158,8 @@ public partial class SimpleAudioPlayer : IDisposable
             }
 
             Console.WriteLine($"[BASS ChannelSetDevice Error] device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}");
+            LastErrorDetail =
+                $"BASS ChannelSetDevice 失败: device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}";
             return false;
         }
     }

@@ -62,6 +62,8 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
     public string? PreparedSource => _preparedSource;
 
+    public string? LastErrorDetail { get; private set; }
+
     public bool Load(string url, float normalizationGain = 1.0f)
     {
         AbortCrossfade();
@@ -76,6 +78,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
     public bool PrepareNext(string url, float normalizationGain = 1.0f)
     {
+        LastErrorDetail = null;
         _standbyDeck.Stop();
         SetStoredNormalizationGain(_standbyDeck, normalizationGain);
         ApplyDeckSettings(_standbyDeck);
@@ -84,6 +87,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
         {
             SetStoredNormalizationGain(_standbyDeck, 1.0f);
             _preparedSource = null;
+            LastErrorDetail = _standbyDeck.LastErrorDetail ?? $"预加载音频失败: source={url}";
             return false;
         }
 
@@ -95,6 +99,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
     {
         if (!HasPreparedTrack)
         {
+            LastErrorDetail = "没有可切换的预加载音频流。";
             return false;
         }
 
@@ -102,6 +107,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
         ApplyDeckSettings(_activeDeck);
         _activeSource = _preparedSource;
         _preparedSource = null;
+        LastErrorDetail = null;
         return true;
     }
 
@@ -111,6 +117,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
         SetStoredNormalizationGain(_standbyDeck, 1.0f);
         _standbyDeck.SetNormalizationGain(1.0f);
         _preparedSource = null;
+        LastErrorDetail = null;
     }
 
     public void Play()
@@ -134,6 +141,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
         SetStoredNormalizationGain(_standbyDeck, 1.0f);
         _activeSource = null;
         _preparedSource = null;
+        LastErrorDetail = null;
     }
 
     public void SetVolume(float volume)

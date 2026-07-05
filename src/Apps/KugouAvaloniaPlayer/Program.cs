@@ -4,6 +4,7 @@ using Avalonia;
 using KugouAvaloniaPlayer.Services.SystemMediaSession;
 #endif
 using KugouAvaloniaPlayer.Services.Startup;
+using Serilog;
 using Velopack;
 
 namespace KugouAvaloniaPlayer;
@@ -15,18 +16,36 @@ internal sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        CrashReporting.ConfigureLogging();
+        CrashReporting.RegisterGlobalHandlers();
+
         var launchResult = StartupCoordinator.TryAcquireOrForward(args);
         if (launchResult == StartupInstanceLaunchResult.ForwardedToPrimary)
+        {
+            Log.CloseAndFlush();
             return;
+        }
 
 #if KUGOU_WINDOWS
         WindowsAppIdentity.Register();
 #endif
         var velopack = VelopackApp.Build();
 
-        velopack.Run();
-        BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+        try
+        {
+            velopack.Run();
+            BuildAvaloniaApp()
+                .StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Fatal(ex, "桌面程序启动或运行期间发生致命异常");
+            throw;
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
     }
 
     internal static void ShutdownStartupCoordinator()
