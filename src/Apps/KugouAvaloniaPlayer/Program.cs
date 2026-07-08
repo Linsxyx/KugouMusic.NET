@@ -39,7 +39,7 @@ internal sealed class Program
         }
         catch (Exception ex)
         {
-            Serilog.Log.Fatal(ex, "桌面程序启动或运行期间发生致命异常");
+            Log.Fatal(ex, "桌面程序启动或运行期间发生致命异常");
             throw;
         }
         finally

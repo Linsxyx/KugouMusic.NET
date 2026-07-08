@@ -29,6 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     private static string? _sCachedCustomBackgroundPath;
 
     private readonly LoginClient _authClient;
+    private readonly RegisterClient _registerClient;
     private readonly IAppUpdateService _appUpdateService;
     private readonly IDesktopLyricWindowService _desktopLyricWindowService;
     private readonly DailyRecommendViewModel _dailyRecommendViewModel;
@@ -68,6 +69,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _isUpdatingActivePageFromNavigation;
     private bool _isUpdatingSelectedMenuPageFromNavigation;
     private bool _isClosingDesktopLyricForShutdown;
+    
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
@@ -86,6 +88,7 @@ public partial class MainWindowViewModel : ObservableObject
         KgSessionManager sessionManager,
         LoginClient authClient,
         UserClient userClient,
+        RegisterClient deviceClient,
         ISingerViewModelFactory singerViewModelFactory,
         IAppUpdateService appUpdateService,
         IDesktopLyricWindowService desktopLyricWindowService,
@@ -108,6 +111,7 @@ public partial class MainWindowViewModel : ObservableObject
         _authClient = authClient;
         _dailyRecommendViewModel = dailyRecommendViewModel;
         _userClient = userClient;
+        _registerClient = deviceClient;
         var singerViewModelFactory1 = singerViewModelFactory;
         _appUpdateService = appUpdateService;
         _desktopLyricWindowService = desktopLyricWindowService;
@@ -503,6 +507,15 @@ public partial class MainWindowViewModel : ObservableObject
                     _logger.LogInformation("今日已领取vip");
                     break;
             }
+        }else
+        {
+            _logger.LogWarning("查询vip失败{history.ErrorCode}" , history?.ErrorCode);
+            ToastManager.CreateToast()
+                .OfType(NotificationType.Warning)
+                .WithTitle($"查询vip失败,{history?.ErrorCode}")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
         }
     }
 

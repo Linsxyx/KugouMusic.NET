@@ -220,7 +220,7 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 `KgTest` 一个测试用的终端播放器，功能还算凑合，目前也把智能过渡功能加上了，想试试的可以克隆仓库运行。详细功能、快捷键和配置说明见 [src/Apps/KgTest/README.md](src/Apps/KgTest/README.md)。
 
-### 本地开发
+## 本地开发
 
 ```bash
 git clone https://github.com/Linsxyx/KugouMusic.NET.git

@@ -22,7 +22,7 @@ public class SearchController(
     /// <param name="keywords">关键词。</param>
     /// <param name="page">页数。</param>
     /// <param name="pagesize">每页页数。</param>
-    /// <param name="type">搜索类型。默认为单曲，special：歌单，lyric：歌词，song：单曲，album：专辑</param>
+    /// <param name="type">搜索类型。默认为单曲，special：歌单，lyric：歌词，song：单曲，album：专辑，author：歌手</param>
     /// <returns>搜索结果。</returns>
     [HttpGet]
     public async Task<IActionResult> Search(
@@ -41,6 +41,7 @@ public class SearchController(
             {
                 "special" => await searchClient.SearchSpecialAsync(keywords, page),
                 "album" => await searchClient.SearchAlbumAsync(keywords, page),
+                "author" => await searchClient.SearchAuthorAsync(keywords, page, type),
                 "song" => await searchClient.SearchAsync(keywords, page, type),
                 _ => await searchClient.SearchRawAsync(keywords, page, pagesize, type)
             };
@@ -75,7 +76,7 @@ public class SearchController(
         {
             if (string.IsNullOrWhiteSpace(keywords)) return this.ApiBadRequest("关键词不能为空", 40009);
 
-            logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
+            //logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
             var result = await searchClient.SearchSpecialAsync(keywords, page);
 
@@ -109,9 +110,43 @@ public class SearchController(
         {
             if (string.IsNullOrWhiteSpace(keywords)) return this.ApiBadRequest("关键词不能为空", 40009);
 
-            logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
+            //logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
 
             var result = await searchClient.SearchAlbumAsync(keywords, page);
+
+            return Ok(result);
+        }
+        catch (TaskCanceledException)
+        {
+            logger.LogWarning("搜索请求超时或取消");
+            return this.ApiGatewayTimeout("请求超时", 50401);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "搜索异常，关键词: {Keywords}", keywords);
+            return this.ApiServerError($"内部服务器错误: {ex.Message}", 50002);
+        }
+    }
+    
+    /// <summary>
+    ///     搜索歌手。
+    /// </summary>
+    /// <param name="keywords">搜索关键词。</param>
+    /// <param name="page">页码。</param>
+    /// <returns>匹配的歌手列表。</returns>
+    [HttpGet("author")]
+    [ProducesResponseType(typeof(List<SearchAuthorItem>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SearchAuthor(
+        [FromQuery][Required(AllowEmptyStrings = false)] string keywords = "",
+        [FromQuery] int page = 1)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(keywords)) return this.ApiBadRequest("关键词不能为空", 40009);
+
+            //logger.LogInformation("开始搜索，关键词: {Keywords}, 页码: {Page}", keywords, page);
+
+            var result = await searchClient.SearchAuthorAsync(keywords, page);
 
             return Ok(result);
         }
@@ -176,7 +211,7 @@ public class SearchController(
         return Ok(result);
     }
 
-    /// <summary>
+    /*/// <summary>
     ///     综合搜索。
     /// </summary>
     /// <param name="keyword">搜索关键词。</param>
@@ -186,7 +221,7 @@ public class SearchController(
     {
         var result = await searchClient.SearchMixedRawAsync(keyword);
         return Ok(result);
-    }
+    }*/
 
     /// <summary>
     ///     综合搜索。

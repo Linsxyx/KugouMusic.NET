@@ -66,6 +66,8 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(List<SearchPlaylistItem>))]
 [JsonSerializable(typeof(SearchAlbumResponse))]
 [JsonSerializable(typeof(List<SearchAlbumItem>))]
+[JsonSerializable(typeof(SearchAuthorResponse))]
+[JsonSerializable(typeof(List<SearchAuthorItem>))]
 [JsonSerializable(typeof(AlbumSongResponse))]
 [JsonSerializable(typeof(List<AlbumSongItem>))]
 [JsonSerializable(typeof(AlbumSongBase))]

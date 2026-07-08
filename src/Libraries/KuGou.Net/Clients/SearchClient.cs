@@ -15,9 +15,7 @@ public class SearchClient(RawSearchApi rawApi, KgSessionManager sessionManager)
 
         var data = KgApiResponseParser.Parse<SearchResultData>(json, AppJsonContext.Default.SearchResultData);
 
-        if (data?.Songs == null) return new List<SongInfo>();
-
-        return data.Songs;
+        return data?.Songs ?? [];
     }
 
     public async Task<SearchHotResponse?> GetSearchHotAsync()
@@ -53,6 +51,18 @@ public class SearchClient(RawSearchApi rawApi, KgSessionManager sessionManager)
         );
 
         return data?.Albums;
+    }
+    
+    public async Task<List<SearchAuthorItem>?> SearchAuthorAsync(string keyword, int page = 1, string type = "author" ,int pageSize = 30)
+    {
+        var json = await rawApi.SearchAsync(keyword, page, pageSize, type);
+
+        var data = KgApiResponseParser.Parse<SearchAuthorResponse>(
+            json,
+            AppJsonContext.Default.SearchAuthorResponse
+        );
+
+        return data?.Author;
     }
 
     public Task<JsonElement> SearchRawAsync(string keyword, int page = 1, int pageSize = 30, string type = "song")
