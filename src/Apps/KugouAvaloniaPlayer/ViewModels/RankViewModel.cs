@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -22,6 +23,16 @@ public partial class RankItem : ObservableObject
 
     [ObservableProperty]
     public partial long RankId { get; set; }
+
+    [ObservableProperty]
+    public partial long Classify { get; set; }
+}
+
+public sealed class RankSection
+{
+    public string Title { get; init; } = "";
+
+    public AvaloniaList<RankItem> Items { get; } = new();
 }
 
 public partial class RankViewModel : PageViewModelBase
@@ -61,6 +72,7 @@ public partial class RankViewModel : PageViewModelBase
     public override string Icon => "/Assets/headphones-with-music-note-svgrepo-com.svg";
 
     public AvaloniaList<RankItem> Ranks { get; } = new();
+    public AvaloniaList<RankSection> RankSections { get; } = new();
     public AvaloniaList<SongItem> SelectedRankSongs { get; } = new();
 
     public void ShowRankList()
@@ -110,6 +122,7 @@ public partial class RankViewModel : PageViewModelBase
     private async Task LoadAllRanks()
     {
         Ranks.Clear();
+        RankSections.Clear();
         try
         {
             var response = await _rankClient.GetAllRanksAsync();
@@ -119,10 +132,31 @@ public partial class RankViewModel : PageViewModelBase
                 {
                     RankId = r.FileId,
                     Name = r.Name,
-                    Cover = string.IsNullOrWhiteSpace(r.Cover) ? DefaultCover : r.Cover
+                    Cover = string.IsNullOrWhiteSpace(r.Cover) ? DefaultCover : r.Cover,
+                    Classify = r.Classify
                 }).ToList();
 
-                if (items.AsValueEnumerable().Any()) Ranks.AddRange(items);
+                if (items.AsValueEnumerable().Any())
+                {
+                    Ranks.AddRange(items);
+
+                    var sections = items
+                        .AsEnumerable()
+                        .GroupBy(item => item.Classify)
+                        .OrderBy(group => GetClassifyOrder(group.Key))
+                        .Select(group =>
+                        {
+                            var section = new RankSection
+                            {
+                                Title = GetClassifyTitle(group.Key)
+                            };
+                            section.Items.AddRange(group.OrderBy(item => item.Name));
+                            return section;
+                        })
+                        .ToList();
+
+                    RankSections.AddRange(sections);
+                }
             }
         }
         catch (Exception ex)
@@ -241,5 +275,31 @@ public partial class RankViewModel : PageViewModelBase
     {
         RankList,
         PreviousPage
+    }
+
+    private static int GetClassifyOrder(long classify)
+    {
+        return classify switch
+        {
+            1 => 0,
+            2 => 1,
+            3 => 2,
+            4 => 3,
+            5 => 4,
+            _ => int.MaxValue
+        };
+    }
+
+    private static string GetClassifyTitle(long classify)
+    {
+        return classify switch
+        {
+            1 => "星耀榜",
+            2 => "地区榜",
+            3 => "特色榜",
+            4 => "全球榜",
+            5 => "曲风榜",
+            _ => "其他榜单"
+        };
     }
 }

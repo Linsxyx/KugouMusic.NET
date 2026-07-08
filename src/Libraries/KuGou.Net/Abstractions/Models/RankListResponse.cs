@@ -39,6 +39,12 @@ public record RankListItem
     [property: JsonPropertyName("rankname")]
     public string Name { get; set; } = "";
     
+    /// <summary>
+    ///     榜单分类 1：星耀榜，2：地区榜，3：特色榜，4：全球榜，5：曲风榜。
+    /// </summary>
+    [property: JsonPropertyName("classify")]
+    public long Classify { get; set; } 
+    
     [property: JsonPropertyName("songinfo")]
     public List<RankListSongPreview> SongPreviews { get; set; } = [];
 }
