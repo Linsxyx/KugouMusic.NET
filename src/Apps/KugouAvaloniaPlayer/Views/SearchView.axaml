@@ -141,6 +141,9 @@
                         <RadioButton Content="专辑" Classes="Segmented"
                                      IsChecked="{Binding CurrentSearchType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models1:SearchType.Album}}"
                                      Command="{Binding SwitchSearchTypeCommand}" CommandParameter="Album" />
+                        <RadioButton Content="歌手" Classes="Segmented"
+                                     IsChecked="{Binding CurrentSearchType, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models1:SearchType.Singer}}"
+                                     Command="{Binding SwitchSearchTypeCommand}" CommandParameter="Singer" />
                     </StackPanel>
 
                     <!-- 列表与详情内容 -->
@@ -218,6 +221,32 @@
                                                                  Title="{Binding Name}"
                                                                  Subtitle="{Binding SongCount, StringFormat='{}{0} 首'}"
                                                                  Command="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).OpenAlbumCommand}"
+                                                                 CommandParameter="{Binding .}" />
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </ScrollViewer>
+
+                        <!-- 歌手 -->
+                        <ScrollViewer Padding="0,0,0,-50">
+                            <ScrollViewer.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="!IsSearching" />
+                                    <Binding Path="CurrentSearchType" Converter="{x:Static ObjectConverters.Equal}"
+                                             ConverterParameter="{x:Static models1:SearchType.Singer}" />
+                                    <Binding Path="!IsShowingDetail" />
+                                </MultiBinding>
+                            </ScrollViewer.IsVisible>
+                            <ItemsRepeater ItemsSource="{Binding Singers}">
+                                <ItemsRepeater.Layout>
+                                    <UniformGridLayout MinItemWidth="184" MinItemHeight="236" MinColumnSpacing="15" MinRowSpacing="15" />
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate DataType="models:SearchAuthorItem">
+                                        <localControls:MediaCard Cover="{Binding Cover}"
+                                                                 Title="{Binding Name}"
+                                                                 Subtitle="{Binding AudioCount, StringFormat='{}{0} 首歌曲'}"
+                                                                 Command="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).OpenSingerCommand}"
                                                                  CommandParameter="{Binding .}" />
                                     </DataTemplate>
                                 </ItemsRepeater.ItemTemplate>

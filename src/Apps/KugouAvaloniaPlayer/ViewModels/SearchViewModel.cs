@@ -23,6 +23,7 @@ public partial class SearchViewModel(
 {
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private const string DefaultCardCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
+    private const string DefaultSingerCover = "avares://KugouAvaloniaPlayer/Assets/default_singer.png";
     private const int PlaylistSongPageSize = 200;
     private string _currentDetailId = "";
     private long _currentAlbumAuthorId;
@@ -76,6 +77,7 @@ public partial class SearchViewModel(
     public AvaloniaList<SongItem> Songs { get; } = new();
     public AvaloniaList<SearchPlaylistItem> Playlists { get; } = new();
     public AvaloniaList<SearchAlbumItem> Albums { get; } = new();
+    public AvaloniaList<SearchAuthorItem> Singers { get; } = new();
     public AvaloniaList<SongItem> DetailSongs { get; } = new();
     public AvaloniaList<SearchHotTagGroup> HotCategories { get; } = new();
     public AvaloniaList<SearchHotTagItem> CurrentHotKeywords { get; } = new();
@@ -110,6 +112,9 @@ public partial class SearchViewModel(
                     break;
                 case SearchType.Album:
                     await SearchAlbums();
+                    break;
+                case SearchType.Singer:
+                    await SearchSingers();
                     break;
             }
         }
@@ -214,6 +219,7 @@ public partial class SearchViewModel(
         Songs.Clear();
         Playlists.Clear();
         Albums.Clear();
+        Singers.Clear();
     }
 
     private async Task SearchSongs()
@@ -225,17 +231,17 @@ public partial class SearchViewModel(
 
     private async Task SearchPlaylists()
     {
-        for (int page = 1; ; page++)
+        for (var page = 1; ; page++)
         {
             try
             {
-                var results = await searchClient.SearchSpecialAsync(SearchKeyword, page,pageSize:50);
+                var results = await searchClient.SearchSpecialAsync(SearchKeyword, page,pageSize:100);
                 if (results == null || results.Count == 0) break;
 
                 foreach (var item in results)
                     Playlists.Add(item);
 
-                if (results.Count < 50) break;
+                if (results.Count < 100) break;
             }
             catch (Exception ex)
             {
@@ -247,17 +253,17 @@ public partial class SearchViewModel(
 
     private async Task SearchAlbums()
     {
-        for (int page = 1; ; page++)
+        for (var page = 1; ; page++)
         {
             try
             {
-                var results = await searchClient.SearchAlbumAsync(SearchKeyword, page,pageSize:50);
+                var results = await searchClient.SearchAlbumAsync(SearchKeyword, page,pageSize:100);
                 if (results == null || results.Count == 0) break;
                 
                 foreach (var item in results)
                     Albums.Add(item);
 
-                if (results.Count < 50) break;
+                if (results.Count < 100) break;
             }
             catch (Exception ex)
             {
@@ -267,16 +273,30 @@ public partial class SearchViewModel(
         }
     }
 
+    private async Task SearchSingers()
+    {
+        try
+        {
+            var results = await searchClient.SearchAuthorAsync(SearchKeyword, pageSize: 50);
+            if (results == null || results.Count == 0)
+                return;
+
+            Singers.AddRange(results);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "网络问题，歌手搜索失败");
+        }
+    }
+
     [RelayCommand]
     private void SwitchSearchType(string type)
     {
-        if (Enum.TryParse<SearchType>(type, out var searchType))
-        {
-            CurrentSearchType = searchType;
-            IsShowingDetail = false;
-            ClearResults();
-            if (!string.IsNullOrWhiteSpace(SearchKeyword)) _ = Search();
-        }
+        if (!Enum.TryParse<SearchType>(type, out var searchType)) return;
+        CurrentSearchType = searchType;
+        IsShowingDetail = false;
+        ClearResults();
+        if (!string.IsNullOrWhiteSpace(SearchKeyword)) _ = Search();
     }
 
     [RelayCommand]
@@ -367,6 +387,20 @@ public partial class SearchViewModel(
         DetailSongs.Clear();
 
         await LoadMoreDetailsInternal();
+    }
+
+    [RelayCommand]
+    private void OpenSinger(SearchAuthorItem? item)
+    {
+        if (item is not { AuthorId: > 0 })
+            return;
+
+        WeakReferenceMessenger.Default.Send(new NavigateToSingerMessage(new SingerLite
+        {
+            Id = item.AuthorId,
+            Name = item.Name,
+            SingerPic = string.IsNullOrWhiteSpace(item.Cover) ? DefaultSingerCover : item.Cover
+        }));
     }
 
     [RelayCommand]

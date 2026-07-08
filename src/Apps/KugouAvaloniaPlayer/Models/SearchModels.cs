@@ -7,7 +7,8 @@ public enum SearchType
 {
     Song,
     Playlist,
-    Album
+    Album,
+    Singer
 }
 
 public enum DetailType
