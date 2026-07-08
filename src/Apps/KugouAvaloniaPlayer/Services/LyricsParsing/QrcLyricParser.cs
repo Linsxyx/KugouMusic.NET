@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
+using ZLinq;
 using System.Text.RegularExpressions;
 using KugouAvaloniaPlayer.ViewModels;
 
@@ -54,7 +54,7 @@ internal sealed class QrcLyricParser : ILyricParser
                 });
             }
 
-            lyricLine.Content = string.Concat(lyricLine.Words.Select(static x => x.Text));
+            lyricLine.Content = string.Concat(lyricLine.Words.AsValueEnumerable().Select(static x => x.Text).ToList());
             if (!string.IsNullOrWhiteSpace(lyricLine.Content))
                 result.Add(lyricLine);
         }

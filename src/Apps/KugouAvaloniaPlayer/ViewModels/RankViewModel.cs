@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -141,7 +140,7 @@ public partial class RankViewModel : PageViewModelBase
                     Ranks.AddRange(items);
 
                     var sections = items
-                        .AsEnumerable()
+                        .AsValueEnumerable()
                         .GroupBy(item => item.Classify)
                         .OrderBy(group => GetClassifyOrder(group.Key))
                         .Select(group =>
@@ -150,7 +149,7 @@ public partial class RankViewModel : PageViewModelBase
                             {
                                 Title = GetClassifyTitle(group.Key)
                             };
-                            section.Items.AddRange(group.OrderBy(item => item.Name));
+                            section.Items.AddRange(group.AsValueEnumerable().OrderBy(item => item.Name).ToList());
                             return section;
                         })
                         .ToList();

@@ -23,12 +23,14 @@ public sealed class SystemMediaSessionService(
     IHttpClientFactory httpClientFactory,
     ILogger<SystemMediaSessionService> logger) : ISystemMediaSessionService
 {
+    private const string DefaultWindowTitle = "KA Music";
     private static readonly TimeSpan TimelineUpdateInterval = TimeSpan.FromMilliseconds(750);
     private readonly string _artworkCacheDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "kugou",
         "media-session-artwork");
 
+    private Window? _mainWindow;
     private PlayerViewModel? _playerViewModel;
     private SystemMediaTransportControls? _transportControls;
     private DateTimeOffset _lastTimelineUpdate = DateTimeOffset.MinValue;
@@ -51,6 +53,7 @@ public sealed class SystemMediaSessionService(
 
         try
         {
+            _mainWindow = mainWindow;
             _playerViewModel = playerViewModel;
             _transportControls = SystemMediaTransportControlsInterop.GetForWindow(hwnd);
             _transportControls.IsEnabled = true;
@@ -70,6 +73,7 @@ public sealed class SystemMediaSessionService(
         {
             logger.LogWarning(ex, "Windows 系统媒体控件初始化失败。");
             _transportControls = null;
+            _mainWindow = null;
             _playerViewModel = null;
         }
     }
@@ -85,8 +89,9 @@ public sealed class SystemMediaSessionService(
         {
             var updater = controls.DisplayUpdater;
             updater.Type = MediaPlaybackType.Music;
-            updater.MusicProperties.Title = song?.DisplayTitle ?? "KA Music";
+            updater.MusicProperties.Title = song?.DisplayTitle ?? DefaultWindowTitle;
             updater.MusicProperties.Artist = song?.Singer ?? string.Empty;
+            UpdateWindowTitle(song);
 
             var artworkPath = await ResolveArtworkPathAsync(song?.Cover);
             if (updateVersion != Volatile.Read(ref _songUpdateVersion))
@@ -160,6 +165,8 @@ public sealed class SystemMediaSessionService(
             _transportControls = null;
         }
 
+        ResetWindowTitle();
+        _mainWindow = null;
         _playerViewModel = null;
         _isInitialized = false;
     }
@@ -191,6 +198,38 @@ public sealed class SystemMediaSessionService(
                     break;
             }
         });
+    }
+
+    private void UpdateWindowTitle(SongItem? song)
+    {
+        var window = _mainWindow;
+        if (window == null)
+            return;
+
+        var title = BuildWindowTitle(song);
+
+        Dispatcher.UIThread.Post(() => window.Title = title);
+    }
+
+    private void ResetWindowTitle()
+    {
+        var window = _mainWindow;
+        if (window == null)
+            return;
+
+        Dispatcher.UIThread.Post(() => window.Title = DefaultWindowTitle);
+    }
+
+    private static string BuildWindowTitle(SongItem? song)
+    {
+        var songTitle = song?.DisplayTitle?.Trim();
+        if (string.IsNullOrWhiteSpace(songTitle))
+            return DefaultWindowTitle;
+
+        var singer = song?.Singer?.Trim();
+        return string.IsNullOrWhiteSpace(singer)
+            ? songTitle
+            : $"{songTitle} - {singer}";
     }
 
     private async Task<string?> ResolveArtworkPathAsync(string? cover)
