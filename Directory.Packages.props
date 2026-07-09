@@ -19,7 +19,8 @@
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="11.0.0-preview.5.26302.115" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
-    <PackageVersion Include="Pure.DI" Version="2.4.3" />
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.10.0" />
+    <PackageVersion Include="Pure.DI" Version="2.5.0" />
     <PackageVersion Include="Pure.DI.MS" Version="2.4.3" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.12.8" />
     <PackageVersion Include="Serilog" Version="4.3.1" />
@@ -31,12 +32,13 @@
     <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Spectre.Console" Version="0.55.0" />
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageVersion Include="SukiUI" Version="7.0.2-nightly20260520" />
-    <PackageVersion Include="Svg.Controls.Avalonia" Version="12.0.0.11" />
+    <PackageVersion Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.11" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.92.0" />
-    <PackageVersion Include="Velopack" Version="1.0.1" />
+    <PackageVersion Include="Velopack" Version="1.2.0" />
     <PackageVersion Include="ZLinq" Version="1.5.6" />
-    <PackageVersion Include="z440.atl.core" Version="7.0.0" />
+    <PackageVersion Include="z440.atl.core" Version="7.15.3" />
   </ItemGroup>
 </Project>

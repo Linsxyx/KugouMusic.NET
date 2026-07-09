@@ -60,7 +60,7 @@
         <PackageReference Include="Serilog.Sinks.Debug"/>
         <PackageReference Include="Serilog.Sinks.File" />
         <PackageReference Include="SukiUI"/>
-        <PackageReference Include="Svg.Controls.Avalonia"/>
+        <PackageReference Include="Svg.Controls.Skia.Avalonia"/>
         <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
         <PackageReference Include="Tmds.DBus.Protocol"/>
         <PackageReference Include="Velopack" />
