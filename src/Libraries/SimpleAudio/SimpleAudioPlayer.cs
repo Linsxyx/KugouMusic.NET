@@ -6,6 +6,9 @@ namespace SimpleAudio;
 
 public partial class SimpleAudioPlayer
 {
+    private const int NetworkBufferLengthMilliseconds = 15000;
+    private const int NetworkPreBufferPercentage = 15;
+    private const int NetworkReadTimeoutMilliseconds = 45000;
     private const float DefaultHighShelfCenterHz = 4800f;
     private const float DefaultLowPassCutoffHz = 18000f;
     private static readonly float[] EQFreqs = [141f, 234f, 469f, 844f, 1300f, 2200f, 3700f, 5800f, 9000f, 13800f];
@@ -196,9 +199,9 @@ public partial class SimpleAudioPlayer
                 Console.WriteLine($"[BASS_LOUD Load Error] {ex.Message}");
             }
 
-            Bass.Configure(Configuration.NetBufferLength, 5000);
-            Bass.Configure(Configuration.NetPreBuffer, 20);
-            Bass.Configure(Configuration.NetReadTimeOut, 10000);
+            Bass.Configure(Configuration.NetBufferLength, NetworkBufferLengthMilliseconds);
+            Bass.Configure(Configuration.NetPreBuffer, NetworkPreBufferPercentage);
+            Bass.Configure(Configuration.NetReadTimeOut, NetworkReadTimeoutMilliseconds);
         }
     }
 

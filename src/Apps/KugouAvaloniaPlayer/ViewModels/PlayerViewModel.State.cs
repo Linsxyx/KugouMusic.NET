@@ -346,8 +346,12 @@ public partial class PlayerViewModel
                 sourceInfo.IsLocal,
                 currentSong.DurationSeconds,
                 currentLoadCts.Token);
-            var loadSuccess = await _playbackCoordinator.LoadAsync(sourceInfo.Source, currentSong.Name,
-                normalizationGain, AudioLoadTimeout, currentLoadCts.Token);
+            var loadSuccess = await _playbackCoordinator.LoadAsync(
+                sourceInfo.Source,
+                currentSong.Name,
+                normalizationGain,
+                GetAudioLoadTimeout(sourceInfo.IsLocal),
+                currentLoadCts.Token);
             if (!loadSuccess)
             {
                 RevertQualitySelectionToCurrentQuality();

@@ -32,7 +32,8 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private const double PreloadWindowSec = 18.0;
     private static readonly TimeSpan SeamlessVisualSwitchDelay = TimeSpan.FromSeconds(2);
     private const int TailTelemetryCapacity = 320;
-    private static readonly TimeSpan AudioLoadTimeout = TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan LocalAudioLoadTimeout = TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan RemoteAudioLoadTimeout = TimeSpan.FromSeconds(60);
     private readonly PlaybackAudioEffectsService _audioEffectsService;
     private readonly FavoritePlaylistService _favoriteService;
     private readonly PlaybackHistoryService _historyService;
@@ -329,7 +330,11 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                     currentLoadCts.Token);
 
             var loadSuccess =
-                await _playbackCoordinator.LoadAsync(sourceInfo.Source, song.Name, normalizationGain, AudioLoadTimeout,
+                await _playbackCoordinator.LoadAsync(
+                    sourceInfo.Source,
+                    song.Name,
+                    normalizationGain,
+                    GetAudioLoadTimeout(sourceInfo.IsLocal),
                     currentLoadCts.Token);
 
             if (loadSuccess)
@@ -485,6 +490,11 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 _ = PlayNext();
                 break;
         }
+    }
+
+    private static TimeSpan GetAudioLoadTimeout(bool isLocal)
+    {
+        return isLocal ? LocalAudioLoadTimeout : RemoteAudioLoadTimeout;
     }
 
 }
