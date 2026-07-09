@@ -151,6 +151,7 @@ public class AppSettings
 
     public CloseBehavior CloseBehavior { get; set; } = CloseBehavior.MinimizeToTray;
     public string AppTheme { get; set; } = ThemeDefault;
+    public string GlobalFontFamily { get; set; } = string.Empty;
     public string MusicQuality { get; set; } = AudioQuality.Default;
     public PlayMode PlaybackMode { get; set; } = PlayMode.Normal;
     public List<string> LocalMusicFolders { get; set; } = new();

@@ -49,6 +49,8 @@ public record LyricStyleSettingsChangedMessage(
 
 public record DesktopLyricDoubleLineChangedMessage(bool IsEnabled);
 
+public record GlobalFontSettingsChangedMessage(string FontFamilyName);
+
 public record AppBackgroundSettingsChangedMessage(
     bool UseCustomImage,
     string? CustomImagePath,

@@ -134,6 +134,35 @@
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                 <StackPanel>
+                                    <TextBlock Text="全局默认字体" FontWeight="DemiBold" />
+                                    <TextBlock Text="作用于大部分界面文本；歌词未单独自定义时也会跟随"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          MinWidth="220"
+                                          ItemsSource="{Binding AppFontFamilyOptions}"
+                                          SelectedItem="{Binding SelectedAppFontFamily}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="x:String">
+                                            <TextBlock Text="{Binding .}"
+                                                       FontFamily="{Binding .}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+
+                            <Border BorderThickness="1"
+                                    BorderBrush="{DynamicResource SukiBorder}"
+                                    CornerRadius="8"
+                                    Padding="10">
+                                <TextBlock Text="全局字体预览 Preview 123 你好 KA Music"
+                                           TextWrapping="Wrap"
+                                           FontFamily="{Binding AppFontPreviewFamily}" />
+                            </Border>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                <StackPanel>
                                     <TextBlock Text="自定义背景图" FontWeight="DemiBold" />
                                     <TextBlock Text="{Binding CustomBackgroundImageStatus}"
                                                MaxWidth="420"

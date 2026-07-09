@@ -127,6 +127,13 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
             IsDoubleLineEnabled = message.IsEnabled;
         });
 
+        WeakReferenceMessenger.Default.Register<GlobalFontSettingsChangedMessage>(this, (_, _) =>
+        {
+            ApplyFontSettings(
+                SettingsManager.Settings.DesktopLyricUseCustomFont,
+                SettingsManager.Settings.DesktopLyricCustomFontFamily);
+        });
+
         RefreshDoubleLineLanes();
     }
 
@@ -485,24 +492,7 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
 
     private void ApplyFontSettings(bool useCustomFont, string fontFamilyName)
     {
-        if (!useCustomFont || string.IsNullOrWhiteSpace(fontFamilyName))
-        {
-            LyricFontFamily = FontFamily.Default;
-            return;
-        }
-
-        LyricFontFamily = IsSystemFontInstalled(fontFamilyName)
-            ? new FontFamily(fontFamilyName)
-            : FontFamily.Default;
-    }
-
-    private static bool IsSystemFontInstalled(string fontFamilyName)
-    {
-        foreach (var systemFont in FontManager.Current.SystemFonts)
-            if (string.Equals(systemFont.Name, fontFamilyName, StringComparison.OrdinalIgnoreCase))
-                return true;
-
-        return false;
+        LyricFontFamily = AppFontService.ResolveEffectiveLyricFontFamily(useCustomFont, fontFamilyName);
     }
 
     private static Color ParseColorOrDefault(string? colorText, Color fallback)

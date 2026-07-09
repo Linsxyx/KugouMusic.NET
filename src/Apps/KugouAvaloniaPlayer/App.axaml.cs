@@ -47,6 +47,7 @@ public partial class App : Application
             _loggerFactory = new SerilogLoggerFactory(Log.Logger, true);
 
             ApplySavedTheme();
+            AppFontService.ApplyGlobalFont(this);
             _serviceProvider = new AvaloniaAppServiceProvider
             {
                 LoggerFactory = _loggerFactory,

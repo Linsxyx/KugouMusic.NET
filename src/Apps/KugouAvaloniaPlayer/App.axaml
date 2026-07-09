@@ -12,6 +12,15 @@
 
     <Application.Styles>
         <suki:SukiTheme ThemeColor="Blue" />
+        <Style Selector="TemplatedControl">
+            <Setter Property="FontFamily" Value="{DynamicResource AppDefaultFontFamily}" />
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppDefaultFontFamily}" />
+        </Style>
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource AppDefaultFontFamily}" />
+        </Style>
         <Style Selector="suki|SukiWindow[IsTitleBarVisible=False] /template/ Border#PART_BottomBorder">
             <Setter Property="IsVisible" Value="False" />
         </Style>
@@ -30,6 +39,7 @@
     </Application.Styles>
 
     <Application.Resources>
+        <FontFamily x:Key="AppDefaultFontFamily">$Default</FontFamily>
         <converters:SecondsToMinutesSecondsConverter x:Key="SecondsToTimeConverter" />
         <converters:CountdownTextConverter x:Key="CountdownTextConverter" />
         <converters:CountdownEnabledConverter x:Key="CountdownEnabledConverter" />

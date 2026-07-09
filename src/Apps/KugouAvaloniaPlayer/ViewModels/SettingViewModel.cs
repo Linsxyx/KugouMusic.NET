@@ -45,7 +45,6 @@ public partial class SettingViewModel : PageViewModelBase
     private const string LyricColorModeCustom = "自定义";
 
     private readonly LoginClient _authClient;
-    private readonly HashSet<string> _availableLyricFonts;
     private readonly ISukiDialogManager _dialogManager;
     private readonly EqSettingsViewModel _eqSettingsViewModel;
     private readonly IGlobalShortcutService _globalShortcutService;
@@ -59,10 +58,13 @@ public partial class SettingViewModel : PageViewModelBase
 
     [ObservableProperty]
     public partial bool AutoCheckUpdate { get; set; }
-#if KUGOU_LINUX
+
+    [ObservableProperty]
+    public partial string SelectedAppFontFamily { get; set; } = AppFontService.SystemDefaultOption;
+
     [ObservableProperty]
     public partial bool LinuxUseFullWindowDecorations { get; set; }
-#endif
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CustomBackgroundImageStatus))]
     public partial bool UseCustomBackgroundImage { get; set; }
@@ -191,14 +193,15 @@ public partial class SettingViewModel : PageViewModelBase
 
         Player = player;
         EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
-        LyricFontFamilyOptions = LoadSystemFontFamilies();
-        _availableLyricFonts = new HashSet<string>(LyricFontFamilyOptions, StringComparer.OrdinalIgnoreCase);
+        LyricFontFamilyOptions = AppFontService.LoadSystemFontFamilies();
+        AppFontFamilyOptions = [AppFontService.SystemDefaultOption, .. LyricFontFamilyOptions];
         UserId = _sessionManager.Session.UserId;
         _isApplyingSettingsSnapshot = true;
         try
         {
             SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
             AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
+            SelectedAppFontFamily = AppFontService.FormatGlobalFontSelection(LyricFontFamilyOptions);
 #if KUGOU_LINUX
             LinuxUseFullWindowDecorations = SettingsManager.Settings.LinuxUseFullWindowDecorations;
 #endif
@@ -284,6 +287,7 @@ public partial class SettingViewModel : PageViewModelBase
     ];
 
     public string[] LyricFontFamilyOptions { get; }
+    public string[] AppFontFamilyOptions { get; }
     public GlobalShortcutItemViewModel[] ShortcutItems { get; }
     public ObservableCollection<ReleaseNoteItemViewModel> RecentReleaseNotes { get; } = [];
     public ObservableCollection<AudioOutputDevice> OutputDeviceOptions { get; } = [];
@@ -310,6 +314,10 @@ public partial class SettingViewModel : PageViewModelBase
     public bool HasReleaseNotes => RecentReleaseNotes.Count > 0;
     public bool IsReleaseNotesStatusVisible => IsLoadingReleaseNotes || !HasReleaseNotes;
     public bool IsOutputDeviceStatusVisible => !string.IsNullOrWhiteSpace(OutputDeviceStatus);
+    public FontFamily AppFontPreviewFamily =>
+        SelectedAppFontFamily == AppFontService.SystemDefaultOption
+            ? FontFamily.Default
+            : new FontFamily(SelectedAppFontFamily);
 
     public IBrush DesktopLyricColorPreviewBrush =>
         new SolidColorBrush(ParseColorOrDefault(DesktopLyricColorHexInput, Colors.Transparent));
@@ -885,6 +893,7 @@ public partial class SettingViewModel : PageViewModelBase
         {
             SelectedCloseBehavior = SettingsManager.Settings.CloseBehavior;
             AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
+            SelectedAppFontFamily = AppFontService.FormatGlobalFontSelection(LyricFontFamilyOptions);
             UseCustomBackgroundImage = SettingsManager.Settings.UseCustomBackgroundImage;
             CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
             CustomBackgroundImageOpacity = Math.Clamp(SettingsManager.Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
@@ -1134,14 +1143,7 @@ public partial class SettingViewModel : PageViewModelBase
 
     private string? NormalizeFontName(string? fontName)
     {
-        if (string.IsNullOrWhiteSpace(fontName)) return null;
-        var trimmed = fontName.Trim();
-
-        if (!_availableLyricFonts.Contains(trimmed))
-            return null;
-
-        return LyricFontFamilyOptions.AsValueEnumerable().FirstOrDefault(x =>
-            string.Equals(x, trimmed, StringComparison.OrdinalIgnoreCase));
+        return AppFontService.NormalizeSystemFontName(fontName, LyricFontFamilyOptions);
     }
 
     private static Color ParseColorOrDefault(string? colorText, Color fallback)
@@ -1200,16 +1202,6 @@ public partial class SettingViewModel : PageViewModelBase
         };
     }
 
-    private static string[] LoadSystemFontFamilies()
-    {
-        return FontManager.Current.SystemFonts
-            .AsValueEnumerable().Select(f => f.Name)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
-    }
-
     partial void OnSelectedSettingsSectionChanged(string value)
     {
         OnPropertyChanged(nameof(IsGeneralSection));
@@ -1226,6 +1218,32 @@ public partial class SettingViewModel : PageViewModelBase
     partial void OnIsLoadingReleaseNotesChanged(bool value)
     {
         OnPropertyChanged(nameof(IsReleaseNotesStatusVisible));
+    }
+
+    partial void OnSelectedAppFontFamilyChanged(string value)
+    {
+        OnPropertyChanged(nameof(AppFontPreviewFamily));
+
+        if (_isApplyingSettingsSnapshot)
+            return;
+
+        var normalized = AppFontService.NormalizeGlobalFontSelection(value, LyricFontFamilyOptions);
+        var formatted = string.IsNullOrWhiteSpace(normalized)
+            ? AppFontService.SystemDefaultOption
+            : normalized;
+
+        if (!string.Equals(value, formatted, StringComparison.Ordinal))
+        {
+            _isApplyingSettingsSnapshot = true;
+            SelectedAppFontFamily = formatted;
+            _isApplyingSettingsSnapshot = false;
+            return;
+        }
+
+        SettingsManager.Settings.GlobalFontFamily = normalized;
+        SettingsManager.Save();
+        AppFontService.ApplyGlobalFont();
+        WeakReferenceMessenger.Default.Send(new GlobalFontSettingsChangedMessage(normalized));
     }
 
     private async Task LoadReleaseNotesAsync(bool forceRefresh = false)
