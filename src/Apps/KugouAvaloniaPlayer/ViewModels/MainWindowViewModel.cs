@@ -554,6 +554,30 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void RequestWindowToggleFullScreen()
+    {
+        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.ToggleFullScreen));
+    }
+
+    [RelayCommand]
+    private void RequestWindowMinimize()
+    {
+        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Minimize));
+    }
+
+    [RelayCommand]
+    private void RequestWindowToggleMaximize()
+    {
+        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.ToggleMaximize));
+    }
+
+    [RelayCommand]
+    private void RequestWindowClose()
+    {
+        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Close));
+    }
+
+    [RelayCommand]
     private async Task GetDailyRecommendations()
     {
         await _dailyRecommendViewModel.LoadContentAsync();

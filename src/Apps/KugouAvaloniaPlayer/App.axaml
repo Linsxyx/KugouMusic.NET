@@ -19,7 +19,7 @@
             <Setter Property="IsVisible" Value="True" />
         </Style>
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SukiMainHostCustomBackground.axaml" />
-        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SukiSideMenuOverride.axaml" />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/KugouSideMenu.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SliderPlayer.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SegmentedStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/GorgeousThemeSwitch.axaml" />

@@ -4,6 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:suki="https://github.com/kikipoulet/SukiUI"
+                 xmlns:chrome="clr-namespace:Avalonia.Controls.Chrome;assembly=Avalonia.Controls"
                  xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
                  xmlns:localControls="clr-namespace:KugouAvaloniaPlayer.Controls"
                  xmlns:views="clr-namespace:KugouAvaloniaPlayer.Views"
@@ -18,21 +19,8 @@
                  BackgroundStyle="Bubble"
                  CanFullScreen="True"
                  CanMaximize="True"
-                 IsTitleBarVisible="{Binding !NowPlaying.IsOpen}"
+                 IsTitleBarVisible="False"
                  TitleBarVisibilityOnFullScreen="AutoHidden">
-
-    <suki:SukiWindow.RightWindowTitleBarControls>
-        <Button Classes="WindowControlsButton"
-                Cursor="Hand"
-                Command="{Binding NavigateToUserCommand}"
-                ToolTip.Tip="设置">
-            <Svg Classes="ThemeSvgIcon"
-                 Path="/Assets/gear-svgrepo-com.svg"
-                 Width="18"
-                 Height="18"
-                 VerticalAlignment="Center" />
-        </Button>
-    </suki:SukiWindow.RightWindowTitleBarControls>
 
     <suki:SukiWindow.Styles>
         <Style Selector="Button.SidebarPlaylistOption">
@@ -213,23 +201,86 @@
     </suki:SukiWindow.LogoContent>-->
 
     <Grid Name="MainGrid">
-        <suki:SukiSideMenu
+        <Grid ColumnDefinitions="48,*,Auto"
+              Height="36"
+              Background="Transparent"
+              VerticalAlignment="Top"
+              IsVisible="{Binding !NowPlaying.IsOpen}"
+              ZIndex="20"
+              chrome:WindowDecorationProperties.ElementRole="TitleBar">
+            <Border Grid.Column="1"
+                    Background="Transparent"
+                    chrome:WindowDecorationProperties.ElementRole="TitleBar" />
+
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="7"
+                        Margin="0,0,12,0"
+                        VerticalAlignment="Center"
+                        chrome:WindowDecorationProperties.ElementRole="User">
+                <Button Classes="WindowControlsButton"
+                        Command="{Binding NavigateToUserCommand}"
+                        ToolTip.Tip="设置"
+                        chrome:WindowDecorationProperties.ElementRole="User">
+                    <Svg Classes="ThemeSvgIcon"
+                         Path="/Assets/gear-svgrepo-com.svg"
+                         Width="12"
+                         Height="12"
+                         VerticalAlignment="Center" />
+                </Button>
+                <Button Classes="WindowControlsButton"
+                        Command="{Binding RequestWindowToggleFullScreenCommand}"
+                        ToolTip.Tip="全屏"
+                        chrome:WindowDecorationProperties.ElementRole="User">
+                    <PathIcon Data="{x:Static suki:Icons.WindowFullScreen}"
+                              Width="12"
+                              Height="12" />
+                </Button>
+                <Button Classes="WindowControlsButton"
+                        Command="{Binding RequestWindowMinimizeCommand}"
+                        ToolTip.Tip="最小化"
+                        chrome:WindowDecorationProperties.ElementRole="User">
+                    <PathIcon Data="{x:Static suki:Icons.WindowMinimize}"
+                              Width="12"
+                              Height="12"
+                              Margin="0,0,0,6.5" />
+                </Button>
+                <Button Classes="WindowControlsButton"
+                        Command="{Binding RequestWindowToggleMaximizeCommand}"
+                        ToolTip.Tip="最大化/还原"
+                        chrome:WindowDecorationProperties.ElementRole="User">
+                    <PathIcon Data="{x:Static suki:Icons.WindowMaximize}"
+                              Width="12"
+                              Height="12" />
+                </Button>
+                <Button Classes="WindowControlsButton Close"
+                        Command="{Binding RequestWindowCloseCommand}"
+                        ToolTip.Tip="关闭"
+                        chrome:WindowDecorationProperties.ElementRole="User">
+                    <PathIcon Data="{x:Static suki:Icons.WindowClose}"
+                              Width="12"
+                              Height="12" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <localControls:KugouSideMenu
             ItemsSource="{Binding Pages}"
             SelectedItem="{Binding SelectedMenuPage}"
             UseCustomContent="True"
             Content="{Binding ActivePage}"
             IsSearchEnabled="False">
 
-            <suki:SukiSideMenu.HeaderContent>
+            <localControls:KugouSideMenu.HeaderContent>
                 <Border Margin="16,10,16,14"
                         Padding="8"
                         CornerRadius="10"
                         Background="{DynamicResource SukiPrimaryColorLow}">
                     <localControls:UserAvatarControl />
                 </Border>
-            </suki:SukiSideMenu.HeaderContent>
+            </localControls:KugouSideMenu.HeaderContent>
 
-            <suki:SukiSideMenu.ItemTemplate>
+            <localControls:KugouSideMenu.ItemTemplate>
                 <DataTemplate DataType="vm:PageViewModelBase">
                     <suki:SukiSideMenuItem Header="{Binding DisplayName}" FontWeight="ExtraBold">
                         <suki:SukiSideMenuItem.Icon>
@@ -237,9 +288,9 @@
                         </suki:SukiSideMenuItem.Icon>
                     </suki:SukiSideMenuItem>
                 </DataTemplate>
-            </suki:SukiSideMenu.ItemTemplate>
+            </localControls:KugouSideMenu.ItemTemplate>
 
-            <suki:SukiSideMenu.FooterContent>
+            <localControls:KugouSideMenu.FooterContent>
                 <StackPanel Margin="10,4,10,100" Spacing="10">
                     <Separator Margin="0,4,0,2" />
 
@@ -356,11 +407,12 @@
                     </Button>
 
                 </StackPanel>
-            </suki:SukiSideMenu.FooterContent>
-        </suki:SukiSideMenu>
+            </localControls:KugouSideMenu.FooterContent>
+        </localControls:KugouSideMenu>
 
         <localControls:BottomPlaybackControl />
-        <views:NowPlayingView DataContext="{Binding NowPlaying}" ZIndex="300" />
+        <views:NowPlayingView DataContext="{Binding NowPlaying}"
+                              ZIndex="300" />
 
     </Grid>
 
