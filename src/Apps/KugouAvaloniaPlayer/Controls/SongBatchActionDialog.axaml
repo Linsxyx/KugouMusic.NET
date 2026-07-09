@@ -1,0 +1,217 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="KugouAvaloniaPlayer.Controls.SongBatchActionDialog"
+             x:DataType="vm:SongBatchActionDialogViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ListBox.BatchSelectionList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.IsScrollChainingEnabled" Value="False" />
+        </Style>
+
+        <Style Selector="ListBox.BatchSelectionList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Background="Transparent" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+
+    <Border Width="920"
+            MaxHeight="720"
+            Padding="22"
+            Background="{DynamicResource SukiBackground}"
+            CornerRadius="18">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+            <StackPanel Spacing="6"
+                        Margin="0,0,0,16">
+                <TextBlock Text="批量操作"
+                           FontSize="26"
+                           FontWeight="ExtraBold" />
+                <TextBlock Text="{Binding TotalSongCount, StringFormat='当前详情页已加载 {0} 首歌曲，可搜索并多选后执行操作'}"
+                           Foreground="{DynamicResource SukiLowText}" />
+            </StackPanel>
+
+            <Grid Row="1"
+                  ColumnDefinitions="*,Auto,Auto,Auto"
+                  ColumnSpacing="10"
+                  Margin="0,0,0,16">
+                <TextBox PlaceholderText="搜索歌曲、歌手或专辑"
+                         Text="{Binding FilterText}" />
+
+                <Border Grid.Column="1"
+                        Padding="12,8"
+                        CornerRadius="999"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <TextBlock Text="{Binding SelectedCount, StringFormat='已选 {0} 首'}"
+                               Foreground="{DynamicResource SukiLowText}" />
+                </Border>
+
+                <Button Grid.Column="2"
+                        Classes="Basic"
+                        Cursor="Hand"
+                        Command="{Binding SelectAllFilteredCommand}">
+                    <TextBlock Text="全选当前筛选" />
+                </Button>
+
+                <Button Grid.Column="3"
+                        Classes="Basic"
+                        Cursor="Hand"
+                        Command="{Binding ClearSelectionCommand}">
+                    <TextBlock Text="清空选择" />
+                </Button>
+            </Grid>
+
+            <Grid Row="2">
+                <Border IsVisible="{Binding !HasFilteredSongs}"
+                        Padding="24"
+                        CornerRadius="16"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <TextBlock Text="没有找到匹配的歌曲"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="换个关键词试试。"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <ListBox Classes="BatchSelectionList"
+                         IsVisible="{Binding HasFilteredSongs}"
+                         ItemsSource="{Binding FilteredSongs}"
+                         MaxHeight="440"
+                         SelectionMode="Toggle">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:SelectableSongItemViewModel">
+                            <Border Margin="0,0,0,10"
+                                    Padding="12"
+                                    CornerRadius="16"
+                                    Background="{DynamicResource SukiPrimaryColorLow}">
+                                <Grid ColumnDefinitions="Auto,72,*,140,80"
+                                      ColumnSpacing="12">
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                              VerticalAlignment="Center" />
+
+                                    <Border Grid.Column="1"
+                                            Width="60"
+                                            Height="60"
+                                            CornerRadius="12"
+                                            ClipToBounds="True"
+                                            Background="{DynamicResource SukiPrimaryColor0}">
+                                        <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
+                                               behaviors:ImageRenderOptions.InterpolationSource="{Binding Cover}"
+                                               Stretch="UniformToFill" />
+                                    </Border>
+
+                                    <StackPanel Grid.Column="2"
+                                                VerticalAlignment="Center"
+                                                Spacing="4">
+                                        <TextBlock Text="{Binding Name}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Singer}"
+                                                   Foreground="{DynamicResource SukiLowText}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="3"
+                                               Text="{Binding AlbumName}"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource SukiLowText}"
+                                               TextTrimming="CharacterEllipsis" />
+
+                                    <TextBlock Grid.Column="4"
+                                               Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Right"
+                                               Foreground="{DynamicResource SukiLowText}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <Grid Row="3"
+                  ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                  ColumnSpacing="10"
+                  Margin="0,18,0,0">
+                <TextBlock Text="{Binding SelectedCount, StringFormat='已选择 {0} 首歌曲'}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SukiLowText}" />
+
+                <Button Grid.Column="1"
+                        Command="{Binding CancelCommand}"
+                        Classes="Basic"
+                        Cursor="Hand">
+                    <TextBlock Text="取消" />
+                </Button>
+
+                <Button Grid.Column="2"
+                        Command="{Binding AddToQueueCommand}"
+                        Classes="Basic"
+                        Cursor="Hand"
+                        IsEnabled="{Binding CanExecuteBatchActions}">
+                    <TextBlock Text="添加到播放列表" />
+                </Button>
+
+                <Button Grid.Column="3"
+                        Command="{Binding AddToPlaylistCommand}"
+                        Classes="Standard"
+                        Cursor="Hand"
+                        IsVisible="{Binding AllowAddToPlaylist}"
+                        IsEnabled="{Binding CanExecuteBatchActions}">
+                    <Grid ColumnDefinitions="Auto,Auto">
+                        <suki:Loading Width="16"
+                                      Height="16"
+                                      Margin="0,0,8,0"
+                                      IsVisible="{Binding IsSubmitting}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="添加到歌单"
+                                   IsVisible="{Binding !IsSubmitting}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="处理中..."
+                                   IsVisible="{Binding IsSubmitting}" />
+                    </Grid>
+                </Button>
+
+                <Button Grid.Column="4"
+                        Command="{Binding PlaySelectedCommand}"
+                        Classes="Standard"
+                        Cursor="Hand"
+                        IsEnabled="{Binding CanExecuteBatchActions}">
+                    <TextBlock Text="直接播放" />
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

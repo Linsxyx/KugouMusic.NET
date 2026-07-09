@@ -119,6 +119,7 @@
             IsLoadingMore="{Binding IsLoadingMore}"
             ListMargin="0"
             ShowAddLoadedSongsToQueueButton="True"
+            AllowAddToPlaylistAction="False"
             HeroActionCommand="{Binding AddLocalFilesCommand}"
             HeroActionSvgPath="/Assets/PlaylistAdd.svg"
             HeroActionText="添加歌曲"

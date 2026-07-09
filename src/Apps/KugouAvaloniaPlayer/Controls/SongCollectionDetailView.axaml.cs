@@ -78,6 +78,9 @@ public partial class SongCollectionDetailView : UserControl
     public static readonly StyledProperty<bool> ShowAddLoadedSongsToQueueButtonProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(ShowAddLoadedSongsToQueueButton));
 
+    public static readonly StyledProperty<bool> AllowAddToPlaylistActionProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(AllowAddToPlaylistAction), true);
+
     public static readonly StyledProperty<IEnumerable?> HeroDropdownItemsProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, IEnumerable?>(nameof(HeroDropdownItems));
 
@@ -150,14 +153,14 @@ public partial class SongCollectionDetailView : UserControl
     public SongCollectionDetailView()
     {
         PlayFirstSongCommand = new RelayCommand(PlayFirstSong);
-        AddLoadedSongsToQueueCommand = new RelayCommand(AddLoadedSongsToQueue);
+        OpenBatchActionsCommand = new RelayCommand(OpenBatchActions);
         ScrollToPlayingSongCommand = new RelayCommand(ScrollToPlayingSong);
         InitializeComponent();
         UpdateCurrentHeroBackground();
     }
 
     public ICommand PlayFirstSongCommand { get; }
-    public ICommand AddLoadedSongsToQueueCommand { get; }
+    public ICommand OpenBatchActionsCommand { get; }
     public ICommand ScrollToPlayingSongCommand { get; }
 
     public string? Cover
@@ -266,6 +269,12 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(ShowAddLoadedSongsToQueueButtonProperty);
         set => SetValue(ShowAddLoadedSongsToQueueButtonProperty, value);
+    }
+
+    public bool AllowAddToPlaylistAction
+    {
+        get => GetValue(AllowAddToPlaylistActionProperty);
+        set => SetValue(AllowAddToPlaylistActionProperty, value);
     }
 
     public IEnumerable? HeroDropdownItems
@@ -459,10 +468,10 @@ public partial class SongCollectionDetailView : UserControl
             firstSong.PlayCommand.Execute(null);
     }
 
-    private void AddLoadedSongsToQueue()
+    private void OpenBatchActions()
     {
         var loadedSongs = Songs?.AsValueEnumerable().OfType<SongItem>().ToList() ?? [];
-        WeakReferenceMessenger.Default.Send(new AddLoadedSongsToQueueMessage(loadedSongs));
+        WeakReferenceMessenger.Default.Send(new ShowSongBatchActionDialogMessage(loadedSongs, AllowAddToPlaylistAction));
     }
 
     private void ScrollToPlayingSong()

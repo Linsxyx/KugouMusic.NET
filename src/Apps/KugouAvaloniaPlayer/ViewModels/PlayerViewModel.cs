@@ -201,8 +201,12 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             });
         WeakReferenceMessenger.Default.Register<AddLoadedSongsToQueueMessage>(this,
             (_, m) => AddLoadedSongsToQueue(m.Songs));
+        WeakReferenceMessenger.Default.Register<ShowSongBatchActionDialogMessage>(this,
+            (_, m) => _ = ShowSongBatchActionDialogSafelyAsync(m.Songs, m.AllowAddToPlaylist));
         WeakReferenceMessenger.Default.Register<ShowPlaylistDialogMessage>(this,
             (_, m) => _ = ShowPlaylistDialogSafelyAsync(m.Song));
+        WeakReferenceMessenger.Default.Register<ReplacePlaybackQueueMessage>(this,
+            (_, m) => _ = ReplacePlaybackQueueAsync(m.Songs, m.StartSong));
         WeakReferenceMessenger.Default.Register<PlaybackControlMessage>(this,
             (_, m) => HandlePlaybackControlMessage(m.Action));
 

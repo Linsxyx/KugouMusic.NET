@@ -18,7 +18,7 @@
                   ColumnSpacing="10">
                 <TextBox Grid.Column="0"
                          Text="{Binding SearchKeyword}"
-                         PlaceholderText="输入歌曲名、歌手名、歌单或专辑..."
+                         PlaceholderText="输入歌曲、歌手、歌单或专辑..."
                          CornerRadius="8"
                          Height="42"
                          FontSize="15"

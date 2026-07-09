@@ -219,7 +219,7 @@
                         chrome:WindowDecorationProperties.ElementRole="User">
                 
                 <TextBox Text="{Binding SearchKeyword}"
-                         PlaceholderText="输入歌曲名、歌手名、歌单或专辑..."
+                         PlaceholderText="输入歌曲、歌手、歌单或专辑..."
                          CornerRadius="15"
                          Height="34"
                          Width="260"

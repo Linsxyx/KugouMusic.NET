@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
@@ -38,6 +39,7 @@ public partial class FavoritePlaylistService(
     private const int MaxUserPlaylistPages = 200;
     private static readonly TimeSpan LoadPlaylistDialogTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan AddSongToPlaylistTimeout = TimeSpan.FromSeconds(12);
+    private static readonly TimeSpan AddSongsToMultiplePlaylistsTimeout = TimeSpan.FromSeconds(20);
     private readonly Dictionary<string, int> _hashToFileId = new();
     private readonly SemaphoreSlim _addToPlaylistDialogLock = new(1, 1);
     private readonly SemaphoreSlim _likeCacheLoadLock = new(1, 1);
@@ -266,28 +268,7 @@ public partial class FavoritePlaylistService(
 
         try
         {
-            var onlinePlaylists = userCreatedPlaylistCacheService.GetSnapshot();
-            if (onlinePlaylists.Count == 0)
-            {
-                ShowProgressDialog("加载歌单", "正在获取你的歌单列表...");
-
-                var playlists = await WaitWithTimeoutAsync(
-                    LoadAllCreatedPlaylistsAsync(),
-                    LoadPlaylistDialogTimeout,
-                    "加载歌单超时，请检查网络后重试。");
-
-                DismissDialog();
-
-                if (playlists is null)
-                {
-                    logger.LogError("获取歌单列表失败");
-                    ShowToast(NotificationType.Error, "加载失败", "歌单列表获取失败，请稍后再试。");
-                    return;
-                }
-
-                onlinePlaylists = playlists;
-                userCreatedPlaylistCacheService.Update(onlinePlaylists);
-            }
+            var onlinePlaylists = await EnsureOnlinePlaylistsLoadedAsync();
 
             if (onlinePlaylists.Count == 0)
             {
@@ -332,6 +313,128 @@ public partial class FavoritePlaylistService(
         }
     }
 
+    public Task ShowSongBatchActionDialogAsync(IReadOnlyList<SongItem> songs, bool allowAddToPlaylist = true)
+    {
+        if (songs.Count == 0)
+        {
+            ShowToast(NotificationType.Warning, "没有可操作的歌曲", "当前详情页还没有已加载的歌曲。");
+            return Task.CompletedTask;
+        }
+
+        var dialogViewModel = new SongBatchActionDialogViewModel(
+            songs,
+            allowAddToPlaylist,
+            selectedSongs =>
+            {
+                DismissDialog();
+                WeakReferenceMessenger.Default.Send(new AddLoadedSongsToQueueMessage(selectedSongs.AsValueEnumerable().ToList()));
+                return Task.CompletedTask;
+            },
+            async selectedSongs =>
+            {
+                DismissDialog();
+                await ShowMultiPlaylistSelectionDialogAsync(selectedSongs);
+            },
+            selectedSongs =>
+            {
+                DismissDialog();
+                WeakReferenceMessenger.Default.Send(new ReplacePlaybackQueueMessage(
+                    selectedSongs.AsValueEnumerable().ToList(),
+                    selectedSongs[0]));
+                return Task.CompletedTask;
+            },
+            DismissDialog);
+
+        ShowDialog(new SongBatchActionDialog
+        {
+            DataContext = dialogViewModel
+        });
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ShowMultiPlaylistSelectionDialogAsync(IReadOnlyList<SongItem> songs)
+    {
+        if (!await _addToPlaylistDialogLock.WaitAsync(0))
+        {
+            ShowToast(NotificationType.Information, "请稍候", "歌单列表正在加载中...");
+            return;
+        }
+
+        try
+        {
+            var onlinePlaylists = await EnsureOnlinePlaylistsLoadedAsync();
+            if (onlinePlaylists.Count == 0)
+            {
+                ShowToast(NotificationType.Warning, "提示", "请先创建歌单");
+                return;
+            }
+
+            var dialogViewModel = new MultiPlaylistSelectionDialogViewModel(
+                songs.Count,
+                onlinePlaylists.AsValueEnumerable().Select(AddToPlaylistDialogViewModel.ToPlaylistDialogItem).ToArray(),
+                async selectedPlaylists =>
+                {
+                    DismissDialog();
+                    await AddSongsToMultiplePlaylistsInnerAsync(songs, selectedPlaylists);
+                },
+                DismissDialog);
+
+            ShowDialog(new MultiPlaylistSelectionDialog
+            {
+                DataContext = dialogViewModel
+            });
+        }
+        catch (TimeoutException ex)
+        {
+            DismissDialog();
+            logger.LogWarning(ex, "获取歌单列表超时");
+            ShowToast(NotificationType.Error, "加载超时", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            DismissDialog();
+            logger.LogError(ex, "获取歌单列表失败");
+            ShowToast(NotificationType.Error, "加载失败", ex.Message);
+        }
+        finally
+        {
+            _addToPlaylistDialogLock.Release();
+        }
+    }
+
+    private async Task<IReadOnlyList<UserPlaylistItem>> EnsureOnlinePlaylistsLoadedAsync()
+    {
+        var onlinePlaylists = userCreatedPlaylistCacheService.GetSnapshot();
+        if (onlinePlaylists.Count > 0)
+            return onlinePlaylists;
+
+        ShowProgressDialog("加载歌单", "正在获取你的歌单列表...");
+
+        try
+        {
+            var playlists = await WaitWithTimeoutAsync(
+                LoadAllCreatedPlaylistsAsync(),
+                LoadPlaylistDialogTimeout,
+                "加载歌单超时，请检查网络后重试。");
+
+            if (playlists is null)
+            {
+                logger.LogError("获取歌单列表失败");
+                ShowToast(NotificationType.Error, "加载失败", "歌单列表获取失败，请稍后再试。");
+                return [];
+            }
+
+            onlinePlaylists = playlists;
+            userCreatedPlaylistCacheService.Update(onlinePlaylists);
+            return onlinePlaylists;
+        }
+        finally
+        {
+            DismissDialog();
+        }
+    }
+
     private async Task<IReadOnlyList<UserPlaylistItem>?> LoadAllCreatedPlaylistsAsync()
     {
         var allPlaylists = new List<UserPlaylistItem>();
@@ -365,6 +468,101 @@ public partial class FavoritePlaylistService(
         return UserPlaylistDisplayHelper.OrderForDisplay(allPlaylists).AsValueEnumerable()
             .Where(item => !string.IsNullOrEmpty(item.ListCreateId) && item.Type == 0)
             .ToArray();
+    }
+
+    private async Task AddSongsToMultiplePlaylistsInnerAsync(
+        IReadOnlyList<SongItem> songs,
+        IReadOnlyList<PlaylistDialogPlaylistItemViewModel> selectedPlaylists)
+    {
+        if (songs.Count == 0 || selectedPlaylists.Count == 0)
+            return;
+
+        var songPayload = BuildSongPayload(songs);
+        if (songPayload.Count == 0)
+        {
+            ShowToast(NotificationType.Warning, "没有可添加的歌曲", "选中的歌曲缺少必要的在线标识。");
+            return;
+        }
+
+        var successPlaylists = new List<string>();
+        var failedPlaylists = new List<string>();
+        var likePlaylistUpdated = false;
+
+        try
+        {
+            ShowProgressDialog("正在添加", $"准备将 {songPayload.Count} 首歌曲加入 {selectedPlaylists.Count} 个歌单...");
+
+            foreach (var playlist in selectedPlaylists)
+            {
+                var result = await WaitWithTimeoutAsync(
+                    playlistClient.AddSongsAsync(playlist.ListId, songPayload),
+                    AddSongsToMultiplePlaylistsTimeout,
+                    $"添加到「{playlist.Name}」超时，请稍后重试。");
+
+                if (result?.Status == 1)
+                {
+                    successPlaylists.Add(playlist.Name);
+                    if (playlist.ListId == _likeListIdForAction)
+                    {
+                        UpdateLikeCacheAfterBatchAdd(songs);
+                        likePlaylistUpdated = true;
+                    }
+                }
+                else
+                {
+                    failedPlaylists.Add(playlist.Name);
+                }
+            }
+        }
+        catch (TimeoutException ex)
+        {
+            logger.LogWarning(ex, "批量添加歌曲到歌单超时");
+            ShowToast(NotificationType.Error, "添加超时", ex.Message);
+            return;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "批量添加歌曲到歌单失败");
+            ShowToast(NotificationType.Error, "添加失败", ex.Message);
+            return;
+        }
+        finally
+        {
+            DismissDialog();
+        }
+
+        if (likePlaylistUpdated)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(3000);
+                    await LoadLikeListAsync();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "批量添加到喜欢歌单后刷新喜欢列表失败");
+                }
+            });
+        }
+
+        if (successPlaylists.Count == selectedPlaylists.Count)
+        {
+            ShowToast(NotificationType.Success, "添加成功", $"已添加到 {successPlaylists.Count} 个歌单");
+            return;
+        }
+
+        if (successPlaylists.Count > 0)
+        {
+            ShowToast(
+                NotificationType.Warning,
+                "部分成功",
+                $"成功 {successPlaylists.Count} 个，失败 {failedPlaylists.Count} 个");
+            return;
+        }
+
+        ShowToast(NotificationType.Error, "添加失败", $"未能添加到 {failedPlaylists.Count} 个歌单");
     }
 
     private void UpsertSongInCache(SongItem song)
@@ -442,13 +640,7 @@ public partial class FavoritePlaylistService(
             {
                 if (playlistId == _likeListIdForAction)
                 {
-                    lock (_likedHashes)
-                    {
-                        _likedHashes.Add(song.Hash.ToLowerInvariant());
-                    }
-
-                    UpsertSongInCache(song);
-                    PersistCurrentLikeCacheSnapshot();
+                    UpdateLikeCacheAfterBatchAdd([song]);
 
                     _ = Task.Run(async () =>
                     {
@@ -483,6 +675,39 @@ public partial class FavoritePlaylistService(
             logger.LogError(ex, "添加歌曲到歌单失败");
             ShowToast(NotificationType.Error, "添加失败", ex.Message);
         }
+    }
+
+    private List<(string Name, string Hash, string AlbumId, string MixSongId)> BuildSongPayload(IReadOnlyList<SongItem> songs)
+    {
+        return songs.AsValueEnumerable()
+            .Where(song => !string.IsNullOrWhiteSpace(song.Hash))
+            .Select(song => (song.Name, song.Hash, song.AlbumId, "0"))
+            .ToList();
+    }
+
+    private void UpdateLikeCacheAfterBatchAdd(IEnumerable<SongItem> songs)
+    {
+        var changed = false;
+
+        lock (_likedHashes)
+        {
+            foreach (var song in songs)
+            {
+                if (string.IsNullOrWhiteSpace(song.Hash))
+                    continue;
+
+                _likedHashes.Add(song.Hash.ToLowerInvariant());
+                changed = true;
+            }
+        }
+
+        if (!changed)
+            return;
+
+        foreach (var song in songs)
+            UpsertSongInCache(song);
+
+        PersistCurrentLikeCacheSnapshot();
     }
 
     private LikeCacheFileModel BuildCacheModelFromRemote(UserPlaylistItem likePlaylist, List<PlaylistSong> songs)

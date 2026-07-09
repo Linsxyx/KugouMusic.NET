@@ -1,0 +1,220 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="KugouAvaloniaPlayer.Controls.MultiPlaylistSelectionDialog"
+             x:Name="DialogRoot"
+             x:DataType="vm:MultiPlaylistSelectionDialogViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ListBox.BatchSelectionList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.IsScrollChainingEnabled" Value="False" />
+        </Style>
+
+        <Style Selector="ListBox.BatchSelectionList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Background="Transparent" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <Style Selector="Border.PlaylistCard Border.Chrome">
+            <Setter Property="Background" Value="{DynamicResource SukiPrimaryColorLow}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource SukiBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Width="780"
+            Padding="22"
+            Background="{DynamicResource SukiBackground}"
+            CornerRadius="18">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+            <StackPanel Spacing="4"
+                        Margin="0,0,0,18">
+                <TextBlock Text="添加到歌单"
+                           FontSize="24"
+                           FontWeight="ExtraBold" />
+                <TextBlock Text="{Binding SongCount, StringFormat='将 {0} 首歌曲添加到一个或多个在线歌单'}"
+                           Foreground="{DynamicResource SukiLowText}" />
+            </StackPanel>
+
+            <Grid Row="1"
+                  ColumnDefinitions="*,Auto,Auto,Auto"
+                  ColumnSpacing="10"
+                  Margin="0,0,0,16">
+                <TextBox PlaceholderText="搜索歌单"
+                         Text="{Binding FilterText}" />
+
+                <Border Grid.Column="1"
+                        Padding="12,8"
+                        CornerRadius="999"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <TextBlock Text="{Binding SelectedCount, StringFormat='已选 {0} 个歌单'}"
+                               Foreground="{DynamicResource SukiLowText}" />
+                </Border>
+
+                <Button Grid.Column="2"
+                        Classes="Basic"
+                        Command="{Binding SelectAllFilteredCommand}">
+                    <TextBlock Text="全选当前筛选" />
+                </Button>
+
+                <Button Grid.Column="3"
+                        Classes="Basic"
+                        Command="{Binding ClearSelectionCommand}">
+                    <TextBlock Text="清空选择" />
+                </Button>
+            </Grid>
+
+            <Grid Row="2">
+                <Border IsVisible="{Binding !HasFilteredPlaylists}"
+                        Padding="24"
+                        CornerRadius="16"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <TextBlock Text="没有找到匹配的歌单"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="换个关键词试试，或者先创建一个在线歌单。"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <ListBox Classes="BatchSelectionList"
+                         IsVisible="{Binding HasFilteredPlaylists}"
+                         MaxHeight="360"
+                         SelectionMode="Toggle"
+                         ItemsSource="{Binding FilteredPlaylists}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:PlaylistDialogPlaylistItemViewModel">
+                            <Border Classes="PlaylistCard"
+                                    Height="102"
+                                    CornerRadius="18"
+                                    Background="Transparent"
+                                    Margin="0,0,12,12">
+                                <Grid>
+                                    <Border Classes="Chrome"
+                                            CornerRadius="18" />
+
+                                    <Border CornerRadius="18"
+                                            BorderBrush="{StaticResource SukiPrimaryColor}"
+                                            BorderThickness="2"
+                                            IsVisible="{Binding IsSelected}" />
+
+                                    <Grid ColumnDefinitions="Auto,76,*"
+                                          Margin="10">
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  VerticalAlignment="Center"
+                                                  Margin="2,0,6,0" />
+
+                                        <Border Grid.Column="1"
+                                                Width="66"
+                                                Height="66"
+                                                CornerRadius="14"
+                                                ClipToBounds="True"
+                                                Background="{StaticResource SukiPrimaryColor0}"
+                                                VerticalAlignment="Center">
+                                            <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
+                                                   behaviors:ImageRenderOptions.InterpolationSource="{Binding Cover}"
+                                                   Stretch="UniformToFill" />
+                                        </Border>
+
+                                        <StackPanel Grid.Column="2"
+                                                    Margin="12,2,8,2"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="5">
+                                            <Border Padding="8,3"
+                                                    CornerRadius="999"
+                                                    HorizontalAlignment="Left"
+                                                    Background="{StaticResource SukiPrimaryColor0}">
+                                                <TextBlock Text="{Binding BadgeText}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{StaticResource SukiPrimaryColor}" />
+                                            </Border>
+
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxWidth="220" />
+
+                                            <TextBlock Text="{Binding Subtitle}"
+                                                       FontSize="12"
+                                                       Foreground="{StaticResource SukiLowText}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxWidth="220" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <Grid Row="3"
+                  ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="10"
+                  Margin="0,18,0,0">
+                <TextBlock Text="{Binding SelectedCount, StringFormat='已选择 {0} 个歌单'}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SukiLowText}" />
+
+                <Button Grid.Column="1"
+                        Command="{Binding CancelCommand}"
+                        Classes="Basic">
+                    <TextBlock Text="取消" />
+                </Button>
+
+                <Button Grid.Column="2"
+                        Command="{Binding ConfirmCommand}"
+                        Classes="Standard"
+                        IsEnabled="{Binding CanConfirm}"
+                        MinWidth="140">
+                    <Grid ColumnDefinitions="Auto,Auto">
+                        <suki:Loading Width="16"
+                                      Height="16"
+                                      Margin="0,0,8,0"
+                                      IsVisible="{Binding IsSubmitting}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="添加到所选歌单"
+                                   IsVisible="{Binding !IsSubmitting}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="正在添加..."
+                                   IsVisible="{Binding IsSubmitting}" />
+                    </Grid>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

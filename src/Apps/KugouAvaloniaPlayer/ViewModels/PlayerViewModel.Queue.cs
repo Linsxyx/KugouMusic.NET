@@ -57,6 +57,18 @@ public partial class PlayerViewModel
         }
     }
 
+    private async Task ShowSongBatchActionDialogSafelyAsync(IReadOnlyList<SongItem> songs, bool allowAddToPlaylist)
+    {
+        try
+        {
+            await _favoriteService.ShowSongBatchActionDialogAsync(songs, allowAddToPlaylist);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "打开批量操作对话框失败");
+        }
+    }
+
     private void AddLoadedSongsToQueue(IReadOnlyList<SongItem> songs)
     {
         if (songs.Count == 0)
@@ -79,6 +91,31 @@ public partial class PlayerViewModel
             .WithContent($"已添加 {songs.Count} 首歌曲")
             .Dismiss().After(TimeSpan.FromSeconds(3))
             .Queue();
+    }
+
+    public async Task ReplacePlaybackQueueAsync(IReadOnlyList<SongItem> songs, SongItem? startSong = null)
+    {
+        if (songs.Count == 0)
+        {
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Warning)
+                .WithTitle("没有可播放的歌曲")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        var contextList = songs as IList<SongItem> ?? songs.AsValueEnumerable().ToList();
+        var normalizedStartSong = startSong is not null && contextList.Contains(startSong)
+            ? startSong
+            : contextList[0];
+        var queueSnapshot = contextList as IReadOnlyList<SongItem> ?? contextList.AsValueEnumerable().ToList();
+
+        if (IsPersonalFmSessionActive)
+            ClearPersonalFmSession();
+
+        _queueManager.RestoreQueue(queueSnapshot);
+        await PlaySongAsync(normalizedStartSong, contextList);
     }
 
     [RelayCommand]

@@ -10,7 +10,11 @@ public record AddToNextMessage(SongItem Song);
 
 public record AddLoadedSongsToQueueMessage(IReadOnlyList<SongItem> Songs);
 
+public record ShowSongBatchActionDialogMessage(IReadOnlyList<SongItem> Songs, bool AllowAddToPlaylist = true);
+
 public record ShowPlaylistDialogMessage(SongItem Song);
+
+public record ReplacePlaybackQueueMessage(IReadOnlyList<SongItem> Songs, SongItem? StartSong = null);
 
 public record NavigateToSingerMessage(SingerLite Singer);
 

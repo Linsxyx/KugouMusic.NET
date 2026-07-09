@@ -212,11 +212,11 @@
 
                                 <Button Grid.Column="2"
                                         Classes="Icon"
-                                        Command="{Binding #Root.AddLoadedSongsToQueueCommand}"
+                                        Command="{Binding #Root.OpenBatchActionsCommand}"
                                         IsVisible="{Binding #Root.ShowAddLoadedSongsToQueueButton}"
                                         Cursor="Hand"
-                                        ToolTip.Tip="添加到播放列表">
-                                    <Svg Classes="ThemeSvgIcon" Path="/Assets/PlaylistAdd.svg" Width="16" Height="16" />
+                                        ToolTip.Tip="批量操作">
+                                    <Svg Classes="ThemeSvgIcon" Path="/Assets/FormatList.svg" Width="16" Height="16" />
                                 </Button>
                             </Grid>
 
