@@ -191,6 +191,26 @@ public partial class PlayerViewModel
         IsShuffleMode ? PlayMode.Shuffle :
         PlayMode.Normal;
 
+    public string CurrentPlayModeDisplayText => CurrentPlayMode switch
+    {
+        PlayMode.RepeatOne => "单曲循环",
+        PlayMode.Shuffle => "随机播放",
+        _ => "列表循环"
+    };
+
+    [RelayCommand]
+    private void CyclePlayMode()
+    {
+        var nextMode = CurrentPlayMode switch
+        {
+            PlayMode.Normal => PlayMode.Shuffle,
+            PlayMode.Shuffle => PlayMode.RepeatOne,
+            _ => PlayMode.Normal
+        };
+
+        ApplyPlayMode(nextMode, saveSettings: true);
+    }
+
     [RelayCommand]
     private void SetPlayMode(PlayMode mode)
     {
@@ -232,6 +252,7 @@ public partial class PlayerViewModel
         OnPropertyChanged(nameof(IsRepeatOneMode));
         OnPropertyChanged(nameof(IsShuffleMode));
         OnPropertyChanged(nameof(CurrentPlayMode));
+        OnPropertyChanged(nameof(CurrentPlayModeDisplayText));
 
         if (!saveSettings)
             return;

@@ -5,7 +5,6 @@
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:local="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:models="using:KugouAvaloniaPlayer.Models"
              x:Class="KugouAvaloniaPlayer.Controls.BottomPlaybackControl"
              x:DataType="vm:MainWindowViewModel">
 
@@ -153,35 +152,11 @@
                             <Svg Classes="ThemeSvgIcon" Path="/Assets/next-svgrepo-com.svg" Width="16" Height="16" />
                         </Button>
                         <Button Cursor="Hand"
+                                Command="{Binding Player.CyclePlayModeCommand}"
                                 Classes="Basic"
-                                ToolTip.Tip="播放模式"
+                                ToolTip.Tip="{Binding Player.CurrentPlayModeDisplayText}"
                                 Width="32" Height="32"
                                 VerticalAlignment="Center">
-                            <Button.Flyout>
-                                <MenuFlyout>
-                                    <MenuItem Header="列表循环"
-                                              Command="{Binding Player.SetPlayModeCommand}"
-                                              CommandParameter="{x:Static models:PlayMode.Normal}">
-                                        <MenuItem.Icon>
-                                            <Svg Classes="ThemeSvgIcon" Path="/Assets/repeat-svgrepo-com.svg" Width="18" Height="18" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="单曲循环"
-                                              Command="{Binding Player.SetPlayModeCommand}"
-                                              CommandParameter="{x:Static models:PlayMode.RepeatOne}">
-                                        <MenuItem.Icon>
-                                            <Svg Classes="ThemeSvgIcon" Path="/Assets/repeat-one.svg" Width="18" Height="18" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Header="随机播放"
-                                              Command="{Binding Player.SetPlayModeCommand}"
-                                              CommandParameter="{x:Static models:PlayMode.Shuffle}">
-                                        <MenuItem.Icon>
-                                            <Svg Classes="ThemeSvgIcon" Path="/Assets/shuffle-svgrepo-com.svg" Width="18" Height="18" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                </MenuFlyout>
-                            </Button.Flyout>
                             <Panel>
                                 <!-- 列表循环 -->
                                 <Svg Classes="ThemeSvgIcon"
