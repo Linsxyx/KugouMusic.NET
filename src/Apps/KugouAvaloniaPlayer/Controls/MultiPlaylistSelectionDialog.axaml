@@ -53,7 +53,7 @@
                         Margin="0,0,0,18">
                 <TextBlock Text="添加到歌单"
                            FontSize="24"
-                           FontWeight="ExtraBold" />
+                           FontWeight="Bold" />
                 <TextBlock Text="{Binding SongCount, StringFormat='将 {0} 首歌曲添加到一个或多个在线歌单'}"
                            Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>

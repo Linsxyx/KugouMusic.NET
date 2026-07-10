@@ -86,7 +86,7 @@
                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,-4">
                         <TextBlock Text="探索发现"
                                    FontSize="30"
-                                   FontWeight="ExtraBold"
+                                   FontWeight="Bold"
                                    Foreground="{DynamicResource DiscoverSectionTitleBrush}" />
                            
 
@@ -168,7 +168,7 @@
                                                         <Grid RowDefinitions="Auto,*,Auto" Margin="12">
                                                             <TextBlock Text="{Binding Title}"
                                                                        FontSize="18"
-                                                                       FontWeight="ExtraBold"
+                                                                       FontWeight="Bold"
                                                                        Foreground="{DynamicResource DiscoverCardTextBrush}"
                                                                        TextTrimming="CharacterEllipsis" />
 
@@ -325,7 +325,7 @@
                                                 <Grid RowDefinitions="Auto,100" RowSpacing="16">
                                                     <TextBlock Text="{Binding Name}"
                                                                FontSize="19"
-                                                               FontWeight="ExtraBold"
+                                                               FontWeight="Bold"
                                                                Foreground="{DynamicResource DiscoverSectionTitleBrush}"
                                                                Width="356"
                                                                MaxLines="1"

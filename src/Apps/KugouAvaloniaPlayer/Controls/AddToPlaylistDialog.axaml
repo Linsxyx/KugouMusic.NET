@@ -80,7 +80,7 @@
                             Spacing="4">
                     <TextBlock Text="添加到歌单"
                                FontSize="24"
-                               FontWeight="ExtraBold" />
+                               FontWeight="Bold" />
                     <TextBlock Text="{Binding SongName}"
                                FontSize="16"
                                FontWeight="SemiBold"

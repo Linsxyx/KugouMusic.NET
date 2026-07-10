@@ -44,7 +44,7 @@
                 </Button>
                 <TextBlock Text="排行榜"
                            FontSize="28"
-                           FontWeight="ExtraBold"
+                           FontWeight="Bold"
                            VerticalAlignment="Center" />
             </StackPanel>
 

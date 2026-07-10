@@ -22,7 +22,7 @@
                     <StackPanel Spacing="4">
                         <TextBlock Text="本地音乐库"
                                    FontSize="26"
-                                   FontWeight="ExtraBold" />
+                                   FontWeight="Bold" />
                     </StackPanel>
 
                     <Button Grid.Column="1"

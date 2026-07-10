@@ -98,7 +98,7 @@ public class LyricLineControl : UserControl
     private TimeSpan _renderPosition;
     private bool _isApplyingPreset;
 
-    private const FontWeight DefaultFontWeight = FontWeight.ExtraBold;
+    private const FontWeight DefaultFontWeight = FontWeight.Bold;
     private const double TranslationStaticOpacity = 0.82d;
 
     public LyricLineControl()

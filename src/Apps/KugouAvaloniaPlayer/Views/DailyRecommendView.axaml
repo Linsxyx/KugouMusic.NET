@@ -85,7 +85,7 @@
             <Setter Property="Padding" Value="9,4" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="ExtraBold" />
+            <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Button.fm-pool-toggle:pointerover">
@@ -167,7 +167,7 @@
                         </Border>
                         <TextBlock Text="每日推荐"
                                    FontSize="34"
-                                   FontWeight="ExtraBold"
+                                   FontWeight="Bold"
                                    Foreground="White"
                                    TextTrimming="CharacterEllipsis"
                                    MaxWidth="520" />
@@ -192,7 +192,7 @@
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="{Binding FmCardTitle}"
                                                    FontSize="21"
-                                                   FontWeight="ExtraBold"
+                                                   FontWeight="Bold"
                                                    Foreground="White"
                                                    TextTrimming="CharacterEllipsis"
                                                    MaxWidth="180" />

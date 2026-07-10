@@ -162,7 +162,7 @@
                                 Spacing="10">
                         <TextBlock Text="{Binding #Root.Title}"
                                    FontSize="{Binding #Root.TitleFontSize}"
-                                   FontWeight="ExtraBold"
+                                   FontWeight="Bold"
                                    Foreground="White"
                                    TextTrimming="CharacterEllipsis"
                                    MaxWidth="{Binding #Root.TitleMaxWidth}" />

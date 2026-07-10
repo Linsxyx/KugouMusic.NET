@@ -38,7 +38,7 @@
                 </Button>
                 <TextBlock Text="发现歌单"
                            FontSize="28"
-                           FontWeight="ExtraBold"
+                           FontWeight="Bold"
                            VerticalAlignment="Center" />
                 <Button Classes="Basic" Command="{Binding LoadTagsCommand}" Cursor="Hand">
                     <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="{DynamicResource SukiLowText}" />

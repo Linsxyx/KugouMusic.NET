@@ -94,7 +94,7 @@
                           ColumnSpacing="12">
                         <TextBlock Text="设置"
                                    FontSize="22"
-                                   FontWeight="ExtraBold"
+                                   FontWeight="Bold"
                                    Foreground="{DynamicResource SukiText}"
                                    VerticalAlignment="Center" />
 

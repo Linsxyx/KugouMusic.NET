@@ -46,7 +46,7 @@
                 <TextBlock Text="{Binding Name}"
                            Classes="SongTitle"
                            Classes.playing="{Binding IsPlaying}"
-                           FontWeight="ExtraBold"
+                           FontWeight="Bold"
                            TextTrimming="CharacterEllipsis" />
                 <TextBlock Text="{Binding Singer}" FontSize="12" FontWeight="ExtraLight"
                            Foreground="{StaticResource SukiLiquid2}"

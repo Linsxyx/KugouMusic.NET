@@ -74,7 +74,7 @@
                                 <local:ScrollingTextBlock Text="{Binding Player.DisplayedPlayingSong.DisplayTitle, TargetNullValue='KA Music'}"
                                                           Width="200"
                                                           Height="18"
-                                                          FontWeight="SemiBold"
+                                                          FontWeight="Bold"
                                                           FontSize="13"
                                                           Foreground="{DynamicResource SukiText}" />
                                 <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer, TargetNullValue='Ready'}"

@@ -47,7 +47,7 @@
                         Margin="0,0,0,16">
                 <TextBlock Text="批量操作"
                            FontSize="26"
-                           FontWeight="ExtraBold" />
+                           FontWeight="Bold" />
                 <TextBlock Text="{Binding TotalSongCount, StringFormat='当前详情页已加载 {0} 首歌曲，可搜索并多选后执行操作'}"
                            Foreground="{DynamicResource SukiLowText}" />
             </StackPanel>

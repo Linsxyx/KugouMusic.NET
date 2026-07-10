@@ -188,10 +188,10 @@
             <Setter Property="RenderTransform" Value="rotate(90deg)" />
         </Style>
         <Style Selector="suki|SukiSideMenuItem /template/ TextBlock#PART_Header">
-            <Setter Property="FontWeight" Value="ExtraBold" />
+            <Setter Property="FontWeight" Value="Bold" />
         </Style>
         <Style Selector="suki|SukiSideMenuItem[IsSelected=True] /template/ TextBlock#PART_Header">
-            <Setter Property="FontWeight" Value="ExtraBold" />
+            <Setter Property="FontWeight" Value="Bold" />
         </Style>
     </suki:SukiWindow.Styles>
 
@@ -299,7 +299,7 @@
 
             <localControls:KugouSideMenu.ItemTemplate>
                 <DataTemplate DataType="vm:PageViewModelBase">
-                    <suki:SukiSideMenuItem Header="{Binding DisplayName}" FontWeight="ExtraBold">
+                    <suki:SukiSideMenuItem Header="{Binding DisplayName}" FontWeight="Bold">
                         <suki:SukiSideMenuItem.Icon>
                             <Svg Classes="ThemeSvgIcon" Path="{Binding Icon}" VerticalAlignment="Center" HorizontalAlignment="Center" />
                         </suki:SukiSideMenuItem.Icon>
