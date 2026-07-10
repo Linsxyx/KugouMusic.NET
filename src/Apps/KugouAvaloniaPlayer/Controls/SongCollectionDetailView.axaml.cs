@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using ZLinq;
 using System.Windows.Input;
 using Avalonia;
@@ -18,6 +20,9 @@ namespace KugouAvaloniaPlayer.Controls;
 
 public partial class SongCollectionDetailView : UserControl
 {
+    private INotifyCollectionChanged? _songsCollectionNotifier;
+    private PlayerViewModel? _subscribedPlayer;
+
     public static readonly StyledProperty<string?> CoverProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(Cover));
 
@@ -440,18 +445,30 @@ public partial class SongCollectionDetailView : UserControl
             change.Property == LightHeroBackgroundProperty ||
             change.Property == NightHeroBackgroundProperty)
             UpdateCurrentHeroBackground();
+
+        if (change.Property == SongsProperty)
+        {
+            DetachSongsCollectionChanged(change.OldValue as IEnumerable);
+            AttachSongsCollectionChanged(change.NewValue as IEnumerable);
+            SyncPlayingState();
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         SukiTheme.GetInstance().PropertyChanged += OnSukiThemePropertyChanged;
+        AttachSongsCollectionChanged(Songs);
+        AttachPlayerPropertyChanged();
         UpdateCurrentHeroBackground();
+        SyncPlayingState();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         SukiTheme.GetInstance().PropertyChanged -= OnSukiThemePropertyChanged;
+        DetachSongsCollectionChanged(Songs);
+        DetachPlayerPropertyChanged();
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -498,6 +515,79 @@ public partial class SongCollectionDetailView : UserControl
     {
         var topLevel = TopLevel.GetTopLevel(this);
         return (topLevel?.DataContext as MainWindowViewModel)?.Player.CurrentPlayingSong;
+    }
+
+    private void AttachSongsCollectionChanged(IEnumerable? songs)
+    {
+        if (ReferenceEquals(_songsCollectionNotifier, songs))
+            return;
+
+        DetachSongsCollectionChanged(_songsCollectionNotifier as IEnumerable);
+        _songsCollectionNotifier = songs as INotifyCollectionChanged;
+        if (_songsCollectionNotifier != null)
+            _songsCollectionNotifier.CollectionChanged += OnSongsCollectionChanged;
+    }
+
+    private void DetachSongsCollectionChanged(IEnumerable? songs)
+    {
+        var notifier = songs as INotifyCollectionChanged;
+        if (notifier != null)
+            notifier.CollectionChanged -= OnSongsCollectionChanged;
+
+        if (ReferenceEquals(_songsCollectionNotifier, notifier))
+            _songsCollectionNotifier = null;
+    }
+
+    private void AttachPlayerPropertyChanged()
+    {
+        var player = (TopLevel.GetTopLevel(this)?.DataContext as MainWindowViewModel)?.Player;
+        if (ReferenceEquals(_subscribedPlayer, player))
+            return;
+
+        DetachPlayerPropertyChanged();
+        _subscribedPlayer = player;
+        if (_subscribedPlayer != null)
+            _subscribedPlayer.PropertyChanged += OnPlayerPropertyChanged;
+    }
+
+    private void DetachPlayerPropertyChanged()
+    {
+        if (_subscribedPlayer != null)
+            _subscribedPlayer.PropertyChanged -= OnPlayerPropertyChanged;
+
+        _subscribedPlayer = null;
+    }
+
+    private void OnSongsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        SyncPlayingState();
+    }
+
+    private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(PlayerViewModel.CurrentPlayingSong))
+            return;
+
+        SyncPlayingState();
+    }
+
+    private void SyncPlayingState()
+    {
+        void Update()
+        {
+            var currentSong = ResolveCurrentPlayingSong();
+            var songs = Songs?.AsValueEnumerable().OfType<SongItem>().ToList();
+            if (songs == null || songs.Count == 0)
+                return;
+
+            foreach (var song in songs)
+                song.IsPlaying = IsSameSong(song, currentSong);
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+            Update();
+        else
+            Dispatcher.UIThread.Post(Update);
     }
 
     private static bool IsSameSong(SongItem candidate, SongItem? currentSong)
