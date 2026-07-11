@@ -214,23 +214,57 @@
                             VerticalAlignment="Center"
                             HorizontalAlignment="Right">
 
-                    <!-- 音量控制 -->
-                    <StackPanel Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Spacing="6">
+                    <!-- 音量控制：悬浮展开竖向滑块，点击按钮静音切换 -->
+                    <Button Cursor="Hand"
+                            Classes="Basic"
+                            Width="32"
+                            Height="32"
+                            ToolTip.Tip="音量">
+                        <Button.Flyout>
+                            <Flyout Placement="Top"
+                                    ShowMode="TransientWithDismissOnPointerMoveAway">
+                                <Border Background="{DynamicResource SukiGlassCardOpaqueBackground}"
+                                        BorderBrush="{DynamicResource SukiLiquid1}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="8,6"
+                                        Width="30">
+                                <Grid Height="96"
+                                      Width="52"
+                                      RowDefinitions="Auto,*">
+                                    <TextBlock Text="{Binding Player.MusicVolume, StringFormat='{}{0:P0}'}"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               HorizontalAlignment="Center"
+                                               Margin="0,0,0,5" />
+                                    <Border Grid.Row="1"
+                                            Width="30"
+                                            Height="78"
+                                            HorizontalAlignment="Center">
+                                      
+                                        <Slider Width="78"
+                                                Height="30"
+                                                Minimum="0"
+                                                Maximum="1"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                RenderTransform="rotate(270deg)"
+                                                Value="{Binding Player.MusicVolume}"
+                                                Classes="Player" />
+                                    </Border>
+                                </Grid>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
                         <Svg Classes="ThemeSvgIcon"
                              Path="/Assets/volume-max-svgrepo-com.svg"
-                             Width="15" Height="15"
+                             Width="18"
+                             Height="18"
                              Opacity="0.7" />
-                        <Slider Minimum="0"
-                                Maximum="1"
-                                Value="{Binding Player.MusicVolume}"
-                                Width="76"
-                                Classes="Player" />
-                    </StackPanel>
+                    </Button>
 
-                    <!-- 分隔感 -->
-                    <Border Width="1" Height="20" Opacity="0.12" Background="Gray" Margin="4,0" />
+                    <!--~1~ 分隔感 @1@
+                    <Border Width="1" Height="20" Opacity="0.12" Background="Gray" Margin="4,0" />-->
 
                     <Button Cursor="Hand"
                             Classes="Basic"
@@ -283,6 +317,7 @@
                             <DataTemplate DataType="x:String">
                                 <TextBlock
                                     Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
+
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                         <ComboBox.SelectionBoxItemTemplate>
