@@ -702,9 +702,9 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         IEnumerable<SongItem> sortedSongs = GetSortMode(CurrentSortText) switch
         {
             PlaylistSongSortMode.Artist => _selectedPlaylistSongsDefaultOrder
-                .OrderBy(song => song.Singer, StringComparer.CurrentCultureIgnoreCase),
+                .AsValueEnumerable().OrderBy(song => song.Singer, StringComparer.CurrentCultureIgnoreCase).ToArray(),
             PlaylistSongSortMode.Album => _selectedPlaylistSongsDefaultOrder
-                .OrderBy(song => song.AlbumName, StringComparer.CurrentCultureIgnoreCase),
+                .AsValueEnumerable().OrderBy(song => song.AlbumName, StringComparer.CurrentCultureIgnoreCase).ToArray(),
             _ => _selectedPlaylistSongsDefaultOrder
         };
 

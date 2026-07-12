@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using ZLinq;
 using Avalonia;
 using Avalonia.Media;
 
@@ -13,7 +13,7 @@ public static class AppFontService
     public static string[] LoadSystemFontFamilies()
     {
         return FontManager.Current.SystemFonts
-            .Select(f => f.Name)
+            .AsValueEnumerable().Select(f => f.Name)
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase)
@@ -29,7 +29,7 @@ public static class AppFontService
         if (!availableFonts.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
             return null;
 
-        return availableFonts.First(name => string.Equals(name, trimmed, StringComparison.OrdinalIgnoreCase));
+        return availableFonts.AsValueEnumerable().First(name => string.Equals(name, trimmed, StringComparison.OrdinalIgnoreCase));
     }
 
     public static bool IsSystemFontInstalled(string? fontFamilyName)
