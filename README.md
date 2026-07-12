@@ -187,6 +187,14 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
 
+### v3.0.0
+- 优化部分UI页面
+- 新增批量操作、歌单内歌曲查找
+- 新增歌手搜索
+- 新增排行榜分类
+- 新增歌曲排序
+- 修复部分已知问题
+
 ### v2.12.1
 - 支持倍速播放歌曲
 - 支持Windows任务栏缩略图工具栏
@@ -197,12 +205,6 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 ### v2.10.0
 - 优化大规模本地歌曲导入
 - 优化本地歌曲图片加载
-
-### v2.9.1
-- 修复自定义均衡器出错导致启动失败
-- 添加轻量级歌词滚动动画选项
-- 添加主窗口状态保存与恢复功能
-- 播放页添加全屏功能
 
 ## 开发者入口
 
