@@ -260,7 +260,7 @@
                     <PathIcon Data="{x:Static suki:Icons.WindowMinimize}"
                               Width="12"
                               Height="12"
-                              Margin="0,0,0,6.5" />
+                              Margin="0,0,0,-6.5" />
                 </Button>
                 <Button Classes="WindowControlsButton"
                         Command="{Binding RequestWindowToggleMaximizeCommand}"
