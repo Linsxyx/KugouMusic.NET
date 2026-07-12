@@ -308,15 +308,14 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
     private async Task LoadDailyRecommendationsAsync()
     {
         _logger.LogInformation("正在获取每日推荐...");
-        IsDailyRecommendationsLoading = true;
+        await Dispatcher.UIThread.InvokeAsync(() => IsDailyRecommendationsLoading = true);
         try
         {
             var response = await _discoveryClient.GetRecommendedSongsAsync();
             if (response?.Songs == null)
                 return;
 
-            Songs.Clear();
-            Songs.AddRange(response.Songs
+            var songs = response.Songs
                 .AsValueEnumerable().Select(item => new SongItem
                 {
                     Name = item.Name,
@@ -328,7 +327,13 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
                     Singers = item.Singers,
                     Cover = string.IsNullOrWhiteSpace(item.SizableCover) ? DefaultCover : item.SizableCover,
                     DurationSeconds = item.Duration
-                }).ToArray());
+                }).ToArray();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Songs.Clear();
+                Songs.AddRange(songs);
+            });
         }
         catch (Exception ex)
         {
@@ -336,7 +341,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
         }
         finally
         {
-            IsDailyRecommendationsLoading = false;
+            await Dispatcher.UIThread.InvokeAsync(() => IsDailyRecommendationsLoading = false);
         }
     }
 

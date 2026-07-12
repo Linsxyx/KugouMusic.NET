@@ -153,53 +153,60 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         if (_isDisposed)
             return;
 
-        Items.Clear();
-
-        if (!_userClient.IsLoggedIn())
+        try
         {
-            _userCreatedPlaylistCacheService.Clear();
-            return;
-        }
+            await Dispatcher.UIThread.InvokeAsync(Items.Clear);
 
-        var onlinePlaylists = await LoadAllOnlinePlaylistsAsync();
-        if (_isDisposed)
-            return;
-
-        if (onlinePlaylists is not null && onlinePlaylists.Status == 1)
-        {
-            var orderedPlaylists = UserPlaylistDisplayHelper.OrderForDisplay(onlinePlaylists.Playlists).AsValueEnumerable().ToArray();
-            _userCreatedPlaylistCacheService.Update(orderedPlaylists.AsValueEnumerable()
-                .Where(item => !string.IsNullOrEmpty(item.ListCreateId) && item.Type == 0)
-                .ToArray());
-
-            var onlineItems = new List<PlaylistItem>();
-            foreach (var item in orderedPlaylists)
-                if (!string.IsNullOrEmpty(item.ListCreateId) || item.IsCollectedAlbum)
-                    onlineItems.Add(new PlaylistItem
-                    {
-                        Name = item.Name,
-                        Id = item.IsCollectedAlbum ? item.AlbumId.ToString() : item.ListCreateId,
-                        ListId = item.ListId,
-                        Count = item.Count,
-                        Type = item.IsCollectedAlbum ? PlaylistType.Album : PlaylistType.Online,
-                        UserPlaylistType = item.Type,
-                        Cover = string.IsNullOrWhiteSpace(item.Pic)
-                            ? item.ListId != 2 ? DefaultCover : LikeCover
-                            : item.Pic,
-                        Subtitle = item.ListCreateUsername
-                    });
-
-            if (onlineItems.Count > 0)
-                Items.AddRange(onlineItems);
-        }
-        else
-        {
-            _logger.LogError("加载失败,err_code{onlinePlaylists.ErrorCode}" , onlinePlaylists?.Status);
-            if (_favoritePlaylistService.TryGetLikePlaylistCache(out var cachedLike))
+            if (!_userClient.IsLoggedIn())
             {
-                Items.Add(cachedLike.Playlist);
-                _logger.LogInformation("歌单列表远端失败，已从本地缓存兜底显示“我喜欢”。 source={Source}", cachedLike.Source);
+                _userCreatedPlaylistCacheService.Clear();
+                return;
             }
+
+            var onlinePlaylists = await LoadAllOnlinePlaylistsAsync();
+            if (_isDisposed)
+                return;
+
+            if (onlinePlaylists is not null && onlinePlaylists.Status == 1)
+            {
+                var orderedPlaylists = UserPlaylistDisplayHelper.OrderForDisplay(onlinePlaylists.Playlists).AsValueEnumerable().ToArray();
+                _userCreatedPlaylistCacheService.Update(orderedPlaylists.AsValueEnumerable()
+                    .Where(item => !string.IsNullOrEmpty(item.ListCreateId) && item.Type == 0)
+                    .ToArray());
+
+                var onlineItems = new List<PlaylistItem>();
+                foreach (var item in orderedPlaylists)
+                    if (!string.IsNullOrEmpty(item.ListCreateId) || item.IsCollectedAlbum)
+                        onlineItems.Add(new PlaylistItem
+                        {
+                            Name = item.Name,
+                            Id = item.IsCollectedAlbum ? item.AlbumId.ToString() : item.ListCreateId,
+                            ListId = item.ListId,
+                            Count = item.Count,
+                            Type = item.IsCollectedAlbum ? PlaylistType.Album : PlaylistType.Online,
+                            UserPlaylistType = item.Type,
+                            Cover = string.IsNullOrWhiteSpace(item.Pic)
+                                ? item.ListId != 2 ? DefaultCover : LikeCover
+                                : item.Pic,
+                            Subtitle = item.ListCreateUsername
+                        });
+
+                if (onlineItems.Count > 0)
+                    await Dispatcher.UIThread.InvokeAsync(() => Items.AddRange(onlineItems));
+            }
+            else
+            {
+                _logger.LogError("加载失败,err_code{ErrorCode}", onlinePlaylists?.ErrorCode);
+                if (_favoritePlaylistService.TryGetLikePlaylistCache(out var cachedLike))
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => Items.Add(cachedLike.Playlist));
+                    _logger.LogInformation("歌单列表远端失败，已从本地缓存兜底显示“我喜欢”。 source={Source}", cachedLike.Source);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "加载歌单列表失败");
         }
     }
 

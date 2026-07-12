@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Avalonia.Controls.Notifications;
+using Avalonia.Threading;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using Microsoft.Extensions.Logging;
@@ -45,12 +46,13 @@ internal sealed class LoginInitializationService(
         catch (Exception ex)
         {
             logger.LogError(ex, "登录初始化失败");
-            toastManager.CreateToast()
+            await Dispatcher.UIThread.InvokeAsync(() =>
+                toastManager.CreateToast()
                     .OfType(NotificationType.Error)
                     .WithTitle("登录初始化失败")
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .WithContent("登录初始化失败，请重新登录或检查网络连接")
-                    .Queue();
+                    .Queue());
             loginClient.LogOutAsync();
             return LoginInitializationResult.FailedResult;
         }
@@ -84,12 +86,13 @@ internal sealed class LoginInitializationService(
         if (history is not { Status: 1 })
         {
             logger.LogWarning("查询vip失败{ErrorCode}", history?.ErrorCode);
-            toastManager.CreateToast()
+            await Dispatcher.UIThread.InvokeAsync(() =>
+                toastManager.CreateToast()
                     .OfType(NotificationType.Warning)
                     .WithTitle("查询vip失败")
                     .Dismiss().After(TimeSpan.FromSeconds(3))
                     .WithContent("请重新登录或检查网络连接")
-                    .Queue();
+                    .Queue());
             return new VipInitializationResult(false, history?.ErrorCode.ToString());
         }
 
@@ -108,12 +111,13 @@ internal sealed class LoginInitializationService(
                 else
                 {
                     logger.LogError("vip领取失败{ErrorCode}", data?.ErrorCode);
-                    toastManager.CreateToast()
-                        .OfType(NotificationType.Warning)
-                        .WithTitle("领取vip失败")
-                        .Dismiss().After(TimeSpan.FromSeconds(3))
-                        .WithContent("请重新登录或在手机上手动领取")
-                        .Queue();
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                        toastManager.CreateToast()
+                            .OfType(NotificationType.Warning)
+                            .WithTitle("领取vip失败")
+                            .Dismiss().After(TimeSpan.FromSeconds(3))
+                            .WithContent("请重新登录或在手机上手动领取")
+                            .Queue());
                 }
 
                 await Task.Delay(1000);

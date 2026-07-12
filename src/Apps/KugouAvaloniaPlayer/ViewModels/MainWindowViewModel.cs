@@ -170,37 +170,47 @@ public partial class MainWindowViewModel : ObservableObject
                 message.CustomImageOpacity);
         });
 
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await LoadLocalSessionOrLogin();
-                await GetDailyRecommendations();
-                if (SettingsManager.Settings.AutoCheckUpdate) await _appUpdateService.CheckForUpdatesAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "启动后台初始化任务失败");
-            }
-        });
+        _ = InitializeStartupAsync();
 
         _ = ApplyDeferredStartupPreferencesAsync();
     }
 
+    private async Task InitializeStartupAsync()
+    {
+        try
+        {
+            await LoadLocalSessionOrLogin();
+            await GetDailyRecommendations();
+            if (SettingsManager.Settings.AutoCheckUpdate)
+                await _appUpdateService.CheckForUpdatesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "启动后台初始化任务失败");
+        }
+    }
+
     private async Task ApplyDeferredStartupPreferencesAsync()
     {
-        await Task.Delay(TimeSpan.FromMilliseconds(800));
-        await Player.RestoreCachedPlaybackQueueAsync();
-
-        Dispatcher.UIThread.Post(() =>
+        try
         {
-            var savedPlaybackMode = SettingsManager.Settings.PlaybackMode;
-            if (savedPlaybackMode != PlayMode.Normal)
-                Player.ApplySavedPlaybackModePreference();
+            await Task.Delay(TimeSpan.FromMilliseconds(800));
+            await Player.RestoreCachedPlaybackQueueAsync();
 
-            if (SettingsManager.Settings.OpenDesktopLyricOnStartup && !_desktopLyricWindowService.IsOpen)
-                _desktopLyricWindowService.Toggle();
-        });
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var savedPlaybackMode = SettingsManager.Settings.PlaybackMode;
+                if (savedPlaybackMode != PlayMode.Normal)
+                    Player.ApplySavedPlaybackModePreference();
+
+                if (SettingsManager.Settings.OpenDesktopLyricOnStartup && !_desktopLyricWindowService.IsOpen)
+                    _desktopLyricWindowService.Toggle();
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "应用延迟启动设置失败");
+        }
     }
 
     private void ApplyCustomBackgroundImage(
@@ -454,9 +464,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            var vipResult = await _loginInitializationService.TryReceiveStartupVipAsync();
-            if (!vipResult.Success)
-                ShowVipQueryFailedToast(vipResult.ErrorCode);
+            await _loginInitializationService.TryReceiveStartupVipAsync();
 
             await Player.LoadLikeListAsync();
         }
@@ -483,16 +491,6 @@ public partial class MainWindowViewModel : ObservableObject
         ToastManager.CreateToast()
             .OfType(NotificationType.Warning)
             .WithTitle("加载用户失败")
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Dismiss().ByClicking()
-            .Queue();
-    }
-
-    private void ShowVipQueryFailedToast(string? errorCode)
-    {
-        ToastManager.CreateToast()
-            .OfType(NotificationType.Warning)
-            .WithTitle($"查询vip失败,{errorCode}")
             .Dismiss().After(TimeSpan.FromSeconds(3))
             .Dismiss().ByClicking()
             .Queue();
