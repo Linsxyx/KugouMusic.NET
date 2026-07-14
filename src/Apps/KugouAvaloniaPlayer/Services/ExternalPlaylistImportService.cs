@@ -81,10 +81,6 @@ public sealed class ExternalPlaylistImportService(
         try
         {
             await playlistClient.CreatePlaylistAsync(targetPlaylistName);
-            var target = await WaitForCreatedPlaylistAsync(targetPlaylistName, cancellationToken);
-
-            if (target == null)
-                return new ExternalPlaylistImportResult { ErrorMessage = "创建成功，但未找到目标歌单，请稍后重试。" };
 
             var sourceSongNames = parseResult.SongNames.AsValueEnumerable().Reverse().ToList();
             var total = sourceSongNames.Count;
@@ -137,6 +133,12 @@ public sealed class ExternalPlaylistImportService(
                     Message = $"正在匹配歌曲 {matchedProcessed}/{total}"
                 });
             }
+
+            // 歌曲搜索期间给服务端同步新歌单留出时间。创建接口成功并不保证
+            // 紧接着的用户歌单列表接口已经能看到这个歌单。
+            var target = await GetCreatedPlaylistWithRetryAsync(targetPlaylistName, cancellationToken);
+            if (target == null)
+                return new ExternalPlaylistImportResult { ErrorMessage = "创建成功，但未找到目标歌单，请稍后重试。" };
 
             var imported = 0;
             var addProcessed = 0;
@@ -194,30 +196,31 @@ public sealed class ExternalPlaylistImportService(
         }
     }
 
-    private async Task<UserPlaylistItem?> WaitForCreatedPlaylistAsync(
+    private async Task<UserPlaylistItem?> GetCreatedPlaylistWithRetryAsync(
         string targetPlaylistName,
         CancellationToken cancellationToken)
     {
-        const int maxRetries = 8;
-        var delay = TimeSpan.FromMilliseconds(500);
+        var target = await FindCreatedPlaylistAsync(targetPlaylistName, cancellationToken);
+        if (target != null)
+            return target;
 
-        for (var i = 0; i < maxRetries; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
+        // 只在第一次列表查询未看到时额外等待一次，避免同步延迟导致导入被误判失败。
+        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+        return await FindCreatedPlaylistAsync(targetPlaylistName, cancellationToken);
+    }
 
-            var playlists = await userClient.GetPlaylistsAsync();
-            var target = playlists?.Playlists?
-                .AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x.ListCreateId)
-                                                && string.Equals(x.Name, targetPlaylistName, StringComparison.Ordinal))
-                .OrderByDescending(x => x.ListId)
-                .FirstOrDefault();
+    private async Task<UserPlaylistItem?> FindCreatedPlaylistAsync(
+        string targetPlaylistName,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
-            if (target != null)
-                return target;
+        var playlists = await userClient.GetPlaylistsAsync();
+        return playlists?.Playlists?
+            .AsValueEnumerable().Where(x => !string.IsNullOrWhiteSpace(x.ListCreateId)
+                                            && string.Equals(x.Name, targetPlaylistName, StringComparison.Ordinal))
+            .OrderByDescending(x => x.ListId)
+            .FirstOrDefault();
 
-            await Task.Delay(delay, cancellationToken);
-        }
-
-        return null;
     }
 }
