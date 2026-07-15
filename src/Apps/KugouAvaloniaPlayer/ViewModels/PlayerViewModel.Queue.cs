@@ -271,11 +271,15 @@ public partial class PlayerViewModel
     }
 
     [RelayCommand]
-    private void RemoveFromQueue(SongItem song)
-    {
+    private async Task RemoveFromQueue(SongItem song) {
+        if (song == CurrentPlayingSong) {
+            if (_queueManager.PlaybackQueue.Count <= 1)
+                StopAndReset();
+            else
+                await PlaySongAsync(_queueManager.GetNext(CurrentPlayingSong));
+        }
+
         _queueManager.Remove(song);
-        if (_queueManager.PlaybackQueue.Count == 0)
-            StopAndReset();
 
         SchedulePlaybackQueueCacheSave();
     }

@@ -31,14 +31,12 @@ public partial class SongItem : ObservableObject
     [ObservableProperty]
     public partial long FileId { get; set; }
 
-    [ObservableProperty]
-    public partial string Hash { get; set; } = "";
+    public string Hash { get; init; } = "";
 
     [ObservableProperty]
     public partial bool IsPlaying { get; set; }
 
-    [ObservableProperty]
-    public partial string? LocalFilePath { get; set; }
+    public string? LocalFilePath { get; init; }
 
     [ObservableProperty]
     public partial string? LocalSourceType { get; set; }
@@ -46,8 +44,7 @@ public partial class SongItem : ObservableObject
     [ObservableProperty]
     public partial long LocalTrackId { get; set; }
 
-    [ObservableProperty]
-    public partial string? RemoteUrl { get; set; }
+    public string? RemoteUrl { get; init; }
 
     [ObservableProperty]
     public partial string Name { get; set; } = "";
@@ -57,6 +54,7 @@ public partial class SongItem : ObservableObject
 
     [ObservableProperty]
     public partial string Singer { get; set; } = "";
+
     public List<SingerLite> Singers { get; set; } = new();
 
     public string DisplayTitle => NormalizeDisplayTitle(Name, Singer);
@@ -129,6 +127,20 @@ public partial class SongItem : ObservableObject
 
         return trimmedName;
     }
+
+    public static bool operator ==(SongItem? a, SongItem? b) =>
+        (a is null && b is null) ||
+        (!string.IsNullOrWhiteSpace(a?.LocalFilePath) && a.LocalFilePath == b?.LocalFilePath) ||
+        (!string.IsNullOrWhiteSpace(a?.RemoteUrl) && a.RemoteUrl == b?.RemoteUrl && a.Hash == b.Hash);
+
+    public static bool operator !=(SongItem? a, SongItem? b) => !(a == b);
+
+    public override bool Equals(object? obj) => obj is SongItem item && this == item;
+
+    public override int GetHashCode() =>
+        string.IsNullOrWhiteSpace(Hash) ?
+            HashCode.Combine(LocalFilePath ?? RemoteUrl) :
+            HashCode.Combine(LocalFilePath ?? RemoteUrl, Hash);
 }
 
 public partial class PlaylistItem : ObservableObject

@@ -197,7 +197,20 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             (_, m) =>
             {
                 if (!AddSongToPersonalFmNext(m.Song))
-                    _queueManager.AddToNext(m.Song, CurrentPlayingSong);
+                    if (m.Song == CurrentPlayingSong) {
+                        _toastManager.CreateToast()
+                                     .OfType(NotificationType.Error)
+                                     .WithTitle("添加失败")
+                                     .WithContent("当前正在播放的歌曲不能添加到下一首")
+                                     .Dismiss()
+                                     .After(TimeSpan.FromSeconds(3))
+                                     .Dismiss()
+                                     .ByClicking()
+                                     .Queue();
+                        return;
+                    }
+
+                _queueManager.AddToNext(m.Song, CurrentPlayingSong);
             });
         WeakReferenceMessenger.Default.Register<AddLoadedSongsToQueueMessage>(this,
             (_, m) => AddLoadedSongsToQueue(m.Songs));
