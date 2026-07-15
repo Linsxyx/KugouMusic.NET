@@ -1,4 +1,4 @@
-    <Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -17,6 +17,12 @@
         Background="Transparent">
 
     <Window.Styles>
+        <Style Selector="Button">
+            <Setter Property="IsTabStop" Value="False" />
+            <Style Selector="^:focus-visible">
+                <Setter Property="FocusAdorner" Value="{x:Null}" />
+            </Style>
+        </Style>
         <Style Selector="Border#LockBubble">
             <Setter Property="Background" Value="#70353535" />
             <Setter Property="CornerRadius" Value="16" />
@@ -53,7 +59,8 @@
             PointerEntered="OnHotspotPointerEntered"
             PointerExited="OnHotspotPointerExited"
             PointerPressed="OnHotspotPointerPressed">
-        <PathIcon Data="M16,8 A4,4 0 0 0 8,8 L8,11 L7,11 C5.9,11 5,11.9 5,13 L5,21 C5,22.1 5.9,23 7,23 L17,23 C18.1,23 19,22.1 19,21 L19,13 C19,11.9 18.1,11 17,11 L16,11 L16,8 M10,8 A2,2 0 0 1 14,8 L14,11 L10,11 L10,8 Z"
-                  Foreground="White" />
+        <PathIcon
+            Data="M16,8 A4,4 0 0 0 8,8 L8,11 L7,11 C5.9,11 5,11.9 5,13 L5,21 C5,22.1 5.9,23 7,23 L17,23 C18.1,23 19,22.1 19,21 L19,13 C19,11.9 18.1,11 17,11 L16,11 L16,8 M10,8 A2,2 0 0 1 14,8 L14,11 L10,11 L10,8 Z"
+            Foreground="White" />
     </Border>
 </Window>
