@@ -308,7 +308,11 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                 if (sourceInfo.FailureReason == PlaybackSourceFailureReason.LoginRequired)
                     return;
 
-                HandlePlayError(song, requestVersion);
+                HandlePlayError(
+                    song,
+                    requestVersion,
+                    "获取 URL 失败",
+                    GetPlaybackSourceFailureDetail(sourceInfo.FailureReason));
                 return;
             }
 
@@ -361,7 +365,11 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             }
             else
             {
-                HandlePlayError(song, requestVersion);
+                HandlePlayError(
+                    song,
+                    requestVersion,
+                    "获取到 URL 但播放失败",
+                    _player.LastErrorDetail ?? "播放器未提供错误详情");
             }
         }
         catch (Exception ex)
@@ -426,18 +434,19 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         cts.Dispose();
     }
 
-    private void HandlePlayError(SongItem song, int requestVersion)
+    private void HandlePlayError(SongItem song, int requestVersion, string failureStage, string detail)
     {
         _consecutiveFailures++;
         _logger.LogWarning(
-            "加载失败 ({ConsecutiveFailures}/{MaxConsecutiveFailures}): {SongName}. Detail={Detail}",
+            "{FailureStage} ({ConsecutiveFailures}/{MaxConsecutiveFailures}): {SongName}. Detail={Detail}",
+            failureStage,
             _consecutiveFailures,
             MaxConsecutiveFailures,
             song.Name,
-            _player.LastErrorDetail ?? "n/a");
+            detail);
         _toastManager.CreateToast()
             .OfType(NotificationType.Warning)
-            .WithTitle("加载失败")
+            .WithTitle(failureStage)
             .Dismiss().After(TimeSpan.FromSeconds(3))
             .WithContent($"{song.Name}")
             .Queue();
@@ -464,6 +473,17 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
                     .Queue();
             }
         });
+    }
+
+    private static string GetPlaybackSourceFailureDetail(PlaybackSourceFailureReason reason)
+    {
+        return reason switch
+        {
+            PlaybackSourceFailureReason.Unavailable => "播放地址接口返回不可用",
+            PlaybackSourceFailureReason.EmptyUrl => "播放地址接口未返回有效 URL",
+            PlaybackSourceFailureReason.LoginRequired => "需要登录后才能获取播放地址",
+            _ => $"未知音源解析错误: {reason}"
+        };
     }
 
     private void ShowPlaybackSourceFailure(PlaybackSourceFailureReason reason)
