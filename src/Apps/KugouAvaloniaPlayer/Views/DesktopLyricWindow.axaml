@@ -19,6 +19,14 @@
         WindowStartupLocation="Manual">
 
     <Window.Styles>
+
+        <Style Selector="Button">
+            <Setter Property="IsTabStop" Value="False" />
+            <Style Selector="^:focus-visible">
+                <Setter Property="FocusAdorner" Value="{x:Null}" />
+            </Style>
+        </Style>
+
         <Style Selector="Border#BackgroundPlate">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="CornerRadius" Value="12" />
