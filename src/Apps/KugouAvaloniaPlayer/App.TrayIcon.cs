@@ -57,7 +57,6 @@ partial class App
         exitItem.Click += (s, e) =>
         {
             if (desktop.MainWindow is MainWindow mainWindowInstance) mainWindowInstance.CanClose = true;
-            _trayIcon?.Dispose();
             desktop.Shutdown();
         };
 
