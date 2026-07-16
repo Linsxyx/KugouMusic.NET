@@ -6,7 +6,8 @@
              xmlns:local="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              x:Class="KugouAvaloniaPlayer.Controls.BottomPlaybackControl"
-             x:DataType="vm:MainWindowViewModel">
+             x:DataType="vm:MainWindowViewModel"
+             Name="PlaybackControlPanel">
 
     <UserControl.Styles>
         <Style Selector="suki|GlassCard#MiniPlayer">
@@ -215,48 +216,58 @@
                             Classes="Basic"
                             Width="32"
                             Height="32"
-                            ToolTip.Tip="音量">
-                        <Button.Flyout>
+                            ToolTip.Tip="音量"
+                            PointerEntered="VolumeButton_OnPointerEntered"
+                            Click="VolumeButton_OnClick">
+                        <!-- 使用AttachedFlyout以禁用Button的触发影响 -->
+                        <FlyoutBase.AttachedFlyout>
                             <Flyout Placement="Top"
-                                    ShowMode="TransientWithDismissOnPointerMoveAway">
-                                <Border Background="{DynamicResource SukiGlassCardOpaqueBackground}"
-                                        BorderBrush="{DynamicResource SukiLiquid1}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="8,6"
-                                        Width="30">
-                                <Grid Height="96"
-                                      Width="52"
-                                      RowDefinitions="Auto,*">
-                                    <TextBlock Text="{Binding Player.MusicVolume, StringFormat='{}{0:P0}'}"
-                                               FontSize="11"
-                                               FontWeight="Bold"
-                                               HorizontalAlignment="Center"
-                                               Margin="0,0,0,5" />
-                                    <Border Grid.Row="1"
-                                            Width="30"
-                                            Height="78"
-                                            HorizontalAlignment="Center">
-                                      
-                                        <Slider Width="78"
-                                                Height="30"
-                                                Minimum="0"
-                                                Maximum="1"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                RenderTransform="rotate(270deg)"
-                                                Value="{Binding Player.MusicVolume}"
-                                                Classes="Player" />
-                                    </Border>
-                                </Grid>
-                                </Border>
+                                    ShowMode="TransientWithDismissOnPointerMoveAway"
+                                    OverlayInputPassThroughElement="{Binding #PlaybackControlPanel}">
+                                <suki:GlassCard Height="150" Width="40" HorizontalContentAlignment="Center" Margin="0"
+                                                Padding="3 12 3 2" Focusable="False">
+                                    <StackPanel Orientation="Vertical" Spacing="8">
+                                        <TextBlock DockPanel.Dock="Top" Focusable="False"
+                                                   Text="{Binding Player.MusicVolume, StringFormat='{}{0:P0}'}"
+                                                   FontSize="11"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Center" />
+                                        <LayoutTransformControl LayoutTransform="rotate(-90deg)"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Stretch">
+                                            <Slider Width="100" Height="5"
+                                                    Minimum="0" Maximum="1"
+                                                    SmallChange="0.05" LargeChange="0.1"
+                                                    TickFrequency="0.25"
+                                                    Value="{Binding Player.MusicVolume}"
+                                                    Classes="Player" x:Name="VolumeSlider"
+                                                    PointerWheelChanged="VolumeSlider_OnPointerWheelChanged">
+                                                <Slider.Styles>
+                                                    <Style Selector="Slider /template/ Thumb#thumb">
+                                                        <Setter Property="Height" Value="1" />
+                                                        <Setter Property="IsVisible" Value="False" />
+                                                    </Style>
+                                                </Slider.Styles>
+                                            </Slider>
+                                        </LayoutTransformControl>
+                                    </StackPanel>
+                                </suki:GlassCard>
                             </Flyout>
-                        </Button.Flyout>
-                        <Svg Classes="ThemeSvgIcon"
-                             Path="/Assets/volume-max-svgrepo-com.svg"
-                             Width="18"
-                             Height="18"
-                             Opacity="0.7" />
+                        </FlyoutBase.AttachedFlyout>
+                        <Panel>
+                            <Svg Classes="ThemeSvgIcon"
+                                 Path="/Assets/volume-max-svgrepo-com.svg"
+                                 Width="18"
+                                 Height="18"
+                                 Opacity="0.7"
+                                 IsVisible="{Binding !Player.IsMuted}" />
+                            <Svg Classes="ThemeSvgIcon"
+                                 Path="/Assets/VolumeOff.svg"
+                                 Width="18"
+                                 Height="18"
+                                 Opacity="0.7"
+                                 IsVisible="{Binding Player.IsMuted}" />
+                        </Panel>
                     </Button>
 
                     <!--~1~ 分隔感 @1@

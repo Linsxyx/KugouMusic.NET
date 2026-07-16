@@ -515,6 +515,7 @@
                                                         <Slider Grid.Column="1"
                                                                 Minimum="0"
                                                                 Maximum="1"
+                                                                SmallChange="0.05" LargeChange="0.1"
                                                                 Value="{Binding Player.MusicVolume}"
                                                                 Classes="Player PlayerLight PlayerCompact"
                                                                 HorizontalAlignment="Stretch" />
