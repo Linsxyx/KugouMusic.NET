@@ -105,7 +105,6 @@
                                 Command="{Binding Player.ToggleLikeCommand}"
                                 Classes="Basic QueueDependent"
                                 Classes.empty="{Binding !Player.HasDisplayPlaybackQueue}"
-                                ToolTip.Tip="添加到我喜欢"
                                 Width="32"
                                 Height="32"
                                 VerticalAlignment="Center">
@@ -124,7 +123,6 @@
                         <Button Cursor="Hand"
                                 Command="{Binding Player.PlayPreviousCommand}"
                                 Classes="Basic"
-                                ToolTip.Tip="上一首"
                                 Width="32" Height="32">
                             <Svg Classes="ThemeSvgIcon" Path="/Assets/backward.svg" Width="16" Height="16" />
                         </Button>
@@ -147,14 +145,12 @@
                         <Button Cursor="Hand"
                                 Command="{Binding Player.PlayNextCommand}"
                                 Classes="Basic"
-                                ToolTip.Tip="下一首"
                                 Width="32" Height="32">
                             <Svg Classes="ThemeSvgIcon" Path="/Assets/next-svgrepo-com.svg" Width="16" Height="16" />
                         </Button>
                         <Button Cursor="Hand"
                                 Command="{Binding Player.CyclePlayModeCommand}"
                                 Classes="Basic"
-                                ToolTip.Tip="{Binding Player.CurrentPlayModeDisplayText}"
                                 Width="32" Height="32"
                                 VerticalAlignment="Center">
                             <Panel>
@@ -268,7 +264,6 @@
 
                     <Button Cursor="Hand"
                             Classes="Basic"
-                            ToolTip.Tip="播放倍速"
                             VerticalAlignment="Center"
                             Padding="8,0"
                             MinWidth="68"
