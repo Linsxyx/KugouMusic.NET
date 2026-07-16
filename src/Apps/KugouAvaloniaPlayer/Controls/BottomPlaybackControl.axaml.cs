@@ -1,9 +1,11 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using KugouAvaloniaPlayer.ViewModels;
 
 namespace KugouAvaloniaPlayer.Controls;
 
@@ -106,5 +108,25 @@ public partial class BottomPlaybackControl : UserControl
         }
 
         return false;
+    }
+
+    private void VolumeButton_OnPointerEntered(object? sender, PointerEventArgs e) {
+        if (sender is not Button button)
+            return;
+        FlyoutBase.ShowAttachedFlyout(button);
+        VolumeSlider.Focus();
+    }
+
+    private void VolumeButton_OnClick(object? sender, RoutedEventArgs e) {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+        vm.Player.ToggleMute();
+        e.Handled = true;
+    }
+
+    private void VolumeSlider_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e) {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+        vm.Player.MusicVolume = Math.Clamp((float)(vm.Player.MusicVolume+0.01f* e.Delta.Y), 0f, 1f);
     }
 }

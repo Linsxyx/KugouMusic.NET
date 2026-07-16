@@ -129,7 +129,22 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     public partial double NowPlayingLyricsTranslateY { get; set; }
 
     [ObservableProperty]
-    public partial float MusicVolume { get; set; } = 0.8f;
+    [NotifyPropertyChangedFor(nameof(IsMuted))]
+    public partial float MusicVolume { get; set; }
+
+    private float _memorizedVolume;
+
+    public bool IsMuted => MusicVolume == 0;
+
+    public void ToggleMute(bool? isMute = null) {
+        isMute ??= !IsMuted;
+        if (isMute is true) {
+            if (MusicVolume != 0)
+                _memorizedVolume = MusicVolume;
+            MusicVolume = 0;
+        } else
+            MusicVolume = _memorizedVolume;
+    }
 
     private TransitionProfile? _pendingTransitionProfile;
     private SongItem? _pendingTransitionSong;
