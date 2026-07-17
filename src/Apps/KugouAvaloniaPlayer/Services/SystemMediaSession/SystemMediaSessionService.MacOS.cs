@@ -1,11 +1,17 @@
 #if KUGOU_MACOS
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
+using ATL;
 using Avalonia.Controls;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Messaging;
+using KugouAvaloniaPlayer.Converters;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -13,11 +19,15 @@ using Microsoft.Extensions.Logging;
 namespace KugouAvaloniaPlayer.Services.SystemMediaSession;
 
 public sealed class SystemMediaSessionService(
+    IHttpClientFactory httpClientFactory,
     ILogger<SystemMediaSessionService> logger) : ISystemMediaSessionService
 {
+    private const string DefaultArtwork = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
     private static readonly TimeSpan TimelineUpdateInterval = TimeSpan.FromMilliseconds(750);
     private static readonly IntPtr SelAlloc = sel_registerName("alloc");
     private static readonly IntPtr SelInit = sel_registerName("init");
+    private static readonly IntPtr SelRetain = sel_registerName("retain");
+    private static readonly IntPtr SelAutorelease = sel_registerName("autorelease");
     private static readonly IntPtr SelRelease = sel_registerName("release");
     private static readonly IntPtr SelSharedCenter = sel_registerName("defaultCenter");
     private static readonly IntPtr SelSharedCommandCenter = sel_registerName("sharedCommandCenter");
@@ -28,6 +38,10 @@ public sealed class SystemMediaSessionService(
     private static readonly IntPtr SelSetObjectForKey = sel_registerName("setObject:forKey:");
     private static readonly IntPtr SelStringWithUtf8String = sel_registerName("stringWithUTF8String:");
     private static readonly IntPtr SelNumberWithDouble = sel_registerName("numberWithDouble:");
+    private static readonly IntPtr SelDataWithBytesLength = sel_registerName("dataWithBytes:length:");
+    private static readonly IntPtr SelInitWithData = sel_registerName("initWithData:");
+    private static readonly IntPtr SelInitWithBoundsSizeRequestHandler =
+        sel_registerName("initWithBoundsSize:requestHandler:");
     private static readonly IntPtr SelAddTargetAction = sel_registerName("addTarget:action:");
     private static readonly IntPtr SelRemoveTarget = sel_registerName("removeTarget:");
     private static readonly IntPtr SelSetEnabled = sel_registerName("setEnabled:");
@@ -45,15 +59,21 @@ public sealed class SystemMediaSessionService(
     private static readonly CommandActionDelegate s_nextHandler = HandleNextCommand;
     private static readonly CommandActionDelegate s_previousHandler = HandlePreviousCommand;
     private static readonly CommandActionDelegate s_changePlaybackPositionHandler = HandleChangePlaybackPositionCommand;
+    private static readonly ArtworkRequestDelegate s_artworkRequestHandler = HandleArtworkRequest;
+    private static readonly IntPtr s_artworkRequestBlock = CreateArtworkRequestBlock();
     private static IntPtr s_mediaPlayerFramework;
     private static IntPtr s_commandTargetClass;
     private static SystemMediaSessionService? s_currentInstance;
 
     private readonly List<IntPtr> _registeredCommands = [];
+    private readonly object _artworkSync = new();
     private PlayerViewModel? _playerViewModel;
     private IntPtr _commandCenter;
     private IntPtr _commandTarget;
     private IntPtr _nowPlayingInfoCenter;
+    private IntPtr _artwork;
+    private IntPtr _artworkImage;
+    private int _artworkLoadVersion;
     private DateTimeOffset _lastTimelineUpdate = DateTimeOffset.MinValue;
     private SongItem? _currentSong;
     private bool _isInitialized;
@@ -85,7 +105,7 @@ public sealed class SystemMediaSessionService(
             s_currentInstance = this;
             RegisterRemoteCommands();
             _isInitialized = true;
-            UpdateNowPlayingInfo();
+            _ = UpdateSongAsync(_currentSong);
             logger.LogInformation("macOS 系统媒体控件已启用。");
         }
         catch (Exception ex)
@@ -95,11 +115,25 @@ public sealed class SystemMediaSessionService(
         }
     }
 
-    public Task UpdateSongAsync(SongItem? song)
+    public async Task UpdateSongAsync(SongItem? song)
     {
         _currentSong = song;
+        ReleaseArtwork();
         UpdateNowPlayingInfo();
-        return Task.CompletedTask;
+
+        var loadVersion = Interlocked.Increment(ref _artworkLoadVersion);
+        var imageBytes = await LoadArtworkBytesAsync(song?.Cover).ConfigureAwait(false);
+        if (loadVersion != Volatile.Read(ref _artworkLoadVersion) || !ReferenceEquals(song, _currentSong))
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (loadVersion != Volatile.Read(ref _artworkLoadVersion) || !ReferenceEquals(song, _currentSong))
+                return;
+
+            SetArtwork(imageBytes);
+            UpdateNowPlayingInfo();
+        });
     }
 
     public void UpdatePlaybackState(bool isPlaying)
@@ -136,6 +170,7 @@ public sealed class SystemMediaSessionService(
         }
 
         _registeredCommands.Clear();
+        Interlocked.Increment(ref _artworkLoadVersion);
 
         if (_nowPlayingInfoCenter != IntPtr.Zero)
         {
@@ -148,6 +183,8 @@ public sealed class SystemMediaSessionService(
             objc_msgSend(_commandTarget, SelRelease);
             _commandTarget = IntPtr.Zero;
         }
+
+        ReleaseArtwork();
 
         if (ReferenceEquals(s_currentInstance, this))
             s_currentInstance = null;
@@ -212,6 +249,7 @@ public sealed class SystemMediaSessionService(
             SetDouble(info, "MPNowPlayingInfoPropertyElapsedPlaybackTime", _positionSeconds);
             SetDouble(info, "MPNowPlayingInfoPropertyPlaybackRate", _isPlaying ? 1 : 0);
             SetDouble(info, "MPNowPlayingInfoPropertyDefaultPlaybackRate", 1);
+            SetObject(info, "MPMediaItemPropertyArtwork", _artwork);
 
             objc_msgSend_void_IntPtr(_nowPlayingInfoCenter, SelSetNowPlayingInfo, info);
             TrySetPlaybackState(_currentSong == null
@@ -246,6 +284,189 @@ public sealed class SystemMediaSessionService(
         var number = objc_msgSend_double(objc_getClass("NSNumber"), SelNumberWithDouble, Math.Max(0, value));
         if (number != IntPtr.Zero)
             objc_msgSend_IntPtr_IntPtr(dictionary, SelSetObjectForKey, number, key);
+    }
+
+    private static void SetObject(IntPtr dictionary, string mediaPlayerKeyName, IntPtr value)
+    {
+        if (value == IntPtr.Zero)
+            return;
+
+        var key = GetMediaPlayerStringConstant(mediaPlayerKeyName);
+        if (key != IntPtr.Zero)
+            objc_msgSend_IntPtr_IntPtr(dictionary, SelSetObjectForKey, value, key);
+    }
+
+    private async Task<byte[]?> LoadArtworkBytesAsync(string? cover)
+    {
+        try
+        {
+            var bytes = await TryLoadArtworkBytesAsync(cover).ConfigureAwait(false);
+            if (bytes is { Length: > 0 })
+                return bytes;
+
+            return await TryLoadArtworkBytesAsync(DefaultArtwork).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "加载 macOS 系统媒体控件封面失败。");
+            return null;
+        }
+    }
+
+    private async Task<byte[]?> TryLoadArtworkBytesAsync(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return null;
+
+        if (LocalImageSourceHelper.TryGetEmbeddedCoverFilePath(source, out var trackPath))
+        {
+            return await Task.Run(() =>
+            {
+                var track = new Track(trackPath!);
+                return track.EmbeddedPictures.Count > 0 ? track.EmbeddedPictures[0].PictureData : null;
+            }).ConfigureAwait(false);
+        }
+
+        if (source.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
+        {
+            await using var stream = AssetLoader.Open(new Uri(source));
+            return await ReadAllBytesAsync(stream).ConfigureAwait(false);
+        }
+
+        if (Uri.TryCreate(source, UriKind.Absolute, out var uri))
+        {
+            if (uri.Scheme is "http" or "https")
+                return await httpClientFactory.CreateClient().GetByteArrayAsync(uri).ConfigureAwait(false);
+
+            if (uri.IsFile && File.Exists(uri.LocalPath))
+                return await File.ReadAllBytesAsync(uri.LocalPath).ConfigureAwait(false);
+        }
+
+        return File.Exists(source)
+            ? await File.ReadAllBytesAsync(source).ConfigureAwait(false)
+            : null;
+    }
+
+    private static async Task<byte[]> ReadAllBytesAsync(Stream source)
+    {
+        using var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer).ConfigureAwait(false);
+        return buffer.ToArray();
+    }
+
+    private void SetArtwork(byte[]? bytes)
+    {
+        if (bytes is not { Length: > 0 } || s_artworkRequestBlock == IntPtr.Zero)
+        {
+            ReleaseArtwork();
+            return;
+        }
+
+        var dataBuffer = Marshal.AllocHGlobal(bytes.Length);
+        IntPtr image = IntPtr.Zero;
+        IntPtr artwork = IntPtr.Zero;
+        try
+        {
+            Marshal.Copy(bytes, 0, dataBuffer, bytes.Length);
+            var data = objc_msgSend_IntPtr_UIntPtr(
+                objc_getClass("NSData"), SelDataWithBytesLength, dataBuffer, (nuint)bytes.Length);
+            if (data == IntPtr.Zero)
+                return;
+
+            image = objc_msgSend_IntPtr(objc_msgSend(objc_getClass("NSImage"), SelAlloc), SelInitWithData, data);
+            if (image == IntPtr.Zero)
+                return;
+
+            artwork = objc_msgSend_CGSize_IntPtr(
+                objc_msgSend(objc_getClass("MPMediaItemArtwork"), SelAlloc),
+                SelInitWithBoundsSizeRequestHandler,
+                new CGSize(512, 512),
+                s_artworkRequestBlock);
+            if (artwork == IntPtr.Zero)
+                return;
+
+            lock (_artworkSync)
+            {
+                var oldArtwork = _artwork;
+                var oldImage = _artworkImage;
+                _artworkImage = image;
+                _artwork = artwork;
+                image = IntPtr.Zero;
+                artwork = IntPtr.Zero;
+
+                if (oldArtwork != IntPtr.Zero)
+                    objc_msgSend(oldArtwork, SelRelease);
+                if (oldImage != IntPtr.Zero)
+                    objc_msgSend(oldImage, SelRelease);
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(dataBuffer);
+            if (artwork != IntPtr.Zero)
+                objc_msgSend(artwork, SelRelease);
+            if (image != IntPtr.Zero)
+                objc_msgSend(image, SelRelease);
+        }
+    }
+
+    private void ReleaseArtwork()
+    {
+        lock (_artworkSync)
+        {
+            if (_artwork != IntPtr.Zero)
+            {
+                objc_msgSend(_artwork, SelRelease);
+                _artwork = IntPtr.Zero;
+            }
+
+            if (_artworkImage != IntPtr.Zero)
+            {
+                objc_msgSend(_artworkImage, SelRelease);
+                _artworkImage = IntPtr.Zero;
+            }
+        }
+    }
+
+    private static IntPtr HandleArtworkRequest(IntPtr block, CGSize requestedSize)
+    {
+        var instance = s_currentInstance;
+        if (instance == null)
+            return IntPtr.Zero;
+
+        lock (instance._artworkSync)
+        {
+            if (instance._artworkImage == IntPtr.Zero)
+                return IntPtr.Zero;
+
+            var retainedImage = objc_msgSend(instance._artworkImage, SelRetain);
+            return objc_msgSend(retainedImage, SelAutorelease);
+        }
+    }
+
+    private static IntPtr CreateArtworkRequestBlock()
+    {
+        var processHandle = dlopen(null, RtldLazy);
+        var blockClass = dlsym(processHandle, "_NSConcreteGlobalBlock");
+        if (blockClass == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        var descriptor = Marshal.AllocHGlobal(Marshal.SizeOf<BlockDescriptor>());
+        Marshal.StructureToPtr(new BlockDescriptor
+        {
+            Reserved = 0,
+            Size = (nuint)Marshal.SizeOf<BlockLiteral>()
+        }, descriptor, false);
+
+        var block = Marshal.AllocHGlobal(Marshal.SizeOf<BlockLiteral>());
+        Marshal.StructureToPtr(new BlockLiteral
+        {
+            Isa = blockClass,
+            Flags = BlockIsGlobal,
+            Invoke = Marshal.GetFunctionPointerForDelegate(s_artworkRequestHandler),
+            Descriptor = descriptor
+        }, block, false);
+        return block;
     }
 
     private void TrySetPlaybackState(long state)
@@ -424,11 +645,33 @@ public sealed class SystemMediaSessionService(
 
     private const int RtldLazy = 1;
     private const long RemoteCommandSuccess = 0;
-    private const long MacPlaybackStateStopped = 1;
-    private const long MacPlaybackStatePlaying = 2;
-    private const long MacPlaybackStatePaused = 3;
+    private const int BlockIsGlobal = 1 << 28;
+    private const long MacPlaybackStatePlaying = 1;
+    private const long MacPlaybackStatePaused = 2;
+    private const long MacPlaybackStateStopped = 3;
 
     private delegate long CommandActionDelegate(IntPtr self, IntPtr selector, IntPtr commandEvent);
+    private delegate IntPtr ArtworkRequestDelegate(IntPtr block, CGSize requestedSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly record struct CGSize(double Width, double Height);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BlockLiteral
+    {
+        public IntPtr Isa;
+        public int Flags;
+        public int Reserved;
+        public IntPtr Invoke;
+        public IntPtr Descriptor;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BlockDescriptor
+    {
+        public nuint Reserved;
+        public nuint Size;
+    }
 
     [DllImport("/usr/lib/libobjc.A.dylib")]
     private static extern IntPtr objc_getClass(string name);
@@ -456,6 +699,14 @@ public sealed class SystemMediaSessionService(
     private static extern IntPtr objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_IntPtr_UIntPtr(
+        IntPtr receiver, IntPtr selector, IntPtr arg1, nuint arg2);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_CGSize_IntPtr(
+        IntPtr receiver, IntPtr selector, CGSize arg1, IntPtr arg2);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern void objc_msgSend_void_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
@@ -475,7 +726,7 @@ public sealed class SystemMediaSessionService(
     private static extern void objc_msgSend_long(IntPtr receiver, IntPtr selector, long arg1);
 
     [DllImport("/usr/lib/libSystem.dylib")]
-    private static extern IntPtr dlopen(string path, int mode);
+    private static extern IntPtr dlopen(string? path, int mode);
 
     [DllImport("/usr/lib/libSystem.dylib")]
     private static extern IntPtr dlsym(IntPtr handle, string symbol);
