@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using KuGou.Net.util;
 
 namespace KuGou.Net.Abstractions.Models;
 
@@ -87,5 +89,47 @@ public record RecommendPlaylistItem : KgBaseModel
     ///     标签列表
     /// </summary>
     [property: JsonPropertyName("tags")]
+    [property: JsonConverter(typeof(RecommendPlaylistTagListJsonConverter))]
     public List<PlaylistTagItem> Tags { get; set; } = new();
+}
+
+/// <summary>
+///     兼容推荐歌单 tags 字段偶发返回 [] / "" / null / {}。
+/// </summary>
+public sealed class RecommendPlaylistTagListJsonConverter : JsonConverter<List<PlaylistTagItem>>
+{
+    public override List<PlaylistTagItem> Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return [];
+            case JsonTokenType.StartArray:
+                return JsonSerializer.Deserialize(ref reader, AppJsonContext.Default.ListPlaylistTagItem) ?? [];
+            case JsonTokenType.String when string.IsNullOrWhiteSpace(reader.GetString()):
+                return [];
+            case JsonTokenType.StartObject:
+            {
+                using var document = JsonDocument.ParseValue(ref reader);
+                if (!document.RootElement.EnumerateObject().Any())
+                    return [];
+
+                throw new JsonException("Unexpected non-empty object when parsing recommended playlist tags.");
+            }
+            default:
+                throw new JsonException(
+                    $"Unexpected token {reader.TokenType} when parsing recommended playlist tags.");
+        }
+    }
+
+    public override void Write(
+        Utf8JsonWriter writer,
+        List<PlaylistTagItem> value,
+        JsonSerializerOptions options)
+    {
+        JsonSerializer.Serialize(writer, value, AppJsonContext.Default.ListPlaylistTagItem);
+    }
 }
