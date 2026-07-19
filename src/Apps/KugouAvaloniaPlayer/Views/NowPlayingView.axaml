@@ -129,7 +129,10 @@
           VerticalAlignment="Stretch"
           ClipToBounds="True">
         <Panel>
-            <Image Source="{Binding Player.PreparedNextCover, Converter={StaticResource LocalCachedBitmapConverter}, ConverterParameter=320}"
+            <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.PreparedNextCover}"
+                                 behaviors:LocalArtworkImageBehavior.DecodePixelWidth="320"
+                                 behaviors:LocalArtworkImageBehavior.UseDefaultFallback="False"
+                                 behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
                                  asyncImageLoader:ImageLoader.Source="{Binding Player.PreparedNextCover, Converter={StaticResource RemoteImageSourceConverter}}"
                                  Width="1"
                                  Height="1"
@@ -143,7 +146,10 @@
                    VerticalAlignment="Top"
                    ClipToBounds="False"
                    IsHitTestVisible="False">
-                <Image Source="{Binding NowPlayingBackgroundImageSource, Converter={StaticResource LocalCachedBitmapConverter}, ConverterParameter=Original}"
+                <Image behaviors:LocalArtworkImageBehavior.Source="{Binding NowPlayingBackgroundImageSource}"
+                       behaviors:LocalArtworkImageBehavior.DecodePixelWidth="1920"
+                       behaviors:LocalArtworkImageBehavior.DecodeInterpolationMode="HighQuality"
+                       behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
                        asyncImageLoader:ImageLoader.Source="{Binding NowPlayingBackgroundImageSource, Converter={StaticResource RemoteImageSourceConverter}}"
                        RenderOptions.BitmapInterpolationMode="HighQuality"
                        Stretch="UniformToFill"
@@ -329,7 +335,10 @@
                     </StackPanel.RenderTransform>
                     <suki:GlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
                                     MinHeight="220" MaxWidth="350" MaxHeight="350">
-                        <Image Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource LocalCachedBitmapConverter}, ConverterParameter=Original}"
+                        <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover}"
+                               behaviors:LocalArtworkImageBehavior.DecodePixelWidth="512"
+                               behaviors:LocalArtworkImageBehavior.DecodeInterpolationMode="HighQuality"
+                               behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
                                asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
                                RenderOptions.BitmapInterpolationMode="HighQuality"
                                Stretch="UniformToFill" />
