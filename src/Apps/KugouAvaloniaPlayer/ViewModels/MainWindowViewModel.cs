@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,10 @@ public partial class MainWindowViewModel : ObservableObject
     private static readonly Lock CustomBackgroundImageSync = new();
     private static Bitmap? _sCachedCustomBackgroundBitmap;
     private static string? _sCachedCustomBackgroundPath;
+    private static int _sCachedCustomBackgroundDecodeWidth;
+
+    private const int DefaultCustomBackgroundDecodeWidth = 1920;
+    private const int MaxCustomBackgroundDecodeWidth = 2560;
 
     private readonly IAppUpdateService _appUpdateService;
     private readonly IDesktopLyricWindowService _desktopLyricWindowService;
@@ -268,19 +273,39 @@ public partial class MainWindowViewModel : ObservableObject
 
     private static Bitmap GetOrCreateCustomBackgroundBitmap(string path)
     {
+        var decodeWidth = GetCustomBackgroundDecodeWidth();
+
         lock (CustomBackgroundImageSync)
         {
             if (_sCachedCustomBackgroundBitmap is not null &&
-                string.Equals(_sCachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase))
+                string.Equals(_sCachedCustomBackgroundPath, path, StringComparison.OrdinalIgnoreCase) &&
+                _sCachedCustomBackgroundDecodeWidth == decodeWidth)
             {
                 return _sCachedCustomBackgroundBitmap;
             }
 
             _sCachedCustomBackgroundBitmap?.Dispose();
-            _sCachedCustomBackgroundBitmap = new Bitmap(path);
+            using var stream = File.OpenRead(path);
+            _sCachedCustomBackgroundBitmap = Bitmap.DecodeToWidth(stream, decodeWidth);
             _sCachedCustomBackgroundPath = path;
+            _sCachedCustomBackgroundDecodeWidth = decodeWidth;
             return _sCachedCustomBackgroundBitmap;
         }
+    }
+
+    private static int GetCustomBackgroundDecodeWidth()
+    {
+        var mainWindow = (Avalonia.Application.Current?.ApplicationLifetime
+                           as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)
+            ?.MainWindow;
+
+        var renderScaling = mainWindow?.RenderScaling ?? 1;
+        var clientWidth = mainWindow?.ClientSize.Width ?? 0;
+        var width = clientWidth > 0
+            ? (int)Math.Ceiling(clientWidth * renderScaling)
+            : DefaultCustomBackgroundDecodeWidth;
+
+        return Math.Clamp(width, 1, MaxCustomBackgroundDecodeWidth);
     }
 
     private static void ReleaseCachedCustomBackgroundBitmap(string? path = null)
@@ -296,6 +321,7 @@ public partial class MainWindowViewModel : ObservableObject
             _sCachedCustomBackgroundBitmap?.Dispose();
             _sCachedCustomBackgroundBitmap = null;
             _sCachedCustomBackgroundPath = null;
+            _sCachedCustomBackgroundDecodeWidth = 0;
         }
     }
 
