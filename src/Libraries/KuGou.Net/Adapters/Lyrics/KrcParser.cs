@@ -7,6 +7,8 @@ namespace KuGou.Net.Adapters.Lyrics;
 
 public static class KrcParser
 {
+    private static readonly Regex WordRegex = new(@"<(\d+),(\d+),\d+>([^<]+)");
+
     /// <summary>
     ///     解析 KRC 文本 (包含翻译和音译提取)
     /// </summary>
@@ -16,19 +18,25 @@ public static class KrcParser
         var result = new KrcLyric();
         if (string.IsNullOrEmpty(krcText)) return result;
 
-        var lines = krcText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        var source = krcText.AsSpan();
 
         List<List<string>>? translationList = null;
         List<List<string>>? romanizationList = null;
 
-
-        foreach (var line in lines)
+        foreach (var lineRange in source.Split('\n'))
         {
-            if (line.StartsWith("[language:"))
+            var line = source[lineRange];
+            if (lineRange.End.GetOffset(source.Length) < source.Length && line.EndsWith('\r'))
+                line = line[..^1];
+
+            if (line.IsEmpty)
+                continue;
+
+            if (line.StartsWith("[language:", StringComparison.Ordinal))
             {
                 try
                 {
-                    var base64 = line.Substring(10, line.Length - 11);
+                    var base64 = line[10..^1].ToString();
 
 
                     base64 = base64.Replace("-", "+").Replace("_", "/");
@@ -58,28 +66,26 @@ public static class KrcParser
                 continue;
             }
 
-            var metaMatch = Regex.Match(line, @"^\[([a-zA-Z]+):(.*)\]$");
-            if (metaMatch.Success)
+            if (TryGetMetadataRanges(line, out var keyRange, out var valueRange))
             {
-                var key = metaMatch.Groups[1].Value;
-                var val = metaMatch.Groups[2].Value;
+                var key = line[keyRange].ToString();
+                var val = line[valueRange].ToString();
                 result.MetaData[key] = val;
             }
         }
 
 
         var lineIndex = 0;
-        foreach (var line in lines)
+        foreach (var lineRange in source.Split('\n'))
         {
-            if (line.StartsWith("[") && line.Contains(":") && !Regex.IsMatch(line, @"^\[\d+,\d+\]"))
+            var line = source[lineRange];
+            if (lineRange.End.GetOffset(source.Length) < source.Length && line.EndsWith('\r'))
+                line = line[..^1];
+
+            if (line.IsEmpty || !TryParseLine(line, out var startTime, out var duration, out var contentStart))
                 continue;
 
-            var match = Regex.Match(line, @"^\[(\d+),(\d+)\](.*)");
-            if (!match.Success) continue;
-
-            var startTime = long.Parse(match.Groups[1].Value);
-            var duration = long.Parse(match.Groups[2].Value);
-            var rawContent = match.Groups[3].Value;
+            var rawContent = line[contentStart..];
 
             var krcLine = new KrcLine
             {
@@ -87,30 +93,28 @@ public static class KrcParser
                 Duration = duration
             };
 
+            StringBuilder? contentBuilder = null;
+            foreach (var wordMatch in WordRegex.EnumerateMatches(rawContent))
+            {
+                var match = rawContent.Slice(wordMatch.Index, wordMatch.Length);
+                var tagEnd = match.IndexOf('>');
+                var tag = match[1..tagEnd];
+                var firstComma = tag.IndexOf(',');
+                var secondComma = tag[(firstComma + 1)..].IndexOf(',') + firstComma + 1;
+                var wStartOffset = long.Parse(tag[..firstComma]);
+                var wDuration = long.Parse(tag[(firstComma + 1)..secondComma]);
+                var wordText = match[(tagEnd + 1)..];
 
-            var wordMatches = Regex.Matches(rawContent, @"<(\d+),(\d+),\d+>([^<]+)");
-            var sbContent = new StringBuilder();
-
-            if (wordMatches.Count > 0)
-                foreach (Match wm in wordMatches)
+                krcLine.Words.Add(new KrcWord
                 {
-                    var wStartOffset = long.Parse(wm.Groups[1].Value);
-                    var wDuration = long.Parse(wm.Groups[2].Value);
-                    var wText = wm.Groups[3].Value;
+                    Text = wordText.ToString(),
+                    StartTime = startTime + wStartOffset,
+                    Duration = wDuration
+                });
+                (contentBuilder ??= new StringBuilder()).Append(wordText);
+            }
 
-                    krcLine.Words.Add(new KrcWord
-                    {
-                        Text = wText,
-                        StartTime = startTime + wStartOffset,
-                        Duration = wDuration
-                    });
-                    sbContent.Append(wText);
-                }
-            else
-
-                sbContent.Append(rawContent);
-
-            krcLine.Content = sbContent.ToString();
+            krcLine.Content = contentBuilder?.ToString() ?? rawContent.ToString();
 
 
             if (translationList != null && lineIndex < translationList.Count)
@@ -130,5 +134,78 @@ public static class KrcParser
         }
 
         return result;
+    }
+
+    private static bool TryGetMetadataRanges(ReadOnlySpan<char> line, out Range keyRange, out Range valueRange)
+    {
+        keyRange = default;
+        valueRange = default;
+
+        if (line.Length < 4 || line[0] != '[' || line[^1] != ']')
+            return false;
+
+        var colonIndex = line.IndexOf(':');
+        if (colonIndex <= 1)
+            return false;
+
+        foreach (var c in line[1..colonIndex])
+        {
+            if (c is not (>= 'a' and <= 'z') and not (>= 'A' and <= 'Z'))
+                return false;
+        }
+
+        keyRange = 1..colonIndex;
+        valueRange = (colonIndex + 1)..^1;
+        return true;
+    }
+
+    private static bool TryParseLine(
+        ReadOnlySpan<char> line,
+        out long startTime,
+        out long duration,
+        out int contentStart)
+    {
+        startTime = 0;
+        duration = 0;
+        contentStart = 0;
+
+        if (line.Length < 5 || line[0] != '[')
+            return false;
+
+        var commaIndex = line.IndexOf(',');
+        if (commaIndex <= 1)
+            return false;
+
+        var closingBracketOffset = line[(commaIndex + 1)..].IndexOf(']');
+        if (closingBracketOffset < 1)
+            return false;
+
+        var closingBracketIndex = commaIndex + 1 + closingBracketOffset;
+        var startSpan = line[1..commaIndex];
+        var durationSpan = line[(commaIndex + 1)..closingBracketIndex];
+        if (!IsAsciiDigits(startSpan) ||
+            !IsAsciiDigits(durationSpan) ||
+            !long.TryParse(startSpan, out startTime) ||
+            !long.TryParse(durationSpan, out duration))
+        {
+            return false;
+        }
+
+        contentStart = closingBracketIndex + 1;
+        return true;
+    }
+
+    private static bool IsAsciiDigits(ReadOnlySpan<char> value)
+    {
+        if (value.IsEmpty)
+            return false;
+
+        foreach (var c in value)
+        {
+            if (c is < '0' or > '9')
+                return false;
+        }
+
+        return true;
     }
 }

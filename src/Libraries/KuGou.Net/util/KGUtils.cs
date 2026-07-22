@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -9,6 +10,8 @@ namespace KuGou.Net.util;
 
 public static class KgUtils
 {
+    private const int MaxStackallocUtf8Bytes = 256;
+
     public static readonly JsonSerializerOptions JsonOptions = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -36,9 +39,24 @@ public static class KgUtils
         if (string.IsNullOrEmpty(input))
             return string.Empty;
 
-        return Convert.ToHexStringLower(
-            MD5.HashData(Encoding.UTF8.GetBytes(input))
-        );
+        var byteCount = Encoding.UTF8.GetByteCount(input);
+        byte[]? rentedBytes = null;
+        Span<byte> utf8Bytes = byteCount <= MaxStackallocUtf8Bytes
+            ? stackalloc byte[byteCount]
+            : (rentedBytes = ArrayPool<byte>.Shared.Rent(byteCount));
+
+        try
+        {
+            var bytesWritten = Encoding.UTF8.GetBytes(input, utf8Bytes);
+            Span<byte> hash = stackalloc byte[MD5.HashSizeInBytes];
+            MD5.HashData(utf8Bytes[..bytesWritten], hash);
+            return Convert.ToHexStringLower(hash);
+        }
+        finally
+        {
+            if (rentedBytes != null)
+                ArrayPool<byte>.Shared.Return(rentedBytes);
+        }
     }
 
     public static string CalcNewMid(string guid)

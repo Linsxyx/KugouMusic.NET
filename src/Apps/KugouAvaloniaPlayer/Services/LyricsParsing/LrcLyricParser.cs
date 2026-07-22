@@ -13,32 +13,31 @@ internal sealed class LrcLyricParser : ILyricParser
 
     public List<LyricLineViewModel> Parse(string content)
     {
-        var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var source = content.AsSpan();
         var result = new List<LyricLineViewModel>();
 
-        foreach (var line in lines)
+        foreach (var lineRange in source.SplitAny("\r\n"))
         {
-            var matches = TimestampRegex.Matches(line);
-            if (matches.Count == 0)
+            var line = source[lineRange];
+            if (line.IsEmpty)
                 continue;
 
-            var text = line[(matches[^1].Index + matches[^1].Length)..].Trim();
-            foreach (Match match in matches)
+            var hasTimestamp = false;
+            var lastTimestampEnd = 0;
+            foreach (var match in TimestampRegex.EnumerateMatches(line))
             {
-                var minutes = int.Parse(match.Groups[1].Value);
-                var seconds = int.Parse(match.Groups[2].Value);
-                var milliseconds = 0;
-                var msText = match.Groups[3].Value;
-                if (!string.IsNullOrEmpty(msText))
-                {
-                    milliseconds = int.Parse(msText);
-                    if (msText.Length == 1) milliseconds *= 100;
-                    else if (msText.Length == 2) milliseconds *= 10;
-                    else if (msText.Length == 4) milliseconds /= 10;
-                }
+                hasTimestamp = true;
+                lastTimestampEnd = match.Index + match.Length;
+            }
 
-                var time = minutes * 60000 + seconds * 1000 + milliseconds;
-                result.Add(CreateLine(text, time));
+            if (!hasTimestamp)
+                continue;
+
+            var text = line[lastTimestampEnd..].Trim().ToString();
+            foreach (var match in TimestampRegex.EnumerateMatches(line))
+            {
+                var timestamp = line.Slice(match.Index, match.Length);
+                result.Add(CreateLine(text, ParseTimestamp(timestamp)));
             }
         }
 
@@ -54,6 +53,26 @@ internal sealed class LrcLyricParser : ILyricParser
         }
 
         return result;
+    }
+
+    private static long ParseTimestamp(ReadOnlySpan<char> timestamp)
+    {
+        var value = timestamp[1..^1];
+        var colonIndex = value.IndexOf(':');
+        var minutes = int.Parse(value[..colonIndex]);
+        var seconds = int.Parse(value.Slice(colonIndex + 1, 2));
+        var milliseconds = 0;
+
+        if (value.Length > colonIndex + 3)
+        {
+            var millisecondText = value[(colonIndex + 4)..];
+            milliseconds = int.Parse(millisecondText);
+            if (millisecondText.Length == 1) milliseconds *= 100;
+            else if (millisecondText.Length == 2) milliseconds *= 10;
+            else if (millisecondText.Length == 4) milliseconds /= 10;
+        }
+
+        return minutes * 60000L + seconds * 1000L + milliseconds;
     }
 
     private static LyricLineViewModel CreateLine(string text, long startTime)

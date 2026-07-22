@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using System.Security.Cryptography;
 using ZLinq;
@@ -6,6 +7,8 @@ namespace KuGou.Net.util;
 
 public static class KgSigner
 {
+    private const int MaxStackallocUtf8Bytes = 256;
+
     public static string CalcV5Key(string hash, string userid, string mid)
     {
         var salt = KuGouConfig.V5KeySalt;
@@ -39,12 +42,26 @@ public static class KgSigner
     public static string CalcPostSignature(Dictionary<string, string> queryParams, byte[] binaryBody,
         string salt = KuGouConfig.LiteSalt)
     {
-        using var md5 = MD5.Create();
+        using var md5 = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
 
         void AppendString(string value)
         {
-            var bytes = Encoding.UTF8.GetBytes(value);
-            md5.TransformBlock(bytes, 0, bytes.Length, null, 0);
+            var byteCount = Encoding.UTF8.GetByteCount(value);
+            byte[]? rentedBytes = null;
+            Span<byte> utf8Bytes = byteCount <= MaxStackallocUtf8Bytes
+                ? stackalloc byte[byteCount]
+                : (rentedBytes = ArrayPool<byte>.Shared.Rent(byteCount));
+
+            try
+            {
+                var bytesWritten = Encoding.UTF8.GetBytes(value, utf8Bytes);
+                md5.AppendData(utf8Bytes[..bytesWritten]);
+            }
+            finally
+            {
+                if (rentedBytes != null)
+                    ArrayPool<byte>.Shared.Return(rentedBytes);
+            }
         }
 
         AppendString(salt);
@@ -56,11 +73,12 @@ public static class KgSigner
             AppendString(kv.Value);
         }
 
-        md5.TransformBlock(binaryBody, 0, binaryBody.Length, null, 0);
+        md5.AppendData(binaryBody);
         AppendString(salt);
-        md5.TransformFinalBlock([], 0, 0);
 
-        return Convert.ToHexString(md5.Hash!).ToLowerInvariant();
+        Span<byte> hash = stackalloc byte[MD5.HashSizeInBytes];
+        var bytesWritten = md5.GetHashAndReset(hash);
+        return Convert.ToHexStringLower(hash[..bytesWritten]);
     }
 
     public static string CalcLoginKey(long clienttimeMs)
