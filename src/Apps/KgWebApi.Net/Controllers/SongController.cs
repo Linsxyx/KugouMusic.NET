@@ -78,10 +78,10 @@ public class SongController(SongClient songClient) : ControllerBase
     [ProducesResponseType(typeof(AudioMatchResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> MatchAudio()
     {
-        using var memoryStream = new MemoryStream();
-        await Request.Body.CopyToAsync(memoryStream);
-
-        var pcmData = memoryStream.ToArray();
+        var pcmData = await ReadBodyAsync(
+            Request.Body,
+            Request.ContentLength,
+            HttpContext.RequestAborted);
         if (pcmData.Length == 0)
         {
             return BadRequest(new
@@ -113,9 +113,38 @@ public class SongController(SongClient songClient) : ControllerBase
             });
         }
 
-        await using var memoryStream = new MemoryStream();
-        await request.File.CopyToAsync(memoryStream);
-        return Ok(await songClient.GetAudioMatchAsync(memoryStream.ToArray()));
+        await using var stream = request.File.OpenReadStream();
+        var pcmData = await ReadBodyAsync(stream, request.File.Length, HttpContext.RequestAborted);
+        return Ok(await songClient.GetAudioMatchAsync(pcmData));
+    }
+
+    private static async Task<byte[]> ReadBodyAsync(
+        Stream source,
+        long? length,
+        CancellationToken cancellationToken)
+    {
+        if (length is >= 0 and <= int.MaxValue)
+        {
+            var bytes = GC.AllocateUninitializedArray<byte>((int)length.Value);
+            var offset = 0;
+            while (offset < bytes.Length)
+            {
+                var read = await source.ReadAsync(bytes.AsMemory(offset), cancellationToken);
+                if (read == 0)
+                {
+                    Array.Resize(ref bytes, offset);
+                    break;
+                }
+
+                offset += read;
+            }
+
+            return bytes;
+        }
+
+        await using var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer, cancellationToken);
+        return buffer.ToArray();
     }
 
     /// <summary>

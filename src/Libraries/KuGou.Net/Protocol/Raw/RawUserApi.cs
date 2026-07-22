@@ -484,7 +484,7 @@ public class RawUserApi(IKgTransport transport)
         var p = KgCrypto.RsaEncryptPkcs1(JsonSerializer.Serialize(pPayload, AppJsonContext.Default.JsonObject))
             .ToUpper();
 
-        var response = await transport.SendAsync(new KgRequest
+        var responseBytes = await transport.SendBytesAsync(new KgRequest
         {
             Method = HttpMethod.Post,
             BaseUrl = "https://mcloudservice.kugou.com",
@@ -505,16 +505,14 @@ public class RawUserApi(IKgTransport transport)
             SignatureType = SignatureType.Default
         });
 
-        if (response.ValueKind == JsonValueKind.Object &&
-            response.TryGetProperty("__raw_base64__", out var rawEl) &&
-            !string.IsNullOrWhiteSpace(rawEl.GetString()))
+        try
         {
-            var decrypted = KgCrypto.PlaylistAesDecrypt(rawEl.GetString()!, aesKey);
-            using var doc = JsonDocument.Parse(decrypted);
-            return doc.RootElement.Clone();
+            return KgCrypto.PlaylistAesDecryptResponse(responseBytes, aesKey);
         }
-
-        return response;
+        catch
+        {
+            return KgCrypto.ParseJsonOrWrapRawResponse(responseBytes);
+        }
     }
 
     public Task<JsonElement> GetCloudUrlAsync(string hash, string? albumAudioId = null, string? audioId = null,

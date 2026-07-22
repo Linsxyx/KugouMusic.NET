@@ -336,7 +336,13 @@ public sealed class SystemMediaSessionService(
         if (Uri.TryCreate(source, UriKind.Absolute, out var uri))
         {
             if (uri.Scheme is "http" or "https")
-                return await httpClientFactory.CreateClient().GetByteArrayAsync(uri).ConfigureAwait(false);
+            {
+                using var response = await httpClientFactory.CreateClient().GetAsync(
+                    uri,
+                    HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            }
 
             if (uri.IsFile && File.Exists(uri.LocalPath))
                 return await File.ReadAllBytesAsync(uri.LocalPath).ConfigureAwait(false);

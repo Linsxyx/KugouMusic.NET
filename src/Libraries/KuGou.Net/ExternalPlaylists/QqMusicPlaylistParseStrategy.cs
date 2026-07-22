@@ -167,8 +167,14 @@ public sealed class QqMusicPlaylistParseStrategy(
             try
             {
                 using var client = httpClientFactory.CreateClient(nameof(QqMusicPlaylistParseStrategy));
-                using var content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded");
-                using var resp = await client.PostAsync(url, content, cancellationToken);
+                using var request = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded")
+                };
+                using var resp = await client.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
                 if (!resp.IsSuccessStatusCode)
                     continue;
 

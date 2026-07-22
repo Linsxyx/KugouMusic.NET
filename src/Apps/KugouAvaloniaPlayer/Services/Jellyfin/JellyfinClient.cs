@@ -174,7 +174,10 @@ public sealed class JellyfinClient(IHttpClientFactory httpClientFactory, ILogger
     private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var client = httpClientFactory.CreateClient(nameof(JellyfinClient));
-        var response = await client.SendAsync(request, cancellationToken);
+        var response = await client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);

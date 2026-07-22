@@ -163,6 +163,11 @@ public static class KgCrypto
 
     public static string PlaylistAesDecrypt(string str, string key)
     {
+        return Encoding.UTF8.GetString(PlaylistAesDecrypt(Convert.FromBase64String(str), key));
+    }
+
+    public static byte[] PlaylistAesDecrypt(byte[] encryptedBytes, string key)
+    {
         var md5Key = KgUtils.Md5(key);
         var encryptKey = md5Key.Substring(0, 16);
         var iv = md5Key.Substring(16, 16);
@@ -175,10 +180,57 @@ public static class KgCrypto
         aes.IV = Encoding.UTF8.GetBytes(iv);
 
         using var decryptor = aes.CreateDecryptor();
-        var encryptedBytes = Convert.FromBase64String(str);
-        var decrypted = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+        return decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+    }
 
-        return Encoding.UTF8.GetString(decrypted);
+    public static JsonElement PlaylistAesDecryptResponse(byte[] responseBytes, string key)
+    {
+        try
+        {
+            return JsonElement.Parse(PlaylistAesDecrypt(responseBytes, key));
+        }
+        catch (Exception ex) when (ex is CryptographicException or JsonException)
+        {
+            // The encrypted payload may be a JSON string/object or bare Base64 text.
+        }
+
+        string? encryptedContent;
+        try
+        {
+            var response = JsonElement.Parse(responseBytes);
+            encryptedContent = null;
+            if (response.ValueKind == JsonValueKind.Object &&
+                response.TryGetProperty("data", out var dataElement))
+                encryptedContent = dataElement.GetString();
+            else if (response.ValueKind == JsonValueKind.String)
+                encryptedContent = response.GetString();
+        }
+        catch (JsonException)
+        {
+            encryptedContent = Encoding.UTF8.GetString(responseBytes);
+        }
+
+        if (string.IsNullOrWhiteSpace(encryptedContent))
+            throw new CryptographicException("The response does not contain an encrypted payload.");
+
+        return JsonElement.Parse(PlaylistAesDecrypt(Convert.FromBase64String(encryptedContent), key));
+    }
+
+    public static JsonElement ParseJsonOrWrapRawResponse(byte[] responseBytes)
+    {
+        try
+        {
+            return JsonElement.Parse(responseBytes);
+        }
+        catch (JsonException)
+        {
+            var fallbackJson = new JsonObject
+            {
+                ["__raw_base64__"] = Convert.ToBase64String(responseBytes)
+            };
+
+            return JsonSerializer.SerializeToElement(fallbackJson, AppJsonContext.Default.JsonObject);
+        }
     }
 
     public static string DecodeLyrics(string base64Str)
@@ -188,20 +240,17 @@ public static class KgCrypto
         if (bytes.Length <= 4) return "";
 
 
-        byte[] enKey = { 64, 71, 97, 119, 94, 50, 116, 71, 81, 54, 49, 45, 206, 210, 110, 105 };
+        byte[] enKey = [64, 71, 97, 119, 94, 50, 116, 71, 81, 54, 49, 45, 206, 210, 110, 105];
 
-        var krcBytes = new byte[bytes.Length - 4];
-        Array.Copy(bytes, 4, krcBytes, 0, krcBytes.Length);
-
-        for (var i = 0; i < krcBytes.Length; i++) krcBytes[i] = (byte)(krcBytes[i] ^ enKey[i % enKey.Length]);
+        for (var i = 4; i < bytes.Length; i++) bytes[i] = (byte)(bytes[i] ^ enKey[(i - 4) % enKey.Length]);
 
         try
         {
-            using var msInput = new MemoryStream(krcBytes);
+            using var msInput = new MemoryStream(bytes, 4, bytes.Length - 4, writable: false);
             using var zlib = new ZLibStream(msInput, CompressionMode.Decompress);
             using var msOutput = new MemoryStream();
             zlib.CopyTo(msOutput);
-            return Encoding.UTF8.GetString(msOutput.ToArray());
+            return Encoding.UTF8.GetString(msOutput.GetBuffer(), 0, checked((int)msOutput.Length));
         }
         catch
         {

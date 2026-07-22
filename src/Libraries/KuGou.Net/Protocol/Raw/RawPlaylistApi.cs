@@ -320,33 +320,18 @@ public class RawPlaylistApi(IKgTransport transport, ILogger<RawPlaylistApi> logg
             SpecificRouter = "cloudlist.service.kugou.com",
             SignatureType = SignatureType.Default
         };
-        var response = await transport.SendAsync(request);
+        var responseBytes = await transport.SendBytesAsync(request);
 
         try
         {
-            string? encryptedResponse = null;
-            if (response.ValueKind == JsonValueKind.Object &&
-                response.TryGetProperty("__raw_base64__", out var rawEl))
-                encryptedResponse = rawEl.GetString();
-            else if (response.ValueKind == JsonValueKind.Object &&
-                     response.TryGetProperty("data", out var dataEl))
-                encryptedResponse = dataEl.GetString();
-            else if (response.ValueKind == JsonValueKind.String) encryptedResponse = response.GetString();
-
-            if (!string.IsNullOrEmpty(encryptedResponse))
-            {
-                var decryptedJson = KgCrypto.PlaylistAesDecrypt(encryptedResponse, aesKey);
-
-                using var doc = JsonDocument.Parse(decryptedJson);
-                return doc.RootElement.Clone();
-            }
+            return KgCrypto.PlaylistAesDecryptResponse(responseBytes, aesKey);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "[DeletePlaylist] 解密响应失败");
         }
 
-        return response;
+        return KgCrypto.ParseJsonOrWrapRawResponse(responseBytes);
     }
 
     /// <summary>

@@ -43,13 +43,18 @@ public sealed class NeteasePlaylistParseStrategy(
             client.DefaultRequestHeaders.UserAgent.ParseAdd(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36");
 
-            using var requestContent =
-                new FormUrlEncodedContent(new Dictionary<string, string> { ["id"] = playlistId });
-            using var response = await client.PostAsync(NeteasePlaylistDetailApi, requestContent, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Post, NeteasePlaylistDetailApi)
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["id"] = playlistId })
+            };
+            using var response = await client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            using var doc = JsonDocument.Parse(content);
+            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
 
             if (!doc.RootElement.TryGetProperty("playlist", out var playlist))
                 return new ExternalPlaylistParseResult { ErrorMessage = "网易云响应格式异常，未找到歌单信息。" };
@@ -179,15 +184,21 @@ public sealed class NeteasePlaylistParseStrategy(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            using var form = new FormUrlEncodedContent(new Dictionary<string, string>
+            using var request = new HttpRequestMessage(HttpMethod.Post, NeteaseSongDetailApi)
             {
-                ["c"] = BuildNeteaseSongDetailPayload(chunk)
-            });
-            using var resp = await client.PostAsync(NeteaseSongDetailApi, form, cancellationToken);
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["c"] = BuildNeteaseSongDetailPayload(chunk)
+                })
+            };
+            using var resp = await client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
             resp.EnsureSuccessStatusCode();
 
-            var body = await resp.Content.ReadAsStringAsync(cancellationToken);
-            using var doc = JsonDocument.Parse(body);
+            await using var responseStream = await resp.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken);
 
             if (!doc.RootElement.TryGetProperty("songs", out var songsEl) || songsEl.ValueKind != JsonValueKind.Array)
                 continue;

@@ -40,7 +40,10 @@ public sealed partial class GitHubReleaseService(
             request.Headers.UserAgent.ParseAdd("KA-Music/1.0");
             request.Headers.Accept.ParseAdd("application/vnd.github+json");
 
-            using var response = await client.SendAsync(request, cancellationToken);
+            using var response = await client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
             response.EnsureSuccessStatusCode();
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);

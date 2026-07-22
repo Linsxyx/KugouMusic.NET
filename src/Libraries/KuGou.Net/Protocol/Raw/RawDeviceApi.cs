@@ -95,40 +95,23 @@ public class RawDeviceApi(IKgTransport transport, KgSessionManager sessionManage
             SpecificDfid = "-"
         };
 
-        var response = await transport.SendAsync(request);
+        var responseBytes = await transport.SendBytesAsync(request);
 
         // 5. 解密响应
-        // 响应是加密的字符串 (在 Transport 层可能被包在 __raw_base64__ 里)
-        return TryDecryptResponse(response, aesKey);
+        return TryDecryptResponse(responseBytes, aesKey);
     }
 
-    private JsonElement TryDecryptResponse(JsonElement response, string aesKey)
+    private JsonElement TryDecryptResponse(byte[] responseBytes, string aesKey)
     {
         try
         {
-            string? encryptedContent = null;
-
-            // 处理 Transport 层返回的几种可能格式
-            if (response.ValueKind == JsonValueKind.Object &&
-                response.TryGetProperty("__raw_base64__", out var raw))
-                encryptedContent = raw.GetString();
-            else if (response.ValueKind == JsonValueKind.String) encryptedContent = response.GetString();
-
-            if (!string.IsNullOrEmpty(encryptedContent))
-            {
-                // 使用相同的 Key 解密
-                var decryptedJson = KgCrypto.PlaylistAesDecrypt(encryptedContent, aesKey);
-
-                // 解析解密后的 JSON
-                using var doc = JsonDocument.Parse(decryptedJson);
-                return doc.RootElement.Clone();
-            }
+            return KgCrypto.PlaylistAesDecryptResponse(responseBytes, aesKey);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "[RawDeviceApi] 解密失败");
         }
 
-        return response;
+        return KgCrypto.ParseJsonOrWrapRawResponse(responseBytes);
     }
 }

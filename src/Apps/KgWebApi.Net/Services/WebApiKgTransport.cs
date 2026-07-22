@@ -33,6 +33,11 @@ public sealed class WebApiKgTransport : IKgTransport, IDisposable
         return _transport.SendAsync(request);
     }
 
+    public Task<byte[]> SendBytesAsync(KgRequest request)
+    {
+        return _transport.SendBytesAsync(request);
+    }
+
     public void Dispose()
     {
         _client.Dispose();

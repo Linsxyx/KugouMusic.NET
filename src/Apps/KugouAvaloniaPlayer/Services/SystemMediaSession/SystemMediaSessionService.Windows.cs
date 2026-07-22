@@ -261,7 +261,9 @@ public sealed class SystemMediaSessionService(
 
         try
         {
-            using var response = await httpClientFactory.CreateClient().GetAsync(uri);
+            using var response = await httpClientFactory.CreateClient().GetAsync(
+                uri,
+                HttpCompletionOption.ResponseHeadersRead);
             if (!response.IsSuccessStatusCode)
                 return await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png");
 
