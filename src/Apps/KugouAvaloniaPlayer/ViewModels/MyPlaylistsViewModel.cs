@@ -174,7 +174,10 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                     .ToArray());
 
                 var onlineItems = new List<PlaylistItem>();
-                foreach (var item in orderedPlaylists)
+                for (var index = 0; index < orderedPlaylists.Length; index++)
+                {
+                    var item = orderedPlaylists[index];
+                    var isLikePlaylist = index == 1;
                     if (!string.IsNullOrEmpty(item.ListCreateId) || item.IsCollectedAlbum)
                         onlineItems.Add(new PlaylistItem
                         {
@@ -185,10 +188,12 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                             Type = item.IsCollectedAlbum ? PlaylistType.Album : PlaylistType.Online,
                             UserPlaylistType = item.Type,
                             Cover = string.IsNullOrWhiteSpace(item.Pic)
-                                ? item.ListId != 2 ? DefaultCover : LikeCover
+                                ? isLikePlaylist ? LikeCover : DefaultCover
                                 : item.Pic,
-                            Subtitle = item.ListCreateUsername
+                            Subtitle = item.ListCreateUsername,
+                            IsLikePlaylist = isLikePlaylist
                         });
+                }
 
                 if (onlineItems.Count > 0)
                     await Dispatcher.UIThread.InvokeAsync(() => Items.AddRange(onlineItems));
@@ -877,7 +882,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
     private static bool IsLikePlaylist(PlaylistItem item)
     {
-        return item.ListId == 2 || string.Equals(item.Name, "我喜欢", StringComparison.OrdinalIgnoreCase);
+        return item.IsLikePlaylist || item.ListId == 2 || string.Equals(item.Name, "我喜欢", StringComparison.OrdinalIgnoreCase);
     }
 
     private void AddSongsInDefaultOrder(IEnumerable<SongItem> songs)

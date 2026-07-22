@@ -66,6 +66,9 @@ public partial class MainWindowViewModel : ObservableObject
     public partial bool IsAlbumPlaylistsExpanded { get; set; }
 
     [ObservableProperty]
+    public partial PlaylistItem? QuickLikePlaylist { get; set; }
+
+    [ObservableProperty]
     public partial bool IsMiniPlayerOpaque { get; set; } = true;
 
     private bool _isUpdatingActivePageFromNavigation;
@@ -675,6 +678,7 @@ public partial class MainWindowViewModel : ObservableObject
         SidebarCreatedPlaylists.AddRange(PlaylistsViewModel.Items.AsValueEnumerable().Where(IsCreatedOnlinePlaylist).ToArray());
         SidebarCollectedPlaylists.AddRange(PlaylistsViewModel.Items.AsValueEnumerable().Where(IsCollectedOnlinePlaylist).ToArray());
         SidebarAlbumPlaylists.AddRange(PlaylistsViewModel.Items.AsValueEnumerable().Where(x => x.Type == PlaylistType.Album).ToArray());
+        QuickLikePlaylist = PlaylistsViewModel.Items.AsValueEnumerable().FirstOrDefault(x => x.IsLikePlaylist);
 
         UpdateSidebarSelection();
     }

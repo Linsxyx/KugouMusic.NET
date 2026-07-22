@@ -109,6 +109,25 @@
                                                                 Margin="{TemplateBinding Padding}"
                                                                 theme:ItemsPresenterExtensions.AnimatedScroll="True"
                                                                 ItemsPanel="{TemplateBinding ItemsPanel}" />
+                                                <Grid Name="PART_CompactLikePlaylist"
+                                                      IsVisible="False">
+                                                    <Button Width="42"
+                                                            Height="42"
+                                                            Margin="15,6,15,12"
+                                                            Padding="11"
+                                                            HorizontalAlignment="Center"
+                                                            Classes="Basic"
+                                                            Command="{ReflectionBinding OpenSidebarPlaylistCommand}"
+                                                            CommandParameter="{ReflectionBinding QuickLikePlaylist}"
+                                                            Cursor="Hand"
+                                                            IsVisible="{ReflectionBinding QuickLikePlaylist, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                            ToolTip.Tip="我喜欢">
+                                                        <Svg Path="/Assets/Favorite.svg"
+                                                             Classes="ThemeSvgIcon"
+                                                             HorizontalAlignment="Center"
+                                                             VerticalAlignment="Center" />
+                                                    </Button>
+                                                </Grid>
                                                 <ContentControl Margin="0,0,0,12"
                                                                 Content="{TemplateBinding FooterContent}"
                                                                 IsVisible="{TemplateBinding IsMenuExpanded}" />
@@ -152,6 +171,9 @@
         </Style>
         <Style Selector="^ /template/ Grid#PART_Spacer">
             <Setter Property="Height" Value="0" />
+        </Style>
+        <Style Selector="^ /template/ Grid#PART_CompactLikePlaylist">
+            <Setter Property="IsVisible" Value="True" />
         </Style>
     </Style>
 </Styles>
