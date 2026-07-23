@@ -21,7 +21,7 @@ public partial class UserCloudViewModel(
     ISukiToastManager toastManager,
     ILogger<UserCloudViewModel> logger) : PageViewModelBase
 {
-    private const int PageSize = 500;
+    private const int PageSize = 100;
     private const string DefaultCollectionCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.png";
 
