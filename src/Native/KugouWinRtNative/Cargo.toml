@@ -1,0 +1,18 @@
+[package]
+name = "kugou-winrt-native"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "KugouWinRtNative"
+crate-type = ["cdylib"]
+
+[dependencies]
+windows = { version = "0.62.2", features = [
+    "Foundation",
+    "Media",
+    "Storage",
+    "Storage_Streams",
+    "Win32_Foundation",
+    "Win32_System_WinRT",
+] }

@@ -13,9 +13,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
-using Windows.Media;
-using Windows.Storage;
-using Windows.Storage.Streams;
 
 namespace KugouAvaloniaPlayer.Services.SystemMediaSession;
 
@@ -24,6 +21,10 @@ public sealed class SystemMediaSessionService(
     ILogger<SystemMediaSessionService> logger) : ISystemMediaSessionService
 {
     private const string DefaultWindowTitle = "KA Music";
+    private const uint NativeButtonPlay = 1;
+    private const uint NativeButtonPause = 2;
+    private const uint NativeButtonPrevious = 3;
+    private const uint NativeButtonNext = 4;
     private static readonly TimeSpan TimelineUpdateInterval = TimeSpan.FromMilliseconds(750);
     private readonly string _artworkCacheDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -32,82 +33,86 @@ public sealed class SystemMediaSessionService(
 
     private Window? _mainWindow;
     private PlayerViewModel? _playerViewModel;
-    private SystemMediaTransportControls? _transportControls;
+    private KugouWinRtNativeApi? _nativeApi;
     private DateTimeOffset _lastTimelineUpdate = DateTimeOffset.MinValue;
     private int _songUpdateVersion;
-    private bool _isInitialized;
+    private bool _initializationAttempted;
+    private bool _unavailableWarningLogged;
 
-    public bool IsSupported => true;
+    public bool IsSupported => _nativeApi != null;
 
     public void Initialize(Window mainWindow, PlayerViewModel playerViewModel)
     {
-        if (_isInitialized)
+        if (_initializationAttempted)
             return;
+
+        _initializationAttempted = true;
+        _mainWindow = mainWindow;
+        _playerViewModel = playerViewModel;
 
         var hwnd = mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (hwnd == IntPtr.Zero)
         {
-            logger.LogWarning("Windows 系统媒体控件初始化失败: 主窗口句柄不可用。");
+            LogUnavailable("主窗口句柄不可用。");
             return;
         }
 
         try
         {
-            _mainWindow = mainWindow;
-            _playerViewModel = playerViewModel;
-            _transportControls = SystemMediaTransportControlsInterop.GetForWindow(hwnd);
-            _transportControls.IsEnabled = true;
-            _transportControls.IsPlayEnabled = true;
-            _transportControls.IsPauseEnabled = true;
-            _transportControls.IsPreviousEnabled = true;
-            _transportControls.IsNextEnabled = true;
-            _transportControls.IsStopEnabled = false;
-            _transportControls.PlaybackStatus = MediaPlaybackStatus.Stopped;
-            _transportControls.ButtonPressed += OnButtonPressed;
-            _isInitialized = true;
+            _nativeApi = KugouWinRtNativeApi.Load(hwnd, OnNativeButtonPressed);
             _ = UpdateSongAsync(playerViewModel.DisplayedPlayingSong);
             UpdatePlaybackState(playerViewModel.IsPlayingAudio);
             UpdateTimeline(playerViewModel.CurrentPositionSeconds, playerViewModel.TotalDurationSeconds);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is DllNotFoundException
+                                   or BadImageFormatException
+                                   or EntryPointNotFoundException
+                                   or InvalidOperationException)
         {
-            logger.LogWarning(ex, "Windows 系统媒体控件初始化失败。");
-            _transportControls = null;
-            _mainWindow = null;
-            _playerViewModel = null;
+            _nativeApi?.Dispose();
+            _nativeApi = null;
+            LogUnavailable(
+                $"加载或创建 {Path.Combine(AppContext.BaseDirectory, "KugouWinRtNative.dll")} 失败。",
+                ex);
         }
     }
 
     public async Task UpdateSongAsync(SongItem? song)
     {
-        var controls = _transportControls;
-        if (controls == null)
+        UpdateWindowTitle(song);
+
+        var nativeApi = _nativeApi;
+        if (nativeApi == null)
             return;
 
         var updateVersion = Interlocked.Increment(ref _songUpdateVersion);
         try
         {
-            var updater = controls.DisplayUpdater;
-            updater.Type = MediaPlaybackType.Music;
-            updater.MusicProperties.Title = song?.DisplayTitle ?? DefaultWindowTitle;
-            updater.MusicProperties.Artist = song?.Singer ?? string.Empty;
-            UpdateWindowTitle(song);
-
             var artworkPath = await ResolveArtworkPathAsync(song?.Cover);
-            if (updateVersion != Volatile.Read(ref _songUpdateVersion))
+            if (updateVersion != Volatile.Read(ref _songUpdateVersion) || nativeApi != _nativeApi)
                 return;
 
-            if (!string.IsNullOrWhiteSpace(artworkPath) && File.Exists(artworkPath))
-            {
-                var storageFile = await StorageFile.GetFileFromPathAsync(artworkPath);
-                updater.Thumbnail = RandomAccessStreamReference.CreateFromFile(storageFile);
-            }
-            else
-            {
-                updater.Thumbnail = null;
-            }
+            if (string.IsNullOrWhiteSpace(artworkPath) || !File.Exists(artworkPath))
+                artworkPath = null;
 
-            updater.Update();
+            var title = song?.DisplayTitle ?? DefaultWindowTitle;
+            var artist = song?.Singer ?? string.Empty;
+            var status = await Task.Run(() =>
+            {
+                if (updateVersion != Volatile.Read(ref _songUpdateVersion)
+                    || !ReferenceEquals(nativeApi, Volatile.Read(ref _nativeApi)))
+                {
+                    return (int?)null;
+                }
+
+                return nativeApi.UpdateMetadata(title, artist, artworkPath);
+            });
+            if (status is < 0)
+            {
+                logger.LogDebug(
+                    "更新 Windows 系统媒体控件歌曲信息失败，HRESULT={Status}。",
+                    KugouWinRtNativeApi.FormatStatus(status.Value));
+            }
         }
         catch (Exception ex)
         {
@@ -117,17 +122,30 @@ public sealed class SystemMediaSessionService(
 
     public void UpdatePlaybackState(bool isPlaying)
     {
-        var controls = _transportControls;
-        if (controls == null)
+        var nativeApi = _nativeApi;
+        if (nativeApi == null)
             return;
 
-        controls.PlaybackStatus = isPlaying ? MediaPlaybackStatus.Playing : MediaPlaybackStatus.Paused;
+        try
+        {
+            var status = nativeApi.UpdatePlaybackState(isPlaying);
+            if (status < 0)
+            {
+                logger.LogDebug(
+                    "更新 Windows 系统媒体控件播放状态失败，HRESULT={Status}。",
+                    KugouWinRtNativeApi.FormatStatus(status));
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "更新 Windows 系统媒体控件播放状态失败。");
+        }
     }
 
     public void UpdateTimeline(double positionSeconds, double durationSeconds)
     {
-        var controls = _transportControls;
-        if (controls == null)
+        var nativeApi = _nativeApi;
+        if (nativeApi == null)
             return;
 
         var now = DateTimeOffset.UtcNow;
@@ -140,14 +158,15 @@ public sealed class SystemMediaSessionService(
 
         try
         {
-            controls.UpdateTimelineProperties(new SystemMediaTransportControlsTimelineProperties
+            var status = nativeApi.UpdateTimeline(
+                SecondsToMilliseconds(position),
+                SecondsToMilliseconds(duration));
+            if (status < 0)
             {
-                StartTime = TimeSpan.Zero,
-                MinSeekTime = TimeSpan.Zero,
-                Position = TimeSpan.FromSeconds(position),
-                EndTime = TimeSpan.FromSeconds(duration),
-                MaxSeekTime = TimeSpan.FromSeconds(duration)
-            });
+                logger.LogDebug(
+                    "更新 Windows 系统媒体控件播放进度失败，HRESULT={Status}。",
+                    KugouWinRtNativeApi.FormatStatus(status));
+            }
         }
         catch (Exception ex)
         {
@@ -157,18 +176,15 @@ public sealed class SystemMediaSessionService(
 
     public void Shutdown()
     {
-        if (_transportControls != null)
-        {
-            _transportControls.ButtonPressed -= OnButtonPressed;
-            _transportControls.PlaybackStatus = MediaPlaybackStatus.Stopped;
-            _transportControls.IsEnabled = false;
-            _transportControls = null;
-        }
+        Interlocked.Increment(ref _songUpdateVersion);
+        _nativeApi?.Dispose();
+        _nativeApi = null;
 
         ResetWindowTitle();
         _mainWindow = null;
         _playerViewModel = null;
-        _isInitialized = false;
+        _initializationAttempted = false;
+        _lastTimelineUpdate = DateTimeOffset.MinValue;
     }
 
     public void Dispose()
@@ -176,28 +192,52 @@ public sealed class SystemMediaSessionService(
         Shutdown();
     }
 
-    private void OnButtonPressed(SystemMediaTransportControls sender, SystemMediaTransportControlsButtonPressedEventArgs args)
+    private void OnNativeButtonPressed(uint button)
     {
-        var player = _playerViewModel;
-        if (player == null)
-            return;
-
         Dispatcher.UIThread.Post(() =>
         {
-            switch (args.Button)
+            var player = _playerViewModel;
+            if (player == null)
+                return;
+
+            switch (button)
             {
-                case SystemMediaTransportControlsButton.Play when !player.IsPlayingAudio:
-                case SystemMediaTransportControlsButton.Pause when player.IsPlayingAudio:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                case NativeButtonPlay when !player.IsPlayingAudio:
+                case NativeButtonPause when player.IsPlayingAudio:
+                    WeakReferenceMessenger.Default.Send(
+                        new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
                     break;
-                case SystemMediaTransportControlsButton.Previous:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
+                case NativeButtonPrevious:
+                    WeakReferenceMessenger.Default.Send(
+                        new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
                     break;
-                case SystemMediaTransportControlsButton.Next:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.NextTrack));
+                case NativeButtonNext:
+                    WeakReferenceMessenger.Default.Send(
+                        new PlaybackControlMessage(PlaybackControlAction.NextTrack));
                     break;
             }
         });
+    }
+
+    private void LogUnavailable(string reason, Exception? exception = null)
+    {
+        if (_unavailableWarningLogged)
+            return;
+
+        _unavailableWarningLogged = true;
+        if (exception == null)
+        {
+            logger.LogWarning(
+                "Windows 系统媒体控件不可用，已禁用该可选功能，应用将继续运行。原因: {Reason}",
+                reason);
+        }
+        else
+        {
+            logger.LogWarning(
+                exception,
+                "Windows 系统媒体控件不可用，已禁用该可选功能，应用将继续运行。原因: {Reason}",
+                reason);
+        }
     }
 
     private void UpdateWindowTitle(SongItem? song)
@@ -207,7 +247,6 @@ public sealed class SystemMediaSessionService(
             return;
 
         var title = BuildWindowTitle(song);
-
         Dispatcher.UIThread.Post(() => window.Title = title);
     }
 
@@ -249,13 +288,17 @@ public sealed class SystemMediaSessionService(
                 return uri.LocalPath;
         }
 
-        return File.Exists(cover) ? cover : await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png");
+        return File.Exists(cover)
+            ? cover
+            : await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png");
     }
 
     private async Task<string?> DownloadArtworkAsync(Uri uri)
     {
         Directory.CreateDirectory(_artworkCacheDirectory);
-        var cachePath = Path.Combine(_artworkCacheDirectory, $"{GetStableHash(uri.AbsoluteUri)}{GetArtworkExtension(uri)}");
+        var cachePath = Path.Combine(
+            _artworkCacheDirectory,
+            $"{GetStableHash(uri.AbsoluteUri)}{GetArtworkExtension(uri)}");
         if (File.Exists(cachePath))
             return cachePath;
 
@@ -268,8 +311,15 @@ public sealed class SystemMediaSessionService(
                 return await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png");
 
             var contentExtension = GetArtworkExtension(response.Content.Headers.ContentType?.MediaType);
-            if (!string.Equals(contentExtension, Path.GetExtension(cachePath), StringComparison.OrdinalIgnoreCase))
-                cachePath = Path.Combine(_artworkCacheDirectory, $"{GetStableHash(uri.AbsoluteUri)}{contentExtension}");
+            if (!string.Equals(
+                    contentExtension,
+                    Path.GetExtension(cachePath),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                cachePath = Path.Combine(
+                    _artworkCacheDirectory,
+                    $"{GetStableHash(uri.AbsoluteUri)}{contentExtension}");
+            }
 
             await using var source = await response.Content.ReadAsStreamAsync();
             await using var target = File.Create(cachePath);
@@ -290,7 +340,9 @@ public sealed class SystemMediaSessionService(
         if (string.IsNullOrWhiteSpace(extension))
             extension = ".png";
 
-        var cachePath = Path.Combine(_artworkCacheDirectory, $"{GetStableHash(assetUri)}{extension}");
+        var cachePath = Path.Combine(
+            _artworkCacheDirectory,
+            $"{GetStableHash(assetUri)}{extension}");
         if (File.Exists(cachePath))
             return cachePath;
 
@@ -306,6 +358,16 @@ public sealed class SystemMediaSessionService(
             logger.LogDebug(ex, "复制 Windows 系统媒体控件默认封面失败。");
             return null;
         }
+    }
+
+    private static long SecondsToMilliseconds(double seconds)
+    {
+        if (!double.IsFinite(seconds) || seconds <= 0)
+            return 0;
+
+        return seconds >= long.MaxValue / 1000d
+            ? long.MaxValue
+            : (long)Math.Round(seconds * 1000d);
     }
 
     private static string GetStableHash(string value)

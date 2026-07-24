@@ -38,6 +38,16 @@ jobs:
         shell: bash
         run: dotnet tool install -g vpk
 
+      - name: Build WinRT native bridge
+        if: ${{ matrix.rid == 'win-x64' }}
+        shell: bash
+        run: |
+          cargo build \
+            --manifest-path ./src/Native/KugouWinRtNative/Cargo.toml \
+            --release
+          cp ./src/Native/KugouWinRtNative/target/release/KugouWinRtNative.dll \
+            ./src/Apps/KugouAvaloniaPlayer/Native/KugouWinRtNative.dll
+
       - name: Publish App
         shell: bash
         run: |
