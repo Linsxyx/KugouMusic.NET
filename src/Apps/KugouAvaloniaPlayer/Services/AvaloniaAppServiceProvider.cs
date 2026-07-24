@@ -75,6 +75,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<IFolderPickerService>().As(Singleton).To<FolderPickerService>()
         .Bind<IJellyfinClient>().As(Singleton).To<JellyfinClient>()
         .Bind<ILocalMusicLibraryService>().As(Singleton).To<LocalMusicLibraryService>()
+        .Bind<ILocalMusicSearchDialogService>().As(Singleton).To<LocalMusicSearchDialogService>()
         .Bind<IGitHubReleaseService>().As(Singleton).To<GitHubReleaseService>()
         .Bind<IAppUpdateService>().As(Singleton).To<AppUpdateService>()
         .Bind<ISingerViewModelFactory>().To<SingerViewModelFactory>()

@@ -22,6 +22,8 @@ public record RemoveFromPlaylistMessage(SongItem Song);
 
 public record SetLocalSongCoverMessage(SongItem Song);
 
+public record SongLocateRequest(long LocalTrackId, long Sequence);
+
 public record AuthStateChangedMessage(bool IsLoggedIn);
 
 public record RequestNavigateBackMessage;

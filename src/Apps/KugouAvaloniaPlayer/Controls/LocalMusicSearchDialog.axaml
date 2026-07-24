@@ -1,0 +1,245 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="KugouAvaloniaPlayer.Controls.LocalMusicSearchDialog"
+             x:Name="SearchDialogRoot"
+             x:DataType="vm:LocalMusicSearchDialogViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ListBox.LocalMusicSearchList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.IsScrollChainingEnabled" Value="False" />
+        </Style>
+
+        <Style Selector="ListBox.LocalMusicSearchList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Background="Transparent" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+
+    <Border Width="920"
+            MaxHeight="720"
+            Padding="22"
+            Background="{DynamicResource SukiBackground}"
+            CornerRadius="18">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+            <StackPanel Spacing="6"
+                        Margin="0,0,0,16">
+                <TextBlock Text="搜索本地歌曲"
+                           FontSize="26"
+                           FontWeight="Bold" />
+                <TextBlock Text="搜索已加入本地音乐库歌单的全部歌曲"
+                           Foreground="{DynamicResource SukiLowText}" />
+            </StackPanel>
+
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="10"
+                  Margin="0,0,0,16">
+                <TextBox x:Name="SearchBox"
+                         PlaceholderText="搜索歌曲、歌手、专辑或歌单"
+                         Text="{Binding SearchText}"
+                         behaviors:InteractionBehaviors.EnterKeyCommand="{Binding SearchCommand}" />
+
+                <Button Grid.Column="1"
+                        Classes="Standard"
+                        MinWidth="44"
+                        Cursor="Hand"
+                        Command="{Binding SearchCommand}"
+                        ToolTip.Tip="搜索">
+                    <PathIcon Data="{x:Static suki:Icons.Search}"
+                              Width="18"
+                              Height="18" />
+                </Button>
+            </Grid>
+
+            <Grid Grid.Row="2">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="8"
+                            IsVisible="{Binding ShowPromptState}">
+                    <PathIcon Data="{x:Static suki:Icons.Search}"
+                              Width="30"
+                              Height="30"
+                              Foreground="{DynamicResource SukiLowText}" />
+                    <TextBlock Text="输入关键词后按 Enter 或点击搜索按钮"
+                               Foreground="{DynamicResource SukiLowText}" />
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="10"
+                            IsVisible="{Binding IsSearching}">
+                    <suki:Loading Width="40" Height="40" />
+                    <TextBlock Text="正在搜索本地音乐库..."
+                               Foreground="{DynamicResource SukiLiquid2}" />
+                </StackPanel>
+
+                <Border IsVisible="{Binding ShowEmptyState}"
+                        Padding="24"
+                        CornerRadius="16"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <TextBlock Text="没有找到匹配的歌曲"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="换个关键词试试。"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Border IsVisible="{Binding HasError}"
+                        Padding="24"
+                        CornerRadius="16"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <StackPanel HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="10">
+                        <TextBlock Text="搜索失败"
+                                   FontSize="16"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding ErrorMessage}"
+                                   MaxWidth="640"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Foreground="{DynamicResource SukiLowText}" />
+                        <Button Classes="Basic"
+                                Command="{Binding SearchCommand}"
+                                Cursor="Hand">
+                            <TextBlock Text="重试" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <Grid RowDefinitions="Auto,*"
+                      IsVisible="{Binding HasResults}">
+                    <Grid ColumnDefinitions="72,*,140,140,80,100"
+                          ColumnSpacing="12"
+                          Margin="12,0,12,8">
+                        <TextBlock Grid.Column="1" Text="歌曲" Foreground="{DynamicResource SukiLowText}" />
+                        <TextBlock Grid.Column="2" Text="专辑" Foreground="{DynamicResource SukiLowText}" />
+                        <TextBlock Grid.Column="3" Text="对应歌单" Foreground="{DynamicResource SukiLowText}" />
+                        <TextBlock Grid.Column="4" Text="时长" Foreground="{DynamicResource SukiLowText}" />
+                        <TextBlock Grid.Column="5"
+                                   Text="操作"
+                                   HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource SukiLowText}" />
+                    </Grid>
+
+                    <ListBox Grid.Row="1"
+                             Classes="LocalMusicSearchList"
+                             ItemsSource="{Binding Results}"
+                             MaxHeight="440">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:LocalMusicSearchResultItemViewModel">
+                                <Border Margin="0,0,0,10"
+                                        Padding="12"
+                                        CornerRadius="16"
+                                        Background="{DynamicResource SukiPrimaryColorLow}"
+                                        behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #SearchDialogRoot.((vm:LocalMusicSearchDialogViewModel)DataContext).OpenResultCommand}"
+                                        behaviors:InteractionBehaviors.DoubleTappedCommandParameter="{Binding}">
+                                    <Grid ColumnDefinitions="72,*,140,140,80,100"
+                                          ColumnSpacing="12">
+                                        <Border Width="60"
+                                                Height="60"
+                                                CornerRadius="12"
+                                                ClipToBounds="True"
+                                                Background="{DynamicResource SukiPrimaryColor0}">
+                                            <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
+                                                   behaviors:ImageRenderOptions.InterpolationSource="{Binding Cover}"
+                                                   Stretch="UniformToFill" />
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1"
+                                                    VerticalAlignment="Center"
+                                                    Spacing="4">
+                                            <TextBlock Text="{Binding Title}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Artist}"
+                                                       Foreground="{DynamicResource SukiLowText}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding Album}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource SukiLowText}"
+                                                   TextTrimming="CharacterEllipsis" />
+
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding PlaylistName}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource SukiLowText}"
+                                                   TextTrimming="CharacterEllipsis" />
+
+                                        <TextBlock Grid.Column="4"
+                                                   Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource SukiLowText}" />
+
+                                        <Button Grid.Column="5"
+                                                Classes="Basic"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Center"
+                                                Cursor="Hand"
+                                                Command="{Binding #SearchDialogRoot.((vm:LocalMusicSearchDialogViewModel)DataContext).OpenResultCommand}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="打开歌单" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Grid>
+
+            <Grid Grid.Row="3"
+                  ColumnDefinitions="*,Auto"
+                  Margin="0,18,0,0">
+                <TextBlock Text="{Binding Results.Count, StringFormat='找到 {0} 条结果'}"
+                           IsVisible="{Binding HasResults}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SukiLowText}" />
+
+                <Button Grid.Column="1"
+                        Classes="Basic"
+                        Command="{Binding CancelCommand}"
+                        Cursor="Hand">
+                    <TextBlock Text="关闭" />
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

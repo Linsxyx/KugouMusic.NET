@@ -22,6 +22,9 @@ public interface ILocalMusicLibraryService
     Task InitializeAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LocalPlaylistSummary>> GetPlaylistsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LocalTrackItem>> GetPlaylistTracksAsync(long playlistId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LocalTrackSearchResult>> SearchTracksAsync(
+        string keyword,
+        CancellationToken cancellationToken = default);
     Task<LocalPlaylistSummary> CreatePlaylistAsync(string name, CancellationToken cancellationToken = default);
     Task<LocalPlaylistSummary> ImportFolderAsync(string folderPath, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LocalPlaylistSummary>> ImportJellyfinLibraryAsync(
@@ -54,6 +57,12 @@ public sealed record LocalTrackItem(
     string LocalPath,
     string? CoverPath,
     string? RemoteUrl);
+
+public sealed record LocalTrackSearchResult(
+    LocalTrackItem Track,
+    long PlaylistId,
+    string PlaylistName,
+    int PlaylistPosition);
 
 public sealed class LocalMusicLibraryService(
     IJellyfinClient jellyfinClient,
@@ -139,6 +148,60 @@ public sealed class LocalMusicLibraryService(
             tracks.Add(ReadTrackItem(reader));
 
         return tracks;
+    }
+
+    public async Task<IReadOnlyList<LocalTrackSearchResult>> SearchTracksAsync(
+        string keyword,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedKeyword = keyword.Trim();
+        if (normalizedKeyword.Length == 0)
+            return [];
+
+        await EnsureInitializedAsync(cancellationToken);
+        await using var connection = await AppDatabase.CreateConnectionAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT t.id, t.title, t.artist, t.album, t.duration_seconds, t.source_type, t.local_path,
+                   t.cover_path, t.remote_url, p.id AS playlist_id, p.name AS playlist_name,
+                   pt.position AS playlist_position
+            FROM playlist_tracks pt
+            INNER JOIN tracks t ON t.id = pt.track_id
+            INNER JOIN playlists p ON p.id = pt.playlist_id
+            WHERE t.title LIKE $pattern ESCAPE '\'
+               OR t.artist LIKE $pattern ESCAPE '\'
+               OR t.album LIKE $pattern ESCAPE '\'
+               OR p.name LIKE $pattern ESCAPE '\'
+            ORDER BY
+                CASE
+                    WHEN t.title = $keyword COLLATE NOCASE THEN 0
+                    WHEN t.title LIKE $prefix ESCAPE '\' THEN 1
+                    ELSE 2
+                END,
+                t.title COLLATE NOCASE,
+                p.name COLLATE NOCASE,
+                pt.position,
+                t.id;
+            """;
+
+        var escapedKeyword = EscapeLikePattern(normalizedKeyword);
+        command.Parameters.AddWithValue("$keyword", normalizedKeyword);
+        command.Parameters.AddWithValue("$prefix", escapedKeyword + "%");
+        command.Parameters.AddWithValue("$pattern", "%" + escapedKeyword + "%");
+
+        var results = new List<LocalTrackSearchResult>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(new LocalTrackSearchResult(
+                ReadTrackItem(reader),
+                reader.GetInt64(reader.GetOrdinal("playlist_id")),
+                reader.GetString(reader.GetOrdinal("playlist_name")),
+                reader.GetInt32(reader.GetOrdinal("playlist_position"))));
+        }
+
+        return results;
     }
 
     public async Task<LocalPlaylistSummary> CreatePlaylistAsync(string name, CancellationToken cancellationToken = default)
@@ -1257,6 +1320,14 @@ public sealed class LocalMusicLibraryService(
     private static object DbValue(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? DBNull.Value : value;
+    }
+
+    private static string EscapeLikePattern(string value)
+    {
+        return value
+            .Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("%", @"\%", StringComparison.Ordinal)
+            .Replace("_", @"\_", StringComparison.Ordinal);
     }
 
     private async Task EnsureInitializedAsync(CancellationToken cancellationToken)

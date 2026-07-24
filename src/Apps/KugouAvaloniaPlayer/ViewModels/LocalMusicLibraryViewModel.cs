@@ -29,6 +29,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
     private readonly IFolderPickerService _folderPickerService;
     private readonly IJellyfinClient _jellyfinClient;
     private readonly ILocalMusicLibraryService _localMusicLibraryService;
+    private readonly ILocalMusicSearchDialogService _localMusicSearchDialogService;
     private readonly ILogger<LocalMusicLibraryViewModel> _logger;
     private readonly ISukiToastManager _toastManager;
     private readonly List<SongItem> _selectedPlaylistSongsDefaultOrder = new();
@@ -54,11 +55,17 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
     [NotifyPropertyChangedFor(nameof(IsLocalLibraryHome))]
     public partial PlaylistItem? SelectedPlaylist { get; set; }
 
+    [ObservableProperty]
+    public partial SongLocateRequest? PendingSongLocateRequest { get; set; }
+
+    private long _songLocateSequence;
+
     public LocalMusicLibraryViewModel(
         ICreatePlaylistDialogService createPlaylistDialogService,
         IFolderPickerService folderPickerService,
         IJellyfinClient jellyfinClient,
         ILocalMusicLibraryService localMusicLibraryService,
+        ILocalMusicSearchDialogService localMusicSearchDialogService,
         ISukiToastManager toastManager,
         ILogger<LocalMusicLibraryViewModel> logger)
     {
@@ -66,6 +73,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         _folderPickerService = folderPickerService;
         _jellyfinClient = jellyfinClient;
         _localMusicLibraryService = localMusicLibraryService;
+        _localMusicSearchDialogService = localMusicSearchDialogService;
         _toastManager = toastManager;
         _logger = logger;
         CurrentSortText = GetSortText(SettingsManager.Settings.LocalPlaylistSongSortMode);
@@ -109,6 +117,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
     {
         IsShowingSongs = false;
         SelectedPlaylist = null;
+        PendingSongLocateRequest = null;
         _selectedPlaylistSongsDefaultOrder.Clear();
         SelectedPlaylistSongs.Clear();
         OnPropertyChanged(nameof(IsLocalLibraryHome));
@@ -118,6 +127,68 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
     private void BackFromPlaylist()
     {
         GoBack();
+    }
+
+    [RelayCommand]
+    private void ShowLocalMusicSearchDialog()
+    {
+        _localMusicSearchDialogService.Show(OpenSearchResultAsync);
+    }
+
+    private async Task OpenSearchResultAsync(LocalTrackSearchResult result)
+    {
+        try
+        {
+            var playlistId = result.PlaylistId.ToString();
+            var playlist = LocalLibraryPlaylists
+                .AsValueEnumerable()
+                .FirstOrDefault(item => item.Id == playlistId);
+
+            if (playlist is null)
+            {
+                await LoadLocalLibraryAsync();
+                playlist = LocalLibraryPlaylists
+                    .AsValueEnumerable()
+                    .FirstOrDefault(item => item.Id == playlistId);
+            }
+
+            if (playlist is null)
+            {
+                ShowSearchNavigationError("对应歌单已不存在，请重新搜索。");
+                return;
+            }
+
+            await OpenPlaylist(playlist);
+            if (!SelectedPlaylistSongs.AsValueEnumerable().Any(song => song.LocalTrackId == result.Track.Id))
+            {
+                ShowSearchNavigationError("歌曲已不在对应歌单中，请重新搜索。");
+                return;
+            }
+
+            PendingSongLocateRequest = new SongLocateRequest(
+                result.Track.Id,
+                ++_songLocateSequence);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "打开本地搜索结果失败 playlistId={PlaylistId}, trackId={TrackId}",
+                result.PlaylistId,
+                result.Track.Id);
+            ShowSearchNavigationError(ex.Message);
+        }
+    }
+
+    private void ShowSearchNavigationError(string message)
+    {
+        _toastManager.CreateToast()
+            .OfType(NotificationType.Warning)
+            .WithTitle("无法打开搜索结果")
+            .WithContent(message)
+            .Dismiss().After(TimeSpan.FromSeconds(4))
+            .Dismiss().ByClicking()
+            .Queue();
     }
 
     [RelayCommand]
@@ -149,6 +220,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         if (item.Type != PlaylistType.Local)
             return;
 
+        PendingSongLocateRequest = null;
         SelectedPlaylist = item;
         IsShowingSongs = true;
         _selectedPlaylistSongsDefaultOrder.Clear();

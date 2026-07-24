@@ -16,7 +16,7 @@
                         IsVisible="{Binding IsLocalLibraryHome}">
             <Grid RowDefinitions="Auto,*">
                 <Grid Grid.Row="0"
-                      ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                      ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
                       ColumnSpacing="10"
                       Margin="0,0,0,18">
                     <StackPanel Spacing="4">
@@ -29,6 +29,18 @@
                             Classes="Basic"
                             MinHeight="36"
                             Padding="14,0"
+                            Command="{Binding ShowLocalMusicSearchDialogCommand}"
+                            Cursor="Hand">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{x:Static suki:Icons.Search}" />
+                            <TextBlock Text="搜索本地歌曲" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2"
+                            Classes="Basic"
+                            MinHeight="36"
+                            Padding="14,0"
                             Command="{Binding RefreshLocalLibraryCommand}"
                             IsEnabled="{Binding !IsRefreshingLocalLibrary}"
                             Cursor="Hand">
@@ -38,7 +50,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="2"
+                    <Button Grid.Column="3"
                             Classes="Basic"
                             MinHeight="36"
                             Padding="14,0"
@@ -50,7 +62,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="3"
+                    <Button Grid.Column="4"
                             Classes="Basic"
                             MinHeight="36"
                             Padding="14,0"
@@ -63,7 +75,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Button Grid.Column="4"
+                    <Button Grid.Column="5"
                             Classes="Basic"
                             MinHeight="36"
                             Padding="14,0"
@@ -115,6 +127,7 @@
             Cover="{Binding SelectedPlaylist.Cover}"
             Title="{Binding SelectedPlaylist.Name}"
             Songs="{Binding SelectedPlaylistSongs}"
+            SongLocateRequest="{Binding PendingSongLocateRequest}"
             BackCommand="{Binding BackFromPlaylistCommand}"
             IsLoadingMore="{Binding IsLoadingMore}"
             ListMargin="0"
