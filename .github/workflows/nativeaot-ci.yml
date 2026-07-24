@@ -1,0 +1,90 @@
+name: NativeAOT CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  publish-windows:
+    name: Publish Windows x64 NativeAOT
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Build optional WinRT native bridge
+        shell: pwsh
+        run: |
+          $manifest = 'src/Native/KugouWinRtNative/Cargo.toml'
+          if (-not (Test-Path -LiteralPath $manifest)) {
+            Write-Host 'KugouWinRtNative is not present on this revision; skipping its checks.'
+            exit 0
+          }
+
+          cargo fmt --manifest-path $manifest -- --check
+          cargo clippy --manifest-path $manifest --release -- -D warnings
+          cargo test --manifest-path $manifest --release
+          cargo build --manifest-path $manifest --release
+
+          Copy-Item `
+            -LiteralPath 'src/Native/KugouWinRtNative/target/release/KugouWinRtNative.dll' `
+            -Destination 'src/Apps/KugouAvaloniaPlayer/Native/KugouWinRtNative.dll' `
+            -Force
+
+      - name: Publish NativeAOT
+        shell: pwsh
+        run: |
+          dotnet publish `
+            'src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj' `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishAot=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -o artifacts/nativeaot
+
+      - name: Verify publish output
+        shell: pwsh
+        run: |
+          $publishDirectory = 'artifacts/nativeaot'
+          $appPath = Join-Path $publishDirectory 'KugouAvaloniaPlayer.exe'
+          if (-not (Test-Path -LiteralPath $appPath)) {
+            throw "NativeAOT executable was not produced: $appPath"
+          }
+
+          $manifest = 'src/Native/KugouWinRtNative/Cargo.toml'
+          if (Test-Path -LiteralPath $manifest) {
+            $bridgePath = Join-Path $publishDirectory 'KugouWinRtNative.dll'
+            if (-not (Test-Path -LiteralPath $bridgePath)) {
+              throw "WinRT native bridge was not published: $bridgePath"
+            }
+          }
