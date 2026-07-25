@@ -172,6 +172,25 @@ public partial class PlayerViewModel
         await PlaySongAsync(_queueManager.GetPrevious(CurrentPlayingSong));
     }
 
+    private async Task ChangeTrackPreservingPlaybackStateAsync(bool playNext)
+    {
+        var wasPlaying = IsPlayingAudio;
+        var wasStopped = _player.IsStopped;
+
+        if (playNext)
+            await PlayNext();
+        else
+            await PlayPrevious();
+
+        if (wasPlaying || !IsPlayingAudio)
+            return;
+
+        if (wasStopped)
+            StopAndReset();
+        else
+            TogglePlayPause();
+    }
+
     [RelayCommand]
     private void ToggleRepeatOneMode()
     {
@@ -222,7 +241,7 @@ public partial class PlayerViewModel
         ApplyPlayMode(SettingsManager.Settings.PlaybackMode, saveSettings: false);
     }
 
-    private void ApplyPlayMode(PlayMode mode, bool saveSettings)
+    internal void ApplyPlayMode(PlayMode mode, bool saveSettings)
     {
         if (mode == CurrentPlayMode)
             return;

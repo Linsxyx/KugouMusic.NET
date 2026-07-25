@@ -1,6 +1,7 @@
 #if KUGOU_LINUX
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -26,8 +27,7 @@ public sealed class SystemMediaSessionService(
     private const string PlayerInterface = "org.mpris.MediaPlayer2.Player";
     private const string PropertiesInterface = "org.freedesktop.DBus.Properties";
     private const string IntrospectableInterface = "org.freedesktop.DBus.Introspectable";
-    private static readonly TimeSpan TimelineUpdateInterval = TimeSpan.FromMilliseconds(750);
-    private static readonly ObjectPath TrackObjectPath = new("/org/mpris/MediaPlayer2/Track/CurrentTrack");
+    private const string ErrorPrefix = "org.freedesktop.DBus.Error.";
 
     private readonly string _artworkCacheDirectory = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -35,13 +35,19 @@ public sealed class SystemMediaSessionService(
         "media-session-artwork");
 
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly Lock _connectionStateLock = new();
     private DBusConnection? _connection;
+    private Task? _initializationTask;
+    private Window? _mainWindow;
     private PlayerViewModel? _playerViewModel;
-    private DateTimeOffset _lastTimelineUpdate = DateTimeOffset.MinValue;
     private SongItem? _currentSong;
+    private ObjectPath _currentTrackPath;
     private int _songUpdateVersion;
+    private int _disposeState;
     private bool _isInitialized;
     private bool _isPlaying;
+    private bool _isStopped = true;
     private double _positionSeconds;
     private double _durationSeconds;
     private string? _artUrl;
@@ -52,30 +58,44 @@ public sealed class SystemMediaSessionService(
 
     public void Initialize(Window mainWindow, PlayerViewModel playerViewModel)
     {
-        if (_isInitialized)
+        if (Volatile.Read(ref _disposeState) != 0 || _initializationTask != null)
             return;
 
+        _mainWindow = mainWindow;
         _playerViewModel = playerViewModel;
         _currentSong = playerViewModel.DisplayedPlayingSong;
+        _currentTrackPath = CreateTrackPath(_currentSong);
         _isPlaying = playerViewModel.IsPlayingAudio;
+        _isStopped = _currentSong == null;
         _positionSeconds = playerViewModel.CurrentPositionSeconds;
         _durationSeconds = playerViewModel.TotalDurationSeconds;
-        _ = InitializeAsync(playerViewModel);
+        playerViewModel.PropertyChanged += OnPlayerPropertyChanged;
+        _initializationTask = InitializeAsync(playerViewModel, _lifetimeCancellation.Token);
     }
 
     public async Task UpdateSongAsync(SongItem? song)
     {
+        var trackChanged = !ReferenceEquals(_currentSong, song);
         _currentSong = song;
+        if (trackChanged)
+        {
+            _currentTrackPath = CreateTrackPath(song);
+            _isStopped = song == null;
+        }
+
         var updateVersion = Interlocked.Increment(ref _songUpdateVersion);
 
         try
         {
-            var artUrl = await ResolveArtworkUrlAsync(song?.Cover);
+            var artUrl = song == null
+                ? null
+                : await ResolveArtworkUrlAsync(song.Cover).ConfigureAwait(false);
             if (updateVersion != Volatile.Read(ref _songUpdateVersion))
                 return;
 
             _artUrl = artUrl;
-            EmitPlayerPropertiesChanged(["Metadata", "CanPlay", "CanPause", "CanSeek"]);
+            EmitPlayerPropertiesChanged(
+                ["PlaybackStatus", "Metadata", "CanGoNext", "CanGoPrevious", "CanPlay", "CanPause", "CanSeek"]);
         }
         catch (Exception ex)
         {
@@ -85,52 +105,68 @@ public sealed class SystemMediaSessionService(
 
     public void UpdatePlaybackState(bool isPlaying)
     {
-        if (_isPlaying == isPlaying)
+        var oldStatus = GetPlaybackStatus();
+        _isPlaying = isPlaying;
+        if (isPlaying)
+            _isStopped = false;
+
+        if (oldStatus == GetPlaybackStatus())
             return;
 
-        _isPlaying = isPlaying;
         EmitPlayerPropertiesChanged(["PlaybackStatus"]);
     }
 
     public void UpdateTimeline(double positionSeconds, double durationSeconds)
     {
-        _positionSeconds = Math.Max(0, positionSeconds);
-        _durationSeconds = Math.Max(0, durationSeconds);
+        var oldDuration = _durationSeconds;
+        var oldCanSeek = CanSeek();
+        _positionSeconds = NormalizeSeconds(positionSeconds);
+        _durationSeconds = NormalizeSeconds(durationSeconds);
 
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastTimelineUpdate < TimelineUpdateInterval)
-            return;
-
-        _lastTimelineUpdate = now;
-        EmitPlayerPropertiesChanged(["Position", "Metadata", "CanSeek"]);
+        var changedProperties = new List<string>(2);
+        if (Math.Abs(oldDuration - _durationSeconds) >= 0.001)
+            changedProperties.Add("Metadata");
+        if (oldCanSeek != CanSeek())
+            changedProperties.Add("CanSeek");
+        if (changedProperties.Count > 0)
+            EmitPlayerPropertiesChanged(changedProperties);
     }
 
     public void Shutdown()
     {
-        _isInitialized = false;
-        _playerViewModel = null;
-        _currentSong = null;
-        _artUrl = null;
-
-        var connection = Interlocked.Exchange(ref _connection, null);
-        if (connection == null)
-            return;
-
         try
         {
-            connection.RemoveMethodHandler(MediaObjectPath);
-            connection.Dispose();
+            _lifetimeCancellation.Cancel();
         }
-        catch (Exception ex)
+        catch (ObjectDisposedException)
         {
-            logger.LogDebug(ex, "关闭 Linux MPRIS 会话失败。");
+            // Dispose 后重复 Shutdown 保持幂等。
         }
+        var player = Interlocked.Exchange(ref _playerViewModel, null);
+        if (player != null)
+            player.PropertyChanged -= OnPlayerPropertyChanged;
+        _mainWindow = null;
+        _currentSong = null;
+        _currentTrackPath = default;
+        _artUrl = null;
+
+        DBusConnection? connection;
+        lock (_connectionStateLock)
+        {
+            _isInitialized = false;
+            connection = _connection;
+            _connection = null;
+        }
+        DisposeConnection(connection);
     }
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposeState, 1) != 0)
+            return;
+
         Shutdown();
-        _initializationLock.Dispose();
+        _ = DisposeInitializationResourcesAsync(_initializationTask ?? Task.CompletedTask);
     }
 
     public async ValueTask HandleMethodAsync(MethodContext context)
@@ -161,13 +197,13 @@ public sealed class SystemMediaSessionService(
         {
             logger.LogDebug(ex, "处理 Linux MPRIS 方法调用失败。");
             if (!context.ReplySent)
-                context.ReplyError("org.freedesktop.DBus.Error.Failed", ex.Message);
+                context.ReplyError($"{ErrorPrefix}Failed", "The media player could not process the request.");
         }
 
         await ValueTask.CompletedTask;
     }
 
-    private async Task InitializeAsync(PlayerViewModel playerViewModel)
+    private async Task InitializeAsync(PlayerViewModel playerViewModel, CancellationToken cancellationToken)
     {
         if (!IsSupported)
         {
@@ -175,31 +211,55 @@ public sealed class SystemMediaSessionService(
             return;
         }
 
-        await _initializationLock.WaitAsync();
+        DBusConnection? connection = null;
+        var lockTaken = false;
         try
         {
-            if (_isInitialized)
+            await _initializationLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            lockTaken = true;
+            if (_isInitialized || cancellationToken.IsCancellationRequested)
                 return;
 
-            var connection = new DBusConnection(DBusAddress.Session!);
-            await connection.ConnectAsync();
+            connection = new DBusConnection(DBusAddress.Session!);
+            await connection.ConnectAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             connection.AddMethodHandler(this);
-            await connection.RequestNameAsync(BusName, RequestNameOptions.ReplaceExisting);
+            var acquired = await connection.TryRequestNameAsync(BusName, RequestNameOptions.None)
+                .ConfigureAwait(false);
+            if (!acquired)
+            {
+                logger.LogWarning("D-Bus 名称 {BusName} 已被占用，Linux MPRIS 服务未启动。", BusName);
+                return;
+            }
 
-            _connection = connection;
-            _isInitialized = true;
-            await UpdateSongAsync(playerViewModel.DisplayedPlayingSong);
-            EmitPlayerPropertiesChanged(["PlaybackStatus", "Metadata", "Position"]);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_connectionStateLock)
+            {
+                if (cancellationToken.IsCancellationRequested || Volatile.Read(ref _disposeState) != 0)
+                    return;
+
+                _connection = connection;
+                connection = null;
+                _isInitialized = true;
+            }
+            await UpdateSongAsync(playerViewModel.DisplayedPlayingSong).ConfigureAwait(false);
+            EmitPlayerPropertiesChanged(
+                ["PlaybackStatus", "Metadata", "CanPlay", "CanPause", "CanSeek", "Volume", "LoopStatus", "Shuffle"]);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // 应用关闭时取消初始化属于正常生命周期。
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Linux MPRIS 媒体控件初始化失败。");
-            _connection?.Dispose();
-            _connection = null;
         }
         finally
         {
-            _initializationLock.Release();
+            DisposeConnection(connection);
+            if (lockTaken)
+                _initializationLock.Release();
         }
     }
 
@@ -208,6 +268,9 @@ public sealed class SystemMediaSessionService(
         switch (context.Request.MemberAsString)
         {
             case "Raise":
+                RaiseMainWindow();
+                ReplyEmpty(context);
+                break;
             case "Quit":
                 ReplyEmpty(context);
                 break;
@@ -222,11 +285,13 @@ public sealed class SystemMediaSessionService(
         switch (context.Request.MemberAsString)
         {
             case "Next":
-                DispatchPlaybackControl(PlaybackControlAction.NextTrack);
+                if (_currentSong != null)
+                    DispatchPlaybackControl(PlaybackControlAction.NextTrack, preservePlaybackState: true);
                 ReplyEmpty(context);
                 break;
             case "Previous":
-                DispatchPlaybackControl(PlaybackControlAction.PreviousTrack);
+                if (_currentSong != null)
+                    DispatchPlaybackControl(PlaybackControlAction.PreviousTrack, preservePlaybackState: true);
                 ReplyEmpty(context);
                 break;
             case "Pause":
@@ -238,19 +303,21 @@ public sealed class SystemMediaSessionService(
                 ReplyEmpty(context);
                 break;
             case "PlayPause":
+                _isStopped = false;
                 DispatchPlaybackControl(PlaybackControlAction.TogglePlayPause);
                 ReplyEmpty(context);
                 break;
             case "Stop":
-                DispatchPlayerCommand(player =>
-                {
-                    if (player.IsPlayingAudio)
-                        WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
-                    player.CurrentPositionSeconds = 0;
-                });
+                _isStopped = true;
+                _isPlaying = false;
+                _positionSeconds = 0;
+                DispatchPlaybackControl(PlaybackControlAction.Stop);
+                EmitPlayerPropertiesChanged(["PlaybackStatus"]);
+                EmitSeeked(0);
                 ReplyEmpty(context);
                 break;
             case "Play":
+                _isStopped = false;
                 DispatchPlayerCommand(player =>
                 {
                     if (!player.IsPlayingAudio)
@@ -279,10 +346,10 @@ public sealed class SystemMediaSessionService(
         switch (context.Request.MemberAsString)
         {
             case "Get":
-                ReplyVariant(context, GetProperty(reader.ReadString(), reader.ReadString()));
+                GetProperty(context, reader.ReadString(), reader.ReadString());
                 break;
             case "GetAll":
-                ReplyDictionary(context, GetAllProperties(reader.ReadString()));
+                GetAllProperties(context, reader.ReadString());
                 break;
             case "Set":
                 SetProperty(context, reader.ReadString(), reader.ReadString(), reader.ReadVariantValue());
@@ -296,8 +363,22 @@ public sealed class SystemMediaSessionService(
     private void SeekByOffset(MethodContext context)
     {
         var offsetMicroseconds = context.Request.GetBodyReader().ReadInt64();
+        if (!CanSeek())
+        {
+            ReplyEmpty(context);
+            return;
+        }
+
         var newPosition = _positionSeconds + offsetMicroseconds / 1_000_000d;
-        SetPlayerPosition(context, newPosition);
+        if (newPosition > _durationSeconds)
+        {
+            DispatchPlaybackControl(PlaybackControlAction.NextTrack, preservePlaybackState: true);
+            ReplyEmpty(context);
+            return;
+        }
+
+        SetPlayerPosition(Math.Max(0, newPosition));
+        ReplyEmpty(context);
     }
 
     private void SetPosition(MethodContext context)
@@ -305,90 +386,184 @@ public sealed class SystemMediaSessionService(
         var reader = context.Request.GetBodyReader();
         var trackId = reader.ReadObjectPath();
         var positionMicroseconds = reader.ReadInt64();
-        if (!trackId.Equals(TrackObjectPath))
+        if (!CanSeek() ||
+            !trackId.Equals(_currentTrackPath) ||
+            positionMicroseconds < 0 ||
+            positionMicroseconds / 1_000_000d > _durationSeconds)
         {
             ReplyEmpty(context);
             return;
         }
 
-        SetPlayerPosition(context, positionMicroseconds / 1_000_000d);
+        SetPlayerPosition(positionMicroseconds / 1_000_000d);
+        ReplyEmpty(context);
     }
 
-    private void SetPlayerPosition(MethodContext context, double positionSeconds)
+    private void SetPlayerPosition(double positionSeconds)
     {
-        var duration = _durationSeconds;
-        var safePosition = Math.Clamp(positionSeconds, 0, duration > 0 ? duration : Math.Max(0, positionSeconds));
-        _positionSeconds = safePosition;
+        _positionSeconds = positionSeconds;
 
-        DispatchPlayerCommand(player => player.CurrentPositionSeconds = safePosition);
-        EmitSeeked(safePosition);
-        EmitPlayerPropertiesChanged(["Position"]);
-        ReplyEmpty(context);
+        DispatchPlayerCommand(player => player.CurrentPositionSeconds = positionSeconds);
+        EmitSeeked(positionSeconds);
     }
 
     private void SetProperty(MethodContext context, string interfaceName, string propertyName, VariantValue value)
     {
-        if (interfaceName == PlayerInterface && propertyName == "Volume")
+        if (!IsKnownInterface(interfaceName))
         {
-            var volume = Math.Clamp(value.GetDouble(), 0, 1);
-            DispatchPlayerCommand(player => player.MusicVolume = (float)volume);
-            ReplyEmpty(context);
+            ReplyDbusError(context, "UnknownInterface", $"Interface '{interfaceName}' is not available.");
             return;
         }
 
-        context.ReplyError("org.freedesktop.DBus.Error.PropertyReadOnly", $"{propertyName} is read-only.");
+        if (!IsKnownProperty(interfaceName, propertyName))
+        {
+            ReplyDbusError(context, "UnknownProperty", $"Property '{propertyName}' is not available.");
+            return;
+        }
+
+        try
+        {
+            if (interfaceName == RootInterface && propertyName == "Fullscreen")
+            {
+                ReplyDbusError(context, "NotSupported", "Fullscreen control is not supported.");
+                return;
+            }
+
+            if (interfaceName == PlayerInterface)
+            {
+                switch (propertyName)
+                {
+                    case "Volume":
+                    {
+                        var volume = Math.Clamp(value.GetDouble(), 0, 1);
+                        DispatchPlayerCommand(player => player.MusicVolume = (float)volume);
+                        ReplyEmpty(context);
+                        return;
+                    }
+                    case "Shuffle":
+                    {
+                        var shuffle = value.GetBool();
+                        DispatchPlayerCommand(player =>
+                        {
+                            if (player.IsShuffleMode != shuffle)
+                                player.ApplyPlayMode(shuffle ? PlayMode.Shuffle : PlayMode.Normal, saveSettings: true);
+                        });
+                        ReplyEmpty(context);
+                        return;
+                    }
+                    case "LoopStatus":
+                    {
+                        var loopStatus = value.GetString();
+                        if (loopStatus is not ("None" or "Track" or "Playlist"))
+                        {
+                            ReplyDbusError(context, "InvalidArgs", $"Unsupported LoopStatus '{loopStatus}'.");
+                            return;
+                        }
+
+                        DispatchPlayerCommand(player =>
+                        {
+                            if (loopStatus == "Track")
+                                player.ApplyPlayMode(PlayMode.RepeatOne, saveSettings: true);
+                            else if (player.IsRepeatOneMode)
+                                player.ApplyPlayMode(PlayMode.Normal, saveSettings: true);
+                        });
+                        ReplyEmpty(context);
+                        return;
+                    }
+                    case "Rate":
+                    {
+                        var rate = value.GetDouble();
+                        if (!double.IsFinite(rate) || rate < 0)
+                        {
+                            ReplyDbusError(context, "InvalidArgs", "Rate must be a finite non-negative number.");
+                            return;
+                        }
+
+                        if (rate == 0)
+                            PausePlayback();
+                        // 此播放器仅支持 1.0；规范允许忽略无法采用的其他速率。
+                        ReplyEmpty(context);
+                        return;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "收到类型不匹配的 Linux MPRIS 属性值：{Interface}.{Property}。",
+                interfaceName, propertyName);
+            ReplyDbusError(context, "InvalidArgs", $"Invalid value for property '{propertyName}'.");
+            return;
+        }
+
+        ReplyDbusError(context, "PropertyReadOnly", $"Property '{propertyName}' is read-only.");
     }
 
-    private VariantValue GetProperty(string interfaceName, string propertyName)
+    private void GetProperty(MethodContext context, string interfaceName, string propertyName)
     {
-        if (interfaceName == RootInterface)
-            return propertyName switch
+        if (!IsKnownInterface(interfaceName))
+        {
+            ReplyDbusError(context, "UnknownInterface", $"Interface '{interfaceName}' is not available.");
+            return;
+        }
+
+        if (!IsKnownProperty(interfaceName, propertyName))
+        {
+            ReplyDbusError(context, "UnknownProperty", $"Property '{propertyName}' is not available.");
+            return;
+        }
+
+        ReplyVariant(context, ReadProperty(interfaceName, propertyName));
+    }
+
+    private VariantValue ReadProperty(string interfaceName, string propertyName)
+    {
+        return interfaceName switch
+        {
+            RootInterface => propertyName switch
             {
-                "CanQuit" => VariantValue.Bool(false),
-                "Fullscreen" => VariantValue.Bool(false),
-                "CanSetFullscreen" => VariantValue.Bool(false),
+                "CanQuit" or "Fullscreen" or "CanSetFullscreen" => VariantValue.Bool(false),
                 "CanRaise" => VariantValue.Bool(true),
                 "HasTrackList" => VariantValue.Bool(false),
                 "Identity" => VariantValue.String("KA Music"),
                 "DesktopEntry" => VariantValue.String("KugouAvaloniaPlayer"),
-                "SupportedUriSchemes" => VariantValue.Array(Array.Empty<string>()),
-                "SupportedMimeTypes" => VariantValue.Array(Array.Empty<string>()),
+                "SupportedUriSchemes" or "SupportedMimeTypes" => VariantValue.Array(Array.Empty<string>()),
                 _ => throw new ArgumentOutOfRangeException(nameof(propertyName), propertyName, null)
-            };
-
-        if (interfaceName == PlayerInterface)
-            return propertyName switch
+            },
+            PlayerInterface => propertyName switch
             {
                 "PlaybackStatus" => VariantValue.String(GetPlaybackStatus()),
-                "LoopStatus" => VariantValue.String("None"),
+                "LoopStatus" => VariantValue.String(GetLoopStatus()),
                 "Rate" => VariantValue.Double(1),
                 "Shuffle" => VariantValue.Bool(_playerViewModel?.IsShuffleMode ?? false),
                 "Metadata" => BuildMetadata(),
                 "Volume" => VariantValue.Double(_playerViewModel?.MusicVolume ?? 1),
                 "Position" => VariantValue.Int64(ToMicroseconds(_positionSeconds)),
-                "MinimumRate" => VariantValue.Double(1),
-                "MaximumRate" => VariantValue.Double(1),
-                "CanGoNext" => VariantValue.Bool(true),
-                "CanGoPrevious" => VariantValue.Bool(true),
-                "CanPlay" => VariantValue.Bool(_currentSong != null),
-                "CanPause" => VariantValue.Bool(_currentSong != null),
-                "CanSeek" => VariantValue.Bool(_durationSeconds > 0),
+                "MinimumRate" or "MaximumRate" => VariantValue.Double(1),
+                "CanGoNext" or "CanGoPrevious" or "CanPlay" or "CanPause" => VariantValue.Bool(_currentSong != null),
+                "CanSeek" => VariantValue.Bool(CanSeek()),
                 "CanControl" => VariantValue.Bool(true),
                 _ => throw new ArgumentOutOfRangeException(nameof(propertyName), propertyName, null)
-            };
-
-        throw new ArgumentOutOfRangeException(nameof(interfaceName), interfaceName, null);
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(interfaceName), interfaceName, null)
+        };
     }
 
-    private Dictionary<string, VariantValue> GetAllProperties(string interfaceName)
+    private void GetAllProperties(MethodContext context, string interfaceName)
     {
+        if (!IsKnownInterface(interfaceName))
+        {
+            ReplyDbusError(context, "UnknownInterface", $"Interface '{interfaceName}' is not available.");
+            return;
+        }
+
         var properties = new Dictionary<string, VariantValue>();
         foreach (var propertyName in GetPropertyNames(interfaceName))
-            properties[propertyName] = GetProperty(interfaceName, propertyName);
-        return properties;
+            properties[propertyName] = ReadProperty(interfaceName, propertyName);
+        ReplyDictionary(context, properties);
     }
 
-    private string[] GetPropertyNames(string interfaceName)
+    private static string[] GetPropertyNames(string interfaceName)
     {
         return interfaceName switch
         {
@@ -407,20 +582,26 @@ public sealed class SystemMediaSessionService(
         };
     }
 
+    private static bool IsKnownInterface(string interfaceName) =>
+        interfaceName is RootInterface or PlayerInterface;
+
+    private static bool IsKnownProperty(string interfaceName, string propertyName) =>
+        Array.IndexOf(GetPropertyNames(interfaceName), propertyName) >= 0;
+
     private VariantValue BuildMetadata()
     {
         var song = _currentSong;
-        var title = song?.DisplayTitle;
-        if (string.IsNullOrWhiteSpace(title))
-            title = "KA Music";
+        if (song == null)
+            return new Dict<string, VariantValue>(new Dictionary<string, VariantValue>());
 
-        var artist = song?.Singer;
+        var title = string.IsNullOrWhiteSpace(song.DisplayTitle) ? song.Name : song.DisplayTitle;
+        var artist = song.Singer;
         var metadata = new Dictionary<string, VariantValue>
         {
-            ["mpris:trackid"] = VariantValue.ObjectPath(TrackObjectPath),
+            ["mpris:trackid"] = VariantValue.ObjectPath(_currentTrackPath),
             ["xesam:title"] = VariantValue.String(title),
             ["xesam:artist"] = VariantValue.Array(string.IsNullOrWhiteSpace(artist) ? Array.Empty<string>() : [artist]),
-            ["mpris:length"] = VariantValue.Int64(ToMicroseconds(song?.DurationSeconds > 0 ? song.DurationSeconds : _durationSeconds))
+            ["mpris:length"] = VariantValue.Int64(ToMicroseconds(song.DurationSeconds > 0 ? song.DurationSeconds : _durationSeconds))
         };
 
         if (!string.IsNullOrWhiteSpace(_artUrl))
@@ -429,7 +610,7 @@ public sealed class SystemMediaSessionService(
         return new Dict<string, VariantValue>(metadata);
     }
 
-    private void EmitPlayerPropertiesChanged(string[] propertyNames)
+    private void EmitPlayerPropertiesChanged(IReadOnlyList<string> propertyNames)
     {
         if (!_isInitialized || _connection == null)
             return;
@@ -438,7 +619,7 @@ public sealed class SystemMediaSessionService(
         {
             var changed = new Dictionary<string, VariantValue>();
             foreach (var propertyName in propertyNames)
-                changed[propertyName] = GetProperty(PlayerInterface, propertyName);
+                changed[propertyName] = ReadProperty(PlayerInterface, propertyName);
 
             EmitPropertiesChanged(PlayerInterface, changed);
         }
@@ -473,10 +654,66 @@ public sealed class SystemMediaSessionService(
         if (connection == null)
             return;
 
-        using var writer = connection.GetMessageWriter();
-        writer.WriteSignalHeader(null, MediaObjectPath, PlayerInterface, "Seeked", "x");
-        writer.WriteInt64(ToMicroseconds(positionSeconds));
-        connection.TrySendMessage(writer.CreateMessage());
+        try
+        {
+            using var writer = connection.GetMessageWriter();
+            writer.WriteSignalHeader(null, MediaObjectPath, PlayerInterface, "Seeked", "x");
+            writer.WriteInt64(ToMicroseconds(positionSeconds));
+            connection.TrySendMessage(writer.CreateMessage());
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "发送 Linux MPRIS Seeked 信号失败。");
+        }
+    }
+
+    private void RaiseMainWindow()
+    {
+        var window = _mainWindow;
+        if (window == null)
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                if (!window.IsVisible)
+                    window.Show();
+                if (window.WindowState == WindowState.Minimized)
+                    window.WindowState = WindowState.Normal;
+                window.Activate();
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "通过 Linux MPRIS 唤起主窗口失败。");
+            }
+        });
+    }
+
+    private void PausePlayback()
+    {
+        DispatchPlayerCommand(player =>
+        {
+            if (player.IsPlayingAudio)
+                WeakReferenceMessenger.Default.Send(
+                    new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+        });
+    }
+
+    private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(PlayerViewModel.MusicVolume):
+                EmitPlayerPropertiesChanged(["Volume"]);
+                break;
+            case nameof(PlayerViewModel.IsShuffleMode):
+                EmitPlayerPropertiesChanged(["Shuffle"]);
+                break;
+            case nameof(PlayerViewModel.IsRepeatOneMode):
+                EmitPlayerPropertiesChanged(["LoopStatus"]);
+                break;
+        }
     }
 
     private void DispatchPlayerCommand(Action<PlayerViewModel> action)
@@ -498,13 +735,13 @@ public sealed class SystemMediaSessionService(
         });
     }
 
-    private void DispatchPlaybackControl(PlaybackControlAction action)
+    private void DispatchPlaybackControl(PlaybackControlAction action, bool preservePlaybackState = false)
     {
         Dispatcher.UIThread.Post(() =>
         {
             try
             {
-                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(action));
+                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(action, preservePlaybackState));
             }
             catch (Exception ex)
             {
@@ -513,13 +750,55 @@ public sealed class SystemMediaSessionService(
         });
     }
 
+    private void DisposeConnection(DBusConnection? connection)
+    {
+        if (connection == null)
+            return;
+
+        try
+        {
+            connection.RemoveMethodHandler(MediaObjectPath);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "移除 Linux MPRIS D-Bus 方法处理器失败。");
+        }
+
+        try
+        {
+            connection.Dispose();
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "关闭 Linux MPRIS D-Bus 连接失败。");
+        }
+    }
+
+    private async Task DisposeInitializationResourcesAsync(Task initializationTask)
+    {
+        try
+        {
+            await initializationTask.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "等待 Linux MPRIS 初始化任务结束失败。");
+        }
+        finally
+        {
+            _lifetimeCancellation.Dispose();
+            _initializationLock.Dispose();
+        }
+    }
+
     private async Task<string?> ResolveArtworkUrlAsync(string? cover)
     {
         if (string.IsNullOrWhiteSpace(cover))
-            return await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png");
+            return await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png")
+                .ConfigureAwait(false);
 
         if (cover.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
-            return await CopyAssetArtworkAsync(cover);
+            return await CopyAssetArtworkAsync(cover).ConfigureAwait(false);
 
         if (Uri.TryCreate(cover, UriKind.Absolute, out var uri))
         {
@@ -529,7 +808,8 @@ public sealed class SystemMediaSessionService(
 
         return File.Exists(cover)
             ? new Uri(System.IO.Path.GetFullPath(cover)).AbsoluteUri
-            : await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png");
+            : await CopyAssetArtworkAsync("avares://KugouAvaloniaPlayer/Assets/default_song.png")
+                .ConfigureAwait(false);
     }
 
     private async Task<string?> CopyAssetArtworkAsync(string assetUri)
@@ -546,7 +826,7 @@ public sealed class SystemMediaSessionService(
             {
                 await using var source = AssetLoader.Open(new Uri(assetUri));
                 await using var target = File.Create(cachePath);
-                await source.CopyToAsync(target);
+                await source.CopyToAsync(target).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -585,14 +865,44 @@ public sealed class SystemMediaSessionService(
         context.Reply(writer.CreateMessage());
     }
 
+    private static void ReplyDbusError(MethodContext context, string errorName, string message)
+    {
+        context.ReplyError($"{ErrorPrefix}{errorName}", message);
+    }
+
     private string GetPlaybackStatus()
     {
-        return _currentSong == null ? "Stopped" : _isPlaying ? "Playing" : "Paused";
+        return _currentSong == null || _isStopped ? "Stopped" : _isPlaying ? "Playing" : "Paused";
+    }
+
+    private string GetLoopStatus()
+    {
+        return _playerViewModel?.IsRepeatOneMode == true ? "Track" : "None";
+    }
+
+    private bool CanSeek()
+    {
+        return _currentSong != null && _durationSeconds > 0;
+    }
+
+    private static ObjectPath CreateTrackPath(SongItem? song)
+    {
+        if (song == null)
+            return default;
+
+        var songKey = PlaybackQueueCacheService.BuildSongKey(song);
+        return new ObjectPath($"/com/kugou/KAMusic/Track/{GetStableHash(songKey)}");
+    }
+
+    private static double NormalizeSeconds(double seconds)
+    {
+        return double.IsFinite(seconds) ? Math.Max(0, seconds) : 0;
     }
 
     private static long ToMicroseconds(double seconds)
     {
-        return (long)Math.Round(Math.Max(0, seconds) * 1_000_000d);
+        var normalized = NormalizeSeconds(seconds);
+        return (long)Math.Round(Math.Min(normalized, long.MaxValue / 1_000_000d) * 1_000_000d);
     }
 
     private static string GetStableHash(string value)
@@ -670,7 +980,9 @@ public sealed class SystemMediaSessionService(
                                                 <property name="Shuffle" type="b" access="readwrite"/>
                                                 <property name="Metadata" type="a{sv}" access="read"/>
                                                 <property name="Volume" type="d" access="readwrite"/>
-                                                <property name="Position" type="x" access="read"/>
+                                                <property name="Position" type="x" access="read">
+                                                  <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="false"/>
+                                                </property>
                                                 <property name="MinimumRate" type="d" access="read"/>
                                                 <property name="MaximumRate" type="d" access="read"/>
                                                 <property name="CanGoNext" type="b" access="read"/>
@@ -678,7 +990,9 @@ public sealed class SystemMediaSessionService(
                                                 <property name="CanPlay" type="b" access="read"/>
                                                 <property name="CanPause" type="b" access="read"/>
                                                 <property name="CanSeek" type="b" access="read"/>
-                                                <property name="CanControl" type="b" access="read"/>
+                                                <property name="CanControl" type="b" access="read">
+                                                  <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="false"/>
+                                                </property>
                                               </interface>
                                             </node>
                                             """;

@@ -237,7 +237,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         WeakReferenceMessenger.Default.Register<ReplacePlaybackQueueMessage>(this,
             (_, m) => _ = ReplacePlaybackQueueAsync(m.Songs, m.StartSong));
         WeakReferenceMessenger.Default.Register<PlaybackControlMessage>(this,
-            (_, m) => HandlePlaybackControlMessage(m.Action));
+            (_, m) => HandlePlaybackControlMessage(m));
 
         _queueManager.PlaybackQueue.CollectionChanged += OnPlaybackQueueCollectionChanged;
         _personalFmService.StateChanged += OnPersonalFmServiceStateChanged;
@@ -529,18 +529,25 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             .Queue();
     }
 
-    private void HandlePlaybackControlMessage(PlaybackControlAction action)
+    private void HandlePlaybackControlMessage(PlaybackControlMessage message)
     {
-        switch (action)
+        switch (message.Action)
         {
             case PlaybackControlAction.TogglePlayPause:
                 TogglePlayPause();
                 break;
             case PlaybackControlAction.PreviousTrack:
-                _ = PlayPrevious();
+                _ = message.PreservePlaybackState
+                    ? ChangeTrackPreservingPlaybackStateAsync(playNext: false)
+                    : PlayPrevious();
                 break;
             case PlaybackControlAction.NextTrack:
-                _ = PlayNext();
+                _ = message.PreservePlaybackState
+                    ? ChangeTrackPreservingPlaybackStateAsync(playNext: true)
+                    : PlayNext();
+                break;
+            case PlaybackControlAction.Stop:
+                StopAndReset();
                 break;
         }
     }

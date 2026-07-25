@@ -32,7 +32,7 @@ public record MainWindowChromeActionMessage(MainWindowChromeAction Action);
 
 public record LinuxWindowDecorationsChangedMessage(bool UseFullDecorations);
 
-public record PlaybackControlMessage(PlaybackControlAction Action);
+public record PlaybackControlMessage(PlaybackControlAction Action, bool PreservePlaybackState = false);
 
 public record RefreshPlaylistsMessage;
 
@@ -80,5 +80,6 @@ public enum PlaybackControlAction
 {
     TogglePlayPause,
     PreviousTrack,
-    NextTrack
+    NextTrack,
+    Stop
 }
