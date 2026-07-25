@@ -310,7 +310,10 @@ public partial class PlayerViewModel
             }
 
             var currentLoadCts = new CancellationTokenSource();
-            var sourceInfo = await _playbackSourceResolver.ResolveAsync(currentSong, quality, currentLoadCts.Token);
+            var sourceInfo = await _playbackSourceRecoveryService.ResolveWithRecoveryAsync(
+                currentSong,
+                quality,
+                currentLoadCts.Token);
             if (sourceInfo.IsLocal)
             {
                 currentLoadCts.Dispose();

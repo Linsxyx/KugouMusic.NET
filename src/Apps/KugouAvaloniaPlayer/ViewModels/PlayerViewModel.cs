@@ -43,7 +43,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
     private readonly PlaybackQueueCacheService _queueCacheService;
     private readonly DispatcherTimer _playbackTimer;
     private readonly IPlaybackCoordinator _playbackCoordinator;
-    private readonly IPlaybackSourceResolver _playbackSourceResolver;
+    private readonly IPlaybackSourceRecoveryService _playbackSourceRecoveryService;
     private readonly ISystemMediaSessionService _systemMediaSessionService;
     private readonly PlaybackVisualizerService _visualizerService;
 
@@ -175,7 +175,8 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         PersonalFmService personalFmService, PlaybackQueueCacheService queueCacheService,
         PlaybackAudioEffectsService audioEffectsService,
         PlaybackVisualizerService visualizerService,
-        ITransitionAnalysisService transitionAnalysisService, IPlaybackSourceResolver playbackSourceResolver,
+        ITransitionAnalysisService transitionAnalysisService,
+        IPlaybackSourceRecoveryService playbackSourceRecoveryService,
         IPlaybackCoordinator playbackCoordinator, ISystemMediaSessionService systemMediaSessionService)
     {
         _toastManager = toastManager;
@@ -189,7 +190,7 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
         _audioEffectsService = audioEffectsService;
         _visualizerService = visualizerService;
         _transitionAnalysisService = transitionAnalysisService;
-        _playbackSourceResolver = playbackSourceResolver;
+        _playbackSourceRecoveryService = playbackSourceRecoveryService;
         _playbackCoordinator = playbackCoordinator;
         _systemMediaSessionService = systemMediaSessionService;
 

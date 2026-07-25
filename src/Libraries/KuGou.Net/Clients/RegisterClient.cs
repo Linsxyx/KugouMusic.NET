@@ -39,12 +39,12 @@ public class RegisterClient(RawDeviceApi rawApi, KgSessionManager sessionManager
                     session.Uuid = KgUtils.Md5(session.Dfid + session.Mid);
 
                     sessionManager.Persist();
-                    logger.LogInformation("[Device] 注册成功! DFID: {serverDfid}" , serverDfid);
+                    //logger.LogInformation("[Device] 注册成功! DFID: {serverDfid}" , serverDfid);
                     return true;
                 }
             }
 
-        logger.LogError("[Device] 注册失败。");
+        logger.LogError("[Device] 注册失败:{json}",json );
         return false;
     }
 }

@@ -13,7 +13,10 @@ public partial class PlayerViewModel
         SongItem song,
         CancellationToken cancellationToken)
     {
-        return _playbackSourceResolver.ResolveAsync(song, MusicQuality, cancellationToken);
+        return _playbackSourceRecoveryService.ResolveWithRecoveryAsync(
+            song,
+            MusicQuality,
+            cancellationToken);
     }
 
     private void StartLyricsLoad(SongItem song, bool isLocal)

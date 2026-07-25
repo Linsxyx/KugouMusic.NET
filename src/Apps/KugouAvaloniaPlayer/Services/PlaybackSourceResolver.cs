@@ -40,15 +40,21 @@ public sealed class PlaybackSourceResolver(
         {
             var streamUrl = ResolveJellyfinStreamUrl(song.RemoteUrl, localFilePath);
             return string.IsNullOrWhiteSpace(streamUrl)
-                ? PlaybackSourceResult.Failed(PlaybackSourceFailureReason.Unavailable)
-                : PlaybackSourceResult.Remote(streamUrl);
+                ? PlaybackSourceResult.Failed(
+                    PlaybackSourceFailureReason.Unavailable,
+                    PlaybackSourceOrigin.Jellyfin)
+                : PlaybackSourceResult.Remote(streamUrl, PlaybackSourceOrigin.Jellyfin);
         }
 
         if (!string.IsNullOrWhiteSpace(localFilePath) && File.Exists(localFilePath))
             return PlaybackSourceResult.Local(localFilePath);
 
+        var sourceOrigin = song.PlaybackSource == SongPlaybackSource.UserCloud
+            ? PlaybackSourceOrigin.KugouUserCloud
+            : PlaybackSourceOrigin.KugouCatalog;
+
         if (string.IsNullOrEmpty(sessionManager.Session.Token) || sessionManager.Session.UserId == "0")
-            return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.LoginRequired);
+            return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.LoginRequired, sourceOrigin);
 
         if (song.PlaybackSource == SongPlaybackSource.UserCloud)
         {
@@ -61,9 +67,11 @@ public sealed class PlaybackSourceResolver(
             cancellationToken.ThrowIfCancellationRequested();
 
             if (cloudData == null || cloudData.Status != 1 || string.IsNullOrWhiteSpace(cloudData.Url))
-                return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.Unavailable);
+                return PlaybackSourceResult.Failed(
+                    PlaybackSourceFailureReason.Unavailable,
+                    PlaybackSourceOrigin.KugouUserCloud);
 
-            return PlaybackSourceResult.Remote(cloudData.Url);
+            return PlaybackSourceResult.Remote(cloudData.Url, PlaybackSourceOrigin.KugouUserCloud);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -72,12 +80,16 @@ public sealed class PlaybackSourceResolver(
         cancellationToken.ThrowIfCancellationRequested();
 
         if (playData == null || playData.Status != 1)
-            return PlaybackSourceResult.Failed(PlaybackSourceFailureReason.Unavailable);
+            return PlaybackSourceResult.Failed(
+                PlaybackSourceFailureReason.Unavailable,
+                PlaybackSourceOrigin.KugouCatalog);
 
         var url = playData.Urls?.AsValueEnumerable().FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
         return string.IsNullOrWhiteSpace(url)
-            ? PlaybackSourceResult.Failed(PlaybackSourceFailureReason.EmptyUrl)
-            : PlaybackSourceResult.Remote(url);
+            ? PlaybackSourceResult.Failed(
+                PlaybackSourceFailureReason.EmptyUrl,
+                PlaybackSourceOrigin.KugouCatalog)
+            : PlaybackSourceResult.Remote(url, PlaybackSourceOrigin.KugouCatalog);
     }
 
     private async Task<string> ResolvePlaybackQualityAsync(
@@ -160,16 +172,24 @@ public sealed record PlaybackSourceResult(
     bool Success,
     string? Source,
     bool IsLocal,
-    PlaybackSourceFailureReason FailureReason)
+    PlaybackSourceFailureReason FailureReason,
+    PlaybackSourceOrigin Origin)
 {
     public static PlaybackSourceResult Local(string source) =>
-        new(true, source, true, PlaybackSourceFailureReason.None);
+        new(
+            true,
+            source,
+            true,
+            PlaybackSourceFailureReason.None,
+            PlaybackSourceOrigin.LocalFile);
 
-    public static PlaybackSourceResult Remote(string source) =>
-        new(true, source, false, PlaybackSourceFailureReason.None);
+    public static PlaybackSourceResult Remote(string source, PlaybackSourceOrigin origin) =>
+        new(true, source, false, PlaybackSourceFailureReason.None, origin);
 
-    public static PlaybackSourceResult Failed(PlaybackSourceFailureReason reason) =>
-        new(false, null, false, reason);
+    public static PlaybackSourceResult Failed(
+        PlaybackSourceFailureReason reason,
+        PlaybackSourceOrigin origin) =>
+        new(false, null, false, reason, origin);
 }
 
 public enum PlaybackSourceFailureReason
@@ -178,4 +198,13 @@ public enum PlaybackSourceFailureReason
     LoginRequired,
     Unavailable,
     EmptyUrl
+}
+
+public enum PlaybackSourceOrigin
+{
+    Unknown,
+    LocalFile,
+    Jellyfin,
+    KugouUserCloud,
+    KugouCatalog
 }

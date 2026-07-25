@@ -39,6 +39,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ILoginDialogService _loginDialogService;
     private readonly ILoginInitializationService _loginInitializationService;
     private readonly INavigationService _navigationService;
+    private readonly IVipEntitlementService _vipEntitlementService;
     private readonly SearchViewModel _searchViewModel;
     private readonly UserCloudViewModel _userCloudViewModel;
     private readonly KgSessionManager _sessionManager;
@@ -95,6 +96,7 @@ public partial class MainWindowViewModel : ObservableObject
         IDesktopLyricWindowService desktopLyricWindowService,
         ILoginDialogService loginDialogService,
         ILoginInitializationService loginInitializationService,
+        IVipEntitlementService vipEntitlementService,
         INavigationService navigationService,
         NowPlayingViewModel nowPlaying,
         LoginViewModel loginViewModel,
@@ -116,6 +118,7 @@ public partial class MainWindowViewModel : ObservableObject
         _desktopLyricWindowService = desktopLyricWindowService;
         _loginDialogService = loginDialogService;
         _loginInitializationService = loginInitializationService;
+        _vipEntitlementService = vipEntitlementService;
         _navigationService = navigationService;
 
         LoginViewModel = loginViewModel;
@@ -493,7 +496,8 @@ public partial class MainWindowViewModel : ObservableObject
     {
         try
         {
-            await _loginInitializationService.TryReceiveStartupVipAsync();
+            var vipResult = await _vipEntitlementService.TryEnsureDailyVipAsync();
+            await ShowVipInitializationFailureAsync(vipResult);
 
             await Player.LoadLikeListAsync();
         }
@@ -501,6 +505,28 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _logger.Log(logLevel, ex, failureMessage);
         }
+    }
+
+    private async Task ShowVipInitializationFailureAsync(VipEntitlementResult result)
+    {
+        var toastContent = result.FailureReason switch
+        {
+            VipEntitlementFailureReason.HistoryUnavailable =>
+                ("查询VIP失败", "请重新登录或检查网络连接"),
+            VipEntitlementFailureReason.ReceiveFailed =>
+                ("领取VIP失败", "请重新登录或在手机上手动领取"),
+            _ => default
+        };
+        if (toastContent == default)
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+            ToastManager.CreateToast()
+                .OfType(NotificationType.Warning)
+                .WithTitle(toastContent.Item1)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .WithContent(toastContent.Item2)
+                .Queue());
     }
 
     private void ApplyUserProfile(UserProfileSnapshot? profile)
