@@ -6,7 +6,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
@@ -58,6 +57,7 @@ public partial class App : Application
 
             var vm = services.GetService<MainWindowViewModel>();
             var playerVm = services.GetService<PlayerViewModel>();
+            var mainWindowService = services.GetService<IMainWindowService>();
             var startupActivationServer = services.GetService<IStartupActivationServer>();
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
@@ -87,7 +87,7 @@ public partial class App : Application
                 void OnApplicationActivated(object? _, ActivatedEventArgs e)
                 {
                     if (e.Kind == ActivationKind.Reopen)
-                        WeakReferenceMessenger.Default.Send(new ShowMainWindowMessage());
+                        mainWindowService.ShowMainWindow();
                 }
 
                 if (activatableLifetime != null)
@@ -96,7 +96,7 @@ public partial class App : Application
                 desktop.ShutdownRequested += (_, _) => mainWindow.CanClose = true;
 #endif
 
-                InitializeTrayIcon(playerVm, desktop, vm);
+                InitializeTrayIcon(playerVm, desktop, vm, mainWindowService);
                 desktop.Exit += (s, e) =>
                 {
 #if KUGOU_MACOS

@@ -10,12 +10,15 @@
 
     <Grid Margin="15">
         <localControls:SongCollectionDetailView
+            PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+            SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
+            RemoveSongCommand="{Binding RemoveSongFromPlaylistCommand}"
             IsVisible="{Binding IsShowingSongs}"
             Cover="{Binding SelectedPlaylist.Cover}"
             Title="{Binding SelectedPlaylist.Name}"
             Songs="{Binding SelectedPlaylistSongs}"
             LoadMoreCommand="{Binding LoadMoreCommand}"
-            BackCommand="{Binding BackFromPlaylistCommand}"
+            BackCommand="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
             IsLoadingMore="{Binding IsLoadingMore}"
             ListMargin="0"
             ShowAddLoadedSongsToQueueButton="True"

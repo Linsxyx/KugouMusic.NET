@@ -10,7 +10,6 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
@@ -28,77 +27,35 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     private static readonly IBrush DefaultTranslationLineBrush = new SolidColorBrush(Color.Parse("#CCFFFFFF"));
     private static readonly IBrush DefaultTranslationWordBrush = new SolidColorBrush(Colors.White);
     private readonly ILogger<NowPlayingViewModel> _logger;
+    private readonly IMainWindowService _mainWindowService;
+    private readonly ISongInteractionService _songInteractionService;
     private readonly SongClient _songClient;
+    private readonly IUiPreferencesState _uiPreferencesState;
     private CancellationTokenSource? _portraitCancellation;
     private IReadOnlyList<string> _portraitUrls = [];
     private bool _isPortraitLayerAActive = true;
     private int _portraitIndex;
     private bool _disposed;
 
-    public NowPlayingViewModel(PlayerViewModel player, SongClient songClient, ILogger<NowPlayingViewModel> logger)
+    public NowPlayingViewModel(
+        PlayerViewModel player,
+        SongClient songClient,
+        ILogger<NowPlayingViewModel> logger,
+        IUiPreferencesState uiPreferencesState,
+        IMainWindowService mainWindowService,
+        ISongInteractionService songInteractionService)
     {
         Player = player;
         _songClient = songClient;
         _logger = logger;
+        _uiPreferencesState = uiPreferencesState;
+        _mainWindowService = mainWindowService;
+        _songInteractionService = songInteractionService;
 
         Player.PropertyChanged += OnPlayerPropertyChanged;
         NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
-        BackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
-        BackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
-        UseLightweightLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
-        CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
-        ApplyLyricStyleSettings(
-            SettingsManager.Settings.PlayPageLyricUseCustomMainColor,
-            SettingsManager.Settings.PlayPageLyricCustomMainColor,
-            SettingsManager.Settings.PlayPageLyricUseCustomTranslationColor,
-            SettingsManager.Settings.PlayPageLyricCustomTranslationColor,
-            SettingsManager.Settings.PlayPageLyricUseCustomFont,
-            SettingsManager.Settings.PlayPageLyricCustomFontFamily,
-            SettingsManager.Settings.PlayPageLyricAlignment,
-            SettingsManager.Settings.PlayPageLyricFontSize);
-
-        WeakReferenceMessenger.Default.Register<LyricStyleSettingsChangedMessage>(this, (_, message) =>
-        {
-            if (message.Scope != LyricSettingsScope.PlayPage)
-                return;
-
-            ApplyLyricStyleSettings(
-                message.UseCustomMainColor,
-                message.MainColorHex,
-                message.UseCustomTranslationColor,
-                message.TranslationColorHex,
-                message.UseCustomFont,
-                message.FontFamilyName,
-                message.Alignment,
-                message.FontSize);
-        });
-
-        WeakReferenceMessenger.Default.Register<NowPlayingBackgroundBlurRadiusChangedMessage>(this, (_, message) =>
-        {
-            BackgroundBlurRadius = message.Radius;
-        });
-
-        WeakReferenceMessenger.Default.Register<NowPlayingBackgroundSourceChangedMessage>(this, (_, message) =>
-        {
-            BackgroundSource = message.Source;
-        });
-
-        WeakReferenceMessenger.Default.Register<LightweightNowPlayingLyricScrollChangedMessage>(this, (_, message) =>
-        {
-            UseLightweightLyricScroll = message.IsEnabled;
-        });
-
-        WeakReferenceMessenger.Default.Register<AppBackgroundSettingsChangedMessage>(this, (_, message) =>
-        {
-            CustomBackgroundImagePath = message.CustomImagePath;
-        });
-
-        WeakReferenceMessenger.Default.Register<GlobalFontSettingsChangedMessage>(this, (_, _) =>
-        {
-            ApplyFontSettings(
-                SettingsManager.Settings.PlayPageLyricUseCustomFont,
-                SettingsManager.Settings.PlayPageLyricCustomFontFamily);
-        });
+        ApplyUiPreferences(_uiPreferencesState.Current);
+        _uiPreferencesState.PropertyChanged += OnUiPreferencesChanged;
     }
 
     public PlayerViewModel Player { get; }
@@ -250,8 +207,32 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         _disposed = true;
         CancelPortraitWork();
         Player.PropertyChanged -= OnPlayerPropertyChanged;
-        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _uiPreferencesState.PropertyChanged -= OnUiPreferencesChanged;
         GC.SuppressFinalize(this);
+    }
+
+    private void OnUiPreferencesChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is null or nameof(IUiPreferencesState.Current))
+            ApplyUiPreferences(_uiPreferencesState.Current);
+    }
+
+    private void ApplyUiPreferences(UiPreferencesSnapshot preferences)
+    {
+        var lyric = preferences.PlayPageLyric;
+        BackgroundBlurRadius = preferences.NowPlayingBackgroundBlurRadius;
+        BackgroundSource = preferences.NowPlayingBackgroundSource;
+        UseLightweightLyricScroll = preferences.UseLightweightNowPlayingLyricScroll;
+        CustomBackgroundImagePath = preferences.AppBackground.CustomImagePath;
+        ApplyLyricStyleSettings(
+            lyric.UseCustomMainColor,
+            lyric.MainColorHex,
+            lyric.UseCustomTranslationColor,
+            lyric.TranslationColorHex,
+            lyric.UseCustomFont,
+            lyric.FontFamilyName,
+            lyric.Alignment,
+            lyric.FontSize);
     }
 
     [RelayCommand]
@@ -302,7 +283,10 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     private void ViewSinger(SingerLite? singer)
     {
         if (singer != null)
-            WeakReferenceMessenger.Default.Send(new NavigateToSingerMessage(singer));
+        {
+            Close();
+            _songInteractionService.NavigateToSinger(singer);
+        }
     }
 
     [RelayCommand]
@@ -310,31 +294,31 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     {
         var song = Player.DisplayedPlayingSong;
         if (song != null && song.LocalFilePath is null)
-            WeakReferenceMessenger.Default.Send(new ShowPlaylistDialogMessage(song));
+            _ = _songInteractionService.ShowAddToPlaylistDialogAsync(song);
     }
 
     [RelayCommand]
     private void RequestWindowMinimize()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Minimize));
+        _mainWindowService.Minimize();
     }
 
     [RelayCommand]
     private void RequestWindowToggleFullScreen()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.ToggleFullScreen));
+        _mainWindowService.ToggleFullScreen();
     }
 
     [RelayCommand]
     private void RequestWindowToggleMaximize()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.ToggleMaximize));
+        _mainWindowService.ToggleMaximize();
     }
 
     [RelayCommand]
     private void RequestWindowClose()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Close));
+        _mainWindowService.Close();
     }
 
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)

@@ -20,6 +20,9 @@ public partial class SearchViewModel(
     PlaylistClient playlistClient,
     AlbumClient albumClient,
     INavigationService navigationService,
+    PlayerViewModel player,
+    ISongInteractionService songInteractions,
+    IMessenger messenger,
     ISukiToastManager toastManager,
     ILogger<SearchViewModel> logger) : PageViewModelBase
 {
@@ -74,6 +77,32 @@ public partial class SearchViewModel(
     public AvaloniaList<SearchAlbumItem> Albums { get; } = new();
     public AvaloniaList<SearchAuthorItem> Singers { get; } = new();
     public AvaloniaList<SongItem> DetailSongs { get; } = new();
+
+    [RelayCommand]
+    private Task PlaySong(SongItem? song) =>
+        song is null
+            ? Task.CompletedTask
+            : ((IPlaybackCommands)player).PlayAsync(song, Songs);
+
+    [RelayCommand]
+    private void AddSongToNext(SongItem? song)
+    {
+        if (song != null)
+            ((IPlaybackCommands)player).AddToNext(song);
+    }
+
+    [RelayCommand]
+    private Task ShowSongPlaylistDialog(SongItem? song) =>
+        song is null
+            ? Task.CompletedTask
+            : songInteractions.ShowAddToPlaylistDialogAsync(song);
+
+    [RelayCommand]
+    private void ViewSongSinger(SingerLite? singer)
+    {
+        if (singer != null)
+            songInteractions.NavigateToSinger(singer);
+    }
 
     // 当前是否显示歌单详情（用于控制收藏按钮可见性）
     public bool IsPlaylistDetail => _currentDetailType == DetailType.Playlist;
@@ -298,12 +327,12 @@ public partial class SearchViewModel(
         if (item is not { AuthorId: > 0 })
             return;
 
-        WeakReferenceMessenger.Default.Send(new NavigateToSingerMessage(new SingerLite
+        songInteractions.NavigateToSinger(new SingerLite
         {
             Id = item.AuthorId,
             Name = item.Name,
             SingerPic = string.IsNullOrWhiteSpace(item.Cover) ? DefaultSingerCover : item.Cover
-        }));
+        });
     }
 
     [RelayCommand]
@@ -462,7 +491,7 @@ public partial class SearchViewModel(
             var result = await playlistClient.CollectPlaylistAsync(_currentPlaylistName, _currentPlaylistGlobalId);
             if (result != null)
             {
-                WeakReferenceMessenger.Default.Send(new RefreshPlaylistsMessage());
+                messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
                 toastManager.CreateToast()
                     .OfType(NotificationType.Success)
                     .WithTitle("收藏成功")
@@ -499,7 +528,7 @@ public partial class SearchViewModel(
 
             if (result != null)
             {
-                WeakReferenceMessenger.Default.Send(new RefreshPlaylistsMessage());
+                messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
                 toastManager.CreateToast()
                     .OfType(NotificationType.Success)
                     .WithTitle("收藏成功")

@@ -111,6 +111,10 @@
         </suki:GlassCard>
 
         <localControls:SongCollectionDetailView
+            PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+            SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
+            RemoveSongCommand="{Binding RemoveSongFromPlaylistCommand}"
+            SetLocalSongCoverCommand="{Binding SetLocalSongCoverCommand}"
             IsVisible="{Binding IsShowingSongs}"
             Cover="{Binding SelectedPlaylist.Cover}"
             Title="{Binding SelectedPlaylist.Name}"

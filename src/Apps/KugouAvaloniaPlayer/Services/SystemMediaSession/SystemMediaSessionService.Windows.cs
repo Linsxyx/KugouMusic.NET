@@ -9,8 +9,6 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.Messaging;
-using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 using Windows.Media;
@@ -188,13 +186,13 @@ public sealed class SystemMediaSessionService(
             {
                 case SystemMediaTransportControlsButton.Play when !player.IsPlayingAudio:
                 case SystemMediaTransportControlsButton.Pause when player.IsPlayingAudio:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                    ((IPlaybackCommands)player).TogglePlayPause();
                     break;
                 case SystemMediaTransportControlsButton.Previous:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
+                    _ = ((IPlaybackCommands)player).PlayPreviousAsync();
                     break;
                 case SystemMediaTransportControlsButton.Next:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.NextTrack));
+                    _ = ((IPlaybackCommands)player).PlayNextAsync();
                     break;
             }
         });

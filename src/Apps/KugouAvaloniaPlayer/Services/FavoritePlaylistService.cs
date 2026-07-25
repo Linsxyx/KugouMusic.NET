@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
-using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
@@ -353,7 +352,10 @@ public partial class FavoritePlaylistService(
         }
     }
 
-    public Task ShowSongBatchActionDialogAsync(IReadOnlyList<SongItem> songs, bool allowAddToPlaylist = true)
+    public Task ShowSongBatchActionDialogAsync(
+        IReadOnlyList<SongItem> songs,
+        IPlaybackCommands playbackCommands,
+        bool allowAddToPlaylist = true)
     {
         if (songs.Count == 0)
         {
@@ -367,7 +369,7 @@ public partial class FavoritePlaylistService(
             selectedSongs =>
             {
                 DismissDialog();
-                WeakReferenceMessenger.Default.Send(new AddLoadedSongsToQueueMessage(selectedSongs.AsValueEnumerable().ToList()));
+                playbackCommands.AddToQueue(selectedSongs.AsValueEnumerable().ToList());
                 return Task.CompletedTask;
             },
             async selectedSongs =>
@@ -378,10 +380,9 @@ public partial class FavoritePlaylistService(
             selectedSongs =>
             {
                 DismissDialog();
-                WeakReferenceMessenger.Default.Send(new ReplacePlaybackQueueMessage(
+                return playbackCommands.ReplaceQueueAsync(
                     selectedSongs.AsValueEnumerable().ToList(),
-                    selectedSongs[0]));
-                return Task.CompletedTask;
+                    selectedSongs[0]);
             },
             DismissDialog);
 

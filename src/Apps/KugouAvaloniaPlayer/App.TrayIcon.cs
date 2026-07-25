@@ -3,8 +3,7 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
-using CommunityToolkit.Mvvm.Messaging;
-using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
 
@@ -17,9 +16,10 @@ partial class App
     private TrayIcon? _trayIcon;
 
     private void InitializeTrayIcon(PlayerViewModel player, IClassicDesktopStyleApplicationLifetime desktop,
-        MainWindowViewModel mainWindowViewModel)
+        MainWindowViewModel mainWindowViewModel, IMainWindowService mainWindowService)
     {
         _playerViewModel = player;
+        var playbackCommands = (IPlaybackCommands)player;
 
         var iconUri = new Uri("avares://KugouAvaloniaPlayer/Assets/Test.ico");
         using var iconStream = AssetLoader.Open(iconUri);
@@ -27,8 +27,7 @@ partial class App
 
         var showItem = new NativeMenuItem("显示主界面");
 
-        showItem.Click += (_, _) =>
-            WeakReferenceMessenger.Default.Send(new ShowMainWindowMessage());
+        showItem.Click += (_, _) => mainWindowService.ShowMainWindow();
 
         var showLyric = new NativeMenuItem("桌面歌词");
         showLyric.Click += (s, e) =>
@@ -40,16 +39,13 @@ partial class App
         var sep1 = new NativeMenuItemSeparator();
 
         var prevItem = new NativeMenuItem("上一首");
-        prevItem.Click += (s, e) =>
-            WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
+        prevItem.Click += (_, _) => _ = playbackCommands.PlayPreviousAsync();
 
         _playPauseItem = new NativeMenuItem("播放");
-        _playPauseItem.Click += (s, e) =>
-            WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+        _playPauseItem.Click += (_, _) => playbackCommands.TogglePlayPause();
 
         var nextItem = new NativeMenuItem("下一首");
-        nextItem.Click += (s, e) =>
-            WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.NextTrack));
+        nextItem.Click += (_, _) => _ = playbackCommands.PlayNextAsync();
 
         var sep2 = new NativeMenuItemSeparator();
 
@@ -80,8 +76,7 @@ partial class App
             IsVisible = true
         };
 
-        _trayIcon.Clicked += (_, _) =>
-            WeakReferenceMessenger.Default.Send(new ShowMainWindowMessage());
+        _trayIcon.Clicked += (_, _) => mainWindowService.ShowMainWindow();
 
         player.PropertyChanged += OnPlayerPropertyChanged;
 

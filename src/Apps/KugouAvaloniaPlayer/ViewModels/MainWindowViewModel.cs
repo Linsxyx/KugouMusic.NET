@@ -22,7 +22,7 @@ using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class MainWindowViewModel : ObservableObject
+public partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private static readonly Lock CustomBackgroundImageSync = new();
     private static Bitmap? _sCachedCustomBackgroundBitmap;
@@ -38,7 +38,10 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly ILoginDialogService _loginDialogService;
     private readonly ILoginInitializationService _loginInitializationService;
+    private readonly IMainWindowService _mainWindowService;
+    private readonly IMessenger _messenger;
     private readonly INavigationService _navigationService;
+    private readonly IUiPreferencesState _uiPreferencesState;
     private readonly IVipEntitlementService _vipEntitlementService;
     private readonly SearchViewModel _searchViewModel;
     private readonly UserCloudViewModel _userCloudViewModel;
@@ -75,6 +78,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _isUpdatingActivePageFromNavigation;
     private bool _isUpdatingSelectedMenuPageFromNavigation;
     private bool _isClosingDesktopLyricForShutdown;
+    private bool _isDisposed;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
@@ -91,11 +95,14 @@ public partial class MainWindowViewModel : ObservableObject
         PlayerViewModel player,
         ISukiDialogManager dialogManager,
         KgSessionManager sessionManager,
-        ISingerViewModelFactory singerViewModelFactory,
+        ISongInteractionService songInteractionService,
         IAppUpdateService appUpdateService,
         IDesktopLyricWindowService desktopLyricWindowService,
         ILoginDialogService loginDialogService,
         ILoginInitializationService loginInitializationService,
+        IMainWindowService mainWindowService,
+        IMessenger messenger,
+        IUiPreferencesState uiPreferencesState,
         IVipEntitlementService vipEntitlementService,
         INavigationService navigationService,
         NowPlayingViewModel nowPlaying,
@@ -113,11 +120,13 @@ public partial class MainWindowViewModel : ObservableObject
         DialogManager = dialogManager;
         _sessionManager = sessionManager;
         _dailyRecommendViewModel = dailyRecommendViewModel;
-        var singerViewModelFactory1 = singerViewModelFactory;
         _appUpdateService = appUpdateService;
         _desktopLyricWindowService = desktopLyricWindowService;
         _loginDialogService = loginDialogService;
         _loginInitializationService = loginInitializationService;
+        _mainWindowService = mainWindowService;
+        _messenger = messenger;
+        _uiPreferencesState = uiPreferencesState;
         _vipEntitlementService = vipEntitlementService;
         _navigationService = navigationService;
 
@@ -132,6 +141,7 @@ public partial class MainWindowViewModel : ObservableObject
         _desktopLyricWindowService.IsOpenChanged += OnDesktopLyricWindowStateChanged;
 
         Player = player;
+        SongInteractions = songInteractionService;
         NowPlaying = nowPlaying;
         ToastManager = toastManager;
 
@@ -145,40 +155,19 @@ public partial class MainWindowViewModel : ObservableObject
         ActivePage = _dailyRecommendViewModel;
         SelectedMenuPage = _dailyRecommendViewModel;
         IsDesktopLyricEnabled = _desktopLyricWindowService.IsOpen;
-        ApplyCustomBackgroundImage(
-            SettingsManager.Settings.UseCustomBackgroundImage,
-            SettingsManager.Settings.CustomBackgroundImagePath,
-            SettingsManager.Settings.CustomBackgroundImageOpacity);
+        ApplyCustomBackgroundImage(_uiPreferencesState.Current.AppBackground);
+        _uiPreferencesState.PropertyChanged += OnUiPreferencesChanged;
 
         PlaylistsViewModel.Items.CollectionChanged += OnPlaylistItemsChanged;
         PlaylistsViewModel.PropertyChanged += OnPlaylistViewModelPropertyChanged;
         RefreshSidebarPlaylists();
 
-        WeakReferenceMessenger.Default.Register<PlaySongMessage>(this,
-            (_, m) => _ = HandlePlaySongMessageAsync(m.Song));
-
-        WeakReferenceMessenger.Default.Register<NavigateToSingerMessage>(this, (_, m) =>
-        {
-            NowPlaying.CloseCommand.Execute(null);
-            var singerVm = singerViewModelFactory1.Create(m.Singer.Id.ToString(), m.Singer.Name);
-            _navigationService.NavigateTransient(singerVm);
-        });
-
-        WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (_, m) =>
+        _messenger.Register<AuthStateChangedEvent>(this, (_, m) =>
         {
             if (m.IsLoggedIn)
                 _ = OnLoginSuccessAsync();
             else
                 OnLogoutRequested();
-        });
-
-        WeakReferenceMessenger.Default.Register<RequestNavigateBackMessage>(this, (_, _) => { NavigateBack(); });
-        WeakReferenceMessenger.Default.Register<AppBackgroundSettingsChangedMessage>(this, (_, message) =>
-        {
-            ApplyCustomBackgroundImage(
-                message.UseCustomImage,
-                message.CustomImagePath,
-                message.CustomImageOpacity);
         });
 
         _ = InitializeStartupAsync();
@@ -334,6 +323,7 @@ public partial class MainWindowViewModel : ObservableObject
     //public string Version => Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
 
     public PlayerViewModel Player { get; }
+    public ISongInteractionService SongInteractions { get; }
     public NowPlayingViewModel NowPlaying { get; }
     public ISukiToastManager ToastManager { get; }
     public ISukiDialogManager DialogManager { get; }
@@ -423,6 +413,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void ApplyNavigationPage(PageViewModelBase page)
     {
+        NowPlaying.CloseCommand.Execute(null);
         _isUpdatingActivePageFromNavigation = true;
         ActivePage = page;
         _isUpdatingActivePageFromNavigation = false;
@@ -607,25 +598,25 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void RequestWindowToggleFullScreen()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.ToggleFullScreen));
+        _mainWindowService.ToggleFullScreen();
     }
 
     [RelayCommand]
     private void RequestWindowMinimize()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Minimize));
+        _mainWindowService.Minimize();
     }
 
     [RelayCommand]
     private void RequestWindowToggleMaximize()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.ToggleMaximize));
+        _mainWindowService.ToggleMaximize();
     }
 
     [RelayCommand]
     private void RequestWindowClose()
     {
-        WeakReferenceMessenger.Default.Send(new MainWindowChromeActionMessage(MainWindowChromeAction.Close));
+        _mainWindowService.Close();
     }
 
     [RelayCommand]
@@ -745,41 +736,33 @@ public partial class MainWindowViewModel : ObservableObject
         _desktopLyricWindowService.Close();
     }
 
-    private async Task HandlePlaySongMessageAsync(SongItem song)
+    private void OnUiPreferencesChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        try
-        {
-            IList<SongItem>? currentSongList = null;
+        if (e.PropertyName == nameof(IUiPreferencesState.Current))
+            ApplyCustomBackgroundImage(_uiPreferencesState.Current.AppBackground);
+    }
 
-            if (ActivePage is DailyRecommendViewModel dailyVm)
-                currentSongList = dailyVm.Songs;
-            else if (ActivePage is MyPlaylistsViewModel playlistVm && playlistVm.IsShowingSongs)
-                currentSongList = playlistVm.SelectedPlaylistSongs;
-            else if (ActivePage is LocalMusicLibraryViewModel localMusicVm && localMusicVm.IsShowingSongs)
-                currentSongList = localMusicVm.SelectedPlaylistSongs;
-            else if (ActivePage is DiscoverViewModel discoverVm && discoverVm.IsShowingSongs)
-                currentSongList = discoverVm.SelectedPlaylistSongs;
-            else if (ActivePage is SearchViewModel searchVm)
-                currentSongList = searchVm.IsShowingDetail ? searchVm.DetailSongs : searchVm.Songs;
-            else if (ActivePage is UserCloudViewModel userCloudVm)
-                currentSongList = userCloudVm.Songs;
-            else if (ActivePage is SingerViewModel singerVm)
-                currentSongList = singerVm.IsAlbumDetailVisible ? singerVm.AlbumSongs : singerVm.Songs;
-            else if (ActivePage is RankViewModel rankVm && rankVm.IsShowingSongs)
-                currentSongList = rankVm.SelectedRankSongs;
-            else if (ActivePage is HistoryViewModel historyVm)
-                currentSongList = historyVm.Songs;
+    private void ApplyCustomBackgroundImage(AppBackgroundPreferences preferences)
+    {
+        ApplyCustomBackgroundImage(
+            preferences.UseCustomImage,
+            preferences.CustomImagePath,
+            preferences.CustomImageOpacity);
+    }
 
-            await Player.PlaySongAsync(song, currentSongList);
-        }
-        catch (OperationCanceledException)
-        {
-            // Ignore cancellations from rapid song switching.
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "处理播放歌曲消息失败");
-        }
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        _isDisposed = true;
+        _messenger.UnregisterAll(this);
+        _uiPreferencesState.PropertyChanged -= OnUiPreferencesChanged;
+        _settingViewModel.CheckForUpdateRequested -= OnCheckForUpdateRequested;
+        _desktopLyricWindowService.IsOpenChanged -= OnDesktopLyricWindowStateChanged;
+        _navigationService.CurrentPageChanged -= OnNavigationCurrentPageChanged;
+        PlaylistsViewModel.Items.CollectionChanged -= OnPlaylistItemsChanged;
+        PlaylistsViewModel.PropertyChanged -= OnPlaylistViewModelPropertyChanged;
     }
 
 }

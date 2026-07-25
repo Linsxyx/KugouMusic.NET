@@ -109,7 +109,11 @@
                         </ListBox.IsVisible>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="vm:SongItem">
-                                <localControls:SongListItemControl />
+                                <localControls:SongListItemControl
+                                    PlayCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).PlaySongCommand}"
+                                    AddToNextCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).AddSongToNextCommand}"
+                                    ShowPlaylistDialogCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ShowSongPlaylistDialogCommand}"
+                                    ViewSingerCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ViewSongSingerCommand}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -205,6 +209,8 @@
                     </ScrollViewer>
 
                     <localControls:SongCollectionDetailView
+                        PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+                        SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
                         IsVisible="{Binding IsShowingDetail}"
                         Cover="{Binding DetailCover}"
                         Title="{Binding DetailTitle}"

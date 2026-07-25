@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -10,6 +11,24 @@ namespace KugouAvaloniaPlayer.Controls;
 
 public partial class SongListItemControl : UserControl
 {
+    public static readonly StyledProperty<ICommand?> PlayCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(PlayCommand));
+
+    public static readonly StyledProperty<ICommand?> AddToNextCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(AddToNextCommand));
+
+    public static readonly StyledProperty<ICommand?> ShowPlaylistDialogCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(ShowPlaylistDialogCommand));
+
+    public static readonly StyledProperty<ICommand?> ViewSingerCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(ViewSingerCommand));
+
+    public static readonly StyledProperty<ICommand?> RemoveFromPlaylistCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(RemoveFromPlaylistCommand));
+
+    public static readonly StyledProperty<ICommand?> SetLocalCoverCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(SetLocalCoverCommand));
+
     private MenuFlyout? _contextFlyout;
     private TopLevel? _lightDismissTopLevel;
     private MenuFlyout? _moreFlyout;
@@ -17,6 +36,42 @@ public partial class SongListItemControl : UserControl
     public SongListItemControl()
     {
         InitializeComponent();
+    }
+
+    public ICommand? PlayCommand
+    {
+        get => GetValue(PlayCommandProperty);
+        set => SetValue(PlayCommandProperty, value);
+    }
+
+    public ICommand? AddToNextCommand
+    {
+        get => GetValue(AddToNextCommandProperty);
+        set => SetValue(AddToNextCommandProperty, value);
+    }
+
+    public ICommand? ShowPlaylistDialogCommand
+    {
+        get => GetValue(ShowPlaylistDialogCommandProperty);
+        set => SetValue(ShowPlaylistDialogCommandProperty, value);
+    }
+
+    public ICommand? ViewSingerCommand
+    {
+        get => GetValue(ViewSingerCommandProperty);
+        set => SetValue(ViewSingerCommandProperty, value);
+    }
+
+    public ICommand? RemoveFromPlaylistCommand
+    {
+        get => GetValue(RemoveFromPlaylistCommandProperty);
+        set => SetValue(RemoveFromPlaylistCommandProperty, value);
+    }
+
+    public ICommand? SetLocalCoverCommand
+    {
+        get => GetValue(SetLocalCoverCommandProperty);
+        set => SetValue(SetLocalCoverCommandProperty, value);
     }
 
     private void MoreButton_OnClick(object? sender, RoutedEventArgs e)
@@ -75,7 +130,7 @@ public partial class SongListItemControl : UserControl
         flyout.Items.Add(new MenuItem
         {
             Header = "下一首播放",
-            Command = song.AddToNextCommand,
+            Command = AddToNextCommand,
             CommandParameter = song
         });
 
@@ -84,7 +139,7 @@ public partial class SongListItemControl : UserControl
             flyout.Items.Add(new MenuItem
             {
                 Header = "添加到歌单",
-                Command = song.ShowPlaylistDialogCommand,
+                Command = ShowPlaylistDialogCommand,
                 CommandParameter = song
             });
         }
@@ -99,14 +154,14 @@ public partial class SongListItemControl : UserControl
             flyout.Items.Add(new MenuItem
             {
                 Header = "设置歌曲封面",
-                Command = song.SetLocalCoverCommand,
+                Command = SetLocalCoverCommand,
                 CommandParameter = song
             });
 
             flyout.Items.Add(new MenuItem
             {
                 Header = "从歌单移除",
-                Command = song.RemoveFromPlaylistCommand,
+                Command = RemoveFromPlaylistCommand,
                 CommandParameter = song
             });
         }
@@ -116,13 +171,13 @@ public partial class SongListItemControl : UserControl
             flyout.Items.Add(new MenuItem
             {
                 Header = "从歌单移除",
-                Command = song.RemoveFromPlaylistCommand,
+                Command = RemoveFromPlaylistCommand,
                 CommandParameter = song
             });
         }
     }
 
-    private static MenuItem CreateSingerMenuItem(SongItem song)
+    private MenuItem CreateSingerMenuItem(SongItem song)
     {
         var singerMenuItem = new MenuItem
         {
@@ -134,7 +189,7 @@ public partial class SongListItemControl : UserControl
             singerMenuItem.Items.Add(new MenuItem
             {
                 Header = string.IsNullOrWhiteSpace(singer.Name) ? "未知歌手" : singer.Name,
-                Command = song.ViewSingerCommand,
+                Command = ViewSingerCommand,
                 CommandParameter = singer
             });
         }

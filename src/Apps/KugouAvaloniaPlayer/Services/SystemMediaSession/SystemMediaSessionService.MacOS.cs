@@ -10,9 +10,7 @@ using ATL;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Converters;
-using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 
@@ -520,7 +518,7 @@ public sealed class SystemMediaSessionService(
         s_currentInstance?.DispatchPlayerCommand(player =>
         {
             if (!player.IsPlayingAudio)
-                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                ((IPlaybackCommands)player).TogglePlayPause();
         });
         return RemoteCommandSuccess;
     }
@@ -530,26 +528,26 @@ public sealed class SystemMediaSessionService(
         s_currentInstance?.DispatchPlayerCommand(player =>
         {
             if (player.IsPlayingAudio)
-                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                ((IPlaybackCommands)player).TogglePlayPause();
         });
         return RemoteCommandSuccess;
     }
 
     private static long HandleTogglePlayPauseCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
     {
-        s_currentInstance?.DispatchPlaybackControl(PlaybackControlAction.TogglePlayPause);
+        s_currentInstance?.DispatchTogglePlayPause();
         return RemoteCommandSuccess;
     }
 
     private static long HandleNextCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
     {
-        s_currentInstance?.DispatchPlaybackControl(PlaybackControlAction.NextTrack);
+        s_currentInstance?.DispatchTrackChange(playNext: true);
         return RemoteCommandSuccess;
     }
 
     private static long HandlePreviousCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
     {
-        s_currentInstance?.DispatchPlaybackControl(PlaybackControlAction.PreviousTrack);
+        s_currentInstance?.DispatchTrackChange(playNext: false);
         return RemoteCommandSuccess;
     }
 
@@ -634,18 +632,19 @@ public sealed class SystemMediaSessionService(
         return buffer;
     }
 
-    private void DispatchPlaybackControl(PlaybackControlAction action)
+    private void DispatchTogglePlayPause()
     {
-        Dispatcher.UIThread.Post(() =>
+        DispatchPlayerCommand(player => ((IPlaybackCommands)player).TogglePlayPause());
+    }
+
+    private void DispatchTrackChange(bool playNext)
+    {
+        DispatchPlayerCommand(player =>
         {
-            try
-            {
-                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(action));
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "发送 macOS 系统媒体控件播放控制消息失败。");
-            }
+            var commands = (IPlaybackCommands)player;
+            _ = playNext
+                ? commands.PlayNextAsync()
+                : commands.PlayPreviousAsync();
         });
     }
 

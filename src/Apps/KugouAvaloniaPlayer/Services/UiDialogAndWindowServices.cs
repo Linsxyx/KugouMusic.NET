@@ -4,6 +4,7 @@ using ZLinq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
@@ -28,6 +29,11 @@ public interface IMainWindowService
 {
     Window? MainWindow { get; }
     void ShowMainWindow();
+    void Minimize();
+    void ToggleFullScreen();
+    void ToggleMaximize();
+    void Close();
+    void ApplyLinuxWindowDecorations(bool useFullDecorations);
 }
 
 internal static class MainWindowPresentationHelper
@@ -308,13 +314,54 @@ public sealed class DesktopLyricWindowService(
     }
 }
 
-public sealed class MainWindowService : IMainWindowService
+public sealed class MainWindowService(IUiDispatcherService uiDispatcher) : IMainWindowService
 {
     public Window? MainWindow =>
         (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
     public void ShowMainWindow()
     {
-        MainWindowPresentationHelper.ShowAndActivate(MainWindow);
+        uiDispatcher.RunOrPost(() => MainWindowPresentationHelper.ShowAndActivate(MainWindow));
+    }
+
+    public void Minimize()
+    {
+        uiDispatcher.RunOrPost(() =>
+        {
+            if (MainWindow is { } window)
+                window.WindowState = WindowState.Minimized;
+        });
+    }
+
+    public void ToggleFullScreen()
+    {
+        uiDispatcher.RunOrPost(() =>
+        {
+            if (MainWindow is KugouWindow window)
+                window.ToggleFullScreen();
+        });
+    }
+
+    public void ToggleMaximize()
+    {
+        uiDispatcher.RunOrPost(() =>
+        {
+            if (MainWindow is KugouWindow window)
+                window.ToggleMaximizeOrZoom();
+        });
+    }
+
+    public void Close()
+    {
+        uiDispatcher.RunOrPost(() => MainWindow?.Close());
+    }
+
+    public void ApplyLinuxWindowDecorations(bool useFullDecorations)
+    {
+        uiDispatcher.RunOrPost(() =>
+        {
+            if (MainWindow is MainWindow window)
+                window.ApplyLinuxWindowDecorations(useFullDecorations);
+        });
     }
 }

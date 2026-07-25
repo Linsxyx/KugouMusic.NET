@@ -1,4 +1,6 @@
 using KuGou.Net.Clients;
+using CommunityToolkit.Mvvm.Messaging;
+using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using Microsoft.Extensions.Logging;
 using SukiUI.Toasts;
@@ -15,6 +17,7 @@ public sealed class SingerViewModelFactory(
     AlbumClient albumClient,
     PlaylistClient playlistClient,
     ISukiToastManager toastManager,
+    IMessenger messenger,
     ILogger<SingerViewModel> logger)
     : ISingerViewModelFactory
 {
@@ -25,6 +28,7 @@ public sealed class SingerViewModelFactory(
             albumClient,
             playlistClient,
             toastManager,
+            messenger,
             logger,
             authorId,
             singerName);
@@ -41,6 +45,7 @@ public sealed class DiscoverTagViewModelFactory(
     RecommendClient discoveryClient,
     KugouAvaloniaPlayer.Services.INavigationService navigationService,
     ISukiToastManager toastManager,
+    IMessenger messenger,
     ILogger<DiscoverTagViewModel> logger)
     : IDiscoverTagViewModelFactory
 {
@@ -51,6 +56,7 @@ public sealed class DiscoverTagViewModelFactory(
             discoveryClient,
             navigationService,
             toastManager,
+            messenger,
             logger);
     }
 }
@@ -62,6 +68,7 @@ public interface IDesktopLyricViewModelFactory
 
 public sealed class DesktopLyricViewModelFactory(
     PlayerViewModel playerViewModel,
+    IUiPreferencesState uiPreferencesState,
     IDesktopLyricMousePassthroughService desktopLyricMousePassthroughService)
     : IDesktopLyricViewModelFactory
 {
@@ -69,6 +76,7 @@ public sealed class DesktopLyricViewModelFactory(
     {
         return new DesktopLyricViewModel(
             playerViewModel,
+            uiPreferencesState,
             desktopLyricMousePassthroughService.IsSupported,
             usesSeparateLockOverlay: !desktopLyricMousePassthroughService.SupportsSelectiveHitTesting);
     }

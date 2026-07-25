@@ -7,7 +7,6 @@ using ZLinq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
@@ -41,14 +40,6 @@ public partial class MainWindow : KugouWindow
 #endif*/
 
         PositionChanged += (_, _) => CaptureNormalBounds();
-        WeakReferenceMessenger.Default.Register<MainWindowChromeActionMessage>(this,
-            (_, message) => { ApplyChromeAction(message.Action); });
-        WeakReferenceMessenger.Default.Register<ShowMainWindowMessage>(this,
-            (_, _) => ShowAndActivateWindow());
-#if KUGOU_LINUX
-        WeakReferenceMessenger.Default.Register<LinuxWindowDecorationsChangedMessage>(this,
-            (_, message) => ApplyLinuxWindowDecorations(message.UseFullDecorations));
-#endif
     }
 
     public bool CanClose { get; set; }
@@ -60,12 +51,12 @@ public partial class MainWindow : KugouWindow
 #endif
     }
 
-#if KUGOU_LINUX
-    private void ApplyLinuxWindowDecorations(bool useFullDecorations)
+    public void ApplyLinuxWindowDecorations(bool useFullDecorations)
     {
+#if KUGOU_LINUX
         ConfigureLinuxDecorations(useFullDecorations);
-    }
 #endif
+    }
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
@@ -108,7 +99,6 @@ public partial class MainWindow : KugouWindow
         _taskbarToolbar = null;
 #endif
 
-        WeakReferenceMessenger.Default.UnregisterAll(this);
         base.OnClosed(e);
     }
 
@@ -126,27 +116,6 @@ public partial class MainWindow : KugouWindow
 
         if (change.Property == BoundsProperty || change.Property == WindowStateProperty)
             CaptureNormalBounds();
-    }
-
-    private void ApplyChromeAction(MainWindowChromeAction action)
-    {
-        switch (action)
-        {
-            case MainWindowChromeAction.Minimize:
-                WindowState = WindowState.Minimized;
-                break;
-            case MainWindowChromeAction.ToggleFullScreen:
-                ToggleFullScreen();
-                break;
-            case MainWindowChromeAction.ToggleMaximize:
-                ToggleMaximizeOrZoom();
-                break;
-            case MainWindowChromeAction.Close:
-                Close();
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(action), action, null);
-        }
     }
 
     private void SaveWindowState()
@@ -300,23 +269,23 @@ public partial class MainWindow : KugouWindow
         }
     }
 
-    private static void HandleTaskbarThumbnailButtonClick(uint buttonId)
+    private void HandleTaskbarThumbnailButtonClick(uint buttonId)
     {
+        var playbackCommands = _taskbarPlayer as IPlaybackCommands;
         switch (buttonId)
         {
             case WindowsTaskbarThumbnailToolbar.PreviousButtonId:
-                WeakReferenceMessenger.Default.Send(
-                    new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
+                if (playbackCommands != null)
+                    _ = playbackCommands.PlayPreviousAsync();
                 break;
 
             case WindowsTaskbarThumbnailToolbar.PlayPauseButtonId:
-                WeakReferenceMessenger.Default.Send(
-                    new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                playbackCommands?.TogglePlayPause();
                 break;
 
             case WindowsTaskbarThumbnailToolbar.NextButtonId:
-                WeakReferenceMessenger.Default.Send(
-                    new PlaybackControlMessage(PlaybackControlAction.NextTrack));
+                if (playbackCommands != null)
+                    _ = playbackCommands.PlayNextAsync();
                 break;
             case WindowsTaskbarThumbnailToolbar.LikeButtonId:
                 if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow.DataContext: MainWindowViewModel { Player: { } player } })
@@ -326,9 +295,4 @@ public partial class MainWindow : KugouWindow
     }
 
 #endif
-
-    private void ShowAndActivateWindow()
-    {
-        MainWindowPresentationHelper.ShowAndActivate(this);
-    }
 }

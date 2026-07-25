@@ -251,7 +251,7 @@
                             <Grid.ContextFlyout>
                                 <MenuFlyout>
                                     <MenuItem Header="下一首播放"
-                                              Command="{Binding AddToNextCommand}"
+                                              Command="{Binding #Root.AddToNextCommand}"
                                               CommandParameter="{Binding .}" />
                                     <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
                                         <MenuItem.Styles>
@@ -259,13 +259,13 @@
                                                 <Setter Property="Header"
                                                         Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
                                                 <Setter Property="Command"
-                                                        Value="{Binding #QueueItemRoot.((vm:SongItem)DataContext).ViewSingerCommand}" />
+                                                        Value="{Binding #Root.ViewSingerCommand}" />
                                                 <Setter Property="CommandParameter" Value="{Binding .}" />
                                             </Style>
                                         </MenuItem.Styles>
                                     </MenuItem>
                                     <MenuItem Header="添加到歌单"
-                                              Command="{Binding ShowPlaylistDialogCommand}"
+                                              Command="{Binding #Root.ShowPlaylistDialogCommand}"
                                               CommandParameter="{Binding .}" />
 
                                     <MenuItem Header="从队列移除"

@@ -10,7 +10,6 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
@@ -21,7 +20,7 @@ using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class PlayerViewModel : ViewModelBase, IDisposable
+public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDisposable
 {
     private const int MaxConsecutiveFailures = 5;
     private const float VolumeStep = 0.05f;
@@ -208,36 +207,6 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
 
         _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         _playbackTimer.Tick += OnPlaybackTimerTick;
-
-        WeakReferenceMessenger.Default.Register<AddToNextMessage>(this,
-            (_, m) =>
-            {
-                if (!AddSongToPersonalFmNext(m.Song))
-                    if (m.Song == CurrentPlayingSong) {
-                        _toastManager.CreateToast()
-                                     .OfType(NotificationType.Error)
-                                     .WithTitle("添加失败")
-                                     .WithContent("当前正在播放的歌曲不能添加到下一首")
-                                     .Dismiss()
-                                     .After(TimeSpan.FromSeconds(3))
-                                     .Dismiss()
-                                     .ByClicking()
-                                     .Queue();
-                        return;
-                    }
-
-                _queueManager.AddToNext(m.Song, CurrentPlayingSong);
-            });
-        WeakReferenceMessenger.Default.Register<AddLoadedSongsToQueueMessage>(this,
-            (_, m) => AddLoadedSongsToQueue(m.Songs));
-        WeakReferenceMessenger.Default.Register<ShowSongBatchActionDialogMessage>(this,
-            (_, m) => _ = ShowSongBatchActionDialogSafelyAsync(m.Songs, m.AllowAddToPlaylist));
-        WeakReferenceMessenger.Default.Register<ShowPlaylistDialogMessage>(this,
-            (_, m) => _ = ShowPlaylistDialogSafelyAsync(m.Song));
-        WeakReferenceMessenger.Default.Register<ReplacePlaybackQueueMessage>(this,
-            (_, m) => _ = ReplacePlaybackQueueAsync(m.Songs, m.StartSong));
-        WeakReferenceMessenger.Default.Register<PlaybackControlMessage>(this,
-            (_, m) => HandlePlaybackControlMessage(m));
 
         _queueManager.PlaybackQueue.CollectionChanged += OnPlaybackQueueCollectionChanged;
         _personalFmService.StateChanged += OnPersonalFmServiceStateChanged;
@@ -529,27 +498,60 @@ public partial class PlayerViewModel : ViewModelBase, IDisposable
             .Queue();
     }
 
-    private void HandlePlaybackControlMessage(PlaybackControlMessage message)
+    async Task IPlaybackCommands.PlayAsync(
+        SongItem song,
+        IReadOnlyList<SongItem>? context,
+        CancellationToken cancellationToken)
     {
-        switch (message.Action)
+        cancellationToken.ThrowIfCancellationRequested();
+        var contextList = context as IList<SongItem>
+                          ?? context?.AsValueEnumerable().ToList();
+        await PlaySongAsync(song, contextList);
+    }
+
+    void IPlaybackCommands.TogglePlayPause() => TogglePlayPause();
+
+    async Task IPlaybackCommands.PlayPreviousAsync(
+        bool preservePlaybackState,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (preservePlaybackState)
+            await ChangeTrackPreservingPlaybackStateAsync(playNext: false);
+        else
+            await PlayPrevious();
+    }
+
+    async Task IPlaybackCommands.PlayNextAsync(
+        bool preservePlaybackState,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (preservePlaybackState)
+            await ChangeTrackPreservingPlaybackStateAsync(playNext: true);
+        else
+            await PlayNext();
+    }
+
+    void IPlaybackCommands.Stop() => StopAndReset();
+
+    void IPlaybackCommands.AddToNext(SongItem song)
+    {
+        if (!AddSongToPersonalFmNext(song) && song == CurrentPlayingSong)
         {
-            case PlaybackControlAction.TogglePlayPause:
-                TogglePlayPause();
-                break;
-            case PlaybackControlAction.PreviousTrack:
-                _ = message.PreservePlaybackState
-                    ? ChangeTrackPreservingPlaybackStateAsync(playNext: false)
-                    : PlayPrevious();
-                break;
-            case PlaybackControlAction.NextTrack:
-                _ = message.PreservePlaybackState
-                    ? ChangeTrackPreservingPlaybackStateAsync(playNext: true)
-                    : PlayNext();
-                break;
-            case PlaybackControlAction.Stop:
-                StopAndReset();
-                break;
+            _toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("添加失败")
+                .WithContent("当前正在播放的歌曲不能添加到下一首")
+                .Dismiss()
+                .After(TimeSpan.FromSeconds(3))
+                .Dismiss()
+                .ByClicking()
+                .Queue();
+            return;
         }
+
+        _queueManager.AddToNext(song, CurrentPlayingSong);
     }
 
     private static TimeSpan GetAudioLoadTimeout(bool isLocal)

@@ -117,6 +117,7 @@ public partial class DiscoverViewModel : PageViewModelBase
     private readonly RecommendClient _discoveryClient;
     private readonly IDiscoverTagViewModelFactory _discoverTagViewModelFactory;
     private readonly ILogger<DiscoverViewModel> _logger;
+    private readonly IMessenger _messenger;
     private readonly INavigationService _navigationService;
     private readonly PlaylistClient _playlistClient;
     private readonly RankClient _rankClient;
@@ -165,6 +166,7 @@ public partial class DiscoverViewModel : PageViewModelBase
         IDiscoverTagViewModelFactory discoverTagViewModelFactory,
         INavigationService navigationService,
         ISukiToastManager toastManager,
+        IMessenger messenger,
         ILogger<DiscoverViewModel> logger)
     {
         _playlistClient = playlistClient;
@@ -174,6 +176,7 @@ public partial class DiscoverViewModel : PageViewModelBase
         _discoverTagViewModelFactory = discoverTagViewModelFactory;
         _navigationService = navigationService;
         _toastManager = toastManager;
+        _messenger = messenger;
         _logger = logger;
         _ = LoadContentAsync();
     }
@@ -298,7 +301,7 @@ public partial class DiscoverViewModel : PageViewModelBase
             var result = await _playlistClient.CollectPlaylistAsync(SelectedPlaylist.Name, SelectedPlaylist.GlobalId);
             if (result != null)
             {
-                WeakReferenceMessenger.Default.Send(new RefreshPlaylistsMessage());
+                _messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
                 _toastManager.CreateToast()
                     .OfType(NotificationType.Success)
                     .WithTitle("收藏成功")

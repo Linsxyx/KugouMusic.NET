@@ -6,7 +6,6 @@ using Avalonia.Collections;
 using Avalonia.Controls.Notifications;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;

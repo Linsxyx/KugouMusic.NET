@@ -304,7 +304,13 @@
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="vm:SongItem">
-                                <localControls:SongListItemControl />
+                                <localControls:SongListItemControl
+                                    PlayCommand="{Binding #Root.PlaySongCommand}"
+                                    AddToNextCommand="{Binding #Root.AddToNextCommand}"
+                                    ShowPlaylistDialogCommand="{Binding #Root.ShowPlaylistDialogCommand}"
+                                    ViewSingerCommand="{Binding #Root.ViewSingerCommand}"
+                                    RemoveFromPlaylistCommand="{Binding #Root.RemoveSongCommand}"
+                                    SetLocalCoverCommand="{Binding #Root.SetLocalSongCoverCommand}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

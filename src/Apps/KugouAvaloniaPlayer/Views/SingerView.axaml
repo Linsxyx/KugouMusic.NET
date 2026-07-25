@@ -9,6 +9,8 @@
              x:DataType="vm:SingerViewModel">
     <Grid Margin="15">
         <localControls:SongCollectionDetailView
+            PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+            SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
             IsVisible="{Binding IsSongListVisible}"
             Cover="{Binding SingerAvatar}"
             Title="{Binding SingerName}"
@@ -28,6 +30,8 @@
         <Grid IsVisible="{Binding IsAlbumBrowserVisible}"
               RowDefinitions="188,*">
             <localControls:SongCollectionDetailView
+                PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+                SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
                 Grid.RowSpan="2"
                 Cover="{Binding SingerAvatar}"
                 Title="{Binding SingerName}"
@@ -95,6 +99,8 @@
         </Grid>
 
         <localControls:SongCollectionDetailView
+            PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+            SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
             IsVisible="{Binding IsAlbumDetailVisible}"
             Cover="{Binding AlbumDetailCover}"
             Title="{Binding AlbumDetailTitle}"

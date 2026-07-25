@@ -33,6 +33,8 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
     private readonly ICreatePlaylistDialogService _createPlaylistDialogService;
     private readonly IExternalPlaylistImportService _externalPlaylistImportService;
+    private readonly INavigationService _navigationService;
+    private readonly IMessenger _messenger;
     private readonly FavoritePlaylistService _favoritePlaylistService;
     private readonly UserCreatedPlaylistCacheService _userCreatedPlaylistCacheService;
     private readonly ILogger<MyPlaylistsViewModel> _logger;
@@ -76,6 +78,8 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         ISukiToastManager toastManager,
         ICreatePlaylistDialogService createPlaylistDialogService,
         IExternalPlaylistImportService externalPlaylistImportService,
+        INavigationService navigationService,
+        IMessenger messenger,
         ILogger<MyPlaylistsViewModel> logger)
     {
         _userClient = userClient;
@@ -86,17 +90,18 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         _toastManager = toastManager;
         _createPlaylistDialogService = createPlaylistDialogService;
         _externalPlaylistImportService = externalPlaylistImportService;
+        _navigationService = navigationService;
+        _messenger = messenger;
         _logger = logger;
         CurrentSortText = GetSortText(SettingsManager.Settings.UserPlaylistSongSortMode);
 
         _ = LoadAllPlaylists();
 
-        WeakReferenceMessenger.Default.Register<RemoveFromPlaylistMessage>(this,
-            (_, m) => _ = RemoveSongFromPlaylistSafelyAsync(m.Song));
-
-        WeakReferenceMessenger.Default.Register<AuthStateChangedMessage>(this, (r, m) => { _ = LoadAllPlaylists(); });
-        WeakReferenceMessenger.Default.Register<RefreshPlaylistsMessage>(this,
-            (r, m) => { _ = SchedulePlaylistsRefreshAsync("RefreshPlaylistsMessage", 1500); });
+        _messenger.Register<AuthStateChangedEvent>(this, (_, _) => _ = LoadAllPlaylists());
+        _messenger.Register<PlaylistCollectionChangedEvent>(this,
+            (_, message) => _ = SchedulePlaylistsRefreshAsync(
+                $"PlaylistCollectionChanged:{message.Kind}",
+                1500));
     }
 
     // 标识当前选中的歌单是否为网络歌单
@@ -137,13 +142,6 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         SelectedPlaylist = null;
         _selectedPlaylistSongsDefaultOrder.Clear();
         SelectedPlaylistSongs.Clear();
-    }
-
-    [RelayCommand]
-    private void BackFromPlaylist()
-    {
-        CancelPlaylistBackgroundLoad();
-        WeakReferenceMessenger.Default.Send(new RequestNavigateBackMessage());
     }
 
     [RelayCommand]
@@ -616,7 +614,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                 return;
             }
 
-            WeakReferenceMessenger.Default.Send(new RefreshPlaylistsMessage());
+            _messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.FullRefreshRequired));
 
             var preview = string.Join("、", importResult.FailedNames.AsValueEnumerable().Take(10).ToArray());
             var summary =
@@ -661,7 +659,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             var result = await _playlistClient.CreatePlaylistAsync(name);
             if (result != null)
             {
-                WeakReferenceMessenger.Default.Send(new RefreshPlaylistsMessage());
+                _messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
                 _toastManager.CreateToast()
                     .OfType(NotificationType.Success)
                     .WithTitle("创建成功")
@@ -751,7 +749,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             _selectedPlaylistSongsDefaultOrder.Clear();
             SelectedPlaylistSongs.Clear();
             IsShowingSongs = false;
-            WeakReferenceMessenger.Default.Send(new RequestNavigateBackMessage());
+            _navigationService.GoBack();
         }
 
         return true;
@@ -814,18 +812,6 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                 .Dismiss().After(TimeSpan.FromSeconds(3))
                 .Dismiss().ByClicking()
                 .Queue();
-        }
-    }
-
-    private async Task RemoveSongFromPlaylistSafelyAsync(SongItem? song)
-    {
-        try
-        {
-            await RemoveSongFromPlaylist(song);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "处理移除歌曲消息失败");
         }
     }
 
@@ -936,7 +922,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         _refreshPlaylistsCts?.Cancel();
         _refreshPlaylistsCts?.Dispose();
         _refreshPlaylistsCts = null;
-        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _messenger.UnregisterAll(this);
     }
 
 }

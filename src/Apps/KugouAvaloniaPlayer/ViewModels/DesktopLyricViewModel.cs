@@ -6,8 +6,6 @@ using Avalonia.Media;
 using AvaloniaLyrics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -89,50 +87,24 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
 
     private CancellationTokenSource? _topLaneAnimationCancellation;
     private CancellationTokenSource? _bottomLaneAnimationCancellation;
+    private readonly IUiPreferencesState _uiPreferencesState;
 
-    public DesktopLyricViewModel(PlayerViewModel player, bool canMousePassthrough, bool usesSeparateLockOverlay)
+    public DesktopLyricViewModel(
+        PlayerViewModel player,
+        IUiPreferencesState uiPreferencesState,
+        bool canMousePassthrough,
+        bool usesSeparateLockOverlay)
     {
         Player = player;
+        _uiPreferencesState = uiPreferencesState;
         Player.PropertyChanged += OnPlayerPropertyChanged;
         CanMousePassthrough = canMousePassthrough;
         UsesSeparateLockOverlay = canMousePassthrough && usesSeparateLockOverlay;
         IsControlBarExpanded = false;
         FontSize = ClampFontSize(SettingsManager.Settings.DesktopLyricFontSize);
         IsTranslationVisible = SettingsManager.Settings.DesktopLyricShowTranslation;
-        IsDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
-        ApplyLyricStyleSettings(
-            SettingsManager.Settings.DesktopLyricUseCustomMainColor,
-            SettingsManager.Settings.DesktopLyricCustomMainColor,
-            SettingsManager.Settings.DesktopLyricUseCustomTranslationColor,
-            SettingsManager.Settings.DesktopLyricCustomTranslationColor,
-            SettingsManager.Settings.DesktopLyricUseCustomFont,
-            SettingsManager.Settings.DesktopLyricCustomFontFamily);
-
-        WeakReferenceMessenger.Default.Register<LyricStyleSettingsChangedMessage>(this, (_, message) =>
-        {
-            if (message.Scope != LyricSettingsScope.Desktop)
-                return;
-
-            ApplyLyricStyleSettings(
-                message.UseCustomMainColor,
-                message.MainColorHex,
-                message.UseCustomTranslationColor,
-                message.TranslationColorHex,
-                message.UseCustomFont,
-                message.FontFamilyName);
-        });
-
-        WeakReferenceMessenger.Default.Register<DesktopLyricDoubleLineChangedMessage>(this, (_, message) =>
-        {
-            IsDoubleLineEnabled = message.IsEnabled;
-        });
-
-        WeakReferenceMessenger.Default.Register<GlobalFontSettingsChangedMessage>(this, (_, _) =>
-        {
-            ApplyFontSettings(
-                SettingsManager.Settings.DesktopLyricUseCustomFont,
-                SettingsManager.Settings.DesktopLyricCustomFontFamily);
-        });
+        ApplyUiPreferences(_uiPreferencesState.Current);
+        _uiPreferencesState.PropertyChanged += OnUiPreferencesChanged;
 
         RefreshDoubleLineLanes();
     }
@@ -283,7 +255,26 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
     {
         CancelAndDisposeLaneAnimations();
         Player.PropertyChanged -= OnPlayerPropertyChanged;
-        WeakReferenceMessenger.Default.UnregisterAll(this);
+        _uiPreferencesState.PropertyChanged -= OnUiPreferencesChanged;
+    }
+
+    private void OnUiPreferencesChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is null or nameof(IUiPreferencesState.Current))
+            ApplyUiPreferences(_uiPreferencesState.Current);
+    }
+
+    private void ApplyUiPreferences(UiPreferencesSnapshot preferences)
+    {
+        var lyric = preferences.DesktopLyric;
+        IsDoubleLineEnabled = preferences.DesktopLyricDoubleLineEnabled;
+        ApplyLyricStyleSettings(
+            lyric.UseCustomMainColor,
+            lyric.MainColorHex,
+            lyric.UseCustomTranslationColor,
+            lyric.TranslationColorHex,
+            lyric.UseCustomFont,
+            lyric.FontFamilyName);
     }
 
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)

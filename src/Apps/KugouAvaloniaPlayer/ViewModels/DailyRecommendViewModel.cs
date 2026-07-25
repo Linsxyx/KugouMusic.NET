@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SukiUI.Toasts;
 
@@ -22,6 +23,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
     private readonly RecommendClient _discoveryClient;
     private readonly ILogger<DailyRecommendViewModel> _logger;
     private readonly PlayerViewModel _player;
+    private readonly ISongInteractionService _songInteractions;
     private readonly KgSessionManager _sessionManager;
     private readonly ISukiToastManager _toastManager;
     private CancellationTokenSource? _fmPreviewLoadCancellation;
@@ -49,12 +51,14 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
     public DailyRecommendViewModel(
         RecommendClient discoveryClient,
         PlayerViewModel player,
+        ISongInteractionService songInteractions,
         KgSessionManager sessionManager,
         ISukiToastManager toastManager,
         ILogger<DailyRecommendViewModel> logger)
     {
         _discoveryClient = discoveryClient;
         _player = player;
+        _songInteractions = songInteractions;
         _sessionManager = sessionManager;
         _toastManager = toastManager;
         _logger = logger;
@@ -70,6 +74,32 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
     public AvaloniaList<SongItem> Songs { get; } = new();
     public AvaloniaList<SongItem> PersonalFmSongs { get; } = new();
     public PlayerViewModel Player => _player;
+
+    [RelayCommand]
+    private Task PlaySong(SongItem? song) =>
+        song is null
+            ? Task.CompletedTask
+            : ((IPlaybackCommands)_player).PlayAsync(song, Songs);
+
+    [RelayCommand]
+    private void AddSongToNext(SongItem? song)
+    {
+        if (song != null)
+            ((IPlaybackCommands)_player).AddToNext(song);
+    }
+
+    [RelayCommand]
+    private Task ShowSongPlaylistDialog(SongItem? song) =>
+        song is null
+            ? Task.CompletedTask
+            : _songInteractions.ShowAddToPlaylistDialogAsync(song);
+
+    [RelayCommand]
+    private void ViewSongSinger(KuGou.Net.Abstractions.Models.SingerLite? singer)
+    {
+        if (singer != null)
+            _songInteractions.NavigateToSinger(singer);
+    }
 
     public PersonalFmSongPoolOption[] FmSongPoolOptions { get; } =
     [

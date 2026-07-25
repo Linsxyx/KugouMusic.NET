@@ -13,6 +13,8 @@
 
     <Grid Margin="15">
         <localControls:SongCollectionDetailView
+            PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+            SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
             Cover="{Binding Cover}"
             Title="{Binding Title}"
             Subtitle="{Binding Subtitle}"

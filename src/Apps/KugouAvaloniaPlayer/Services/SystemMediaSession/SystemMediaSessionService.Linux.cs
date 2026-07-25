@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -286,32 +285,32 @@ public sealed class SystemMediaSessionService(
         {
             case "Next":
                 if (_currentSong != null)
-                    DispatchPlaybackControl(PlaybackControlAction.NextTrack, preservePlaybackState: true);
+                    DispatchTrackChange(playNext: true, preservePlaybackState: true);
                 ReplyEmpty(context);
                 break;
             case "Previous":
                 if (_currentSong != null)
-                    DispatchPlaybackControl(PlaybackControlAction.PreviousTrack, preservePlaybackState: true);
+                    DispatchTrackChange(playNext: false, preservePlaybackState: true);
                 ReplyEmpty(context);
                 break;
             case "Pause":
                 DispatchPlayerCommand(player =>
                 {
                     if (player.IsPlayingAudio)
-                        WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                        ((IPlaybackCommands)player).TogglePlayPause();
                 });
                 ReplyEmpty(context);
                 break;
             case "PlayPause":
                 _isStopped = false;
-                DispatchPlaybackControl(PlaybackControlAction.TogglePlayPause);
+                DispatchTogglePlayPause();
                 ReplyEmpty(context);
                 break;
             case "Stop":
                 _isStopped = true;
                 _isPlaying = false;
                 _positionSeconds = 0;
-                DispatchPlaybackControl(PlaybackControlAction.Stop);
+                DispatchStop();
                 EmitPlayerPropertiesChanged(["PlaybackStatus"]);
                 EmitSeeked(0);
                 ReplyEmpty(context);
@@ -321,7 +320,7 @@ public sealed class SystemMediaSessionService(
                 DispatchPlayerCommand(player =>
                 {
                     if (!player.IsPlayingAudio)
-                        WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                        ((IPlaybackCommands)player).TogglePlayPause();
                 });
                 ReplyEmpty(context);
                 break;
@@ -372,7 +371,7 @@ public sealed class SystemMediaSessionService(
         var newPosition = _positionSeconds + offsetMicroseconds / 1_000_000d;
         if (newPosition > _durationSeconds)
         {
-            DispatchPlaybackControl(PlaybackControlAction.NextTrack, preservePlaybackState: true);
+            DispatchTrackChange(playNext: true, preservePlaybackState: true);
             ReplyEmpty(context);
             return;
         }
@@ -695,8 +694,7 @@ public sealed class SystemMediaSessionService(
         DispatchPlayerCommand(player =>
         {
             if (player.IsPlayingAudio)
-                WeakReferenceMessenger.Default.Send(
-                    new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                ((IPlaybackCommands)player).TogglePlayPause();
         });
     }
 
@@ -735,18 +733,24 @@ public sealed class SystemMediaSessionService(
         });
     }
 
-    private void DispatchPlaybackControl(PlaybackControlAction action, bool preservePlaybackState = false)
+    private void DispatchTogglePlayPause()
     {
-        Dispatcher.UIThread.Post(() =>
+        DispatchPlayerCommand(player => ((IPlaybackCommands)player).TogglePlayPause());
+    }
+
+    private void DispatchStop()
+    {
+        DispatchPlayerCommand(player => ((IPlaybackCommands)player).Stop());
+    }
+
+    private void DispatchTrackChange(bool playNext, bool preservePlaybackState = false)
+    {
+        DispatchPlayerCommand(player =>
         {
-            try
-            {
-                WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(action, preservePlaybackState));
-            }
-            catch (Exception ex)
-            {
-                logger.LogDebug(ex, "发送 Linux MPRIS 播放控制消息失败。");
-            }
+            var commands = (IPlaybackCommands)player;
+            _ = playNext
+                ? commands.PlayNextAsync(preservePlaybackState)
+                : commands.PlayPreviousAsync(preservePlaybackState);
         });
     }
 

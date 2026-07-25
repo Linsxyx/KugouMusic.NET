@@ -51,6 +51,9 @@ public partial class SettingViewModel : PageViewModelBase
     private readonly IFolderPickerService _folderPickerService;
     private readonly IGitHubReleaseService _releaseService;
     private readonly KgSessionManager _sessionManager;
+    private readonly IMainWindowService _mainWindowService;
+    private readonly IMessenger _messenger;
+    private readonly IUiPreferencesState _uiPreferencesState;
     private readonly UserClient _userClient;
 
     private bool _isApplyingSettingsSnapshot;
@@ -180,7 +183,8 @@ public partial class SettingViewModel : PageViewModelBase
     public SettingViewModel(PlayerViewModel player, UserClient userClient, LoginClient authClient,
         ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
         IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService,
-        IFolderPickerService folderPickerService)
+        IFolderPickerService folderPickerService, IUiPreferencesState uiPreferencesState,
+        IMainWindowService mainWindowService, IMessenger messenger)
     {
         _userClient = userClient;
         _authClient = authClient;
@@ -190,6 +194,9 @@ public partial class SettingViewModel : PageViewModelBase
         _globalShortcutService = globalShortcutService;
         _releaseService = releaseService;
         _folderPickerService = folderPickerService;
+        _uiPreferencesState = uiPreferencesState;
+        _mainWindowService = mainWindowService;
+        _messenger = messenger;
 
         Player = player;
         EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
@@ -381,7 +388,7 @@ public partial class SettingViewModel : PageViewModelBase
     private async Task Logout()
     {
         _authClient.LogOutAsync();
-        WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(false));
+        _messenger.Send(new AuthStateChangedEvent(false));
         await Task.CompletedTask;
     }
 
@@ -445,7 +452,7 @@ public partial class SettingViewModel : PageViewModelBase
         DesktopLyricColorHexInput = normalized;
         OnPropertyChanged(nameof(DesktopLyricColorPreviewBrush));
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
+        NotifyUiPreferencesChanged();
     }
 
     [RelayCommand]
@@ -475,7 +482,7 @@ public partial class SettingViewModel : PageViewModelBase
         PlayPageLyricColorHexInput = normalized;
         OnPropertyChanged(nameof(PlayPageLyricColorPreviewBrush));
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        NotifyUiPreferencesChanged();
     }
 
     public event Action? CheckForUpdateRequested;
@@ -510,7 +517,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.LinuxUseFullWindowDecorations = value;
         SettingsManager.Save();
-        WeakReferenceMessenger.Default.Send(new LinuxWindowDecorationsChangedMessage(value));
+        _mainWindowService.ApplyLinuxWindowDecorations(value);
     }
 #endif
 
@@ -634,7 +641,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.UseLightweightNowPlayingLyricScroll = value;
         SettingsManager.Save();
-        WeakReferenceMessenger.Default.Send(new LightweightNowPlayingLyricScrollChangedMessage(value));
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnDesktopLyricDoubleLineEnabledChanged(bool value)
@@ -643,7 +650,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.DesktopLyricDoubleLineEnabled = value;
         SettingsManager.Save();
-        WeakReferenceMessenger.Default.Send(new DesktopLyricDoubleLineChangedMessage(value));
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnDesktopSelectedLyricColorTargetChanged(string value)
@@ -663,7 +670,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SetDesktopTargetCustomEnabled(value == LyricColorModeCustom);
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnPlayPageSelectedLyricColorModeChanged(string value)
@@ -673,7 +680,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SetPlayPageTargetCustomEnabled(value == LyricColorModeCustom);
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnDesktopLyricColorHexInputChanged(string value)
@@ -696,7 +703,7 @@ public partial class SettingViewModel : PageViewModelBase
             !string.IsNullOrWhiteSpace(DesktopSelectedLyricFontFamily))
             SettingsManager.Settings.DesktopLyricCustomFontFamily = DesktopSelectedLyricFontFamily;
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnPlayPageSelectedLyricFontModeChanged(string value)
@@ -709,7 +716,7 @@ public partial class SettingViewModel : PageViewModelBase
             !string.IsNullOrWhiteSpace(PlayPageSelectedLyricFontFamily))
             SettingsManager.Settings.PlayPageLyricCustomFontFamily = PlayPageSelectedLyricFontFamily;
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnDesktopSelectedLyricFontFamilyChanged(string? value)
@@ -730,7 +737,7 @@ public partial class SettingViewModel : PageViewModelBase
         SettingsManager.Settings.DesktopLyricCustomFontFamily = normalized;
         SettingsManager.Settings.DesktopLyricUseCustomFont = DesktopSelectedLyricFontMode == LyricColorModeCustom;
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnPlayPageSelectedLyricFontFamilyChanged(string? value)
@@ -751,7 +758,7 @@ public partial class SettingViewModel : PageViewModelBase
         SettingsManager.Settings.PlayPageLyricCustomFontFamily = normalized;
         SettingsManager.Settings.PlayPageLyricUseCustomFont = PlayPageSelectedLyricFontMode == LyricColorModeCustom;
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnPlayPageSelectedLyricAlignmentChanged(string value)
@@ -760,7 +767,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.PlayPageLyricAlignment = ParseAlignment(value);
         SettingsManager.Save();
-        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnPlayPageLyricFontSizeChanged(double value)
@@ -781,7 +788,7 @@ public partial class SettingViewModel : PageViewModelBase
         SettingsManager.Settings.PlayPageLyricFontSize = clamped;
         SettingsManager.Save();
         OnPropertyChanged(nameof(PlayPageLyricFontSizeDisplay));
-        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnNowPlayingBackgroundBlurRadiusChanged(double value)
@@ -798,7 +805,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.NowPlayingBackgroundBlurRadius = clamped;
         SettingsManager.Save();
-        WeakReferenceMessenger.Default.Send(new NowPlayingBackgroundBlurRadiusChangedMessage(clamped));
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnSelectedNowPlayingBackgroundSourceChanged(NowPlayingBackgroundSource value)
@@ -807,7 +814,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.NowPlayingBackgroundSource = value;
         SettingsManager.Save();
-        WeakReferenceMessenger.Default.Send(new NowPlayingBackgroundSourceChangedMessage(value));
+        NotifyUiPreferencesChanged();
     }
 
     public void SetCheckingUpdateState(bool isChecking)
@@ -934,24 +941,14 @@ public partial class SettingViewModel : PageViewModelBase
         RefreshShortcutTexts();
         ApplyRegistrationResults(shortcutApplyResult.Results);
 
-        NotifyLyricStyleChanged(LyricSettingsScope.Desktop);
-        NotifyLyricStyleChanged(LyricSettingsScope.PlayPage);
-        NotifyBackgroundSettingsChanged();
-        WeakReferenceMessenger.Default.Send(
-            new DesktopLyricDoubleLineChangedMessage(SettingsManager.Settings.DesktopLyricDoubleLineEnabled));
-        WeakReferenceMessenger.Default.Send(
-            new NowPlayingBackgroundBlurRadiusChangedMessage(SettingsManager.Settings.NowPlayingBackgroundBlurRadius));
-        WeakReferenceMessenger.Default.Send(
-            new NowPlayingBackgroundSourceChangedMessage(SettingsManager.Settings.NowPlayingBackgroundSource));
-        WeakReferenceMessenger.Default.Send(
-            new LightweightNowPlayingLyricScrollChangedMessage(SettingsManager.Settings.UseLightweightNowPlayingLyricScroll));
+        NotifyUiPreferencesChanged();
         OnPropertyChanged(nameof(IsDarkMode));
     }
 
-    private static void SaveAndNotifyBackgroundSettings()
+    private void SaveAndNotifyBackgroundSettings()
     {
         SettingsManager.Save();
-        NotifyBackgroundSettingsChanged();
+        NotifyUiPreferencesChanged();
     }
 
     private void RefreshOutputDeviceOptions(int preferredDeviceId)
@@ -1003,14 +1000,6 @@ public partial class SettingViewModel : PageViewModelBase
         Player.SetOutputDevice(AppSettings.SystemDefaultAudioOutputDeviceId);
         OutputDeviceStatus = "保存的输出设备不可用，已回到系统默认设备。";
         SelectOutputDeviceSilently(AppSettings.SystemDefaultAudioOutputDeviceId);
-    }
-
-    private static void NotifyBackgroundSettingsChanged()
-    {
-        WeakReferenceMessenger.Default.Send(new AppBackgroundSettingsChangedMessage(
-            SettingsManager.Settings.UseCustomBackgroundImage,
-            SettingsManager.Settings.CustomBackgroundImagePath,
-            SettingsManager.Settings.CustomBackgroundImageOpacity));
     }
 
     private void LoadDesktopLyricColorEditorFromSettings()
@@ -1151,35 +1140,9 @@ public partial class SettingViewModel : PageViewModelBase
         return Color.TryParse(colorText, out var parsed) ? parsed : fallback;
     }
 
-    private static void NotifyLyricStyleChanged(LyricSettingsScope scope)
+    private void NotifyUiPreferencesChanged()
     {
-        var isDesktop = scope == LyricSettingsScope.Desktop;
-        WeakReferenceMessenger.Default.Send(new LyricStyleSettingsChangedMessage(
-            scope,
-            isDesktop
-                ? SettingsManager.Settings.DesktopLyricUseCustomMainColor
-                : SettingsManager.Settings.PlayPageLyricUseCustomMainColor,
-            isDesktop
-                ? SettingsManager.Settings.DesktopLyricCustomMainColor
-                : SettingsManager.Settings.PlayPageLyricCustomMainColor,
-            isDesktop
-                ? SettingsManager.Settings.DesktopLyricUseCustomTranslationColor
-                : SettingsManager.Settings.PlayPageLyricUseCustomTranslationColor,
-            isDesktop
-                ? SettingsManager.Settings.DesktopLyricCustomTranslationColor
-                : SettingsManager.Settings.PlayPageLyricCustomTranslationColor,
-            isDesktop
-                ? SettingsManager.Settings.DesktopLyricUseCustomFont
-                : SettingsManager.Settings.PlayPageLyricUseCustomFont,
-            isDesktop
-                ? SettingsManager.Settings.DesktopLyricCustomFontFamily
-                : SettingsManager.Settings.PlayPageLyricCustomFontFamily,
-            isDesktop
-                ? LyricAlignmentOption.Center
-                : SettingsManager.Settings.PlayPageLyricAlignment,
-            isDesktop
-                ? SettingsManager.Settings.DesktopLyricFontSize
-                : SettingsManager.Settings.PlayPageLyricFontSize));
+        _uiPreferencesState.RefreshFromSettings();
     }
 
     private static LyricAlignmentOption ParseAlignment(string? alignment)
@@ -1243,7 +1206,7 @@ public partial class SettingViewModel : PageViewModelBase
         SettingsManager.Settings.GlobalFontFamily = normalized;
         SettingsManager.Save();
         AppFontService.ApplyGlobalFont();
-        WeakReferenceMessenger.Default.Send(new GlobalFontSettingsChangedMessage(normalized));
+        NotifyUiPreferencesChanged();
     }
 
     private async Task LoadReleaseNotesAsync(bool forceRefresh = false)

@@ -1,5 +1,3 @@
-using CommunityToolkit.Mvvm.Messaging;
-using KugouAvaloniaPlayer.Models;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -12,7 +10,8 @@ internal interface IStartupActivationService
 }
 
 internal sealed class StartupActivationService(
-    ILogger<StartupActivationService> logger) : IStartupActivationService
+    ILogger<StartupActivationService> logger,
+    IMainWindowService mainWindowService) : IStartupActivationService
 {
     private readonly ILogger<StartupActivationService> _logger = logger;
 
@@ -25,7 +24,7 @@ internal sealed class StartupActivationService(
 
         if (request.Args.Length == 0)
         {
-            WeakReferenceMessenger.Default.Send(new ShowMainWindowMessage());
+            mainWindowService.ShowMainWindow();
             return Task.CompletedTask;
         }
 

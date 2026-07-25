@@ -347,7 +347,11 @@
                             </ListBox.ItemsPanel>
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="vm:SongItem">
-                                    <localControls:SongListItemControl />
+                                    <localControls:SongListItemControl
+                                        PlayCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).PlaySongCommand}"
+                                        AddToNextCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).AddSongToNextCommand}"
+                                        ShowPlaylistDialogCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ShowSongPlaylistDialogCommand}"
+                                        ViewSingerCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ViewSongSingerCommand}" />
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>

@@ -14,7 +14,11 @@ using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
-public partial class LoginViewModel(LoginClient authClient, RegisterClient deviceClient, ILogger<LoginViewModel> logger)
+public partial class LoginViewModel(
+    LoginClient authClient,
+    RegisterClient deviceClient,
+    IMessenger messenger,
+    ILogger<LoginViewModel> logger)
     : ObservableObject
 {
     [ObservableProperty]
@@ -153,7 +157,7 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
 
                                     Dispatcher.UIThread.Post(() =>
                                     {
-                                        WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
+                                        messenger.Send(new AuthStateChangedEvent(true));
                                     });
                                 });
                             });
@@ -313,7 +317,7 @@ public partial class LoginViewModel(LoginClient authClient, RegisterClient devic
             logger.LogError(ex, "设备初始化失败");
         }
 
-        WeakReferenceMessenger.Default.Send(new AuthStateChangedMessage(true));
+        messenger.Send(new AuthStateChangedEvent(true));
     }
 
     private void SetLoginAccountChoices(LoginResponse result)

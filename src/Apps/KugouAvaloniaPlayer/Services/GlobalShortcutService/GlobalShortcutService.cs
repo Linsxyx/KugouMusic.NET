@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using ZLinq;
 using Avalonia.Controls;
 using Avalonia.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -237,6 +236,7 @@ public sealed partial class GlobalShortcutService(
     ILogger<GlobalShortcutService> logger)
     : IGlobalShortcutService
 {
+    private readonly IPlaybackCommands _playbackCommands = playerViewModel;
     private readonly Dictionary<GlobalShortcutAction, GlobalShortcutGesture> _activeGestures = new();
 
     private readonly Dictionary<GlobalShortcutAction, GlobalShortcutRegistrationResult> _currentResults =
@@ -405,13 +405,13 @@ public sealed partial class GlobalShortcutService(
             switch (action)
             {
                 case GlobalShortcutAction.PlayPause:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.TogglePlayPause));
+                    _playbackCommands.TogglePlayPause();
                     break;
                 case GlobalShortcutAction.PreviousTrack:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.PreviousTrack));
+                    _ = _playbackCommands.PlayPreviousAsync();
                     break;
                 case GlobalShortcutAction.NextTrack:
-                    WeakReferenceMessenger.Default.Send(new PlaybackControlMessage(PlaybackControlAction.NextTrack));
+                    _ = _playbackCommands.PlayNextAsync();
                     break;
                 case GlobalShortcutAction.ShowMainWindow:
                     mainWindowService.ShowMainWindow();

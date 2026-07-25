@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SukiUI.Toasts;
 
@@ -26,6 +27,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
 
     private readonly string _authorId;
     private readonly ILogger<SingerViewModel> _logger;
+    private readonly IMessenger _messenger;
     private readonly ArtistClient _artistClient;
     private readonly AlbumClient _albumClient;
     private readonly PlaylistClient _playlistClient;
@@ -96,6 +98,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
         AlbumClient albumClient,
         PlaylistClient playlistClient,
         ISukiToastManager toastManager,
+        IMessenger messenger,
         ILogger<SingerViewModel> logger,
         string authorId,
         string singerName)
@@ -104,6 +107,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
         _albumClient = albumClient;
         _playlistClient = playlistClient;
         _toastManager = toastManager;
+        _messenger = messenger;
         _logger = logger;
         _authorId = authorId;
         SingerName = singerName;
@@ -493,7 +497,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
             if (result == null)
                 return;
 
-            WeakReferenceMessenger.Default.Send(new RefreshPlaylistsMessage());
+            _messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
             _toastManager.CreateToast()
                 .OfType(NotificationType.Success)
                 .WithTitle("收藏成功")

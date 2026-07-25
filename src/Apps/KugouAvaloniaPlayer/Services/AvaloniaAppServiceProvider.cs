@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.ExternalPlaylists;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Infrastructure.Http.Handlers;
@@ -36,6 +37,7 @@ public sealed partial class AvaloniaAppServiceProvider
     private void Setup() => DI.Setup(nameof(AvaloniaAppServiceProvider))
         .Root<MainWindowViewModel>()
         .Root<PlayerViewModel>()
+        .Root<IMainWindowService>()
         .Root<IGlobalShortcutService>()
         .Root<ISystemMediaSessionService>()
         .Root<IStartupActivationServer>()
@@ -46,6 +48,8 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<ILoggerFactory>().As(Singleton).To(_ => LoggerFactory)
         .Bind<Dispatcher>().As(Singleton).To(_ => UiDispatcher)
         .Bind<IUiDispatcherService>().As(Singleton).To<UiDispatcherService>()
+        .Bind<IUiPreferencesState>().As(Singleton).To<UiPreferencesState>()
+        .Bind<IMessenger>().As(Singleton).To(_ => new WeakReferenceMessenger())
         .Bind<ILogger<TT>>().As(Singleton).To((ILoggerFactory loggerFactory) => loggerFactory.CreateLogger<TT>())
 
         .Bind<KgSessionManager>().As(Singleton).To<KgSessionManager>()
@@ -74,6 +78,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<IGlobalShortcutService>().As(Singleton).To<GlobalShortcutServiceImpl>()
         .Bind<ISystemMediaSessionService>().As(Singleton).To<SystemMediaSessionServiceImpl>()
         .Bind<IFolderPickerService>().As(Singleton).To<FolderPickerService>()
+        .Bind<ISongInteractionService>().As(Singleton).To<SongInteractionService>()
         .Bind<IJellyfinClient>().As(Singleton).To<JellyfinClient>()
         .Bind<ILocalMusicLibraryService>().As(Singleton).To<LocalMusicLibraryService>()
         .Bind<IGitHubReleaseService>().As(Singleton).To<GitHubReleaseService>()
@@ -96,6 +101,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<IPlaybackCoordinator>().As(Singleton).To<PlaybackCoordinator>()
         .Bind<ITransitionAnalysisService>().As(Singleton).To<ManagedBassTransitionAnalysisService>()
         .Bind<PlayerViewModel>().As(Singleton).To<PlayerViewModel>()
+        .Bind<IPlaybackCommands>().To((PlayerViewModel playerViewModel) => playerViewModel)
 
         .Bind<LoginViewModel>().To<LoginViewModel>()
         .Bind<SearchViewModel>().As(Singleton).To<SearchViewModel>()

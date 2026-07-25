@@ -45,30 +45,6 @@ public partial class PlayerViewModel
             Dispatcher.UIThread.Post(Update);
     }
 
-    private async Task ShowPlaylistDialogSafelyAsync(SongItem song)
-    {
-        try
-        {
-            await _favoriteService.ShowAddToPlaylistDialogAsync(song);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "打开添加到歌单对话框失败");
-        }
-    }
-
-    private async Task ShowSongBatchActionDialogSafelyAsync(IReadOnlyList<SongItem> songs, bool allowAddToPlaylist)
-    {
-        try
-        {
-            await _favoriteService.ShowSongBatchActionDialogAsync(songs, allowAddToPlaylist);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "打开批量操作对话框失败");
-        }
-    }
-
     private void AddLoadedSongsToQueue(IReadOnlyList<SongItem> songs)
     {
         if (songs.Count == 0)
@@ -91,6 +67,20 @@ public partial class PlayerViewModel
             .WithContent($"已添加 {songs.Count} 首歌曲")
             .Dismiss().After(TimeSpan.FromSeconds(3))
             .Queue();
+    }
+
+    void IPlaybackCommands.AddToQueue(IReadOnlyList<SongItem> songs)
+    {
+        AddLoadedSongsToQueue(songs);
+    }
+
+    Task IPlaybackCommands.ReplaceQueueAsync(
+        IReadOnlyList<SongItem> songs,
+        SongItem? startSong,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return ReplacePlaybackQueueAsync(songs, startSong);
     }
 
     public async Task ReplacePlaybackQueueAsync(IReadOnlyList<SongItem> songs, SongItem? startSong = null)

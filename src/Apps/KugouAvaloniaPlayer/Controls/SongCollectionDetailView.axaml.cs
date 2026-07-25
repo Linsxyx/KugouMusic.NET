@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using ZLinq;
 using System.Windows.Input;
 using Avalonia;
@@ -11,8 +12,8 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using KugouAvaloniaPlayer.Models;
+using KuGou.Net.Abstractions.Models;
+using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
 using SukiUI;
 
@@ -76,6 +77,18 @@ public partial class SongCollectionDetailView : UserControl
 
     public static readonly StyledProperty<ICommand?> PlayFirstCommandProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(PlayFirstCommand));
+
+    public static readonly StyledProperty<IPlaybackCommands?> PlaybackCommandsProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, IPlaybackCommands?>(nameof(PlaybackCommands));
+
+    public static readonly StyledProperty<ISongInteractionService?> SongInteractionsProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, ISongInteractionService?>(nameof(SongInteractions));
+
+    public static readonly StyledProperty<ICommand?> RemoveSongCommandProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(RemoveSongCommand));
+
+    public static readonly StyledProperty<ICommand?> SetLocalSongCoverCommandProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(SetLocalSongCoverCommand));
 
     public static readonly StyledProperty<bool> HasPlayFirstCommandProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, bool>(nameof(HasPlayFirstCommand));
@@ -160,6 +173,10 @@ public partial class SongCollectionDetailView : UserControl
         PlayFirstSongCommand = new RelayCommand(PlayFirstSong);
         OpenBatchActionsCommand = new RelayCommand(OpenBatchActions);
         ScrollToPlayingSongCommand = new RelayCommand(ScrollToPlayingSong);
+        PlaySongCommand = new AsyncRelayCommand<SongItem?>(PlaySongAsync);
+        AddToNextCommand = new RelayCommand<SongItem?>(AddToNext);
+        ShowPlaylistDialogCommand = new AsyncRelayCommand<SongItem?>(ShowPlaylistDialogAsync);
+        ViewSingerCommand = new RelayCommand<SingerLite?>(ViewSinger);
         InitializeComponent();
         UpdateCurrentHeroBackground();
     }
@@ -167,6 +184,10 @@ public partial class SongCollectionDetailView : UserControl
     public ICommand PlayFirstSongCommand { get; }
     public ICommand OpenBatchActionsCommand { get; }
     public ICommand ScrollToPlayingSongCommand { get; }
+    public ICommand PlaySongCommand { get; }
+    public ICommand AddToNextCommand { get; }
+    public ICommand ShowPlaylistDialogCommand { get; }
+    public ICommand ViewSingerCommand { get; }
 
     public string? Cover
     {
@@ -262,6 +283,30 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(PlayFirstCommandProperty);
         set => SetValue(PlayFirstCommandProperty, value);
+    }
+
+    public IPlaybackCommands? PlaybackCommands
+    {
+        get => GetValue(PlaybackCommandsProperty);
+        set => SetValue(PlaybackCommandsProperty, value);
+    }
+
+    public ISongInteractionService? SongInteractions
+    {
+        get => GetValue(SongInteractionsProperty);
+        set => SetValue(SongInteractionsProperty, value);
+    }
+
+    public ICommand? RemoveSongCommand
+    {
+        get => GetValue(RemoveSongCommandProperty);
+        set => SetValue(RemoveSongCommandProperty, value);
+    }
+
+    public ICommand? SetLocalSongCoverCommand
+    {
+        get => GetValue(SetLocalSongCoverCommandProperty);
+        set => SetValue(SetLocalSongCoverCommandProperty, value);
     }
 
     public bool HasPlayFirstCommand
@@ -481,14 +526,42 @@ public partial class SongCollectionDetailView : UserControl
         }
 
         var firstSong = Songs?.AsValueEnumerable().OfType<SongItem>().FirstOrDefault();
-        if (firstSong?.PlayCommand.CanExecute(null) == true)
-            firstSong.PlayCommand.Execute(null);
+        if (firstSong != null && PlaySongCommand.CanExecute(firstSong))
+            PlaySongCommand.Execute(firstSong);
     }
 
     private void OpenBatchActions()
     {
         var loadedSongs = Songs?.AsValueEnumerable().OfType<SongItem>().ToList() ?? [];
-        WeakReferenceMessenger.Default.Send(new ShowSongBatchActionDialogMessage(loadedSongs, AllowAddToPlaylistAction));
+        if (SongInteractions != null)
+            _ = SongInteractions.ShowBatchActionsAsync(loadedSongs, AllowAddToPlaylistAction);
+    }
+
+    private async Task PlaySongAsync(SongItem? song)
+    {
+        if (song is null || PlaybackCommands is null)
+            return;
+
+        var context = Songs?.AsValueEnumerable().OfType<SongItem>().ToList();
+        await PlaybackCommands.PlayAsync(song, context);
+    }
+
+    private void AddToNext(SongItem? song)
+    {
+        if (song != null)
+            PlaybackCommands?.AddToNext(song);
+    }
+
+    private async Task ShowPlaylistDialogAsync(SongItem? song)
+    {
+        if (song != null && SongInteractions != null)
+            await SongInteractions.ShowAddToPlaylistDialogAsync(song);
+    }
+
+    private void ViewSinger(SingerLite? singer)
+    {
+        if (singer != null)
+            SongInteractions?.NavigateToSinger(singer);
     }
 
     private void ScrollToPlayingSong()

@@ -7,7 +7,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Converters;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
@@ -71,13 +70,6 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         CurrentSortText = GetSortText(SettingsManager.Settings.LocalPlaylistSongSortMode);
 
         _ = LoadLocalLibraryAsync();
-
-        WeakReferenceMessenger.Default.Register<SetLocalSongCoverMessage>(this,
-            (_, m) => _ = SetLocalSongCoverSafelyAsync(m.Song));
-        WeakReferenceMessenger.Default.Register<RemoveFromPlaylistMessage>(this,
-            (_, m) => _ = RemoveSongFromPlaylistSafelyAsync(m.Song));
-        WeakReferenceMessenger.Default.Register<RefreshPlaylistsMessage>(this,
-            (_, _) => _ = LoadLocalLibraryAsync());
     }
 
     public bool IsLocalPlaylist => SelectedPlaylist?.Type == PlaylistType.Local;
@@ -602,37 +594,6 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         finally
         {
             IsImportingJellyfinLibrary = false;
-        }
-    }
-
-    private async Task SetLocalSongCoverSafelyAsync(SongItem? song)
-    {
-        try
-        {
-            await SetLocalSongCover(song);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "处理设置本地歌曲封面消息失败");
-        }
-    }
-
-    private async Task RemoveSongFromPlaylistSafelyAsync(SongItem? song)
-    {
-        try
-        {
-            await RemoveSongFromPlaylist(song);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "处理从本地歌单移除歌曲消息失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("移除失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
         }
     }
 
