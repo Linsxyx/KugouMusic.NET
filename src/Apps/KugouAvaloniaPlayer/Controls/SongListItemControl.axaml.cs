@@ -88,6 +88,15 @@ public partial class SongListItemControl : UserControl
                 CommandParameter = song
             });
         }
+        else
+        {
+            flyout.Items.Add(new MenuItem
+            {
+                Header = "查找所在歌单",
+                Command = song.SearchLocalPlaylistsCommand,
+                CommandParameter = song
+            });
+        }
 
         if (!includePlaylistSpecificItems)
             return;

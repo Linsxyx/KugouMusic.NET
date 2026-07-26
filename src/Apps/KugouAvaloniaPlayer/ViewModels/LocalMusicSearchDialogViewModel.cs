@@ -12,9 +12,9 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class LocalMusicSearchDialogViewModel : ObservableObject, IDisposable
 {
+    private readonly ILocalMusicLibraryService _localMusicLibraryService;
     private readonly Func<LocalTrackSearchResult, Task> _openResultAction;
     private readonly Action _cancelAction;
-    private readonly ILocalMusicLibraryService _localMusicLibraryService;
     private CancellationTokenSource? _searchCancellation;
     private long _searchVersion;
 
@@ -46,7 +46,7 @@ public partial class LocalMusicSearchDialogViewModel : ObservableObject, IDispos
         _cancelAction = cancelAction;
     }
 
-    public ObservableCollection<LocalMusicSearchResultItemViewModel> Results { get; } = new();
+    public ObservableCollection<GroupedSearchResultItemViewModel> Results { get; } = new();
 
     public bool HasResults => Results.Count > 0;
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
@@ -81,12 +81,17 @@ public partial class LocalMusicSearchDialogViewModel : ObservableObject, IDispos
 
         try
         {
-            var results = await _localMusicLibraryService.SearchTracksAsync(keyword, cancellation.Token);
+            var results = await _localMusicLibraryService.SearchDistinctTracksAsync(keyword, cancellation.Token);
             if (searchVersion != _searchVersion || cancellation.IsCancellationRequested)
                 return;
 
             foreach (var result in results)
-                Results.Add(new LocalMusicSearchResultItemViewModel(result));
+            {
+                Results.Add(new GroupedSearchResultItemViewModel(
+                    _localMusicLibraryService,
+                    result,
+                    _openResultAction));
+            }
 
             NotifyResultStateChanged();
         }
@@ -106,16 +111,6 @@ public partial class LocalMusicSearchDialogViewModel : ObservableObject, IDispos
                 NotifyResultStateChanged();
             }
         }
-    }
-
-    [RelayCommand]
-    private async Task OpenResultAsync(LocalMusicSearchResultItemViewModel? item)
-    {
-        if (item is null || IsSearching)
-            return;
-
-        CancelPendingSearch();
-        await _openResultAction(item.Result);
     }
 
     [RelayCommand]
@@ -146,10 +141,19 @@ public partial class LocalMusicSearchDialogViewModel : ObservableObject, IDispos
     }
 }
 
-public sealed class LocalMusicSearchResultItemViewModel
+public partial class GroupedSearchResultItemViewModel : ObservableObject
 {
-    public LocalMusicSearchResultItemViewModel(LocalTrackSearchResult result)
+    private readonly ILocalMusicLibraryService _libraryService;
+    private readonly Func<LocalTrackSearchResult, Task> _openResultAction;
+    private bool _playlistsLoaded;
+
+    public GroupedSearchResultItemViewModel(
+        ILocalMusicLibraryService libraryService,
+        LocalTrackSearchResult result,
+        Func<LocalTrackSearchResult, Task> openResultAction)
     {
+        _libraryService = libraryService;
+        _openResultAction = openResultAction;
         Result = result;
         Cover = ResolveCover(result.Track);
     }
@@ -158,9 +162,85 @@ public sealed class LocalMusicSearchResultItemViewModel
     public string Title => Result.Track.Title;
     public string Artist => Result.Track.Artist;
     public string Album => string.IsNullOrWhiteSpace(Result.Track.Album) ? "未知专辑" : Result.Track.Album;
-    public string PlaylistName => Result.PlaylistName;
     public double DurationSeconds => Result.Track.DurationSeconds;
     public string Cover { get; }
+    public long TrackId => Result.Track.Id;
+
+    [ObservableProperty]
+    public partial bool IsExpanded { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoadingPlaylists { get; set; }
+
+    public ObservableCollection<PlaylistSummaryItem> Playlists { get; } = new();
+
+    [RelayCommand]
+    private async Task ToggleExpandAsync() {
+        IsExpanded = !IsExpanded;
+        if (!IsExpanded)
+            return;
+
+        if (_playlistsLoaded)
+            return;
+
+        IsLoadingPlaylists = true;
+        try
+        {
+            var playlists = await _libraryService.GetTrackPlaylistsAsync(TrackId);
+            Playlists.Clear();
+            foreach (var p in playlists)
+            {
+                Playlists.Add(new PlaylistSummaryItem
+                {
+                    PlaylistId = p.Id,
+                    PlaylistName = p.Name,
+                    PlaylistCover = ResolvePlaylistCover(p.CoverPath),
+                    TrackCount = p.TrackCount,
+                    Track = Result.Track
+                });
+            }
+
+            _playlistsLoaded = true;
+        }
+        finally
+        {
+            IsLoadingPlaylists = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenPlaylistAsync(PlaylistSummaryItem? item)
+    {
+        if (item is null)
+            return;
+
+        var searchResult = new LocalTrackSearchResult(
+            item.Track,
+            item.PlaylistId,
+            item.PlaylistName,
+            0);
+
+        await _openResultAction(searchResult);
+    }
+
+    private static string ResolvePlaylistCover(string? coverPath)
+    {
+        const string defaultPlaylistCover = "avares://KugouAvaloniaPlayer/Assets/default_listcard.png";
+
+        if (string.IsNullOrWhiteSpace(coverPath))
+            return defaultPlaylistCover;
+
+        if (LocalImageSourceHelper.TryGetEmbeddedCoverFilePath(coverPath, out _))
+            return coverPath;
+
+        if (Uri.TryCreate(coverPath, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == "avares"))
+        {
+            return coverPath;
+        }
+
+        return File.Exists(coverPath) ? new Uri(coverPath).AbsoluteUri : defaultPlaylistCover;
+    }
 
     private static string ResolveCover(LocalTrackItem track)
     {
@@ -182,4 +262,13 @@ public sealed class LocalMusicSearchResultItemViewModel
             ? defaultSongCover
             : LocalImageSourceHelper.BuildEmbeddedCoverSource(track.LocalPath);
     }
+}
+
+public sealed class PlaylistSummaryItem
+{
+    public long PlaylistId { get; init; }
+    public string PlaylistName { get; init; } = "";
+    public string PlaylistCover { get; init; } = "";
+    public int TrackCount { get; init; }
+    public LocalTrackItem Track { get; init; } = null!;
 }

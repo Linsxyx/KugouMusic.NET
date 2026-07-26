@@ -30,6 +30,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
     private readonly IJellyfinClient _jellyfinClient;
     private readonly ILocalMusicLibraryService _localMusicLibraryService;
     private readonly ILocalMusicSearchDialogService _localMusicSearchDialogService;
+    private readonly ITrackPlaylistSearchDialogService _trackPlaylistSearchDialogService;
     private readonly ILogger<LocalMusicLibraryViewModel> _logger;
     private readonly ISukiToastManager _toastManager;
     private readonly List<SongItem> _selectedPlaylistSongsDefaultOrder = new();
@@ -66,6 +67,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         IJellyfinClient jellyfinClient,
         ILocalMusicLibraryService localMusicLibraryService,
         ILocalMusicSearchDialogService localMusicSearchDialogService,
+        ITrackPlaylistSearchDialogService trackPlaylistSearchDialogService,
         ISukiToastManager toastManager,
         ILogger<LocalMusicLibraryViewModel> logger)
     {
@@ -74,6 +76,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         _jellyfinClient = jellyfinClient;
         _localMusicLibraryService = localMusicLibraryService;
         _localMusicSearchDialogService = localMusicSearchDialogService;
+        _trackPlaylistSearchDialogService = trackPlaylistSearchDialogService;
         _toastManager = toastManager;
         _logger = logger;
         CurrentSortText = GetSortText(SettingsManager.Settings.LocalPlaylistSongSortMode);
@@ -86,6 +89,8 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             (_, m) => _ = RemoveSongFromPlaylistSafelyAsync(m.Song));
         WeakReferenceMessenger.Default.Register<RefreshPlaylistsMessage>(this,
             (_, _) => _ = LoadLocalLibraryAsync());
+        WeakReferenceMessenger.Default.Register<ShowTrackPlaylistSearchDialogMessage>(this,
+            (_, m) => ShowTrackPlaylistSearchDialog(m.Song));
     }
 
     public bool IsLocalPlaylist => SelectedPlaylist?.Type == PlaylistType.Local;
@@ -133,6 +138,14 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
     private void ShowLocalMusicSearchDialog()
     {
         _localMusicSearchDialogService.Show(OpenSearchResultAsync);
+    }
+
+    private void ShowTrackPlaylistSearchDialog(SongItem song)
+    {
+        if (song.LocalTrackId <= 0)
+            return;
+
+        _trackPlaylistSearchDialogService.Show(song, OpenSearchResultAsync);
     }
 
     private async Task OpenSearchResultAsync(LocalTrackSearchResult result)

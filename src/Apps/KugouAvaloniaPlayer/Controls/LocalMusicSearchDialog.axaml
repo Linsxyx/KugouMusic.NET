@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+ <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
@@ -35,6 +35,20 @@
                                       Background="Transparent" />
                 </ControlTemplate>
             </Setter>
+        </Style>
+        <Style Selector="suki|GlassCard.ToggleExpansion PathIcon.ExpansionIcon">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="suki|GlassCard.ToggleExpansion PathIcon.Collapsed">
+            <Setter Property="RenderTransform" Value="rotate(0deg)" />
+        </Style>
+        <!-- Expand toggle chevron rotation -->
+        <Style Selector="suki|GlassCard.ToggleExpansion PathIcon.Expanded">
+            <Setter Property="RenderTransform" Value="rotate(90deg)" />
         </Style>
     </UserControl.Styles>
 
@@ -136,41 +150,51 @@
                     </StackPanel>
                 </Border>
 
-                <Grid RowDefinitions="Auto,*"
+                <Grid RowDefinitions="Auto,*" Margin="10 5"
                       IsVisible="{Binding HasResults}">
-                    <Grid ColumnDefinitions="72,*,140,140,80,100"
-                          ColumnSpacing="12"
-                          Margin="12,0,12,8">
-                        <TextBlock Grid.Column="1" Text="歌曲" Foreground="{DynamicResource SukiLowText}" />
-                        <TextBlock Grid.Column="2" Text="专辑" Foreground="{DynamicResource SukiLowText}" />
-                        <TextBlock Grid.Column="3" Text="对应歌单" Foreground="{DynamicResource SukiLowText}" />
-                        <TextBlock Grid.Column="4" Text="时长" Foreground="{DynamicResource SukiLowText}" />
-                        <TextBlock Grid.Column="5"
-                                   Text="操作"
-                                   HorizontalAlignment="Right"
-                                   Foreground="{DynamicResource SukiLowText}" />
-                    </Grid>
+                    <suki:GlassCard Background="{x:Null}" BorderBrush="{x:Null}" BorderThickness="0" CornerRadius="0"
+                                    Padding="10 0">
+                        <Grid ColumnDefinitions="50,72,*,140,40"
+                              ColumnSpacing="12">
+                            <TextBlock Grid.Column="2" Text="歌曲" Foreground="{DynamicResource SukiLowText}" />
+                            <TextBlock Grid.Column="3" Text="专辑" Foreground="{DynamicResource SukiLowText}" />
+                            <TextBlock Grid.Column="4" Text="时长" Foreground="{DynamicResource SukiLowText}" />
+                        </Grid>
+                    </suki:GlassCard>
 
                     <ListBox Grid.Row="1"
                              Classes="LocalMusicSearchList"
                              ItemsSource="{Binding Results}"
-                             MaxHeight="440">
+                             MaxHeight="440"
+                             ScrollViewer.VerticalScrollBarVisibility="Hidden">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <VirtualizingStackPanel />
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
-                            <DataTemplate DataType="vm:LocalMusicSearchResultItemViewModel">
-                                <Border Margin="0,0,0,10"
-                                        Padding="12"
-                                        CornerRadius="16"
-                                        Background="{DynamicResource SukiPrimaryColorLow}"
-                                        behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #SearchDialogRoot.((vm:LocalMusicSearchDialogViewModel)DataContext).OpenResultCommand}"
-                                        behaviors:InteractionBehaviors.DoubleTappedCommandParameter="{Binding}">
-                                    <Grid ColumnDefinitions="72,*,140,140,80,100"
-                                          ColumnSpacing="12">
-                                        <Border Width="60"
+                            <DataTemplate DataType="vm:GroupedSearchResultItemViewModel">
+                                <suki:GlassCard Classes="ToggleExpansion" IsInteractive="True"
+                                                Command="{Binding ToggleExpandCommand}"
+                                                CornerRadius="16"
+                                                Padding="10 5"
+                                                Background="{DynamicResource SukiPrimaryColorLow}">
+                                    <Grid RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="12"
+                                          ColumnDefinitions="50,72,*,140,40">
+
+
+                                        <PathIcon
+                                            Classes.ExpansionIcon="True"
+                                            Classes.Collapsed="{Binding !IsExpanded}"
+                                            Classes.Expanded="{Binding IsExpanded}"
+                                            Data="{x:Static suki:Icons.ChevronRight}"
+                                            Width="18"
+                                            Height="18" />
+
+                                        <!-- Row 0: Song info + expand toggle -->
+
+                                        <Border Grid.Row="0" Grid.Column="1" Width="60"
                                                 Height="60"
                                                 CornerRadius="12"
                                                 ClipToBounds="True"
@@ -180,7 +204,7 @@
                                                    Stretch="UniformToFill" />
                                         </Border>
 
-                                        <StackPanel Grid.Column="1"
+                                        <StackPanel Grid.Row="0" Grid.Column="2"
                                                     VerticalAlignment="Center"
                                                     Spacing="4">
                                             <TextBlock Text="{Binding Title}"
@@ -191,34 +215,72 @@
                                                        TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
 
-                                        <TextBlock Grid.Column="2"
+                                        <TextBlock Grid.Row="0" Grid.Column="3"
                                                    Text="{Binding Album}"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource SukiLowText}"
                                                    TextTrimming="CharacterEllipsis" />
 
-                                        <TextBlock Grid.Column="3"
-                                                   Text="{Binding PlaylistName}"
-                                                   VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource SukiLowText}"
-                                                   TextTrimming="CharacterEllipsis" />
-
-                                        <TextBlock Grid.Column="4"
+                                        <TextBlock Grid.Row="0" Grid.Column="4"
                                                    Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                                                    VerticalAlignment="Center"
                                                    Foreground="{DynamicResource SukiLowText}" />
 
-                                        <Button Grid.Column="5"
-                                                Classes="Basic"
-                                                HorizontalAlignment="Right"
-                                                VerticalAlignment="Center"
-                                                Cursor="Hand"
-                                                Command="{Binding #SearchDialogRoot.((vm:LocalMusicSearchDialogViewModel)DataContext).OpenResultCommand}"
-                                                CommandParameter="{Binding}">
-                                            <TextBlock Text="打开歌单" />
-                                        </Button>
+
+                                        <!-- Row 1: Expandable playlist list -->
+                                        <Grid Grid.Row="1"
+                                              Grid.ColumnSpan="5" Grid.Column="0"
+                                              IsVisible="{Binding IsExpanded}"
+                                              Margin="20,8,0,0">
+
+                                            <StackPanel IsVisible="{Binding IsLoadingPlaylists}"
+                                                        HorizontalAlignment="Center"
+                                                        Orientation="Horizontal"
+                                                        Spacing="8"
+                                                        Margin="8">
+                                                <suki:Loading Width="18" Height="18" />
+                                                <TextBlock Text="正在加载所在歌单..."
+                                                           Foreground="{DynamicResource SukiLowText}" />
+                                            </StackPanel>
+
+                                            <ListBox ItemsSource="{Binding Playlists}"
+                                                     IsVisible="{Binding !IsLoadingPlaylists}">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate DataType="vm:PlaylistSummaryItem">
+                                                        <suki:GlassCard Padding="8,6"
+                                                                        CornerRadius="12"
+                                                                        IsInteractive="True"
+                                                                        Command="{Binding $parent[ListBox].((vm:GroupedSearchResultItemViewModel)DataContext).OpenPlaylistCommand}"
+                                                                        CommandParameter="{Binding .}"
+                                                                        Background="{DynamicResource SukiPrimaryColor0}"
+                                                                        Margin="0,0,0,6">
+                                                            <Grid ColumnDefinitions="36,*,Auto"
+                                                                  ColumnSpacing="10">
+                                                                <Border Width="36"
+                                                                        Height="36"
+                                                                        CornerRadius="8"
+                                                                        ClipToBounds="True"
+                                                                        Background="{DynamicResource SukiPrimaryColorLow}">
+                                                                    <Image
+                                                                        asyncImageLoader:ImageLoader.Source="{Binding PlaylistCover}"
+                                                                        Stretch="UniformToFill" />
+                                                                </Border>
+
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding PlaylistName}"
+                                                                           VerticalAlignment="Center"
+                                                                           TextTrimming="CharacterEllipsis" />
+
+                                                                <Svg Grid.Column="2"
+                                                                     Path="avares://KugouAvaloniaPlayer/Assets/NavigateNext.svg" />
+                                                            </Grid>
+                                                        </suki:GlassCard>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Grid>
                                     </Grid>
-                                </Border>
+                                </suki:GlassCard>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

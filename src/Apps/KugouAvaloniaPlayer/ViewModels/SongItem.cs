@@ -88,6 +88,12 @@ public partial class SongItem : ObservableObject
     }
 
     [RelayCommand]
+    private void SearchLocalPlaylists()
+    {
+        WeakReferenceMessenger.Default.Send(new ShowTrackPlaylistSearchDialogMessage(this));
+    }
+
+    [RelayCommand]
     private void ViewSinger(SingerLite? singer)
     {
         if (singer != null)
