@@ -22,6 +22,7 @@ public partial class SongCollectionDetailView : UserControl
 {
     private INotifyCollectionChanged? _songsCollectionNotifier;
     private PlayerViewModel? _subscribedPlayer;
+    private long _lastLocatedRequestSequence;
 
     public static readonly StyledProperty<string?> CoverProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, string?>(nameof(Cover));
@@ -64,6 +65,9 @@ public partial class SongCollectionDetailView : UserControl
 
     public static readonly StyledProperty<IEnumerable?> SongsProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, IEnumerable?>(nameof(Songs));
+
+    public static readonly StyledProperty<SongLocateRequest?> SongLocateRequestProperty =
+        AvaloniaProperty.Register<SongCollectionDetailView, SongLocateRequest?>(nameof(SongLocateRequest));
 
     public static readonly StyledProperty<ICommand?> LoadMoreCommandProperty =
         AvaloniaProperty.Register<SongCollectionDetailView, ICommand?>(nameof(LoadMoreCommand));
@@ -238,6 +242,12 @@ public partial class SongCollectionDetailView : UserControl
     {
         get => GetValue(SongsProperty);
         set => SetValue(SongsProperty, value);
+    }
+
+    public SongLocateRequest? SongLocateRequest
+    {
+        get => GetValue(SongLocateRequestProperty);
+        set => SetValue(SongLocateRequestProperty, value);
     }
 
     public ICommand? LoadMoreCommand
@@ -451,7 +461,11 @@ public partial class SongCollectionDetailView : UserControl
             DetachSongsCollectionChanged(change.OldValue as IEnumerable);
             AttachSongsCollectionChanged(change.NewValue as IEnumerable);
             SyncPlayingState();
+            ScheduleLocateRequestedSong();
         }
+
+        if (change.Property == SongLocateRequestProperty)
+            ScheduleLocateRequestedSong();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -462,6 +476,7 @@ public partial class SongCollectionDetailView : UserControl
         AttachPlayerPropertyChanged();
         UpdateCurrentHeroBackground();
         SyncPlayingState();
+        ScheduleLocateRequestedSong();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -561,6 +576,7 @@ public partial class SongCollectionDetailView : UserControl
     private void OnSongsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         SyncPlayingState();
+        ScheduleLocateRequestedSong();
     }
 
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -588,6 +604,30 @@ public partial class SongCollectionDetailView : UserControl
             Update();
         else
             Dispatcher.UIThread.Post(Update);
+    }
+
+    private void ScheduleLocateRequestedSong()
+    {
+        Dispatcher.UIThread.Post(TryLocateRequestedSong, DispatcherPriority.Loaded);
+    }
+
+    private void TryLocateRequestedSong()
+    {
+        var request = SongLocateRequest;
+        if (request is null || request.Sequence == _lastLocatedRequestSequence)
+            return;
+
+        var targetSong = Songs?
+            .AsValueEnumerable()
+            .OfType<SongItem>()
+            .FirstOrDefault(song => song.LocalTrackId == request.LocalTrackId);
+        if (targetSong is null)
+            return;
+
+        _lastLocatedRequestSequence = request.Sequence;
+        SongList.SelectedItem = targetSong;
+        SongList.ScrollIntoView(targetSong);
+        Dispatcher.UIThread.Post(() => AdjustScrollPosition(targetSong), DispatcherPriority.Background);
     }
 
 

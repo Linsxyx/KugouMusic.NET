@@ -14,6 +14,8 @@ public record ShowSongBatchActionDialogMessage(IReadOnlyList<SongItem> Songs, bo
 
 public record ShowPlaylistDialogMessage(SongItem Song);
 
+public record ShowTrackPlaylistSearchDialogMessage(SongItem Song);
+
 public record ReplacePlaybackQueueMessage(IReadOnlyList<SongItem> Songs, SongItem? StartSong = null);
 
 public record NavigateToSingerMessage(SingerLite Singer);
@@ -21,6 +23,8 @@ public record NavigateToSingerMessage(SingerLite Singer);
 public record RemoveFromPlaylistMessage(SongItem Song);
 
 public record SetLocalSongCoverMessage(SongItem Song);
+
+public record SongLocateRequest(long LocalTrackId, long Sequence);
 
 public record AuthStateChangedMessage(bool IsLoggedIn);
 
