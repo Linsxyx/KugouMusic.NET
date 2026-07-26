@@ -488,6 +488,10 @@ public partial class FavoritePlaylistService(
 
             if (response.Status != 1)
             {
+                if (response.ErrorCode == 30227) {
+                    ShowToast(NotificationType.Error,"歌单未初始化","请下载并登录酷狗音乐APP以初始化歌单信息。");
+                    return [];
+                }
                 logger.LogError("获取歌单列表失败 err_code={ErrorCode}, page={Page}", response.ErrorCode, page);
                 return null;
             }
@@ -639,7 +643,7 @@ public partial class FavoritePlaylistService(
                 AlbumId = song.AlbumId,
                 Cover = song.Cover,
                 DurationSeconds = song.DurationSeconds,
-                Singers = song.Singers?.AsValueEnumerable().ToList() ?? new List<SingerLite>()
+                Singers = song.Singers.AsValueEnumerable().ToList()
             });
         }
     }

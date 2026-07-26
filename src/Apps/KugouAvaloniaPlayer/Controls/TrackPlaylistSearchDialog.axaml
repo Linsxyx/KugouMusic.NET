@@ -1,0 +1,155 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="KugouAvaloniaPlayer.Controls.TrackPlaylistSearchDialog"
+             x:Name="SearchDialogRoot"
+             x:DataType="vm:TrackPlaylistSearchDialogViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ListBox.TrackPlaylistSearchList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+
+        <Style Selector="ListBox.TrackPlaylistSearchList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Padding="{TemplateBinding Padding}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      Background="Transparent" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+    </UserControl.Styles>
+
+    <Border Width="920"
+            Padding="22"
+            Background="{DynamicResource SukiBackground}"
+            CornerRadius="18">
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+            <StackPanel Spacing="6"
+                        Margin="0,0,0,16">
+                <TextBlock Text="精确歌单检索"
+                           FontSize="24"
+                           FontWeight="Bold" />
+            </StackPanel>
+
+            <suki:GlassCard Grid.Row="1"
+                            Padding="12"
+                            CornerRadius="14"
+                            Margin="0,0,0,16"
+                            Background="{DynamicResource SukiPrimaryColorLow}">
+                <Grid ColumnDefinitions="Auto,*,20,*">
+                    <Border Grid.Column="0"
+                            Width="54" Height="54"
+                            CornerRadius="10"
+                            ClipToBounds="True"
+                            Background="{DynamicResource SukiPrimaryColor0}">
+                        <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
+                               Stretch="UniformToFill" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Margin="14,0,0,0"
+                                Spacing="3">
+                        <TextBlock Text="{Binding Title}"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Artist}"
+                                   TextWrapping="NoWrap"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   FontSize="12"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Right"
+                                Spacing="2">
+                        <TextBlock Text="{Binding Album}"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   TextWrapping="NoWrap"
+                                   TextTrimming="CharacterEllipsis"
+                                   HorizontalAlignment="Right" />
+                        <TextBlock Text="{Binding Duration, Converter={StaticResource SecondsToTimeConverter}}"
+                                   Foreground="{DynamicResource SukiLowText}"
+                                   TextWrapping="NoWrap"
+                                   FontSize="12"
+                                   HorizontalAlignment="Right" />
+                    </StackPanel>
+                </Grid>
+            </suki:GlassCard>
+
+            <TextBlock Grid.Row="2"
+                       Text="所在歌单"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource SukiLowText}"
+                       Margin="0,0,0,8" />
+
+            <ListBox Grid.Row="3"
+                     Classes="TrackPlaylistSearchList"
+                     ItemsSource="{Binding Playlists}"
+                     MaxHeight="340">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:TrackPlaylistItem">
+                        <suki:GlassCard Padding="10,8"
+                                        CornerRadius="12"
+                                        IsInteractive="True"
+                                        Command="{Binding $parent[ListBox].((vm:TrackPlaylistSearchDialogViewModel)DataContext).OpenPlaylistCommand}"
+                                        CommandParameter="{Binding .}"
+                                        Background="{DynamicResource SukiPrimaryColor0}"
+                                        Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="40,*,Auto"
+                                  ColumnSpacing="12">
+                                <Border Grid.Column="0"
+                                        Width="40" Height="40"
+                                        CornerRadius="8"
+                                        ClipToBounds="True"
+                                        Background="{DynamicResource SukiPrimaryColorLow}">
+                                    <Image asyncImageLoader:ImageLoader.Source="{Binding PlaylistCover}"
+                                           Stretch="UniformToFill" />
+                                </Border>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding PlaylistName}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" />
+
+                                <Svg Grid.Column="2"
+                                     Path="avares://KugouAvaloniaPlayer/Assets/NavigateNext.svg" />
+                            </Grid>
+                        </suki:GlassCard>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Button Grid.Row="4"
+                    Classes="Basic"
+                    Command="{Binding CancelCommand}"
+                    Cursor="Hand"
+                    HorizontalAlignment="Right"
+                    Margin="0,14,0,0">
+                <TextBlock Text="关闭" />
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

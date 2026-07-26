@@ -310,7 +310,8 @@
                                     ShowPlaylistDialogCommand="{Binding #Root.ShowPlaylistDialogCommand}"
                                     ViewSingerCommand="{Binding #Root.ViewSingerCommand}"
                                     RemoveFromPlaylistCommand="{Binding #Root.RemoveSongCommand}"
-                                    SetLocalCoverCommand="{Binding #Root.SetLocalSongCoverCommand}" />
+                                    SetLocalCoverCommand="{Binding #Root.SetLocalSongCoverCommand}"
+                                    SearchLocalPlaylistsCommand="{Binding #Root.SearchLocalPlaylistsCommand}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

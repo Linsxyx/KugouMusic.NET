@@ -29,6 +29,9 @@ public partial class SongListItemControl : UserControl
     public static readonly StyledProperty<ICommand?> SetLocalCoverCommandProperty =
         AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(SetLocalCoverCommand));
 
+    public static readonly StyledProperty<ICommand?> SearchLocalPlaylistsCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(SearchLocalPlaylistsCommand));
+
     private MenuFlyout? _contextFlyout;
     private TopLevel? _lightDismissTopLevel;
     private MenuFlyout? _moreFlyout;
@@ -72,6 +75,12 @@ public partial class SongListItemControl : UserControl
     {
         get => GetValue(SetLocalCoverCommandProperty);
         set => SetValue(SetLocalCoverCommandProperty, value);
+    }
+
+    public ICommand? SearchLocalPlaylistsCommand
+    {
+        get => GetValue(SearchLocalPlaylistsCommandProperty);
+        set => SetValue(SearchLocalPlaylistsCommandProperty, value);
     }
 
     private void MoreButton_OnClick(object? sender, RoutedEventArgs e)
@@ -140,6 +149,15 @@ public partial class SongListItemControl : UserControl
             {
                 Header = "添加到歌单",
                 Command = ShowPlaylistDialogCommand,
+                CommandParameter = song
+            });
+        }
+        else
+        {
+            flyout.Items.Add(new MenuItem
+            {
+                Header = "查找所在歌单",
+                Command = SearchLocalPlaylistsCommand,
                 CommandParameter = song
             });
         }

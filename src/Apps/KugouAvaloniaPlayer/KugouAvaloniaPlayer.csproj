@@ -124,5 +124,8 @@
         <Compile Update="Views\NowPlayingView.MoreFlyout.cs">
           <DependentUpon>NowPlayingView.axaml</DependentUpon>
         </Compile>
+        <Compile Update="Controls\TrackPlaylistSearchDialog.axaml.cs">
+          <DependentUpon>TrackPlaylistSearchDialog.axaml</DependentUpon>
+        </Compile>
     </ItemGroup>
 </Project>
