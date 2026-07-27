@@ -84,6 +84,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<ILocalMusicSearchDialogService>().As(Singleton).To<LocalMusicSearchDialogService>()
         .Bind<ITrackPlaylistSearchDialogService>().As(Singleton).To<TrackPlaylistSearchDialogService>()
         .Bind<ILocalSingerMatchService>().As(Singleton).To<LocalSingerMatchService>()
+        .Bind<ILocalLyricMatchService>().As(Singleton).To<LocalLyricMatchService>()
         .Bind<IGitHubReleaseService>().As(Singleton).To<GitHubReleaseService>()
         .Bind<IAppUpdateService>().As(Singleton).To<AppUpdateService>()
         .Bind<ISingerViewModelFactory>().To<SingerViewModelFactory>()

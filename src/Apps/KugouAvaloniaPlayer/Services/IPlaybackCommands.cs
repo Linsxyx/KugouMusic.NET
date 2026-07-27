@@ -7,6 +7,8 @@ namespace KugouAvaloniaPlayer.Services;
 
 public interface IPlaybackCommands
 {
+    SongItem? CurrentPlayingSong { get; }
+
     Task PlayAsync(
         SongItem song,
         IReadOnlyList<SongItem>? context = null,
@@ -27,6 +29,8 @@ public interface IPlaybackCommands
     void AddToNext(SongItem song);
 
     void AddToQueue(IReadOnlyList<SongItem> songs);
+
+    Task ReloadLyricsAsync(SongItem song);
 
     Task ReplaceQueueAsync(
         IReadOnlyList<SongItem> songs,

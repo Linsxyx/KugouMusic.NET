@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:models="using:KuGou.Net.Abstractions.Models"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="KugouAvaloniaPlayer.Controls.LyricMatchDialog"
+             x:DataType="vm:LyricMatchDialogViewModel">
+    <Border Padding="20" Background="{DynamicResource SukiBackground}" CornerRadius="18">
+        <Grid RowDefinitions="Auto,*,Auto" MinWidth="440" MaxWidth="600">
+            <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" Margin="0,0,0,14" />
+
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding Results}"
+                     SelectedItem="{Binding SelectedSong}"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     MaxHeight="430"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="models:SongInfo">
+                        <suki:GlassCard CornerRadius="12" IsInteractive="True"
+                                        Background="{DynamicResource SukiPrimaryColor0}">
+                            <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="12">
+                                <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True"
+                                        Background="{DynamicResource SukiPrimaryColorLow}">
+                                    <Image Width="48" Height="48" Stretch="UniformToFill"
+                                           asyncImageLoader:ImageLoader.Source="{Binding Cover}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Singer}" FontSize="12" Opacity="0.7"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding AlbumName}" FontSize="11" Opacity="0.55"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Duration,Converter={StaticResource SecondsToTimeConverter}}"
+                                           VerticalAlignment="Center" FontSize="12" Opacity="0.65" />
+                            </Grid>
+                        </suki:GlassCard>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                        Spacing="8" Margin="0,14,0,0">
+                <Button Classes="Basic" Command="{Binding CancelCommand}" Cursor="Hand">
+                    <TextBlock Text="关闭" />
+                </Button>
+                <Button Command="{Binding UseTemporaryCommand}" Cursor="Hand">
+                    <TextBlock Text="临时匹配" />
+                </Button>
+                <Button Command="{Binding EmbedCommand}" Cursor="Hand">
+                    <TextBlock Text="内嵌到文件" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

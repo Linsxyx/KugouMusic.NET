@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KuGou.Net.Abstractions.Models;
 using KugouAvaloniaPlayer.Models;
@@ -43,6 +44,12 @@ public partial class SongItem : ObservableObject
     public partial long LocalTrackId { get; set; }
 
     public string? RemoteUrl { get; init; }
+
+    [JsonIgnore]
+    public string TemporaryLyricHash { get; set; } = "";
+
+    [JsonIgnore]
+    public string TemporaryLyricName { get; set; } = "";
 
     [ObservableProperty]
     public partial string Name { get; set; } = "";

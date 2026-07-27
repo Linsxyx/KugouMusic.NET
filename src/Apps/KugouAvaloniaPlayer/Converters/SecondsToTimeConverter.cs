@@ -4,28 +4,27 @@ using Avalonia.Data.Converters;
 
 namespace KugouAvaloniaPlayer.Converters;
 
-public class SecondsToMinutesSecondsConverter : IValueConverter
+public sealed class SecondsToMinutesSecondsConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is double seconds)
+        var seconds = value switch
         {
-            if (double.IsNaN(seconds) || double.IsInfinity(seconds) || seconds < 0)
-                return "00:00";
-            var totalSeconds = (int)Math.Floor(seconds);
+            double d => d,
+            float f => f,
+            int i => i,
+            long l => l,
+            _ => 0
+        };
 
-            var minutes = totalSeconds / 60;
-            var secs = totalSeconds % 60;
+        if (seconds <= 0 || double.IsNaN(seconds) || double.IsInfinity(seconds))
+            return "00:00";
 
-            return $"{minutes:D2}:{secs:D2}";
-        }
+        var totalSeconds = (int)seconds;
 
-        return "00:00";
+        return $"{totalSeconds / 60:D2}:{totalSeconds % 60:D2}";
     }
 
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        return value;
-    }
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
 }

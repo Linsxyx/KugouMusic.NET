@@ -311,6 +311,7 @@
                                     ViewSingerCommand="{Binding #Root.ViewSingerCommand}"
                                     RemoveFromPlaylistCommand="{Binding #Root.RemoveSongCommand}"
                                     SetLocalCoverCommand="{Binding #Root.SetLocalSongCoverCommand}"
+                                    MatchLocalLyricsCommand="{Binding #Root.MatchLocalLyricsCommand}"
                                     SearchLocalPlaylistsCommand="{Binding #Root.SearchLocalPlaylistsCommand}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
