@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ZLinq;
 using System.Threading.Tasks;
 using Avalonia.Collections;
@@ -7,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KuGou.Net.Abstractions.Models;
 using KugouAvaloniaPlayer.Converters;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
@@ -706,6 +708,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             LocalTrackId = item.Id,
             Name = item.Title,
             Singer = item.Artist,
+            Singers = item.Artist.Split([',', '/', '、', ';', '\0', '&'],StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(artist=>new SingerLite {Id=-1,Name=artist}).ToList(),
             AlbumName = item.Album,
             DurationSeconds = item.DurationSeconds,
             LocalSourceType = item.SourceType,
@@ -723,9 +726,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         if (string.IsNullOrWhiteSpace(fingerprint))
             return null;
 
-        return SettingsManager.Settings.JellyfinServers.TryGetValue(fingerprint, out var settings)
-            ? settings
-            : null;
+        return SettingsManager.Settings.JellyfinServers.GetValueOrDefault(fingerprint);
     }
 
     private void SaveJellyfinSettings(JellyfinConnectionOptions options)

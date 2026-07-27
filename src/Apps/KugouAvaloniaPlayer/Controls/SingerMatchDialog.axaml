@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:models="using:KuGou.Net.Abstractions.Models"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             x:Class="KugouAvaloniaPlayer.Controls.SingerMatchDialog"
+             x:DataType="vm:SingerMatchDialogViewModel">
+
+    <Border Padding="20"
+            Background="{DynamicResource SukiBackground}"
+            CornerRadius="18">
+        <Grid RowDefinitions="Auto,*,Auto"
+              MinWidth="340"
+              MaxWidth="480">
+            <!-- 标题 -->
+            <TextBlock Text="{Binding Title}"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Margin="0,0,0,14" />
+
+            <!-- 歌手列表 -->
+            <ListBox Grid.Row="1" Classes="SingerMatch"
+                     ItemsSource="{Binding Results}"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     MaxHeight="400"
+                     Padding="0"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.Styles>
+                    <Style Selector="ListBox.SingerMatch ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Template">
+                            <ControlTemplate>
+                                <ContentPresenter Name="PART_ContentPresenter"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  Padding="{TemplateBinding Padding}"
+                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                  Background="Transparent" />
+                            </ControlTemplate>
+                        </Setter>
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="models:SearchAuthorItem">
+                        <suki:GlassCard CornerRadius="12"
+                                        IsInteractive="True"
+                                        Command="{Binding $parent[ListBox].((vm:SingerMatchDialogViewModel)DataContext).SelectCommand}"
+                                        CommandParameter="{Binding .}"
+                                        Background="{DynamicResource SukiPrimaryColor0}">
+                            <DockPanel LastChildFill="True">
+                                <!-- 歌手头像（圆形裁剪） -->
+                                <Border DockPanel.Dock="Left"
+                                        Width="44"
+                                        Height="44"
+                                        CornerRadius="22"
+                                        ClipToBounds="True"
+                                        Margin="0,0,12,0"
+                                        Background="{DynamicResource SukiPrimaryColorLow}">
+                                    <Image Width="44"
+                                           Height="44"
+                                           Stretch="UniformToFill"
+                                           asyncImageLoader:ImageLoader.Source="{Binding Cover}" />
+                                </Border>
+
+                                <!-- 歌手信息 -->
+                                <StackPanel Spacing="2"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="15"
+                                               FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding AudioCount, StringFormat='{}{0} 首'}"
+                                               FontSize="12"
+                                               Opacity="0.65" />
+                                </StackPanel>
+                            </DockPanel>
+                        </suki:GlassCard>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- 关闭按钮 -->
+            <Button Grid.Row="2"
+                    Classes="Basic"
+                    Command="{Binding CancelCommand}"
+                    Cursor="Hand"
+                    HorizontalAlignment="Right"
+                    Margin="0,14,0,0">
+                <TextBlock Text="关闭" />
+            </Button>
+        </Grid>
+    </Border>
+</UserControl>

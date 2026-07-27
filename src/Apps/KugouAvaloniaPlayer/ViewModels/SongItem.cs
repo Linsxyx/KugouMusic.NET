@@ -92,16 +92,13 @@ public partial class SongItem : ObservableObject
     public static bool operator ==(SongItem? a, SongItem? b) =>
         ReferenceEquals(a, b) ||
         (!string.IsNullOrWhiteSpace(a?.LocalFilePath) && a.LocalFilePath == b?.LocalFilePath) ||
-        (!string.IsNullOrWhiteSpace(a?.RemoteUrl) && a.RemoteUrl == b?.RemoteUrl && a.Hash == b.Hash);
+        (!string.IsNullOrWhiteSpace(a?.Hash) && a.Hash == b?.Hash);
 
     public static bool operator !=(SongItem? a, SongItem? b) => !(a == b);
 
     public override bool Equals(object? obj) => obj is SongItem item && this == item;
 
-    public override int GetHashCode() =>
-        string.IsNullOrWhiteSpace(Hash) ?
-            HashCode.Combine(LocalFilePath ?? RemoteUrl) :
-            HashCode.Combine(LocalFilePath ?? RemoteUrl, Hash);
+    public override int GetHashCode() => HashCode.Combine(string.IsNullOrWhiteSpace(LocalFilePath) ? Hash : LocalFilePath);
 }
 
 public partial class PlaylistItem : ObservableObject
