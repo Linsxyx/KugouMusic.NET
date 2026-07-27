@@ -7,6 +7,8 @@ namespace KugouAvaloniaPlayer.Services;
 
 public interface IPlaybackCommands
 {
+    SongItem? CurrentPlayingSong { get; }
+
     Task PlayAsync(
         SongItem song,
         IReadOnlyList<SongItem>? context = null,

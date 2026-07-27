@@ -141,6 +141,15 @@ public sealed class SongInteractionService(
                 return;
             }
 
+            if (IsCurrentPlayingLocalFile(song.LocalFilePath))
+            {
+                ShowToast(
+                    NotificationType.Warning,
+                    "内嵌失败",
+                    "当前播放的歌曲不能写入内嵌歌词，请切换到其他歌曲后重试");
+                return;
+            }
+
             await LyricsService.EmbedLyricsAsync(song.LocalFilePath, lyric);
             song.TemporaryLyricHash = "";
             song.TemporaryLyricName = "";
@@ -158,6 +167,21 @@ public sealed class SongInteractionService(
         {
             ShowToast(NotificationType.Error, "歌词匹配失败", ex.Message);
         }
+    }
+
+    private bool IsCurrentPlayingLocalFile(string filePath)
+    {
+        var currentFilePath = playbackCommands.CurrentPlayingSong?.LocalFilePath;
+        if (string.IsNullOrWhiteSpace(currentFilePath))
+            return false;
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(
+            Path.GetFullPath(filePath),
+            Path.GetFullPath(currentFilePath),
+            comparison);
     }
 
     private static bool IsReadOnly(string filePath)
