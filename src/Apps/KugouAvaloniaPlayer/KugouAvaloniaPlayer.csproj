@@ -127,5 +127,8 @@
         <Compile Update="Controls\TrackPlaylistSearchDialog.axaml.cs">
           <DependentUpon>TrackPlaylistSearchDialog.axaml</DependentUpon>
         </Compile>
+        <Compile Update="Controls\LyricMatchDialog.axaml.cs">
+          <DependentUpon>LyricMatchDialog.axaml</DependentUpon>
+        </Compile>
     </ItemGroup>
 </Project>
