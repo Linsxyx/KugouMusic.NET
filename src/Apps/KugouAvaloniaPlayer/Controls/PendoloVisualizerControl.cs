@@ -369,7 +369,8 @@ public sealed class PendoloVisualizerControl : Control
         var balanceCenter = new Point(center.X + baseRadius * 0.2, center.Y - baseRadius * 0.75);
         var balanceRadius = baseRadius * 0.28;
         var balancePhase = _clockSeconds * (2.8 + energy * 3.5);
-        var balanceGearAngle = balancePhase * 0.1;
+
+        var balanceGearAngle = _clockSeconds * (Math.PI * 2 / 60d);
         var balanceOscillation = Math.Sin(balancePhase) * (0.15 + energy * 0.7);
         DrawGear(
             context,
