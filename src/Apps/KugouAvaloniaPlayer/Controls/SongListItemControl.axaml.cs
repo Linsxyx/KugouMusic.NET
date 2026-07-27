@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -31,6 +32,9 @@ public partial class SongListItemControl : UserControl
 
     public static readonly StyledProperty<ICommand?> SearchLocalPlaylistsCommandProperty =
         AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(SearchLocalPlaylistsCommand));
+
+    public static readonly StyledProperty<ICommand?> MatchLocalLyricsCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(MatchLocalLyricsCommand));
 
     private MenuFlyout? _contextFlyout;
     private TopLevel? _lightDismissTopLevel;
@@ -81,6 +85,12 @@ public partial class SongListItemControl : UserControl
     {
         get => GetValue(SearchLocalPlaylistsCommandProperty);
         set => SetValue(SearchLocalPlaylistsCommandProperty, value);
+    }
+
+    public ICommand? MatchLocalLyricsCommand
+    {
+        get => GetValue(MatchLocalLyricsCommandProperty);
+        set => SetValue(MatchLocalLyricsCommandProperty, value);
     }
 
     private void MoreButton_OnClick(object? sender, RoutedEventArgs e)
@@ -154,6 +164,16 @@ public partial class SongListItemControl : UserControl
         }
         else
         {
+            if (File.Exists(song.LocalFilePath))
+            {
+                flyout.Items.Add(new MenuItem
+                {
+                    Header = "匹配歌词...",
+                    Command = MatchLocalLyricsCommand,
+                    CommandParameter = song
+                });
+            }
+
             flyout.Items.Add(new MenuItem
             {
                 Header = "查找所在歌单",

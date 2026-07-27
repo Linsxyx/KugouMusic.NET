@@ -184,6 +184,7 @@ public partial class SongCollectionDetailView : UserControl
         PlaySongCommand = new AsyncRelayCommand<SongItem?>(PlaySongAsync);
         AddToNextCommand = new RelayCommand<SongItem?>(AddToNext);
         ShowPlaylistDialogCommand = new AsyncRelayCommand<SongItem?>(ShowPlaylistDialogAsync);
+        MatchLocalLyricsCommand = new AsyncRelayCommand<SongItem?>(MatchLocalLyricsAsync);
         ViewSingerCommand = new RelayCommand<SingerLite?>(ViewSinger);
         InitializeComponent();
         UpdateCurrentHeroBackground();
@@ -195,6 +196,7 @@ public partial class SongCollectionDetailView : UserControl
     public ICommand PlaySongCommand { get; }
     public ICommand AddToNextCommand { get; }
     public ICommand ShowPlaylistDialogCommand { get; }
+    public ICommand MatchLocalLyricsCommand { get; }
     public ICommand ViewSingerCommand { get; }
 
     public string? Cover
@@ -581,6 +583,12 @@ public partial class SongCollectionDetailView : UserControl
     {
         if (song != null && SongInteractions != null)
             await SongInteractions.ShowAddToPlaylistDialogAsync(song);
+    }
+
+    private async Task MatchLocalLyricsAsync(SongItem? song)
+    {
+        if (song != null && SongInteractions != null)
+            await SongInteractions.MatchLocalLyricsAsync(song);
     }
 
     private void ViewSinger(SingerLite? singer)

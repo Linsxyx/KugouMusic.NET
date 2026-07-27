@@ -40,7 +40,9 @@ public partial class PlayerViewModel
     {
         try
         {
-            if (isLocal && !string.IsNullOrWhiteSpace(song.LocalFilePath))
+            if (!string.IsNullOrWhiteSpace(song.TemporaryLyricHash))
+                await _lyricsService.LoadOnlineLyricsAsync(song.TemporaryLyricHash, song.TemporaryLyricName);
+            else if (isLocal && !string.IsNullOrWhiteSpace(song.LocalFilePath))
                 await _lyricsService.LoadLocalLyricsAsync(song.LocalFilePath);
             else
                 await _lyricsService.LoadOnlineLyricsAsync(song.Hash, song.Name);
@@ -65,6 +67,17 @@ public partial class PlayerViewModel
             if (loadVersion == _lyricsLoadVersion && CurrentPlayingSong == song)
                 CompleteNowPlayingLyricsTransition();
         }
+    }
+
+    public Task ReloadLyricsAsync(SongItem song)
+    {
+        if (CurrentPlayingSong is null || CurrentPlayingSong != song)
+            return Task.CompletedTask;
+
+        CurrentPlayingSong.TemporaryLyricHash = song.TemporaryLyricHash;
+        CurrentPlayingSong.TemporaryLyricName = song.TemporaryLyricName;
+        StartLyricsLoad(CurrentPlayingSong, !string.IsNullOrWhiteSpace(CurrentPlayingSong.LocalFilePath));
+        return Task.CompletedTask;
     }
 
     private void BeginDelayedVisualSwitch(SongItem song, bool isLocal)

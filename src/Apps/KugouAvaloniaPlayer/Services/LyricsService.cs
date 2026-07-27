@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
 using ZLinq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -15,8 +18,11 @@ using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.Services;
 
+public sealed record DownloadedOnlineLyric(string Content, string Extension);
+
 public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logger)
 {
+    private const string EmbeddedRawLyricPrefix = "KUGOU_EMBEDDED_LYRIC:";
     private LyricLineViewModel? _currentActiveLine;
     public AvaloniaList<LyricLineViewModel> LyricLines { get; } = new();
     public AvaloniaList<LyricLine> RenderLyricLines { get; } = new();
@@ -114,6 +120,61 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         {
             logger.LogError(ex, "获取在线歌词失败");
         }
+    }
+
+    public async Task<DownloadedOnlineLyric?> DownloadOnlineLyricAsync(string hash, string name)
+    {
+        var searchJson = await lyricClient.SearchLyricAsync(hash, null, name, "no");
+        if (!searchJson.TryGetProperty("candidates", out var candidatesElem) ||
+            candidatesElem.ValueKind != JsonValueKind.Array)
+            return null;
+
+        var bestMatch = candidatesElem.EnumerateArray().FirstOrDefault();
+        if (bestMatch.ValueKind == JsonValueKind.Undefined)
+            return null;
+
+        var id = bestMatch.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
+        var key = bestMatch.TryGetProperty("accesskey", out var keyElement) ? keyElement.GetString() : null;
+        var fmt = bestMatch.TryGetProperty("fmt", out var formatElement)
+            ? formatElement.GetString() ?? "krc"
+            : "krc";
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var result = await lyricClient.GetLyricAsync(id, key, fmt);
+        return string.IsNullOrWhiteSpace(result.DecodedContent)
+            ? null
+            : new DownloadedOnlineLyric(result.DecodedContent, NormalizeLyricExtension(fmt));
+    }
+
+    public static async Task EmbedLyricsAsync(
+        string audioFilePath,
+        DownloadedOnlineLyric lyric,
+        CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(audioFilePath))
+            throw new FileNotFoundException("本地音频文件不存在。", audioFilePath);
+
+        await Task.Run(
+            () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var track = new Track(audioFilePath)
+                {
+                    Lyrics =
+                    [
+                        new LyricsInfo
+                        {
+                            Description = "Kugou embedded lyric",
+                            UnsynchronizedLyrics = EncodeEmbeddedRawLyric(lyric)
+                        }
+                    ]
+                };
+
+                if (!track.Save())
+                    throw new IOException($"写入内嵌歌词失败: {audioFilePath}");
+            },
+            cancellationToken);
     }
 
     public async Task LoadLocalLyricsAsync(string audioFilePath)
@@ -225,6 +286,9 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
 
         foreach (var entry in lyrics)
         {
+            if (TryDecodeEmbeddedRawLyric(entry.UnsynchronizedLyrics, out var decodedContent))
+                return decodedContent;
+
             if (entry.SynchronizedLyrics is { Count: > 0 })
             {
                 var content = entry.FormatSynch();
@@ -237,6 +301,35 @@ public class LyricsService(LyricClient lyricClient, ILogger<LyricsService> logge
         }
 
         return null;
+    }
+
+    private static string EncodeEmbeddedRawLyric(DownloadedOnlineLyric lyric)
+    {
+        var extension = NormalizeLyricExtension(lyric.Extension).TrimStart('.');
+        var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(lyric.Content));
+        return $"{EmbeddedRawLyricPrefix}{extension}:{content}";
+    }
+
+    private static bool TryDecodeEmbeddedRawLyric(string? value, out string content)
+    {
+        content = string.Empty;
+        if (string.IsNullOrWhiteSpace(value) ||
+            !value.StartsWith(EmbeddedRawLyricPrefix, StringComparison.Ordinal))
+            return false;
+
+        var payloadStart = value.IndexOf(':', EmbeddedRawLyricPrefix.Length);
+        if (payloadStart < 0 || payloadStart == value.Length - 1)
+            return false;
+
+        try
+        {
+            content = Encoding.UTF8.GetString(Convert.FromBase64String(value[(payloadStart + 1)..]));
+            return !string.IsNullOrWhiteSpace(content);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     private static string DetectEmbeddedLyricFormat(string content)

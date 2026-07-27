@@ -28,6 +28,8 @@ public interface IPlaybackCommands
 
     void AddToQueue(IReadOnlyList<SongItem> songs);
 
+    Task ReloadLyricsAsync(SongItem song);
+
     Task ReplaceQueueAsync(
         IReadOnlyList<SongItem> songs,
         SongItem? startSong = null,
