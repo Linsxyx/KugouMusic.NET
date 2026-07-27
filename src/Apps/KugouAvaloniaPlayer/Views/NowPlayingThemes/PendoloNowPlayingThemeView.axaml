@@ -1,36 +1,14 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
-             xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              x:Class="KugouAvaloniaPlayer.Views.NowPlayingThemes.PendoloNowPlayingThemeView"
              x:DataType="vm:NowPlayingViewModel">
 
-    <Grid ClipToBounds="True">
-        <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover}"
-               behaviors:LocalArtworkImageBehavior.DecodePixelWidth="1280"
-               behaviors:LocalArtworkImageBehavior.DecodeInterpolationMode="HighQuality"
-               behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
-               asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
-               RenderOptions.BitmapInterpolationMode="HighQuality"
-               Stretch="UniformToFill"
-               Opacity="0.62">
-            <Image.OpacityMask>
-                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                    <GradientStop Color="#F0FFFFFF" Offset="0" />
-                    <GradientStop Color="#A8FFFFFF" Offset="0.36" />
-                    <GradientStop Color="#20FFFFFF" Offset="0.62" />
-                    <GradientStop Color="#00FFFFFF" Offset="0.76" />
-                </LinearGradientBrush>
-            </Image.OpacityMask>
-        </Image>
-
-        <controls:PendoloVisualizerControl
-            Player="{Binding Player}"
-            IsActive="{Binding IsOpen}"
-            ShowTranslation="{Binding IsTranslationVisible}"
-            ShowRomanization="{Binding IsRomanizationVisible}"
-            LyricFontFamily="{Binding LyricFontFamily}" />
-    </Grid>
+    <controls:PendoloVisualizerControl
+        Player="{Binding Player}"
+        IsActive="{Binding IsOpen}"
+        ShowTranslation="{Binding IsTranslationVisible}"
+        ShowRomanization="{Binding IsRomanizationVisible}"
+        LyricFontFamily="{Binding LyricFontFamily}" />
 </UserControl>

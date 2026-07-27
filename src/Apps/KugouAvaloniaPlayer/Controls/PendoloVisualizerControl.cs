@@ -33,22 +33,22 @@ public sealed class PendoloVisualizerControl : Control
     public static readonly StyledProperty<Color> BackgroundColorProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, Color>(
             nameof(BackgroundColor),
-            Color.Parse("#E6000000"));
+            Color.Parse("#243248"));
 
     public static readonly StyledProperty<Color> PrimaryColorProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, Color>(
             nameof(PrimaryColor),
-            Color.Parse("#E5EAF3"));
+            Color.Parse("#D6E1DE"));
 
     public static readonly StyledProperty<Color> AccentColorProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, Color>(
             nameof(AccentColor),
-            Color.Parse("#A8B7D1"));
+            Color.Parse("#9BC8BE"));
 
     public static readonly StyledProperty<Color> SecondaryColorProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, Color>(
             nameof(SecondaryColor),
-            Color.Parse("#74808E"));
+            Color.Parse("#8797A1"));
 
     private bool _frameQueued;
     private bool _hasFrameTimestamp;
@@ -240,51 +240,64 @@ public sealed class PendoloVisualizerControl : Control
     {
         context.DrawRectangle(new SolidColorBrush(BackgroundColor), null, new Rect(0, 0, width, height));
 
-        var watchGlow = new RadialGradientBrush
+        var opaqueAtmosphere = new LinearGradientBrush
         {
-            Center = new RelativePoint(0, 0.5, RelativeUnit.Relative),
-            GradientOrigin = new RelativePoint(0, 0.5, RelativeUnit.Relative),
-            RadiusX = new RelativeScalar(0.62, RelativeUnit.Relative),
-            RadiusY = new RelativeScalar(0.9, RelativeUnit.Relative),
+            StartPoint = new RelativePoint(0, 0.45, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 0.55, RelativeUnit.Relative),
             GradientStops =
             [
-                new GradientStop(Color.Parse("#5C3C485A"), 0),
-                new GradientStop(Color.Parse("#30252B37"), 0.46),
-                new GradientStop(WithAlpha(BackgroundColor, 0), 1)
+                new GradientStop(Color.Parse("#314959"), 0),
+                new GradientStop(Color.Parse("#2C3D53"), 0.44),
+                new GradientStop(Color.Parse("#243248"), 0.72),
+                new GradientStop(Color.Parse("#202D42"), 1)
             ]
         };
-        context.DrawRectangle(watchGlow, null, new Rect(0, 0, width, height));
+        context.DrawRectangle(opaqueAtmosphere, null, new Rect(0, 0, width, height));
 
-        DrawStarField(context, width, height);
-
-        var rightShade = new LinearGradientBrush
+        var centerHaze = new RadialGradientBrush
         {
-            StartPoint = new RelativePoint(0.15, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative),
+            Center = new RelativePoint(0.52, 0.45, RelativeUnit.Relative),
+            GradientOrigin = new RelativePoint(0.52, 0.45, RelativeUnit.Relative),
+            RadiusX = new RelativeScalar(0.52, RelativeUnit.Relative),
+            RadiusY = new RelativeScalar(0.74, RelativeUnit.Relative),
             GradientStops =
             [
-                new GradientStop(WithAlpha(BackgroundColor, 0), 0),
-                new GradientStop(WithAlpha(Colors.Black, 110), 0.5),
-                new GradientStop(Colors.Black, 0.82)
+                new GradientStop(Color.Parse("#183F4D62"), 0),
+                new GradientStop(Color.Parse("#0C8090A0"), 0.42),
+                new GradientStop(Colors.Transparent, 1)
             ]
         };
-        context.DrawRectangle(rightShade, null, new Rect(0, 0, width, height));
+        context.DrawRectangle(centerHaze, null, new Rect(0, 0, width, height));
+
+        DrawAmbientShapes(context, width, height);
     }
 
-    private void DrawStarField(DrawingContext context, double width, double height)
+    private static void DrawAmbientShapes(DrawingContext context, double width, double height)
     {
-        for (var index = 0; index < 90; index++)
+        var shapes = new[]
         {
-            var x = Fraction(Math.Sin(index * 91.17 + 1.4) * 43758.5453) * width;
-            var y = Fraction(Math.Sin(index * 47.73 + 8.2) * 24634.6345) * height;
-            var strength = Fraction(Math.Sin(index * 13.21 + 4.8) * 16807.31);
-            var radius = 0.35 + strength * 1.05;
-            context.DrawEllipse(
-                new SolidColorBrush(WithAlpha(PrimaryColor, (byte)(22 + strength * 58))),
-                null,
-                new Point(x, y),
-                radius,
-                radius);
+            (X: 0.46, Y: 0.12, Size: 24d, Rotation: 0.78, Alpha: (byte)13),
+            (X: 0.61, Y: 0.26, Size: 17d, Rotation: 0.28, Alpha: (byte)11),
+            (X: 0.53, Y: 0.52, Size: 39d, Rotation: 0.62, Alpha: (byte)12),
+            (X: 0.41, Y: 0.79, Size: 35d, Rotation: 0.18, Alpha: (byte)12),
+            (X: 0.72, Y: 0.68, Size: 27d, Rotation: 0.95, Alpha: (byte)7)
+        };
+
+        foreach (var shape in shapes)
+        {
+            var center = new Point(width * shape.X, height * shape.Y);
+            var rect = new Rect(
+                center.X - shape.Size * 0.5,
+                center.Y - shape.Size * 0.5,
+                shape.Size,
+                shape.Size);
+            using (context.PushTransform(Matrix.CreateRotation(shape.Rotation, center)))
+            {
+                context.DrawRectangle(
+                    new SolidColorBrush(Color.FromArgb(shape.Alpha, 190, 210, 215)),
+                    null,
+                    rect);
+            }
         }
     }
 
@@ -452,9 +465,9 @@ public sealed class PendoloVisualizerControl : Control
             RadiusY = new RelativeScalar(0.7, RelativeUnit.Relative),
             GradientStops =
             [
-                new GradientStop(Color.Parse("#264A5B70"), 0),
-                new GradientStop(Color.Parse("#18333B4C"), 0.58),
-                new GradientStop(Color.Parse("#08000000"), 1)
+                new GradientStop(Color.Parse("#78375055"), 0),
+                new GradientStop(Color.Parse("#4A2E454D"), 0.58),
+                new GradientStop(Color.Parse("#12263742"), 1)
             ]
         };
         context.DrawEllipse(glass, null, center, baseRadius * 1.15, baseRadius * 1.15);
@@ -869,11 +882,6 @@ public sealed class PendoloVisualizerControl : Control
             (byte)Math.Round(first.R + (second.R - first.R) * amount),
             (byte)Math.Round(first.G + (second.G - first.G) * amount),
             (byte)Math.Round(first.B + (second.B - first.B) * amount));
-    }
-
-    private static double Fraction(double value)
-    {
-        return value - Math.Floor(value);
     }
 
     private static Color WithAlpha(Color color, byte alpha)
