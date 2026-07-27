@@ -708,7 +708,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             LocalTrackId = item.Id,
             Name = item.Title,
             Singer = item.Artist,
-            Singers = item.Artist.Split([',', '/', '、', ';', '\0', '&'],StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(artist=>new SingerLite {Name=artist}).ToList(),
+            Singers = item.Artist.Split([',', '/', '、', ';', '\0', '&'],StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(artist=>new SingerLite {Id=-1,Name=artist}).ToList(),
             AlbumName = item.Album,
             DurationSeconds = item.DurationSeconds,
             LocalSourceType = item.SourceType,
