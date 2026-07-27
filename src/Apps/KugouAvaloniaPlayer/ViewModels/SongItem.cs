@@ -98,7 +98,7 @@ public partial class SongItem : ObservableObject
 
     public override bool Equals(object? obj) => obj is SongItem item && this == item;
 
-    public override int GetHashCode() => HashCode.Combine(LocalFilePath ?? Hash);
+    public override int GetHashCode() => HashCode.Combine(string.IsNullOrWhiteSpace(LocalFilePath) ? Hash : LocalFilePath);
 }
 
 public partial class PlaylistItem : ObservableObject
