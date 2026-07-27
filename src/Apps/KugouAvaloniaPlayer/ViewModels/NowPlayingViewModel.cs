@@ -54,11 +54,15 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
         Player.PropertyChanged += OnPlayerPropertyChanged;
         NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
+        SelectedThemePreset = NowPlayingThemePresetRegistry.Normalize(
+            SettingsManager.Settings.NowPlayingThemePreset);
         ApplyUiPreferences(_uiPreferencesState.Current);
         _uiPreferencesState.PropertyChanged += OnUiPreferencesChanged;
     }
 
     public PlayerViewModel Player { get; }
+    public IReadOnlyList<NowPlayingThemePresetOption> ThemePresets =>
+        NowPlayingThemePresetRegistry.Presets;
 
     [ObservableProperty]
     public partial bool IsOpen { get; set; }
@@ -113,6 +117,15 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(CurrentLyricDisplayModeText))]
     public partial NowPlayingLyricDisplayMode NowPlayingLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStandardTheme))]
+    [NotifyPropertyChangedFor(nameof(IsPendoloTheme))]
+    [NotifyPropertyChangedFor(nameof(IsStandardLayoutVisible))]
+    [NotifyPropertyChangedFor(nameof(CurrentThemePresetName))]
+    [NotifyPropertyChangedFor(nameof(CurrentThemePresetDescription))]
+    public partial NowPlayingThemePreset SelectedThemePreset { get; set; } =
+        NowPlayingThemePreset.Standard;
 
     [ObservableProperty]
     public partial FontFamily LyricFontFamily { get; set; } = FontFamily.Default;
@@ -181,7 +194,17 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         (!string.IsNullOrWhiteSpace(PortraitBackgroundA) ||
          !string.IsNullOrWhiteSpace(PortraitBackgroundB));
 
-    public bool IsStandardLayoutVisible => !HasPortraitBackground;
+    public bool IsStandardTheme => SelectedThemePreset == NowPlayingThemePreset.Standard;
+
+    public bool IsPendoloTheme => SelectedThemePreset == NowPlayingThemePreset.Pendolo;
+
+    public bool IsStandardLayoutVisible => IsStandardTheme && !HasPortraitBackground;
+
+    public string CurrentThemePresetName =>
+        NowPlayingThemePresetRegistry.Get(SelectedThemePreset).DisplayName;
+
+    public string CurrentThemePresetDescription =>
+        NowPlayingThemePresetRegistry.Get(SelectedThemePreset).Description;
 
     public double BackgroundImageOpacity => HasPortraitBackground ? 0 : 1;
 
@@ -271,6 +294,23 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             NowPlayingLyricDisplayMode.LyricsOnly => NowPlayingLyricDisplayMode.LyricsWithRomanization,
             _ => NowPlayingLyricDisplayMode.LyricsWithTranslation
         };
+    }
+
+    [RelayCommand]
+    private void CycleThemePreset()
+    {
+        var presets = ThemePresets;
+        var currentIndex = 0;
+        for (var index = 0; index < presets.Count; index++)
+        {
+            if (presets[index].Preset != SelectedThemePreset)
+                continue;
+
+            currentIndex = index;
+            break;
+        }
+
+        SelectedThemePreset = presets[(currentIndex + 1) % presets.Count].Preset;
     }
 
     [RelayCommand]
@@ -391,6 +431,22 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     partial void OnNowPlayingLyricDisplayModeChanged(NowPlayingLyricDisplayMode value)
     {
         SettingsManager.Settings.PlayPageLyricDisplayMode = value;
+        SettingsManager.Save();
+    }
+
+    partial void OnSelectedThemePresetChanged(NowPlayingThemePreset value)
+    {
+        var normalized = NowPlayingThemePresetRegistry.Normalize(value);
+        if (normalized != value)
+        {
+            SelectedThemePreset = normalized;
+            return;
+        }
+
+        if (value == NowPlayingThemePreset.Pendolo)
+            IsPortraitModeEnabled = false;
+
+        SettingsManager.Settings.NowPlayingThemePreset = value;
         SettingsManager.Save();
     }
 

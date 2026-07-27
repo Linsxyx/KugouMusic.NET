@@ -218,6 +218,9 @@ public class AppSettings
     public NowPlayingLyricDisplayMode PlayPageLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
 
+    public NowPlayingThemePreset NowPlayingThemePreset { get; set; } =
+        NowPlayingThemePreset.Standard;
+
     public double NowPlayingBackgroundBlurRadius { get; set; } = 40;
     public NowPlayingBackgroundSource NowPlayingBackgroundSource { get; set; } =
         NowPlayingBackgroundSource.Cover;

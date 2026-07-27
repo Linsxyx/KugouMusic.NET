@@ -5,6 +5,7 @@
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:themes="using:KugouAvaloniaPlayer.Views.NowPlayingThemes"
              xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
              xmlns:controls1="clr-namespace:KugouAvaloniaPlayer.Controls"
              x:Class="KugouAvaloniaPlayer.Views.NowPlayingView"
@@ -128,7 +129,7 @@
           HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch"
           ClipToBounds="True">
-        <Panel>
+        <Panel IsVisible="{Binding IsStandardTheme}">
             <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.PreparedNextCover}"
                                  behaviors:LocalArtworkImageBehavior.DecodePixelWidth="320"
                                  behaviors:LocalArtworkImageBehavior.UseDefaultFallback="False"
@@ -234,6 +235,11 @@
                 </Border.Background>
             </Border>
         </Panel>
+
+        <themes:PendoloNowPlayingThemeView
+            DataContext="{Binding .}"
+            IsVisible="{Binding IsPendoloTheme}" />
+
         <Border Height="72"
                 VerticalAlignment="Top"
                 Background="Transparent"
@@ -270,6 +276,30 @@
                                  Width="25"
                                  Height="25"
                                  Opacity="0.9" />
+                        </Border>
+                    </Button>
+
+                    <Button Cursor="Hand"
+                            Command="{Binding CycleThemePresetCommand}"
+                            Classes="Basic"
+                            ToolTip.Tip="{Binding CurrentThemePresetDescription}">
+                        <Border Background="#24101822"
+                                BorderBrush="#35E5B96B"
+                                BorderThickness="1"
+                                CornerRadius="20"
+                                Padding="13,8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Svg Path="/Assets/gear-svgrepo-com.svg"
+                                     Css="path { stroke: #E5B96B; fill: none; }"
+                                     Width="14"
+                                     Height="14"
+                                     Opacity="0.92" />
+                                <TextBlock Text="{Binding CurrentThemePresetName}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="White"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
                         </Border>
                     </Button>
                 </StackPanel>
@@ -315,7 +345,10 @@
                 </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="1" ColumnDefinitions="4*, 6*" Margin="0,30,0,28">
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="4*, 6*"
+                  Margin="0,30,0,28"
+                  IsVisible="{Binding IsStandardTheme}">
 
                 <StackPanel Grid.Column="0"
                             x:Name="AlbumMotionContainer"
