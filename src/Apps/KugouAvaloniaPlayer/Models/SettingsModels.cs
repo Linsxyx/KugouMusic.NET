@@ -221,6 +221,8 @@ public class AppSettings
     public NowPlayingThemePreset NowPlayingThemePreset { get; set; } =
         NowPlayingThemePreset.Standard;
 
+    public FumeThemeSettings FumeTheme { get; set; } = new();
+
     public double NowPlayingBackgroundBlurRadius { get; set; } = 40;
     public NowPlayingBackgroundSource NowPlayingBackgroundSource { get; set; } =
         NowPlayingBackgroundSource.Cover;

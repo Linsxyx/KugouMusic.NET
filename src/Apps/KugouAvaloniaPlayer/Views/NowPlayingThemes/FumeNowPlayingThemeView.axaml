@@ -1,0 +1,295 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:controls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             x:Class="KugouAvaloniaPlayer.Views.NowPlayingThemes.FumeNowPlayingThemeView"
+             x:DataType="vm:NowPlayingViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.FumeGlass">
+            <Setter Property="Background" Value="#E5121928" />
+            <Setter Property="BorderBrush" Value="#28F2EBDD" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="BoxShadow" Value="0 18 50 0 #66000000" />
+        </Style>
+        <Style Selector="TextBlock.FumeSettingsLabel">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#DDF2EBDD" />
+        </Style>
+        <Style Selector="TextBlock.FumeSettingsValue">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="Monospace" />
+            <Setter Property="Foreground" Value="#B8D6A91F" />
+        </Style>
+        <Style Selector="Button.FumeSegment">
+            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="Foreground" Value="#DDF2EBDD" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,7" />
+        </Style>
+        <Style Selector="Button.FumeSegment:pointerover">
+            <Setter Property="Background" Value="#25D6A91F" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ClipToBounds="True">
+        <!-- Keep the shared blurred cover, but make Fume's ivory/gold text readable. -->
+        <Border IsHitTestVisible="False">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Color="#D7080E1B" Offset="0" />
+                    <GradientStop Color="#B7101A31" Offset="0.48" />
+                    <GradientStop Color="#E3080C16" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+        <Border IsHitTestVisible="False">
+            <Border.Background>
+                <RadialGradientBrush Center="50%,42%"
+                                     GradientOrigin="50%,42%"
+                                     RadiusX="75%"
+                                     RadiusY="68%">
+                    <GradientStop Color="#00131C32" Offset="0" />
+                    <GradientStop Color="#5A080C16" Offset="0.68" />
+                    <GradientStop Color="#C6080A10" Offset="1" />
+                </RadialGradientBrush>
+            </Border.Background>
+        </Border>
+
+        <controls:FumeVisualizerControl
+            Player="{Binding Player}"
+            IsActive="{Binding IsOpen}"
+            LyricFontFamily="{Binding LyricFontFamily}"
+            HidePrintSymbols="{Binding FumeTuning.HidePrintSymbols}"
+            DisableGeometricBackground="{Binding FumeTuning.DisableGeometricBackground}"
+            BackgroundObjectOpacity="{Binding FumeTuning.BackgroundObjectOpacity}"
+            TextHoldRatio="{Binding FumeTuning.TextHoldRatio}"
+            CameraTrackingMode="{Binding FumeTuning.CameraTrackingMode}"
+            CameraSpeed="{Binding FumeTuning.CameraSpeed}"
+            GlowIntensity="{Binding FumeTuning.GlowIntensity}"
+            HeroScale="{Binding FumeTuning.HeroScale}"
+            IsHitTestVisible="False" />
+
+        <TextBlock Text="等待歌词排版"
+                   FontSize="16"
+                   Foreground="#88F2EBDD"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding !Player.RenderLyricLines.Count}" />
+
+        <!-- Fume keeps the article itself non-interactive; translation stays in a quiet subtitle rail. -->
+        <Border Classes="FumeGlass"
+                Padding="18,10"
+                Margin="0,0,0,82"
+                MaxWidth="680"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                IsVisible="{Binding IsTranslationVisible}">
+            <TextBlock Text="{Binding Player.CurrentLyricLine.Translation}"
+                       FontSize="14"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="#D0D6A91F" />
+        </Border>
+
+        <Border Classes="FumeGlass"
+                Padding="18,10"
+                Margin="0,0,0,82"
+                MaxWidth="680"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                IsVisible="{Binding IsRomanizationVisible}">
+            <TextBlock Text="{Binding Player.CurrentLyricLine.Romanization}"
+                       FontSize="14"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="#D0D6A91F" />
+        </Border>
+
+        <Border Classes="FumeGlass"
+                Padding="18,10"
+                Margin="0,0,0,26"
+                Width="390"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <TextBlock Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                           FontSize="11"
+                           FontFamily="Monospace"
+                           Foreground="#C8D6A91F"
+                           VerticalAlignment="Center" />
+                <Slider Grid.Column="1"
+                        Minimum="0"
+                        Maximum="{Binding Player.TotalDurationSeconds}"
+                        Value="{Binding Player.CurrentPositionSeconds}"
+                        IsSnapToTickEnabled="False"
+                        Classes="Player PlayerDark PlayerCompact"
+                        VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2"
+                           Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                           FontSize="11"
+                           FontFamily="Monospace"
+                           Foreground="#C8D6A91F"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <Button Classes="Basic"
+                Cursor="Hand"
+                Width="48"
+                Height="48"
+                Margin="0,0,28,26"
+                Padding="0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                ToolTip.Tip="Fume 参数">
+            <Button.Flyout>
+                <Flyout Placement="TopEdgeAlignedRight">
+                    <Border Classes="FumeGlass"
+                            Width="336"
+                            MaxHeight="650"
+                            Padding="18">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Spacing="16">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Fume 参数"
+                                                   FontSize="16"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#FFF2EBDD" />
+                                        <TextBlock Text="打印、摄影机、辉光与整篇排版"
+                                                   FontSize="11"
+                                                   Foreground="#8FF2EBDD" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Classes="Basic FumeSegment"
+                                            Command="{Binding FumeTuning.ResetCommand}"
+                                            Content="恢复默认"
+                                            Cursor="Hand" />
+                                </Grid>
+
+                                <ToggleSwitch Content="显示打印方块"
+                                              IsChecked="{Binding FumeTuning.ShowPrintSymbols}" />
+                                <ToggleSwitch Content="额外通用几何背景"
+                                              IsChecked="{Binding FumeTuning.EnableGeometricBackground}" />
+
+                                <StackPanel Spacing="7">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="FumeSettingsLabel" Text="世界物体透明度" />
+                                        <TextBlock Grid.Column="1"
+                                                   Classes="FumeSettingsValue"
+                                                   Text="{Binding FumeTuning.BackgroundObjectOpacity, StringFormat={}{0:P0}}" />
+                                    </Grid>
+                                    <Slider Minimum="0"
+                                            Maximum="1"
+                                            TickFrequency="0.05"
+                                            Value="{Binding FumeTuning.BackgroundObjectOpacity}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="7">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="FumeSettingsLabel" Text="文字停留比例" />
+                                        <TextBlock Grid.Column="1"
+                                                   Classes="FumeSettingsValue"
+                                                   Text="{Binding FumeTuning.TextHoldRatio, StringFormat={}{0:P0}}" />
+                                    </Grid>
+                                    <Slider Minimum="0"
+                                            Maximum="1"
+                                            TickFrequency="0.05"
+                                            Value="{Binding FumeTuning.TextHoldRatio}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="8">
+                                    <TextBlock Classes="FumeSettingsLabel" Text="摄影机追焦方式" />
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                        <Button Classes="FumeSegment"
+                                                Command="{Binding FumeTuning.UseSteppedCameraCommand}"
+                                                Cursor="Hand">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                                <Border Width="6"
+                                                        Height="6"
+                                                        CornerRadius="3"
+                                                        Background="#FFD6A91F"
+                                                        IsVisible="{Binding FumeTuning.IsSteppedCamera}" />
+                                                <TextBlock Text="定格" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1"
+                                                Classes="FumeSegment"
+                                                Command="{Binding FumeTuning.UseSmoothCameraCommand}"
+                                                Cursor="Hand">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                                <Border Width="6"
+                                                        Height="6"
+                                                        CornerRadius="3"
+                                                        Background="#FFD6A91F"
+                                                        IsVisible="{Binding FumeTuning.IsSmoothCamera}" />
+                                                <TextBlock Text="平滑" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </StackPanel>
+
+                                <StackPanel Spacing="7">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="FumeSettingsLabel" Text="摄影机移动速度" />
+                                        <TextBlock Grid.Column="1"
+                                                   Classes="FumeSettingsValue"
+                                                   Text="{Binding FumeTuning.CameraSpeed, StringFormat={}{0:F2}x}" />
+                                    </Grid>
+                                    <Slider Minimum="0.55"
+                                            Maximum="1.85"
+                                            TickFrequency="0.05"
+                                            Value="{Binding FumeTuning.CameraSpeed}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="7">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="FumeSettingsLabel" Text="当前句辉光强度" />
+                                        <TextBlock Grid.Column="1"
+                                                   Classes="FumeSettingsValue"
+                                                   Text="{Binding FumeTuning.GlowIntensity, StringFormat={}{0:F2}x}" />
+                                    </Grid>
+                                    <Slider Minimum="0"
+                                            Maximum="1.8"
+                                            TickFrequency="0.05"
+                                            Value="{Binding FumeTuning.GlowIntensity}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="7">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="FumeSettingsLabel" Text="大标题比例" />
+                                        <TextBlock Grid.Column="1"
+                                                   Classes="FumeSettingsValue"
+                                                   Text="{Binding FumeTuning.HeroScale, StringFormat={}{0:F2}x}" />
+                                    </Grid>
+                                    <Slider Minimum="0.82"
+                                            Maximum="1.32"
+                                            TickFrequency="0.02"
+                                            Value="{Binding FumeTuning.HeroScale}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Flyout>
+            </Button.Flyout>
+
+            <Border Width="48"
+                    Height="48"
+                    CornerRadius="24"
+                    Background="#E5121928"
+                    BorderBrush="#35D6A91F"
+                    BorderThickness="1">
+                <Svg Path="/Assets/gear-svgrepo-com.svg"
+                     Css="path { stroke: #F2EBDD; fill: none; }"
+                     Width="18"
+                     Height="18"
+                     Opacity="0.92"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center" />
+            </Border>
+        </Button>
+    </Grid>
+</UserControl>

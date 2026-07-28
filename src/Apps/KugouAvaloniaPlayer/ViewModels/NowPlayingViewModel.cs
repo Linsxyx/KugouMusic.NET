@@ -51,6 +51,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         _uiPreferencesState = uiPreferencesState;
         _mainWindowService = mainWindowService;
         _songInteractionService = songInteractionService;
+        FumeTuning = new FumeTuningViewModel();
 
         Player.PropertyChanged += OnPlayerPropertyChanged;
         NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
@@ -61,6 +62,8 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     }
 
     public PlayerViewModel Player { get; }
+    public FumeTuningViewModel FumeTuning { get; }
+
     public IReadOnlyList<NowPlayingThemePresetOption> ThemePresets =>
         NowPlayingThemePresetRegistry.Presets;
 
@@ -121,6 +124,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStandardTheme))]
     [NotifyPropertyChangedFor(nameof(IsPendoloTheme))]
+    [NotifyPropertyChangedFor(nameof(IsFumeTheme))]
     [NotifyPropertyChangedFor(nameof(IsStandardLayoutVisible))]
     [NotifyPropertyChangedFor(nameof(CurrentThemePresetName))]
     [NotifyPropertyChangedFor(nameof(CurrentThemePresetDescription))]
@@ -198,6 +202,8 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     public bool IsPendoloTheme => SelectedThemePreset == NowPlayingThemePreset.Pendolo;
 
+    public bool IsFumeTheme => SelectedThemePreset == NowPlayingThemePreset.Fume;
+
     public bool IsStandardLayoutVisible => IsStandardTheme && !HasPortraitBackground;
 
     public string CurrentThemePresetName =>
@@ -229,6 +235,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
         _disposed = true;
         CancelPortraitWork();
+        FumeTuning.Dispose();
         Player.PropertyChanged -= OnPlayerPropertyChanged;
         _uiPreferencesState.PropertyChanged -= OnUiPreferencesChanged;
         GC.SuppressFinalize(this);
@@ -443,7 +450,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (value == NowPlayingThemePreset.Pendolo)
+        if (value is NowPlayingThemePreset.Pendolo or NowPlayingThemePreset.Fume)
             IsPortraitModeEnabled = false;
 
         SettingsManager.Settings.NowPlayingThemePreset = value;

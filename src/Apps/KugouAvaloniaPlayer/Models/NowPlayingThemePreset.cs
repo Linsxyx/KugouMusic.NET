@@ -6,7 +6,8 @@ namespace KugouAvaloniaPlayer.Models;
 public enum NowPlayingThemePreset
 {
     Standard,
-    Pendolo
+    Pendolo,
+    Fume
 }
 
 public sealed record NowPlayingThemePresetOption(
@@ -23,6 +24,10 @@ public static class NowPlayingThemePresetRegistry
             "Pendolo",
             "机械擒纵轮、弧形歌词与音频响应"),
         new(
+            NowPlayingThemePreset.Fume,
+            "Fume",
+            "整篇歌词排版、逐字打印与摄影机追焦"),
+        new(
             NowPlayingThemePreset.Standard,
             "Standard",
             "经典封面与滚动歌词布局")
@@ -30,7 +35,9 @@ public static class NowPlayingThemePresetRegistry
 
     public static NowPlayingThemePreset Normalize(NowPlayingThemePreset preset)
     {
-        return preset is NowPlayingThemePreset.Standard or NowPlayingThemePreset.Pendolo
+        return preset is NowPlayingThemePreset.Standard or
+            NowPlayingThemePreset.Pendolo or
+            NowPlayingThemePreset.Fume
             ? preset
             : NowPlayingThemePreset.Standard;
     }

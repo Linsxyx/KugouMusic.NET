@@ -245,6 +245,10 @@
             DataContext="{Binding .}"
             IsVisible="{Binding IsPendoloTheme}" />
 
+        <themes:FumeNowPlayingThemeView
+            DataContext="{Binding .}"
+            IsVisible="{Binding IsFumeTheme}" />
+
         <Border Height="72"
                 VerticalAlignment="Top"
                 Background="Transparent"
