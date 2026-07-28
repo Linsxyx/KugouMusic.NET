@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
+using ZLinq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -273,13 +273,17 @@ public sealed class FumeVisualizerControl : Control
         var font = LyricFontFamily.ToString();
         var signature = ComputeLyricsSignature(player);
         var heroScale = Math.Clamp(HeroScale, 0.82, 1.32);
-        if (viewport != _layoutViewport ||
+        var layoutInputsChanged =
+            viewport != _layoutViewport ||
             !string.Equals(font, _layoutFont, StringComparison.Ordinal) ||
             signature != _layoutLyricsSignature ||
-            Math.Abs(heroScale - _layoutHeroScale) > 0.0001)
+            Math.Abs(heroScale - _layoutHeroScale) > 0.0001;
+        if (layoutInputsChanged && !_layoutDirty)
         {
             // EnsureArticle can run inside Render. Updating the internal dirty state is
             // safe there, but invalidating the visual again would re-enter the render pass.
+            // Only start the debounce window once; moving it on every animation frame can
+            // postpone a lyric rebuild forever while playback keeps rendering.
             _layoutDirty = true;
             _layoutRebuildAt = _article != null
                 ? DateTimeOffset.UtcNow + LayoutRebuildDelay
@@ -385,8 +389,7 @@ public sealed class FumeVisualizerControl : Control
     {
         return IsActive &&
                IsVisible &&
-               Bounds.Width > 1 &&
-               Bounds.Height > 1 &&
+               Bounds is { Width: > 1, Height: > 1 } &&
                TopLevel.GetTopLevel(this) != null &&
                (Player?.IsPlayingAudio == true || _settleFrames > 0 || _layoutDirty);
     }
@@ -541,10 +544,10 @@ public sealed class FumeVisualizerControl : Control
         if (article.Blocks.Count == 0)
             return new CameraTarget(article.Width * 0.5, article.Height * 0.5, 0.4, -2);
 
-        var minX = article.Blocks.Min(block => block.X);
-        var minY = article.Blocks.Min(block => block.Y);
-        var maxX = article.Blocks.Max(block => block.X + block.Width);
-        var maxY = article.Blocks.Max(block => block.Y + block.Height);
+        var minX = article.Blocks.AsValueEnumerable().Min(block => block.X);
+        var minY = article.Blocks.AsValueEnumerable().Min(block => block.Y);
+        var maxX = article.Blocks.AsValueEnumerable().Max(block => block.X + block.Width);
+        var maxY = article.Blocks.AsValueEnumerable().Max(block => block.Y + block.Height);
         var paddingX = Math.Clamp(Bounds.Width * 0.2, 120, 280);
         var paddingY = Math.Clamp(Bounds.Height * 0.2, 96, 220);
         var scale = Math.Min(
@@ -567,7 +570,7 @@ public sealed class FumeVisualizerControl : Control
             return active;
 
         if (currentSeconds >= article.LastEndSeconds)
-            return article.ChronologicalBlocks.LastOrDefault();
+            return article.ChronologicalBlocks.AsValueEnumerable().LastOrDefault();
 
         for (var index = article.ChronologicalBlocks.Count - 1; index >= 0; index--)
         {
@@ -576,7 +579,7 @@ public sealed class FumeVisualizerControl : Control
                 return block;
         }
 
-        return article.ChronologicalBlocks.FirstOrDefault();
+        return article.ChronologicalBlocks.AsValueEnumerable().FirstOrDefault();
     }
 
     private static Point ResolveFocusPoint(FumeArticleBlock block, double printedProgress)
@@ -631,7 +634,7 @@ public sealed class FumeVisualizerControl : Control
 
     private static bool ShouldShowOverview(FumeArticleLayout article, double currentSeconds)
     {
-        var last = article.ChronologicalBlocks.LastOrDefault();
+        var last = article.ChronologicalBlocks.AsValueEnumerable().LastOrDefault();
         if (last == null)
             return false;
         var start = last.Line.Start.TotalSeconds;
@@ -658,7 +661,7 @@ public sealed class FumeVisualizerControl : Control
         if (bars.Length == 0)
             return default;
 
-        static double Average(IReadOnlyList<Models.VisualizerBandState> values, int start, int end)
+        static double Average(IReadOnlyList<VisualizerBandState> values, int start, int end)
         {
             var total = 0d;
             var count = 0;
@@ -738,7 +741,7 @@ public sealed class FumeVisualizerControl : Control
                 index % 5));
         }
 
-        return result.OrderBy(shape => shape.Depth).ToArray();
+        return result.AsValueEnumerable().OrderBy(shape => shape.Depth).ToArray();
     }
 
     private static double StableMix(int seed, double min, double max)
@@ -883,13 +886,11 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
 
     private void DrawCommonGeometry(SKCanvas canvas, double cameraX, double cameraY)
     {
-        using var paint = new SKPaint
-        {
-            IsAntialias = true,
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 0.8f,
-            Color = WithAlpha(Secondary, 0.07 * frame.BackgroundObjectOpacity)
-        };
+        using var paint = new SKPaint();
+        paint.IsAntialias = true;
+        paint.Style = SKPaintStyle.Stroke;
+        paint.StrokeWidth = 0.8f;
+        paint.Color = WithAlpha(Secondary, 0.07 * frame.BackgroundObjectOpacity);
         var span = Math.Max(frame.Article.Width, frame.Article.Height);
         for (var index = -4; index <= 4; index++)
         {
@@ -918,14 +919,12 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
             0.42);
         var color = shape.Kind is FumeShapeKind.Square or FumeShapeKind.Spark ? Accent : Secondary;
 
-        using var paint = new SKPaint
-        {
-            IsAntialias = true,
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = shape.Kind == FumeShapeKind.Spark ? 1.15f : 1.05f,
-            StrokeCap = SKStrokeCap.Round,
-            Color = WithAlpha(color, opacity)
-        };
+        using var paint = new SKPaint();
+        paint.IsAntialias = true;
+        paint.Style = SKPaintStyle.Stroke;
+        paint.StrokeWidth = shape.Kind == FumeShapeKind.Spark ? 1.15f : 1.05f;
+        paint.StrokeCap = SKStrokeCap.Round;
+        paint.Color = WithAlpha(color, opacity);
         if (shape.Kind == FumeShapeKind.Spark)
             paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, (float)(3.5 * audioScale));
 
@@ -983,7 +982,8 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
             SKFontStyleSlant.Upright);
         var typeface = requestedTypeface ?? SKTypeface.Default;
         using var font = new SKFont(typeface, (float)block.FontSize);
-        using var paint = new SKPaint { IsAntialias = true };
+        using var paint = new SKPaint();
+        paint.IsAntialias = true;
         var lineStart = block.Line.Start.TotalSeconds;
         var lineEnd = lineStart + Math.Max(block.Line.Duration.TotalSeconds, 0.12);
         var lineDuration = Math.Max(lineEnd - lineStart, 0.18);
@@ -1001,7 +1001,7 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         if (frame.PlaybackSeconds >= lineEnd + trailDuration)
         {
             var opacity = passedOpacity;
-            if (frame.TextHoldRatio < 1 && !frame.IsOverview)
+            if (frame is { TextHoldRatio: < 1, IsOverview: false })
             {
                 var totalDuration = Math.Clamp(
                     (frame.Article.LastEndSeconds - frame.Article.FirstStartSeconds) * frame.TextHoldRatio,
@@ -1053,14 +1053,12 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
 
                 if (printed && frame.GlowIntensity > 0)
                 {
-                    using var glowPaint = new SKPaint
-                    {
-                        IsAntialias = true,
-                        Color = WithAlpha(color, (0.36 + glyphProgress * 0.36) * (1 - trail * 0.55)),
-                        MaskFilter = SKMaskFilter.CreateBlur(
-                            SKBlurStyle.Normal,
-                            (float)((3 + block.FontSize * 0.12) * frame.GlowIntensity))
-                    };
+                    using var glowPaint = new SKPaint();
+                    glowPaint.IsAntialias = true;
+                    glowPaint.Color = WithAlpha(color, (0.36 + glyphProgress * 0.36) * (1 - trail * 0.55));
+                    glowPaint.MaskFilter = SKMaskFilter.CreateBlur(
+                        SKBlurStyle.Normal,
+                        (float)((3 + block.FontSize * 0.12) * frame.GlowIntensity));
                     canvas.DrawText(glyph, (float)x, (float)baseline, font, glowPaint);
                 }
 
@@ -1115,15 +1113,13 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         var pulse = 1 - Math.Abs(Math.Sin(
             Math.Clamp(frame.PlaybackSeconds * 12 - glyphIndex * 0.31, 0, Math.PI)));
         pulse = Math.Clamp(1 - pulse, 0.18, 1);
-        using var paint = new SKPaint
-        {
-            IsAntialias = true,
-            Style = SKPaintStyle.Fill,
-            Color = WithAlpha(color, pulse * (block.IsHero ? 0.82 : 0.72)),
-            MaskFilter = SKMaskFilter.CreateBlur(
-                SKBlurStyle.Normal,
-                (float)((4 + block.FontSize * 0.12) * frame.GlowIntensity))
-        };
+        using var paint = new SKPaint();
+        paint.IsAntialias = true;
+        paint.Style = SKPaintStyle.Fill;
+        paint.Color = WithAlpha(color, pulse * (block.IsHero ? 0.82 : 0.72));
+        paint.MaskFilter = SKMaskFilter.CreateBlur(
+            SKBlurStyle.Normal,
+            (float)((4 + block.FontSize * 0.12) * frame.GlowIntensity));
         canvas.DrawRect(
             new SKRect(
                 (float)(x - block.FontSize * 0.05),
@@ -1259,13 +1255,11 @@ internal sealed class EmptyFumeDrawOperation(
             return;
         using var lease = feature.Lease();
         var canvas = lease.SkCanvas;
-        using var paint = new SKPaint
-        {
-            IsAntialias = true,
-            Style = SKPaintStyle.Stroke,
-            StrokeWidth = 1.2f,
-            Color = new SKColor(214, 169, 31, (byte)(40 * Math.Clamp(opacity, 0, 1)))
-        };
+        using var paint = new SKPaint();
+        paint.IsAntialias = true;
+        paint.Style = SKPaintStyle.Stroke;
+        paint.StrokeWidth = 1.2f;
+        paint.Color = new SKColor(214, 169, 31, (byte)(40 * Math.Clamp(opacity, 0, 1)));
         var pulse = 1 + energy.Mid * 0.12;
         canvas.DrawCircle(
             (float)(Bounds.Width * 0.5),
