@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using AvaloniaLyrics;
 using KugouAvaloniaPlayer.ViewModels;
@@ -12,6 +14,8 @@ namespace KugouAvaloniaPlayer.Controls;
 public sealed class PendoloVisualizerControl : Control
 {
     private const double ArcAngleRadians = 100d * Math.PI / 180d;
+    private static readonly TimeSpan ManualAnchorTimeout = TimeSpan.FromSeconds(3);
+    private static readonly Cursor LyricHandCursor = new(StandardCursorType.Hand);
 
     public static readonly StyledProperty<PlayerViewModel?> PlayerProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, PlayerViewModel?>(nameof(Player));
@@ -57,6 +61,12 @@ public sealed class PendoloVisualizerControl : Control
     private double _lineVelocity;
     private double _clockSeconds;
     private double _smoothedEnergy = 0.15;
+    private readonly List<LyricHitTarget> _lyricHitTargets = [];
+    private int? _manualAnchorIndex;
+    private int? _pendingSeekIndex;
+    private double _wheelAccumulator;
+    private int _wheelDirection;
+    private DateTimeOffset _manualAnchorExpiresAt;
 
     static PendoloVisualizerControl()
     {
@@ -148,6 +158,68 @@ public sealed class PendoloVisualizerControl : Control
         }
     }
 
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        var player = Player;
+        var lines = player?.RenderLyricLines;
+        if (!IsActive || player == null || lines == null || lines.Count == 0 ||
+            Math.Abs(e.Delta.Y) < 0.01)
+            return;
+
+        var direction = Math.Sign(e.Delta.Y);
+        if (_wheelDirection != 0 && direction != _wheelDirection)
+            _wheelAccumulator = 0;
+
+        _wheelDirection = direction;
+        _wheelAccumulator += e.Delta.Y;
+        var steps = Math.Clamp((int)Math.Truncate(_wheelAccumulator), -5, 5);
+        if (steps != 0)
+        {
+            var baseIndex = _manualAnchorIndex ??
+                            Math.Clamp(
+                                player.CurrentLyricIndex >= 0
+                                    ? player.CurrentLyricIndex
+                                    : (int)Math.Round(_displayLineIndex),
+                                0,
+                                lines.Count - 1);
+            // Avalonia reports a positive Y delta for wheel-up, which selects
+            // the previous lyric; wheel-down selects the next lyric.
+            _manualAnchorIndex = Math.Clamp(baseIndex - steps, 0, lines.Count - 1);
+            _wheelAccumulator = 0;
+        }
+
+        _manualAnchorExpiresAt = DateTimeOffset.UtcNow + ManualAnchorTimeout;
+        e.Handled = true;
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (!IsActive || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        var player = Player;
+        var pointerPosition = e.GetPosition(this);
+        if (player == null || !TryGetLyricHitTarget(pointerPosition, out var target))
+            return;
+
+        _manualAnchorIndex = target.Index;
+        _pendingSeekIndex = target.Index;
+        _wheelAccumulator = 0;
+        _wheelDirection = 0;
+        SeekTo(player, target.Position);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        Cursor = TryGetLyricHitTarget(e.GetPosition(this), out _)
+            ? LyricHandCursor
+            : Cursor.Default;
+    }
+
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -155,8 +227,6 @@ public sealed class PendoloVisualizerControl : Control
         var height = Bounds.Height;
         if (width <= 1 || height <= 1)
             return;
-
-        DrawBackground(context, width, height);
 
         var player = Player;
         if (player == null)
@@ -212,7 +282,22 @@ public sealed class PendoloVisualizerControl : Control
         if (Player?.IsPlayingAudio == true)
             _clockSeconds += deltaSeconds;
 
-        var targetLineIndex = Math.Max(-1, Player?.CurrentLyricIndex ?? -1);
+        var playerLineIndex = Math.Max(-1, Player?.CurrentLyricIndex ?? -1);
+        if (_pendingSeekIndex == playerLineIndex)
+        {
+            _pendingSeekIndex = null;
+            _manualAnchorIndex = null;
+        }
+        else if (_manualAnchorIndex.HasValue &&
+                 _pendingSeekIndex == null &&
+                 DateTimeOffset.UtcNow >= _manualAnchorExpiresAt)
+        {
+            _manualAnchorIndex = null;
+            _wheelAccumulator = 0;
+            _wheelDirection = 0;
+        }
+
+        var targetLineIndex = _manualAnchorIndex ?? playerLineIndex;
         if (_displayLineIndex < -0.5 && targetLineIndex >= 0)
         {
             _displayLineIndex = targetLineIndex;
@@ -234,71 +319,6 @@ public sealed class PendoloVisualizerControl : Control
 
         InvalidateVisual();
         RequestNextFrame();
-    }
-
-    private void DrawBackground(DrawingContext context, double width, double height)
-    {
-        context.DrawRectangle(new SolidColorBrush(BackgroundColor), null, new Rect(0, 0, width, height));
-
-        var opaqueAtmosphere = new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0, 0.45, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 0.55, RelativeUnit.Relative),
-            GradientStops =
-            [
-                new GradientStop(Color.Parse("#314959"), 0),
-                new GradientStop(Color.Parse("#2C3D53"), 0.44),
-                new GradientStop(Color.Parse("#243248"), 0.72),
-                new GradientStop(Color.Parse("#202D42"), 1)
-            ]
-        };
-        context.DrawRectangle(opaqueAtmosphere, null, new Rect(0, 0, width, height));
-
-        var centerHaze = new RadialGradientBrush
-        {
-            Center = new RelativePoint(0.52, 0.45, RelativeUnit.Relative),
-            GradientOrigin = new RelativePoint(0.52, 0.45, RelativeUnit.Relative),
-            RadiusX = new RelativeScalar(0.52, RelativeUnit.Relative),
-            RadiusY = new RelativeScalar(0.74, RelativeUnit.Relative),
-            GradientStops =
-            [
-                new GradientStop(Color.Parse("#183F4D62"), 0),
-                new GradientStop(Color.Parse("#0C8090A0"), 0.42),
-                new GradientStop(Colors.Transparent, 1)
-            ]
-        };
-        context.DrawRectangle(centerHaze, null, new Rect(0, 0, width, height));
-
-        DrawAmbientShapes(context, width, height);
-    }
-
-    private static void DrawAmbientShapes(DrawingContext context, double width, double height)
-    {
-        var shapes = new[]
-        {
-            (X: 0.46, Y: 0.12, Size: 24d, Rotation: 0.78, Alpha: (byte)13),
-            (X: 0.61, Y: 0.26, Size: 17d, Rotation: 0.28, Alpha: (byte)11),
-            (X: 0.53, Y: 0.52, Size: 39d, Rotation: 0.62, Alpha: (byte)12),
-            (X: 0.41, Y: 0.79, Size: 35d, Rotation: 0.18, Alpha: (byte)12),
-            (X: 0.72, Y: 0.68, Size: 27d, Rotation: 0.95, Alpha: (byte)7)
-        };
-
-        foreach (var shape in shapes)
-        {
-            var center = new Point(width * shape.X, height * shape.Y);
-            var rect = new Rect(
-                center.X - shape.Size * 0.5,
-                center.Y - shape.Size * 0.5,
-                shape.Size,
-                shape.Size);
-            using (context.PushTransform(Matrix.CreateRotation(shape.Rotation, center)))
-            {
-                context.DrawRectangle(
-                    new SolidColorBrush(Color.FromArgb(shape.Alpha, 190, 210, 215)),
-                    null,
-                    rect);
-            }
-        }
     }
 
     private void DrawClockwork(
@@ -499,6 +519,7 @@ public sealed class PendoloVisualizerControl : Control
         double width,
         double height)
     {
+        _lyricHitTargets.Clear();
         var lines = player.RenderLyricLines;
         if (lines.Count == 0)
         {
@@ -506,8 +527,10 @@ public sealed class PendoloVisualizerControl : Control
             return;
         }
 
-        var focusIndex = player.CurrentLyricIndex >= 0
-            ? player.CurrentLyricIndex
+        var focusIndex = _manualAnchorIndex.HasValue
+            ? Math.Clamp(_manualAnchorIndex.Value, 0, lines.Count - 1)
+            : player.CurrentLyricIndex >= 0
+                ? player.CurrentLyricIndex
             : Math.Clamp((int)Math.Round(_displayLineIndex), 0, lines.Count - 1);
         var first = Math.Max(0, focusIndex - 5);
         var last = Math.Min(lines.Count - 1, focusIndex + 5);
@@ -554,6 +577,15 @@ public sealed class PendoloVisualizerControl : Control
                 anchor.X,
                 Math.Clamp(anchor.Y - text.Height * 0.5, 20, Math.Max(20, height - text.Height - 20)));
             var lineRotation = angle * 0.35;
+            var alternateHeight = index == focusIndex && HasVisibleAlternate(line) ? 27d : 0d;
+            var hitWidth = Math.Clamp(text.WidthIncludingTrailingWhitespace, 48, maxTextWidth);
+            _lyricHitTargets.Add(new LyricHitTarget(
+                new Rect(origin.X - 10, origin.Y - 8, hitWidth + 20, text.Height + alternateHeight + 16),
+                anchor,
+                lineRotation,
+                index,
+                line.Start));
+
             using (context.PushTransform(Matrix.CreateRotation(lineRotation, anchor)))
             {
                 context.DrawText(text, origin);
@@ -565,6 +597,62 @@ public sealed class PendoloVisualizerControl : Control
                 }
             }
         }
+    }
+
+    private bool TryGetLyricHitTarget(Point pointerPosition, out LyricHitTarget target)
+    {
+        var closestDistance = double.MaxValue;
+        target = default;
+        var found = false;
+
+        foreach (var candidate in _lyricHitTargets)
+        {
+            var localPoint = RotateAround(
+                pointerPosition,
+                candidate.RotationCenter,
+                -candidate.Rotation);
+            if (!candidate.Bounds.Contains(localPoint))
+                continue;
+
+            var center = candidate.Bounds.Center;
+            var distance = Math.Abs(localPoint.Y - center.Y);
+            if (distance >= closestDistance)
+                continue;
+
+            closestDistance = distance;
+            target = candidate;
+            found = true;
+        }
+
+        return found;
+    }
+
+    private static void SeekTo(PlayerViewModel player, TimeSpan position)
+    {
+        var maxSeconds = player.TotalDurationSeconds > 0
+            ? player.TotalDurationSeconds
+            : Math.Max(0, position.TotalSeconds);
+        var target = TimeSpan.FromSeconds(Math.Clamp(position.TotalSeconds, 0, maxSeconds));
+        var command = player.SeekToLyricLineCommand;
+        if (command.CanExecute(target))
+            command.Execute(target);
+    }
+
+    private bool HasVisibleAlternate(LyricLine line)
+    {
+        return ShowTranslation && !string.IsNullOrWhiteSpace(line.Translation) ||
+               ShowRomanization && !string.IsNullOrWhiteSpace(line.Romanization);
+    }
+
+    private static Point RotateAround(Point point, Point center, double angle)
+    {
+        var deltaX = point.X - center.X;
+        var deltaY = point.Y - center.Y;
+        var cos = Math.Cos(angle);
+        var sin = Math.Sin(angle);
+        return new Point(
+            center.X + deltaX * cos - deltaY * sin,
+            center.Y + deltaX * sin + deltaY * cos);
     }
 
     private void DrawActiveSweep(
@@ -889,4 +977,11 @@ public sealed class PendoloVisualizerControl : Control
     {
         return Color.FromArgb(alpha, color.R, color.G, color.B);
     }
+
+    private readonly record struct LyricHitTarget(
+        Rect Bounds,
+        Point RotationCenter,
+        double Rotation,
+        int Index,
+        TimeSpan Position);
 }

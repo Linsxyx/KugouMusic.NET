@@ -129,7 +129,7 @@
           HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch"
           ClipToBounds="True">
-        <Panel IsVisible="{Binding IsStandardTheme}">
+        <Panel>
             <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.PreparedNextCover}"
                                  behaviors:LocalArtworkImageBehavior.DecodePixelWidth="320"
                                  behaviors:LocalArtworkImageBehavior.UseDefaultFallback="False"
@@ -174,12 +174,17 @@
             </Panel>
 
             <Grid IsHitTestVisible="False"
-                  IsVisible="{Binding Player.IsNowPlayingVisualizerEnabled}"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch"
                   RowDefinitions="*,Auto"
                   Opacity="0.68"
                   ZIndex="2">
+                <Grid.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="Player.IsNowPlayingVisualizerEnabled" />
+                        <Binding Path="IsStandardTheme" />
+                    </MultiBinding>
+                </Grid.IsVisible>
 
                 <!-- Ambient bottom glow -->
                 <Border Grid.Row="1"
