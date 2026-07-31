@@ -127,7 +127,6 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsFumeTheme))]
     [NotifyPropertyChangedFor(nameof(IsStandardLayoutVisible))]
     [NotifyPropertyChangedFor(nameof(CurrentThemePresetName))]
-    [NotifyPropertyChangedFor(nameof(CurrentThemePresetDescription))]
     public partial NowPlayingThemePreset SelectedThemePreset { get; set; } =
         NowPlayingThemePreset.Standard;
 
@@ -208,9 +207,6 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     public string CurrentThemePresetName =>
         NowPlayingThemePresetRegistry.Get(SelectedThemePreset).DisplayName;
-
-    public string CurrentThemePresetDescription =>
-        NowPlayingThemePresetRegistry.Get(SelectedThemePreset).Description;
 
     public double BackgroundImageOpacity => HasPortraitBackground ? 0 : 1;
 

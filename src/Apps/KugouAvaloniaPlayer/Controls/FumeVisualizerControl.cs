@@ -227,6 +227,7 @@ public sealed class FumeVisualizerControl : Control
                 article,
                 _backgroundShapes,
                 currentSeconds,
+                player.CurrentLyricIndex,
                 _lastFrameTimestamp.TotalSeconds,
                 _cameraX,
                 _cameraY,
@@ -800,6 +801,7 @@ internal sealed record FumeFrame(
     FumeArticleLayout Article,
     IReadOnlyList<FumeBackgroundShape> BackgroundShapes,
     double PlaybackSeconds,
+    int CurrentLineIndex,
     double ClockSeconds,
     double CameraX,
     double CameraY,
@@ -955,6 +957,8 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         var waitingOpacity = block.IsHero ? 0.06 : 0.035;
         var activeOpacity = block.IsHero ? 0.985 : 0.92;
         var passedOpacity = block.IsHero ? 0.74 : 0.58;
+        var isCurrentLine = block.SourceLineIndex == frame.CurrentLineIndex;
+        var isHoldingCurrentLine = isCurrentLine && frame.PlaybackSeconds >= lineEnd;
 
         if (frame.PlaybackSeconds < lineStart)
         {
@@ -962,7 +966,7 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
             return;
         }
 
-        if (frame.PlaybackSeconds >= lineEnd + trailDuration)
+        if (!isHoldingCurrentLine && frame.PlaybackSeconds >= lineEnd + trailDuration)
         {
             var opacity = passedOpacity;
             if (frame is { TextHoldRatio: < 1, IsOverview: false })

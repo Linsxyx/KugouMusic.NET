@@ -12,8 +12,7 @@ public enum NowPlayingThemePreset
 
 public sealed record NowPlayingThemePresetOption(
     NowPlayingThemePreset Preset,
-    string DisplayName,
-    string Description);
+    string DisplayName);
 
 public static class NowPlayingThemePresetRegistry
 {
@@ -21,16 +20,13 @@ public static class NowPlayingThemePresetRegistry
     [
         new(
             NowPlayingThemePreset.Pendolo,
-            "Pendolo",
-            "机械擒纵轮、弧形歌词与音频响应"),
+            "摆钟"),
         new(
             NowPlayingThemePreset.Fume,
-            "Fume",
-            "整篇歌词排版、逐字打印与摄影机追焦"),
+            "浮名"),
         new(
             NowPlayingThemePreset.Standard,
-            "Standard",
-            "经典封面与滚动歌词布局")
+            "经典")
     ];
 
     public static NowPlayingThemePreset Normalize(NowPlayingThemePreset preset)

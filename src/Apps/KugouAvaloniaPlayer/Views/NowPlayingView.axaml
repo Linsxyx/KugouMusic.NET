@@ -134,8 +134,7 @@
 
                     <Button Cursor="Hand"
                             Command="{Binding CycleThemePresetCommand}"
-                            Classes="Basic"
-                            ToolTip.Tip="{Binding CurrentThemePresetDescription}">
+                            Classes="Basic">
                         <Border Background="#24101822"
                                 BorderBrush="#35E5B96B"
                                 BorderThickness="1"
