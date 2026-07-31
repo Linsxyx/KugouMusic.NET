@@ -84,6 +84,11 @@ public static class LocalArtworkImageBehavior
     public static void SetIsEnabled(AvaloniaObject element, bool value) =>
         element.SetValue(IsEnabledProperty, value);
 
+    internal static bool OwnsBitmap(Image image, Bitmap bitmap)
+    {
+        return States.TryGetValue(image, out var state) && state.OwnsBitmap(bitmap);
+    }
+
     private static void OnLoadingPropertyChanged(Image image, AvaloniaPropertyChangedEventArgs args)
     {
         States.GetValue(image, static owner => new ImageState(owner)).Reload();
@@ -281,6 +286,13 @@ public static class LocalArtworkImageBehavior
                 return;
 
             cancellation.Cancel();
+        }
+
+        public bool OwnsBitmap(Bitmap bitmap)
+        {
+            return ReferenceEquals(_ownedBitmap, bitmap) ||
+                   SharedDefaultBitmap.IsValueCreated &&
+                   ReferenceEquals(SharedDefaultBitmap.Value, bitmap);
         }
 
         private void QueueDefaultFallback(int version)

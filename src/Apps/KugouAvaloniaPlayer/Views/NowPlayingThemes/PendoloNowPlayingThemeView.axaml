@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             x:Class="KugouAvaloniaPlayer.Views.NowPlayingThemes.PendoloNowPlayingThemeView"
+             x:DataType="vm:NowPlayingViewModel">
+
+    <controls:PendoloVisualizerControl
+        Player="{Binding Player}"
+        IsActive="{Binding IsOpen}"
+        ShowTranslation="{Binding IsTranslationVisible}"
+        ShowRomanization="{Binding IsRomanizationVisible}"
+        LyricFontFamily="{Binding LyricFontFamily}" />
+</UserControl>

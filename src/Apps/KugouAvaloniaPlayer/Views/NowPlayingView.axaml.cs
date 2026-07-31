@@ -1,20 +1,25 @@
 using System;
-using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
+using KugouAvaloniaPlayer.Views.NowPlayingThemes;
 using ZLinq;
 
 namespace KugouAvaloniaPlayer.Views;
 
 public partial class NowPlayingView : UserControl
 {
+    private static readonly TimeSpan ThemeUnloadDelay = TimeSpan.FromMilliseconds(480);
+
     private NowPlayingViewModel? _nowPlayingViewModel;
-    private PlayerViewModel? _playerViewModel;
+    private CancellationTokenSource? _themeUnloadCancellation;
+    private NowPlayingThemePreset? _loadedThemePreset;
     private Size _lastSharedBackgroundSize;
     private Point _lastSharedBackgroundOffset;
 
@@ -27,17 +32,19 @@ public partial class NowPlayingView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        HookViewModel();
+        SynchronizeThemeContent();
         LayoutUpdated += OnLayoutUpdated;
         UpdateSharedBackgroundFrame();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        HideMoreFlyout();
-        DetachMoreFlyoutLightDismissHandler();
+        CancelPendingThemeUnload();
+        UnhookViewModel();
+        ClearThemeContent();
         LayoutUpdated -= OnLayoutUpdated;
         base.OnDetachedFromVisualTree(e);
-        UnhookViewModel();
     }
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
@@ -67,44 +74,128 @@ public partial class NowPlayingView : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
+        CancelPendingThemeUnload();
         UnhookViewModel();
-        _nowPlayingViewModel = DataContext as NowPlayingViewModel;
-        _playerViewModel = _nowPlayingViewModel?.Player;
+        ClearThemeContent();
+        HookViewModel();
+        SynchronizeThemeContent();
+    }
+
+    private void HookViewModel()
+    {
+        var viewModel = DataContext as NowPlayingViewModel;
+        if (ReferenceEquals(_nowPlayingViewModel, viewModel))
+            return;
+
+        _nowPlayingViewModel = viewModel;
         if (_nowPlayingViewModel != null)
             _nowPlayingViewModel.PropertyChanged += OnNowPlayingPropertyChanged;
-        if (_playerViewModel != null)
-            _playerViewModel.RenderLyricLines.CollectionChanged += OnLyricLinesChanged;
     }
 
     private void UnhookViewModel()
     {
-        if (_playerViewModel != null)
-            _playerViewModel.RenderLyricLines.CollectionChanged -= OnLyricLinesChanged;
-        if (_nowPlayingViewModel == null) return;
-        _nowPlayingViewModel.PropertyChanged -= OnNowPlayingPropertyChanged;
+        if (_nowPlayingViewModel != null)
+            _nowPlayingViewModel.PropertyChanged -= OnNowPlayingPropertyChanged;
         _nowPlayingViewModel = null;
-        _playerViewModel = null;
     }
 
     private void OnNowPlayingPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(NowPlayingViewModel.IsOpen))
-            return;
-
-        if (_nowPlayingViewModel?.IsOpen != true)
+        if (e.PropertyName == nameof(NowPlayingViewModel.IsOpen))
         {
-            HideMoreFlyout();
+            SynchronizeThemeContent();
             return;
         }
 
-        Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
+        if (e.PropertyName == nameof(NowPlayingViewModel.SelectedThemePreset) &&
+            _nowPlayingViewModel?.IsOpen == true)
+            LoadThemeContent();
     }
 
-    private void OnLyricLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void SynchronizeThemeContent()
     {
-        if (_nowPlayingViewModel?.IsOpen != true || _playerViewModel?.RenderLyricLines.Count <= 0)
+        if (_nowPlayingViewModel?.IsOpen == true)
+        {
+            CancelPendingThemeUnload();
+            LoadThemeContent();
+            return;
+        }
+
+        ScheduleThemeUnload();
+    }
+
+    private void LoadThemeContent()
+    {
+        var viewModel = _nowPlayingViewModel;
+        if (viewModel == null)
+        {
+            ClearThemeContent();
+            return;
+        }
+
+        var preset = viewModel.SelectedThemePreset;
+        if (_loadedThemePreset == preset && ThemeContentHost.Children.Count > 0)
             return;
 
-        Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
+        ClearThemeContent();
+
+        Control content = preset switch
+        {
+            NowPlayingThemePreset.Pendolo => new PendoloNowPlayingThemeView(),
+            NowPlayingThemePreset.Fume => new FumeNowPlayingThemeView(),
+            _ => new StandardNowPlayingThemeView()
+        };
+
+        content.DataContext = viewModel;
+        ThemeContentHost.Children.Add(content);
+        _loadedThemePreset = preset;
+    }
+
+    private async void ScheduleThemeUnload()
+    {
+        CancelPendingThemeUnload();
+
+        var cancellation = new CancellationTokenSource();
+        _themeUnloadCancellation = cancellation;
+
+        try
+        {
+            await Task.Delay(ThemeUnloadDelay, cancellation.Token);
+            if (cancellation.IsCancellationRequested)
+                return;
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (ReferenceEquals(_themeUnloadCancellation, cancellation) &&
+                    _nowPlayingViewModel?.IsOpen != true)
+                    ClearThemeContent();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(_themeUnloadCancellation, cancellation))
+                _themeUnloadCancellation = null;
+
+            cancellation.Dispose();
+        }
+    }
+
+    private void CancelPendingThemeUnload()
+    {
+        var cancellation = _themeUnloadCancellation;
+        _themeUnloadCancellation = null;
+        cancellation?.Cancel();
+    }
+
+    private void ClearThemeContent()
+    {
+        foreach (var child in ThemeContentHost.Children)
+            child.DataContext = null;
+
+        ThemeContentHost.Children.Clear();
+        _loadedThemePreset = null;
     }
 }

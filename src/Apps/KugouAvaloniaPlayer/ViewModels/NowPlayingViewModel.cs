@@ -51,14 +51,21 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         _uiPreferencesState = uiPreferencesState;
         _mainWindowService = mainWindowService;
         _songInteractionService = songInteractionService;
+        FumeTuning = new FumeTuningViewModel();
 
         Player.PropertyChanged += OnPlayerPropertyChanged;
         NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
+        SelectedThemePreset = NowPlayingThemePresetRegistry.Normalize(
+            SettingsManager.Settings.NowPlayingThemePreset);
         ApplyUiPreferences(_uiPreferencesState.Current);
         _uiPreferencesState.PropertyChanged += OnUiPreferencesChanged;
     }
 
     public PlayerViewModel Player { get; }
+    public FumeTuningViewModel FumeTuning { get; }
+
+    public IReadOnlyList<NowPlayingThemePresetOption> ThemePresets =>
+        NowPlayingThemePresetRegistry.Presets;
 
     [ObservableProperty]
     public partial bool IsOpen { get; set; }
@@ -113,6 +120,15 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(CurrentLyricDisplayModeText))]
     public partial NowPlayingLyricDisplayMode NowPlayingLyricDisplayMode { get; set; } =
         NowPlayingLyricDisplayMode.LyricsWithTranslation;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStandardTheme))]
+    [NotifyPropertyChangedFor(nameof(IsPendoloTheme))]
+    [NotifyPropertyChangedFor(nameof(IsFumeTheme))]
+    [NotifyPropertyChangedFor(nameof(IsStandardLayoutVisible))]
+    [NotifyPropertyChangedFor(nameof(CurrentThemePresetName))]
+    public partial NowPlayingThemePreset SelectedThemePreset { get; set; } =
+        NowPlayingThemePreset.Standard;
 
     [ObservableProperty]
     public partial FontFamily LyricFontFamily { get; set; } = FontFamily.Default;
@@ -181,7 +197,16 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         (!string.IsNullOrWhiteSpace(PortraitBackgroundA) ||
          !string.IsNullOrWhiteSpace(PortraitBackgroundB));
 
-    public bool IsStandardLayoutVisible => !HasPortraitBackground;
+    public bool IsStandardTheme => SelectedThemePreset == NowPlayingThemePreset.Standard;
+
+    public bool IsPendoloTheme => SelectedThemePreset == NowPlayingThemePreset.Pendolo;
+
+    public bool IsFumeTheme => SelectedThemePreset == NowPlayingThemePreset.Fume;
+
+    public bool IsStandardLayoutVisible => IsStandardTheme && !HasPortraitBackground;
+
+    public string CurrentThemePresetName =>
+        NowPlayingThemePresetRegistry.Get(SelectedThemePreset).DisplayName;
 
     public double BackgroundImageOpacity => HasPortraitBackground ? 0 : 1;
 
@@ -206,6 +231,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
         _disposed = true;
         CancelPortraitWork();
+        FumeTuning.Dispose();
         Player.PropertyChanged -= OnPlayerPropertyChanged;
         _uiPreferencesState.PropertyChanged -= OnUiPreferencesChanged;
         GC.SuppressFinalize(this);
@@ -271,6 +297,23 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             NowPlayingLyricDisplayMode.LyricsOnly => NowPlayingLyricDisplayMode.LyricsWithRomanization,
             _ => NowPlayingLyricDisplayMode.LyricsWithTranslation
         };
+    }
+
+    [RelayCommand]
+    private void CycleThemePreset()
+    {
+        var presets = ThemePresets;
+        var currentIndex = 0;
+        for (var index = 0; index < presets.Count; index++)
+        {
+            if (presets[index].Preset != SelectedThemePreset)
+                continue;
+
+            currentIndex = index;
+            break;
+        }
+
+        SelectedThemePreset = presets[(currentIndex + 1) % presets.Count].Preset;
     }
 
     [RelayCommand]
@@ -391,6 +434,22 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     partial void OnNowPlayingLyricDisplayModeChanged(NowPlayingLyricDisplayMode value)
     {
         SettingsManager.Settings.PlayPageLyricDisplayMode = value;
+        SettingsManager.Save();
+    }
+
+    partial void OnSelectedThemePresetChanged(NowPlayingThemePreset value)
+    {
+        var normalized = NowPlayingThemePresetRegistry.Normalize(value);
+        if (normalized != value)
+        {
+            SelectedThemePreset = normalized;
+            return;
+        }
+
+        if (value is NowPlayingThemePreset.Pendolo or NowPlayingThemePreset.Fume)
+            IsPortraitModeEnabled = false;
+
+        SettingsManager.Settings.NowPlayingThemePreset = value;
         SettingsManager.Save();
     }
 
