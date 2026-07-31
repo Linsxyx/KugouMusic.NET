@@ -129,4 +129,10 @@ public partial class BottomPlaybackControl : UserControl
             return;
         vm.Player.MusicVolume = Math.Clamp((float)(vm.Player.MusicVolume+0.01f* e.Delta.Y), 0f, 1f);
     }
+    
+    private void VolumeButton_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e) {
+        if (DataContext is not MainWindowViewModel vm)
+            return;
+        vm.Player.MusicVolume = Math.Clamp((float)(vm.Player.MusicVolume+0.05f* e.Delta.Y), 0f, 1f);
+    }
 }

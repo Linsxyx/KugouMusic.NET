@@ -219,6 +219,7 @@
                             Height="32"
                             ToolTip.Tip="音量"
                             PointerEntered="VolumeButton_OnPointerEntered"
+                            PointerWheelChanged="VolumeButton_OnPointerWheelChanged"
                             Click="VolumeButton_OnClick">
                         <!-- 使用AttachedFlyout以禁用Button的触发影响 -->
                         <FlyoutBase.AttachedFlyout>
