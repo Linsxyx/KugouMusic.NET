@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:suki="https://github.com/kikipoulet/SukiUI"
-             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
@@ -180,7 +179,8 @@
                        behaviors:LocalArtworkImageBehavior.DecodePixelWidth="512"
                        behaviors:LocalArtworkImageBehavior.DecodeInterpolationMode="HighQuality"
                        behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
-                       asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
+                       behaviors:NowPlayingRemoteImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
+                       behaviors:NowPlayingRemoteImageBehavior.IsEnabled="{Binding IsOpen}"
                        RenderOptions.BitmapInterpolationMode="HighQuality"
                        Stretch="UniformToFill" />
             </suki:GlassCard>
