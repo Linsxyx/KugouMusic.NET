@@ -151,7 +151,14 @@ public sealed class PendoloVisualizerControl : Control
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == IsActiveProperty && change.NewValue is true)
+        if (change.Property == BoundsProperty &&
+            Bounds is { Width: > 0, Height: > 0 })
+        {
+            _hasFrameTimestamp = false;
+            InvalidateVisual();
+            RequestNextFrame();
+        }
+        else if (change.Property == IsActiveProperty && change.NewValue is true)
         {
             _hasFrameTimestamp = false;
             RequestNextFrame();
