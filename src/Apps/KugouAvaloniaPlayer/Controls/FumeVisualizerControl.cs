@@ -429,6 +429,7 @@ public sealed class FumeVisualizerControl : Control
     private void UpdateCamera(CameraTarget target, double deltaSeconds)
     {
         var speed = Math.Clamp(CameraSpeed, 0.55, 1.85);
+        var entryPoint = ResolveEntryFocusPoint(target);
         if (_cameraSourceIndex != target.SourceIndex)
         {
             _cameraSourceIndex = target.SourceIndex;
@@ -436,8 +437,8 @@ public sealed class FumeVisualizerControl : Control
             _retargetFromX = _cameraX;
             _retargetFromY = _cameraY;
             _retargetFromScale = _cameraScale;
-            var deltaX = target.X - _cameraX;
-            var deltaY = target.Y - _cameraY;
+            var deltaX = entryPoint.X - _cameraX;
+            var deltaY = entryPoint.Y - _cameraY;
             var screenDistance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY) *
                                  Math.Max(_cameraScale, target.Scale);
             var minimumSide = Math.Max(Math.Min(Bounds.Width, Bounds.Height), 1);
@@ -447,8 +448,8 @@ public sealed class FumeVisualizerControl : Control
                 : Math.Clamp(0.1 / speed, 0.03, 0.3);
 
             var overview = _article == null ? target : ResolveOverviewTarget(_article);
-            _bridgeX = Mix((_cameraX + target.X) * 0.5, overview.X, 0.32);
-            _bridgeY = Mix((_cameraY + target.Y) * 0.5, overview.Y, 0.32);
+            _bridgeX = Mix((_cameraX + entryPoint.X) * 0.5, overview.X, 0.32);
+            _bridgeY = Mix((_cameraY + entryPoint.Y) * 0.5, overview.Y, 0.32);
             _bridgeScale = Math.Clamp(
                 Math.Max(overview.Scale * 1.65, Math.Max(_cameraScale, target.Scale) * 0.48),
                 CameraScaleMin,
@@ -457,11 +458,14 @@ public sealed class FumeVisualizerControl : Control
 
         _retargetElapsed += deltaSeconds;
         var phase = Math.Clamp(_retargetElapsed / Math.Max(_retargetDuration, 0.001), 0, 1);
+        var entryBias = Math.Pow(1 - EaseOutCubic(phase), 0.58);
+        var targetX = Mix(target.X, entryPoint.X, entryBias);
+        var targetY = Mix(target.Y, entryPoint.Y, entryBias);
         if (_useOverviewBridge && phase < 1)
         {
             var eased = EaseOutCubic(phase);
-            var x = Quadratic(_retargetFromX, _bridgeX, target.X, eased);
-            var y = Quadratic(_retargetFromY, _bridgeY, target.Y, eased);
+            var x = Quadratic(_retargetFromX, _bridgeX, targetX, eased);
+            var y = Quadratic(_retargetFromY, _bridgeY, targetY, eased);
             var scale = Quadratic(_retargetFromScale, _bridgeScale, target.Scale, eased);
             var catchUp = 1 - Math.Exp(-deltaSeconds * Mix(12.5, 22, 1 - phase));
             _cameraX += (x - _cameraX) * catchUp;
@@ -476,8 +480,8 @@ public sealed class FumeVisualizerControl : Control
         var retargetBoost = 1 - EaseOutCubic(phase);
         var spring = Mix(208, 520, retargetBoost);
         var damping = Mix(24, 34, retargetBoost);
-        _cameraVelocityX += ((target.X - _cameraX) * spring - _cameraVelocityX * damping) * deltaSeconds;
-        _cameraVelocityY += ((target.Y - _cameraY) * spring - _cameraVelocityY * damping) * deltaSeconds;
+        _cameraVelocityX += ((targetX - _cameraX) * spring - _cameraVelocityX * damping) * deltaSeconds;
+        _cameraVelocityY += ((targetY - _cameraY) * spring - _cameraVelocityY * damping) * deltaSeconds;
         var maxVelocity = Mix(1320, 6400, retargetBoost);
         _cameraVelocityX = Math.Clamp(_cameraVelocityX, -maxVelocity, maxVelocity);
         _cameraVelocityY = Math.Clamp(_cameraVelocityY, -maxVelocity, maxVelocity);
@@ -494,6 +498,17 @@ public sealed class FumeVisualizerControl : Control
             _cameraScale + _cameraVelocityScale * deltaSeconds,
             CameraScaleMin,
             CameraScaleMax);
+    }
+
+    private Point ResolveEntryFocusPoint(CameraTarget target)
+    {
+        if (_article == null || target.SourceIndex < 0 ||
+            !_article.BlocksBySourceIndex.TryGetValue(target.SourceIndex, out var block) ||
+            block.RenderLines.Count == 0)
+            return new Point(target.X, target.Y);
+
+        var firstLine = block.RenderLines[0];
+        return new Point(block.X, block.Y + firstLine.Top + block.LineHeight * 0.5);
     }
 
     private void SnapCameraIfUninitialized(CameraTarget target, FumeArticleLayout article)
@@ -570,15 +585,46 @@ public sealed class FumeVisualizerControl : Control
                 break;
         }
 
-        var line = block.RenderLines[targetLineIndex];
-        var baseOffset = Math.Clamp((int)Math.Floor(offset), line.Start, line.End);
-        var fraction = offset - Math.Floor(offset);
-        var x = block.X + block.GlyphOffsets[baseOffset] - block.GlyphOffsets[line.Start];
-        if (baseOffset < block.Graphemes.Count)
-            x += (block.GlyphOffsets[baseOffset + 1] - block.GlyphOffsets[baseOffset]) * fraction;
-        return new Point(
-            Math.Clamp(x, block.X, block.X + line.Width),
-            block.Y + targetLineIndex * block.LineHeight + block.LineHeight * 0.5);
+        Point PointOnLine(int lineIndex, double lineOffset)
+        {
+            var line = block.RenderLines[lineIndex];
+            var clampedOffset = Math.Clamp(lineOffset, line.Start, line.End);
+            var baseOffset = Math.Clamp((int)Math.Floor(clampedOffset), line.Start, line.End);
+            var fraction = clampedOffset - Math.Floor(clampedOffset);
+            var x = block.X + block.GlyphOffsets[baseOffset] - block.GlyphOffsets[line.Start];
+            if (baseOffset < block.Graphemes.Count)
+                x += (block.GlyphOffsets[baseOffset + 1] - block.GlyphOffsets[baseOffset]) * fraction;
+            return new Point(
+                Math.Clamp(x, block.X, block.X + line.Width),
+                block.Y + lineIndex * block.LineHeight + block.LineHeight * 0.5);
+        }
+
+        var point = PointOnLine(targetLineIndex, offset);
+        const double blendWindow = 0.7;
+        var currentLine = block.RenderLines[targetLineIndex];
+        if (targetLineIndex > 0 && offset < currentLine.Start + blendWindow)
+        {
+            var previousLine = block.RenderLines[targetLineIndex - 1];
+            var blend = EaseInOutCubic(Math.Clamp(
+                1 - (offset - previousLine.End) / blendWindow,
+                0,
+                1));
+            var previous = PointOnLine(targetLineIndex - 1, previousLine.End);
+            point = new Point(Mix(point.X, previous.X, blend), Mix(point.Y, previous.Y, blend));
+        }
+        else if (targetLineIndex < block.RenderLines.Count - 1 &&
+                 offset > currentLine.End - blendWindow)
+        {
+            var nextLine = block.RenderLines[targetLineIndex + 1];
+            var blend = EaseInOutCubic(Math.Clamp(
+                (offset - (currentLine.End - blendWindow)) / blendWindow,
+                0,
+                1));
+            var next = PointOnLine(targetLineIndex + 1, nextLine.Start);
+            point = new Point(Mix(point.X, next.X, blend), Mix(point.Y, next.Y, blend));
+        }
+
+        return point;
     }
 
     private static double ResolvePrintedProgress(FumeArticleBlock block, double currentSeconds)
@@ -748,6 +794,14 @@ public sealed class FumeVisualizerControl : Control
 
     private static double EaseOutCubic(double value) =>
         1 - Math.Pow(1 - Math.Clamp(value, 0, 1), 3);
+
+    private static double EaseInOutCubic(double value)
+    {
+        var normalized = Math.Clamp(value, 0, 1);
+        return normalized < 0.5
+            ? 4 * normalized * normalized * normalized
+            : 1 - Math.Pow(-2 * normalized + 2, 3) / 2;
+    }
 
     private static double Quadratic(double from, double control, double to, double amount)
     {
