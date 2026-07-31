@@ -121,16 +121,13 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 ### 本地音乐库
 
 - 本地音乐库首页，集中管理本地歌单、导入文件夹和 Jellyfin 媒体库
-- 新建、编辑、删除本地歌单
-- 向本地歌单追加本地歌曲文件
 - 可导入本地音乐文件夹，上千首歌曲也能快速导入
 - 支持刷新已导入的本地文件夹和 Jellyfin 媒体库
 - 支持为本地歌单和本地歌曲设置封面
-- 支持从 Jellyfin 导入音乐媒体库，按专辑同步为多个本地歌单
-- Jellyfin 连接信息会本地保存，后续可直接刷新已导入媒体库
+- 支持匹配歌词与歌手
 - 未登录可播放本地歌曲
 - 支持 `MP3`、`FLAC`、`WAV`、`OGG`、`M4A`、`AAC`、`WEBM`、`DSF`、`DFF` 等音频格式
-- 支持本地 KRC / LRC / VTT 歌词
+- 支持本地 KRC / LRC / VTT / QRC 歌词
 
 ### 桌面体验
 
@@ -187,6 +184,10 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
 
+### v3.3.0
+- 播放页新增两个仿Folia播放器的播放主题
+- 修复部分已知问题
+
 ### v3.0.0
 - 优化部分UI页面
 - 新增批量操作、歌单内歌曲查找
@@ -201,10 +202,6 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 - 修复验证码登录无法点击
 - 优化添加歌曲进入歌单时选择歌单的加载
 - 启用AOT发布，减少启动时间
-
-### v2.10.0
-- 优化大规模本地歌曲导入
-- 优化本地歌曲图片加载
 
 ## 开发者入口
 
@@ -273,6 +270,7 @@ KugouMusic.NET
 ## 👍 灵感来源
 
 - [KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)
+- [folia-major](https://github.com/chthollyphile/folia-major)
 
 ## ⚠️ 免责声明
 
