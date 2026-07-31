@@ -32,14 +32,6 @@ public sealed class FumeVisualizerControl : Control
             nameof(LyricFontFamily),
             FontFamily.Default);
 
-    public static readonly StyledProperty<bool> HidePrintSymbolsProperty =
-        AvaloniaProperty.Register<FumeVisualizerControl, bool>(nameof(HidePrintSymbols));
-
-    public static readonly StyledProperty<bool> DisableGeometricBackgroundProperty =
-        AvaloniaProperty.Register<FumeVisualizerControl, bool>(
-            nameof(DisableGeometricBackground),
-            true);
-
     public static readonly StyledProperty<double> BackgroundObjectOpacityProperty =
         AvaloniaProperty.Register<FumeVisualizerControl, double>(
             nameof(BackgroundObjectOpacity),
@@ -99,8 +91,6 @@ public sealed class FumeVisualizerControl : Control
             PlayerProperty,
             IsActiveProperty,
             LyricFontFamilyProperty,
-            HidePrintSymbolsProperty,
-            DisableGeometricBackgroundProperty,
             BackgroundObjectOpacityProperty,
             TextHoldRatioProperty,
             CameraTrackingModeProperty,
@@ -125,18 +115,6 @@ public sealed class FumeVisualizerControl : Control
     {
         get => GetValue(LyricFontFamilyProperty);
         set => SetValue(LyricFontFamilyProperty, value);
-    }
-
-    public bool HidePrintSymbols
-    {
-        get => GetValue(HidePrintSymbolsProperty);
-        set => SetValue(HidePrintSymbolsProperty, value);
-    }
-
-    public bool DisableGeometricBackground
-    {
-        get => GetValue(DisableGeometricBackgroundProperty);
-        set => SetValue(DisableGeometricBackgroundProperty, value);
     }
 
     public double BackgroundObjectOpacity
@@ -254,8 +232,6 @@ public sealed class FumeVisualizerControl : Control
                 _cameraY,
                 _cameraScale,
                 ResolveEnergy(player),
-                HidePrintSymbols,
-                DisableGeometricBackground,
                 Math.Clamp(BackgroundObjectOpacity, 0, 1),
                 Math.Clamp(TextHoldRatio, 0, 1),
                 Math.Clamp(GlowIntensity, 0, 1.8),
@@ -613,16 +589,18 @@ public sealed class FumeVisualizerControl : Control
         if (currentSeconds >= lineEnd)
             return block.Graphemes.Count;
 
-        if (block.WordRanges.Count == 0)
+        if (!HasTimedWordRanges(block))
             return Math.Clamp((currentSeconds - lineStart) / (lineEnd - lineStart), 0, 1) *
                    block.Graphemes.Count;
 
         var printed = 0d;
         foreach (var range in block.WordRanges)
         {
+            if (range.End <= range.Start || range.EndSeconds <= range.StartSeconds)
+                continue;
             if (currentSeconds < range.StartSeconds)
                 return printed;
-            var duration = Math.Max(range.EndSeconds - range.StartSeconds, 0.08);
+            var duration = range.EndSeconds - range.StartSeconds;
             var progress = Math.Clamp((currentSeconds - range.StartSeconds) / duration, 0, 1);
             printed = range.Start + (range.End - range.Start) * progress;
             if (progress < 1)
@@ -630,6 +608,17 @@ public sealed class FumeVisualizerControl : Control
         }
 
         return Math.Clamp(printed, 0, block.Graphemes.Count);
+    }
+
+    private static bool HasTimedWordRanges(FumeArticleBlock block)
+    {
+        foreach (var range in block.WordRanges)
+        {
+            if (range.End > range.Start && range.EndSeconds > range.StartSeconds)
+                return true;
+        }
+
+        return false;
     }
 
     private static bool ShouldShowOverview(FumeArticleLayout article, double currentSeconds)
@@ -816,8 +805,6 @@ internal sealed record FumeFrame(
     double CameraY,
     double CameraScale,
     FumeAudioEnergy Energy,
-    bool HidePrintSymbols,
-    bool DisableGeometricBackground,
     double BackgroundObjectOpacity,
     double TextHoldRatio,
     double GlowIntensity,
@@ -876,32 +863,9 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         canvas.Scale((float)scale);
         canvas.Translate((float)-cameraX, (float)-cameraY);
 
-        if (!frame.DisableGeometricBackground)
-            DrawCommonGeometry(canvas, cameraX, cameraY);
-
         foreach (var shape in frame.BackgroundShapes)
             DrawShape(canvas, shape, cameraX, cameraY);
         canvas.Restore();
-    }
-
-    private void DrawCommonGeometry(SKCanvas canvas, double cameraX, double cameraY)
-    {
-        using var paint = new SKPaint();
-        paint.IsAntialias = true;
-        paint.Style = SKPaintStyle.Stroke;
-        paint.StrokeWidth = 0.8f;
-        paint.Color = WithAlpha(Secondary, 0.07 * frame.BackgroundObjectOpacity);
-        var span = Math.Max(frame.Article.Width, frame.Article.Height);
-        for (var index = -4; index <= 4; index++)
-        {
-            var offset = index * span * 0.16;
-            canvas.DrawLine(
-                (float)(cameraX - span + offset),
-                (float)(cameraY - span),
-                (float)(cameraX + span + offset),
-                (float)(cameraY + span),
-                paint);
-        }
     }
 
     private void DrawShape(SKCanvas canvas, FumeBackgroundShape shape, double cameraX, double cameraY)
@@ -1018,6 +982,7 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         }
 
         var printedProgress = ResolvePrintedProgress(block);
+        var hasTimedWords = HasTimedWordRanges(block);
         for (var lineIndex = 0; lineIndex < block.RenderLines.Count; lineIndex++)
         {
             var renderLine = block.RenderLines[lineIndex];
@@ -1031,48 +996,66 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
                 var rangeIndex = glyphIndex < block.WordRangeByGlyph.Count
                     ? block.WordRangeByGlyph[glyphIndex]
                     : -1;
-                ResolveGlyphTiming(block, glyphIndex, rangeIndex, out var glyphStart, out var glyphEnd);
+                ResolveGlyphTiming(
+                    block,
+                    glyphIndex,
+                    hasTimedWords ? rangeIndex : -1,
+                    out var glyphStart,
+                    out var glyphEnd);
                 var glyphDuration = Math.Max(glyphEnd - glyphStart, 0.001);
                 var glyphProgress = Math.Clamp(
-                    (frame.PlaybackSeconds - glyphStart) / glyphDuration + 0.16,
+                    (frame.PlaybackSeconds - glyphStart) / glyphDuration,
                     0,
                     1);
-                var printed = glyphIndex < printedProgress || frame.PlaybackSeconds >= lineEnd;
                 var trailStart = glyphStart + glyphDuration * 0.18;
                 var trail = Math.Pow(Math.Clamp(
                     (frame.PlaybackSeconds - trailStart) / trailDuration,
                     0,
                     1), 1.35);
 
-                var color = printed
-                    ? MixColor(Accent, Primary, 0.18 + trail * 0.82)
-                    : Primary;
-                var opacity = printed
-                    ? Mix(waitingOpacity, activeOpacity, EaseOutCubic(glyphProgress))
-                    : waitingOpacity;
+                paint.Color = WithAlpha(Primary, waitingOpacity);
+                paint.MaskFilter = null;
+                canvas.DrawText(glyph, (float)x, (float)baseline, font, paint);
 
-                if (printed && frame.GlowIntensity > 0)
+                var playedFraction = ResolvePlayedFraction(
+                    block,
+                    glyphIndex,
+                    hasTimedWords ? rangeIndex : -1,
+                    printedProgress);
+                if (playedFraction <= 0)
+                    continue;
+
+                var color = MixColor(Accent, Primary, 0.18 + trail * 0.82);
+                var glyphWidth = Math.Max(
+                    block.GlyphOffsets[glyphIndex + 1] - block.GlyphOffsets[glyphIndex],
+                    block.FontSize * 0.08);
+
+                if (frame.GlowIntensity > 0)
                 {
                     using var glowPaint = new SKPaint();
                     glowPaint.IsAntialias = true;
-                    glowPaint.Color = WithAlpha(color, (0.36 + glyphProgress * 0.36) * (1 - trail * 0.55));
+                    glowPaint.Color = WithAlpha(
+                        color,
+                        (0.36 + glyphProgress * 0.36) *
+                        EaseOutCubic(playedFraction) *
+                        (1 - trail * 0.55));
                     glowPaint.MaskFilter = SKMaskFilter.CreateBlur(
                         SKBlurStyle.Normal,
                         (float)((3 + block.FontSize * 0.12) * frame.GlowIntensity));
                     canvas.DrawText(glyph, (float)x, (float)baseline, font, glowPaint);
                 }
 
-                paint.Color = WithAlpha(color, opacity);
+                var saveCount = canvas.Save();
+                canvas.ClipRect(new SKRect(
+                    (float)x,
+                    (float)(baseline - block.LineHeight),
+                    (float)(x + glyphWidth * playedFraction),
+                    (float)(baseline + block.LineHeight * 0.25)));
+                paint.Color = WithAlpha(color, activeOpacity);
                 paint.MaskFilter = null;
                 canvas.DrawText(glyph, (float)x, (float)baseline, font, paint);
+                canvas.RestoreToCount(saveCount);
 
-                if (!frame.HidePrintSymbols &&
-                    !string.IsNullOrWhiteSpace(glyph) &&
-                    frame.PlaybackSeconds >= glyphStart - Math.Clamp(glyphDuration * 0.86, 0.055, 0.2) &&
-                    frame.PlaybackSeconds <= trailStart + Math.Clamp(glyphDuration * 0.36, 0.02, 0.08))
-                {
-                    DrawPrintStamp(canvas, block, glyphIndex, renderLine, baseline, color);
-                }
             }
         }
     }
@@ -1098,37 +1081,6 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         }
     }
 
-    private void DrawPrintStamp(
-        SKCanvas canvas,
-        FumeArticleBlock block,
-        int glyphIndex,
-        FumeRenderLine line,
-        double baseline,
-        SKColor color)
-    {
-        var width = Math.Max(
-            block.GlyphOffsets[glyphIndex + 1] - block.GlyphOffsets[glyphIndex],
-            block.FontSize * 0.38);
-        var x = block.X + block.GlyphOffsets[glyphIndex] - block.GlyphOffsets[line.Start];
-        var pulse = 1 - Math.Abs(Math.Sin(
-            Math.Clamp(frame.PlaybackSeconds * 12 - glyphIndex * 0.31, 0, Math.PI)));
-        pulse = Math.Clamp(1 - pulse, 0.18, 1);
-        using var paint = new SKPaint();
-        paint.IsAntialias = true;
-        paint.Style = SKPaintStyle.Fill;
-        paint.Color = WithAlpha(color, pulse * (block.IsHero ? 0.82 : 0.72));
-        paint.MaskFilter = SKMaskFilter.CreateBlur(
-            SKBlurStyle.Normal,
-            (float)((4 + block.FontSize * 0.12) * frame.GlowIntensity));
-        canvas.DrawRect(
-            new SKRect(
-                (float)(x - block.FontSize * 0.05),
-                (float)(baseline - block.FontSize * 0.88),
-                (float)(x + width + block.FontSize * 0.05),
-                (float)(baseline - block.FontSize * 0.25)),
-            paint);
-    }
-
     private double ResolvePrintedProgress(FumeArticleBlock block)
     {
         var start = block.Line.Start.TotalSeconds;
@@ -1137,18 +1089,20 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
             return 0;
         if (frame.PlaybackSeconds >= end)
             return block.Graphemes.Count;
-        if (block.WordRanges.Count == 0)
+        if (!HasTimedWordRanges(block))
             return Math.Clamp((frame.PlaybackSeconds - start) / (end - start), 0, 1) *
                    block.Graphemes.Count;
 
         var printed = 0d;
         foreach (var range in block.WordRanges)
         {
+            if (range.End <= range.Start || range.EndSeconds <= range.StartSeconds)
+                continue;
             if (frame.PlaybackSeconds < range.StartSeconds)
                 return printed;
             var progress = Math.Clamp(
                 (frame.PlaybackSeconds - range.StartSeconds) /
-                Math.Max(range.EndSeconds - range.StartSeconds, 0.08),
+                (range.EndSeconds - range.StartSeconds),
                 0,
                 1);
             printed = range.Start + (range.End - range.Start) * progress;
@@ -1156,6 +1110,48 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
                 return printed;
         }
         return printed;
+    }
+
+    private static bool HasTimedWordRanges(FumeArticleBlock block)
+    {
+        foreach (var range in block.WordRanges)
+        {
+            if (range.End > range.Start && range.EndSeconds > range.StartSeconds)
+                return true;
+        }
+
+        return false;
+    }
+
+    private double ResolvePlayedFraction(
+        FumeArticleBlock block,
+        int glyphIndex,
+        int rangeIndex,
+        double printedProgress)
+    {
+        if (rangeIndex < 0 ||
+            rangeIndex >= block.WordRanges.Count ||
+            block.WordRanges[rangeIndex].EndSeconds <= block.WordRanges[rangeIndex].StartSeconds)
+        {
+            return Math.Clamp(printedProgress - glyphIndex, 0, 1);
+        }
+
+        var range = block.WordRanges[rangeIndex];
+        var rangeStart = block.GlyphOffsets[range.Start];
+        var rangeEnd = block.GlyphOffsets[range.End];
+        var rangeWidth = Math.Max(rangeEnd - rangeStart, 0.001);
+        var rangeProgress = Math.Clamp(
+            (frame.PlaybackSeconds - range.StartSeconds) /
+            (range.EndSeconds - range.StartSeconds),
+            0,
+            1);
+        var playedOffset = rangeStart + rangeWidth * rangeProgress;
+        var glyphStart = block.GlyphOffsets[glyphIndex];
+        var glyphEnd = block.GlyphOffsets[glyphIndex + 1];
+        return Math.Clamp(
+            (playedOffset - glyphStart) / Math.Max(glyphEnd - glyphStart, 0.001),
+            0,
+            1);
     }
 
     private static void ResolveGlyphTiming(
@@ -1176,11 +1172,13 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         }
 
         var range = block.WordRanges[rangeIndex];
-        var countInRange = Math.Max(range.End - range.Start, 1);
-        var indexInRange = Math.Clamp(glyphIndex - range.Start, 0, countInRange - 1);
         var duration = Math.Max(range.EndSeconds - range.StartSeconds, 0.08);
-        start = range.StartSeconds + indexInRange / (double)countInRange * duration;
-        end = range.StartSeconds + (indexInRange + 1d) / countInRange * duration;
+        var rangeStart = block.GlyphOffsets[range.Start];
+        var rangeWidth = Math.Max(block.GlyphOffsets[range.End] - rangeStart, 0.001);
+        var glyphStart = block.GlyphOffsets[glyphIndex];
+        var glyphEnd = block.GlyphOffsets[glyphIndex + 1];
+        start = range.StartSeconds + (glyphStart - rangeStart) / rangeWidth * duration;
+        end = range.StartSeconds + (glyphEnd - rangeStart) / rangeWidth * duration;
     }
 
     private static void DrawCross(SKCanvas canvas, float half, SKPaint paint)

@@ -8,10 +8,6 @@ public enum FumeCameraTrackingMode
 
 public sealed class FumeThemeSettings
 {
-    public bool HidePrintSymbols { get; set; }
-
-    public bool DisableGeometricBackground { get; set; } = true;
-
     public double BackgroundObjectOpacity { get; set; } = 0.5;
 
     public double TextHoldRatio { get; set; } = 1;

@@ -25,8 +25,6 @@ public sealed partial class FumeTuningViewModel : ObservableObject, IDisposable
         };
         _saveTimer.Tick += OnSaveTimerTick;
 
-        HidePrintSymbols = _settings.HidePrintSymbols;
-        DisableGeometricBackground = _settings.DisableGeometricBackground;
         BackgroundObjectOpacity = _settings.BackgroundObjectOpacity;
         TextHoldRatio = _settings.TextHoldRatio;
         CameraTrackingMode = _settings.CameraTrackingMode;
@@ -35,14 +33,6 @@ public sealed partial class FumeTuningViewModel : ObservableObject, IDisposable
         HeroScale = _settings.HeroScale;
         _suppressSave = false;
     }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPrintSymbols))]
-    public partial bool HidePrintSymbols { get; set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(EnableGeometricBackground))]
-    public partial bool DisableGeometricBackground { get; set; } = true;
 
     [ObservableProperty]
     public partial double BackgroundObjectOpacity { get; set; } = 0.5;
@@ -69,18 +59,6 @@ public sealed partial class FumeTuningViewModel : ObservableObject, IDisposable
 
     public bool IsSmoothCamera => CameraTrackingMode == FumeCameraTrackingMode.Smooth;
 
-    public bool ShowPrintSymbols
-    {
-        get => !HidePrintSymbols;
-        set => HidePrintSymbols = !value;
-    }
-
-    public bool EnableGeometricBackground
-    {
-        get => !DisableGeometricBackground;
-        set => DisableGeometricBackground = !value;
-    }
-
     [RelayCommand]
     private void UseSteppedCamera()
     {
@@ -96,26 +74,12 @@ public sealed partial class FumeTuningViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Reset()
     {
-        HidePrintSymbols = false;
-        DisableGeometricBackground = true;
         BackgroundObjectOpacity = 0.5;
         TextHoldRatio = 1;
         CameraTrackingMode = FumeCameraTrackingMode.Smooth;
         CameraSpeed = 1;
         GlowIntensity = 1;
         HeroScale = 1;
-    }
-
-    partial void OnHidePrintSymbolsChanged(bool value)
-    {
-        _settings.HidePrintSymbols = value;
-        ScheduleSave();
-    }
-
-    partial void OnDisableGeometricBackgroundChanged(bool value)
-    {
-        _settings.DisableGeometricBackground = value;
-        ScheduleSave();
     }
 
     partial void OnBackgroundObjectOpacityChanged(double value)

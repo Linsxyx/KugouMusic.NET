@@ -62,8 +62,6 @@
             Player="{Binding Player}"
             IsActive="{Binding IsOpen}"
             LyricFontFamily="{Binding LyricFontFamily}"
-            HidePrintSymbols="{Binding FumeTuning.HidePrintSymbols}"
-            DisableGeometricBackground="{Binding FumeTuning.DisableGeometricBackground}"
             BackgroundObjectOpacity="{Binding FumeTuning.BackgroundObjectOpacity}"
             TextHoldRatio="{Binding FumeTuning.TextHoldRatio}"
             CameraTrackingMode="{Binding FumeTuning.CameraTrackingMode}"
@@ -159,7 +157,7 @@
                                                    FontSize="16"
                                                    FontWeight="SemiBold"
                                                    Foreground="#FFF2EBDD" />
-                                        <TextBlock Text="打印、摄影机、辉光与整篇排版"
+                                        <TextBlock Text="摄影机、辉光与整篇排版"
                                                    FontSize="11"
                                                    Foreground="#8FF2EBDD" />
                                     </StackPanel>
@@ -169,11 +167,6 @@
                                             Content="恢复默认"
                                             Cursor="Hand" />
                                 </Grid>
-
-                                <ToggleSwitch Content="显示打印方块"
-                                              IsChecked="{Binding FumeTuning.ShowPrintSymbols}" />
-                                <ToggleSwitch Content="额外通用几何背景"
-                                              IsChecked="{Binding FumeTuning.EnableGeometricBackground}" />
 
                                 <StackPanel Spacing="7">
                                     <Grid ColumnDefinitions="*,Auto">
