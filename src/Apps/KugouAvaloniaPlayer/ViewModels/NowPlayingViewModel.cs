@@ -5,6 +5,7 @@ using ZLinq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -14,6 +15,7 @@ using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
+using KugouAvaloniaPlayer.Views.NowPlayingThemes;
 using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -36,6 +38,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     private bool _isPortraitLayerAActive = true;
     private int _portraitIndex;
     private bool _disposed;
+    private Control _currentContent;
 
     public NowPlayingViewModel(
         PlayerViewModel player,
@@ -46,6 +49,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         ISongInteractionService songInteractionService)
     {
         Player = player;
+        _currentContent = CreateThemeContent(NowPlayingThemePreset.Standard);
         _songClient = songClient;
         _logger = logger;
         _uiPreferencesState = uiPreferencesState;
@@ -63,6 +67,11 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     public PlayerViewModel Player { get; }
     public FumeTuningViewModel FumeTuning { get; }
+    public Control CurrentContent
+    {
+        get => _currentContent;
+        private set => SetProperty(ref _currentContent, value);
+    }
 
     public IReadOnlyList<NowPlayingThemePresetOption> ThemePresets =>
         NowPlayingThemePresetRegistry.Presets;
@@ -453,8 +462,23 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         if (value is NowPlayingThemePreset.Pendolo or NowPlayingThemePreset.Fume)
             IsPortraitModeEnabled = false;
 
+        CurrentContent = CreateThemeContent(value);
+
         SettingsManager.Settings.NowPlayingThemePreset = value;
         SettingsManager.Save();
+    }
+
+    private Control CreateThemeContent(NowPlayingThemePreset preset)
+    {
+        Control content = preset switch
+        {
+            NowPlayingThemePreset.Pendolo => new PendoloNowPlayingThemeView(),
+            NowPlayingThemePreset.Fume => new FumeNowPlayingThemeView(),
+            _ => new StandardNowPlayingThemeView()
+        };
+
+        content.DataContext = this;
+        return content;
     }
 
     private async Task RefreshPortraitsAsync()

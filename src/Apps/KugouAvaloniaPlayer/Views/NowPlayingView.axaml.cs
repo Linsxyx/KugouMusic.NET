@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
 using KugouAvaloniaPlayer.ViewModels;
 using ZLinq;
@@ -14,7 +12,6 @@ namespace KugouAvaloniaPlayer.Views;
 public partial class NowPlayingView : UserControl
 {
     private NowPlayingViewModel? _nowPlayingViewModel;
-    private PlayerViewModel? _playerViewModel;
     private Size _lastSharedBackgroundSize;
     private Point _lastSharedBackgroundOffset;
 
@@ -27,17 +24,18 @@ public partial class NowPlayingView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        HookViewModel();
+        UpdateThemeContent();
         LayoutUpdated += OnLayoutUpdated;
         UpdateSharedBackgroundFrame();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        HideMoreFlyout();
-        DetachMoreFlyoutLightDismissHandler();
+        UnhookViewModel();
+        ThemeContentHost.Children.Clear();
         LayoutUpdated -= OnLayoutUpdated;
         base.OnDetachedFromVisualTree(e);
-        UnhookViewModel();
     }
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
@@ -68,43 +66,42 @@ public partial class NowPlayingView : UserControl
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
         UnhookViewModel();
-        _nowPlayingViewModel = DataContext as NowPlayingViewModel;
-        _playerViewModel = _nowPlayingViewModel?.Player;
+        HookViewModel();
+        UpdateThemeContent();
+    }
+
+    private void HookViewModel()
+    {
+        var viewModel = DataContext as NowPlayingViewModel;
+        if (ReferenceEquals(_nowPlayingViewModel, viewModel))
+            return;
+
+        _nowPlayingViewModel = viewModel;
         if (_nowPlayingViewModel != null)
             _nowPlayingViewModel.PropertyChanged += OnNowPlayingPropertyChanged;
-        if (_playerViewModel != null)
-            _playerViewModel.RenderLyricLines.CollectionChanged += OnLyricLinesChanged;
     }
 
     private void UnhookViewModel()
     {
-        if (_playerViewModel != null)
-            _playerViewModel.RenderLyricLines.CollectionChanged -= OnLyricLinesChanged;
-        if (_nowPlayingViewModel == null) return;
-        _nowPlayingViewModel.PropertyChanged -= OnNowPlayingPropertyChanged;
+        if (_nowPlayingViewModel != null)
+            _nowPlayingViewModel.PropertyChanged -= OnNowPlayingPropertyChanged;
         _nowPlayingViewModel = null;
-        _playerViewModel = null;
     }
 
     private void OnNowPlayingPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(NowPlayingViewModel.IsOpen))
-            return;
-
-        if (_nowPlayingViewModel?.IsOpen != true)
-        {
-            HideMoreFlyout();
-            return;
-        }
-
-        Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
+        if (e.PropertyName == nameof(NowPlayingViewModel.CurrentContent))
+            UpdateThemeContent();
     }
 
-    private void OnLyricLinesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void UpdateThemeContent()
     {
-        if (_nowPlayingViewModel?.IsOpen != true || _playerViewModel?.RenderLyricLines.Count <= 0)
+        ThemeContentHost.Children.Clear();
+        if (_nowPlayingViewModel?.CurrentContent is not { } content)
             return;
 
-        Dispatcher.Post(() => { LyricScrollView?.ForceSecondPassLayout(); }, DispatcherPriority.Render);
+        content.DataContext = _nowPlayingViewModel;
+        ThemeContentHost.Children.Add(content);
     }
+
 }
