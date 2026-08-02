@@ -67,21 +67,25 @@
                    VerticalAlignment="Top"
                    ClipToBounds="False"
                    IsHitTestVisible="False">
-                <Image behaviors:LocalArtworkImageBehavior.Source="{Binding NowPlayingBackgroundImageSource}"
-                       behaviors:LocalArtworkImageBehavior.DecodePixelWidth="1920"
+                <Image x:Name="BackgroundSourceImage"
+                       behaviors:LocalArtworkImageBehavior.Source="{Binding NowPlayingBackgroundImageSource}"
+                       behaviors:LocalArtworkImageBehavior.DecodePixelWidth="960"
                        behaviors:LocalArtworkImageBehavior.DecodeInterpolationMode="HighQuality"
                        behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
                        behaviors:NowPlayingRemoteImageBehavior.Source="{Binding NowPlayingBackgroundImageSource, Converter={StaticResource RemoteImageSourceConverter}}"
                        behaviors:NowPlayingRemoteImageBehavior.IsEnabled="{Binding IsOpen}"
+                       Width="1"
+                       Height="1"
+                       Opacity="0"
+                       IsHitTestVisible="False"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Top" />
+                <Image x:Name="CachedBackgroundImage"
                        RenderOptions.BitmapInterpolationMode="HighQuality"
                        Stretch="UniformToFill"
                        Margin="-96"
                        Opacity="{Binding BackgroundImageOpacity}"
-                       Classes="NowPlayingBackgroundLayer">
-                    <Image.Effect>
-                        <BlurEffect Radius="{Binding BackgroundBlurRadius}" />
-                    </Image.Effect>
-                </Image>
+                       Classes="NowPlayingBackgroundLayer" />
                 <Image behaviors:NowPlayingRemoteImageBehavior.Source="{Binding PortraitBackgroundA, Converter={StaticResource RemoteImageSourceConverter}}"
                        behaviors:NowPlayingRemoteImageBehavior.IsEnabled="{Binding IsOpen}"
                        Stretch="UniformToFill"
