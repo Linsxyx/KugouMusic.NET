@@ -10,5 +10,10 @@
         IsActive="{Binding IsOpen}"
         ShowTranslation="{Binding IsTranslationVisible}"
         ShowRomanization="{Binding IsRomanizationVisible}"
-        LyricFontFamily="{Binding LyricFontFamily}" />
+        LyricFontFamily="{Binding LyricFontFamily}"
+        ParallaxEnabled="{Binding PendoloParallaxTuning.Enabled}"
+        ParallaxMaxTilt="{Binding PendoloParallaxTuning.MaxTilt}"
+        ParallaxResponse="{Binding PendoloParallaxTuning.Response}"
+        ParallaxOriginX="{Binding PendoloParallaxTuning.OriginX}"
+        ParallaxOriginY="{Binding PendoloParallaxTuning.OriginY}" />
 </UserControl>

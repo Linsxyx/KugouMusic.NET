@@ -223,6 +223,10 @@ public class AppSettings
 
     public FumeThemeSettings FumeTheme { get; set; } = new();
 
+    public MouseParallaxSettings PendoloMouseParallax { get; set; } = new() { MaxTilt = 16, OriginX = 0.3 };
+
+    public MouseParallaxSettings FumeMouseParallax { get; set; } = new();
+
     public double NowPlayingBackgroundBlurRadius { get; set; } = 40;
     public NowPlayingBackgroundSource NowPlayingBackgroundSource { get; set; } =
         NowPlayingBackgroundSource.Cover;

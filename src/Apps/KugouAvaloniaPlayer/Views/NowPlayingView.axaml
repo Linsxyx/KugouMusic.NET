@@ -4,6 +4,7 @@
              xmlns:chrome="clr-namespace:Avalonia.Controls.Chrome;assembly=Avalonia.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models"
              x:Class="KugouAvaloniaPlayer.Views.NowPlayingView"
              x:DataType="vm:NowPlayingViewModel">
 
@@ -40,7 +41,25 @@
                 </Transitions>
             </Setter>
         </Style>
-        
+
+        <Style Selector="TextBlock.ParallaxLabel">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#DDFFFFFF" />
+        </Style>
+        <Style Selector="TextBlock.ParallaxValue">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="Monospace" />
+            <Setter Property="Foreground" Value="#B8E5B96B" />
+        </Style>
+        <Style Selector="Button.ParallaxSegment">
+            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="Foreground" Value="#DDFFFFFF" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,7" />
+        </Style>
+        <Style Selector="Button.ParallaxSegment:pointerover">
+            <Setter Property="Background" Value="#25E5B96B" />
+        </Style>
     </UserControl.Styles>
 
     <Grid Name="Root"
@@ -138,7 +157,109 @@
 
                     <Button Cursor="Hand"
                             Command="{Binding CycleThemePresetCommand}"
-                            Classes="Basic">
+                            Classes="Basic"
+                            PointerEntered="ShowModeConfigurationFlyout">
+                        <FlyoutBase.AttachedFlyout>
+                            <Flyout Placement="Bottom"
+                                    OverlayInputPassThroughElement="{Binding $parent}" 
+                                    ShowMode="TransientWithDismissOnPointerMoveAway">
+                                <Border Background="#E5141B2A"
+                                        BorderBrush="#2EE5B96B"
+                                        BorderThickness="1"
+                                        CornerRadius="16"
+                                        Padding="18"
+                                        BoxShadow="0 18 50 0 #66000000"
+                                        IsVisible="{Binding SelectedThemePreset,Converter={x:Static ObjectConverters.NotEqual},ConverterParameter={x:Static models:NowPlayingThemePreset.Standard}}">
+                                    <StackPanel Spacing="16" Width="300">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="视差设置"
+                                                           FontSize="16"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="White" />
+                                                <TextBlock Text="鼠标倾斜 · 响应 · 枢轴"
+                                                           FontSize="11"
+                                                           Foreground="#8FFFFFFF" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1"
+                                                    Classes="Basic ParallaxSegment"
+                                                    Command="{Binding ActiveParallaxTuning.ResetCommand}"
+                                                    Content="恢复默认"
+                                                    Cursor="Hand"
+                                                    IsEnabled="{Binding ActiveParallaxTuning.Enabled}" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock Classes="ParallaxLabel"
+                                                       Text="启用视差效果"
+                                                       VerticalAlignment="Center" />
+                                            <ToggleSwitch Grid.Column="1"
+                                                          IsChecked="{Binding ActiveParallaxTuning.Enabled, Mode=TwoWay}" />
+                                        </Grid>
+
+                                        <Border IsEnabled="{Binding ActiveParallaxTuning.Enabled}">
+                                            <StackPanel Spacing="16">
+                                                <StackPanel Spacing="7">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="ParallaxLabel" Text="最大倾斜角度" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="ParallaxValue"
+                                                                   Text="{Binding ActiveParallaxTuning.MaxTilt, StringFormat={}{0:F0}°}" />
+                                                    </Grid>
+                                                    <Slider Minimum="0"
+                                                            Maximum="30"
+                                                            TickFrequency="1"
+                                                            Value="{Binding ActiveParallaxTuning.MaxTilt}"
+                                                            Classes="Player PlayerDark PlayerCompact" />
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="7">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="ParallaxLabel" Text="响应速度" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="ParallaxValue"
+                                                                   Text="{Binding ActiveParallaxTuning.Response, StringFormat={}{0:F1}}" />
+                                                    </Grid>
+                                                    <Slider Minimum="0.5"
+                                                            Maximum="20"
+                                                            TickFrequency="0.5"
+                                                            Value="{Binding ActiveParallaxTuning.Response}"
+                                                            Classes="Player PlayerDark PlayerCompact" />
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="7">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="ParallaxLabel" Text="中心 X" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="ParallaxValue"
+                                                                   Text="{Binding ActiveParallaxTuning.OriginX, StringFormat={}{0:P0}}" />
+                                                    </Grid>
+                                                    <Slider Minimum="0"
+                                                            Maximum="1"
+                                                            TickFrequency="0.01"
+                                                            Value="{Binding ActiveParallaxTuning.OriginX}"
+                                                            Classes="Player PlayerDark PlayerCompact" />
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="7">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="ParallaxLabel" Text="中心 Y" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="ParallaxValue"
+                                                                   Text="{Binding ActiveParallaxTuning.OriginY, StringFormat={}{0:P0}}" />
+                                                    </Grid>
+                                                    <Slider Minimum="0"
+                                                            Maximum="1"
+                                                            TickFrequency="0.01"
+                                                            Value="{Binding ActiveParallaxTuning.OriginY}"
+                                                            Classes="Player PlayerDark PlayerCompact" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </FlyoutBase.AttachedFlyout>
                         <Border Background="#24101822"
                                 BorderBrush="#35E5B96B"
                                 BorderThickness="1"

@@ -54,6 +54,31 @@ public sealed class FumeVisualizerControl : Control
     public static readonly StyledProperty<double> HeroScaleProperty =
         AvaloniaProperty.Register<FumeVisualizerControl, double>(nameof(HeroScale), 1);
 
+    public static readonly StyledProperty<bool> ParallaxEnabledProperty =
+        AvaloniaProperty.Register<FumeVisualizerControl, bool>(
+            nameof(ParallaxEnabled),
+            true);
+
+    public static readonly StyledProperty<double> ParallaxMaxTiltProperty =
+        AvaloniaProperty.Register<FumeVisualizerControl, double>(
+            nameof(ParallaxMaxTilt),
+            14);
+
+    public static readonly StyledProperty<double> ParallaxResponseProperty =
+        AvaloniaProperty.Register<FumeVisualizerControl, double>(
+            nameof(ParallaxResponse),
+            7.5);
+
+    public static readonly StyledProperty<double> ParallaxOriginXProperty =
+        AvaloniaProperty.Register<FumeVisualizerControl, double>(
+            nameof(ParallaxOriginX),
+            0.5);
+
+    public static readonly StyledProperty<double> ParallaxOriginYProperty =
+        AvaloniaProperty.Register<FumeVisualizerControl, double>(
+            nameof(ParallaxOriginY),
+            0.5);
+
     private PlayerViewModel? _subscribedPlayer;
     private FumeArticleLayout? _article;
     private IReadOnlyList<FumeBackgroundShape> _backgroundShapes = [];
@@ -84,6 +109,7 @@ public sealed class FumeVisualizerControl : Control
     private double _bridgeX;
     private double _bridgeY;
     private double _bridgeScale;
+    private MouseParallax3D? _parallax;
 
     static FumeVisualizerControl()
     {
@@ -97,6 +123,17 @@ public sealed class FumeVisualizerControl : Control
             CameraSpeedProperty,
             GlowIntensityProperty,
             HeroScaleProperty);
+
+        ParallaxEnabledProperty.Changed.AddClassHandler<FumeVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxMaxTiltProperty.Changed.AddClassHandler<FumeVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxResponseProperty.Changed.AddClassHandler<FumeVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxOriginXProperty.Changed.AddClassHandler<FumeVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxOriginYProperty.Changed.AddClassHandler<FumeVisualizerControl>(
+            OnParallaxPropertyChanged);
     }
 
     public PlayerViewModel? Player
@@ -153,11 +190,60 @@ public sealed class FumeVisualizerControl : Control
         set => SetValue(HeroScaleProperty, value);
     }
 
+    public bool ParallaxEnabled
+    {
+        get => GetValue(ParallaxEnabledProperty);
+        set => SetValue(ParallaxEnabledProperty, value);
+    }
+
+    public double ParallaxMaxTilt
+    {
+        get => GetValue(ParallaxMaxTiltProperty);
+        set => SetValue(ParallaxMaxTiltProperty, value);
+    }
+
+    public double ParallaxResponse
+    {
+        get => GetValue(ParallaxResponseProperty);
+        set => SetValue(ParallaxResponseProperty, value);
+    }
+
+    public double ParallaxOriginX
+    {
+        get => GetValue(ParallaxOriginXProperty);
+        set => SetValue(ParallaxOriginXProperty, value);
+    }
+
+    public double ParallaxOriginY
+    {
+        get => GetValue(ParallaxOriginYProperty);
+        set => SetValue(ParallaxOriginYProperty, value);
+    }
+
+    private static void OnParallaxPropertyChanged(
+        FumeVisualizerControl control,
+        AvaloniaPropertyChangedEventArgs e)
+    {
+        control.ApplyParallax();
+    }
+
+    private void ApplyParallax()
+    {
+        _parallax ??= new MouseParallax3D(this);
+        _parallax.Enabled = ParallaxEnabled;
+        _parallax.MaxTilt = ParallaxMaxTilt;
+        _parallax.Response = ParallaxResponse;
+        _parallax.Origin = new RelativePoint(ParallaxOriginX, ParallaxOriginY, RelativeUnit.Relative);
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         AttachPlayer(Player);
         MarkLayoutDirty(false);
+        _parallax ??= new MouseParallax3D(this);
+        _parallax.Attach();
+        ApplyParallax();
         RequestNextFrame();
     }
 
@@ -166,6 +252,7 @@ public sealed class FumeVisualizerControl : Control
         AttachPlayer(null);
         _frameQueued = false;
         _hasFrameTimestamp = false;
+        _parallax?.Detach();
         base.OnDetachedFromVisualTree(e);
     }
 

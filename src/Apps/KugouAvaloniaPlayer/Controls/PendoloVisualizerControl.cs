@@ -54,6 +54,31 @@ public sealed class PendoloVisualizerControl : Control
             nameof(SecondaryColor),
             Color.Parse("#8797A1"));
 
+    public static readonly StyledProperty<bool> ParallaxEnabledProperty =
+        AvaloniaProperty.Register<PendoloVisualizerControl, bool>(
+            nameof(ParallaxEnabled),
+            true);
+
+    public static readonly StyledProperty<double> ParallaxMaxTiltProperty =
+        AvaloniaProperty.Register<PendoloVisualizerControl, double>(
+            nameof(ParallaxMaxTilt),
+            14);
+
+    public static readonly StyledProperty<double> ParallaxResponseProperty =
+        AvaloniaProperty.Register<PendoloVisualizerControl, double>(
+            nameof(ParallaxResponse),
+            7.5);
+
+    public static readonly StyledProperty<double> ParallaxOriginXProperty =
+        AvaloniaProperty.Register<PendoloVisualizerControl, double>(
+            nameof(ParallaxOriginX),
+            0.5);
+
+    public static readonly StyledProperty<double> ParallaxOriginYProperty =
+        AvaloniaProperty.Register<PendoloVisualizerControl, double>(
+            nameof(ParallaxOriginY),
+            0.5);
+
     private bool _frameQueued;
     private bool _hasFrameTimestamp;
     private TimeSpan _lastFrameTimestamp;
@@ -67,6 +92,7 @@ public sealed class PendoloVisualizerControl : Control
     private double _wheelAccumulator;
     private int _wheelDirection;
     private DateTimeOffset _manualAnchorExpiresAt;
+    private MouseParallax3D? _parallax;
 
     static PendoloVisualizerControl()
     {
@@ -79,6 +105,17 @@ public sealed class PendoloVisualizerControl : Control
             PrimaryColorProperty,
             AccentColorProperty,
             SecondaryColorProperty);
+
+        ParallaxEnabledProperty.Changed.AddClassHandler<PendoloVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxMaxTiltProperty.Changed.AddClassHandler<PendoloVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxResponseProperty.Changed.AddClassHandler<PendoloVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxOriginXProperty.Changed.AddClassHandler<PendoloVisualizerControl>(
+            OnParallaxPropertyChanged);
+        ParallaxOriginYProperty.Changed.AddClassHandler<PendoloVisualizerControl>(
+            OnParallaxPropertyChanged);
     }
 
     public PlayerViewModel? Player
@@ -135,9 +172,58 @@ public sealed class PendoloVisualizerControl : Control
         set => SetValue(SecondaryColorProperty, value);
     }
 
+    public bool ParallaxEnabled
+    {
+        get => GetValue(ParallaxEnabledProperty);
+        set => SetValue(ParallaxEnabledProperty, value);
+    }
+
+    public double ParallaxMaxTilt
+    {
+        get => GetValue(ParallaxMaxTiltProperty);
+        set => SetValue(ParallaxMaxTiltProperty, value);
+    }
+
+    public double ParallaxResponse
+    {
+        get => GetValue(ParallaxResponseProperty);
+        set => SetValue(ParallaxResponseProperty, value);
+    }
+
+    public double ParallaxOriginX
+    {
+        get => GetValue(ParallaxOriginXProperty);
+        set => SetValue(ParallaxOriginXProperty, value);
+    }
+
+    public double ParallaxOriginY
+    {
+        get => GetValue(ParallaxOriginYProperty);
+        set => SetValue(ParallaxOriginYProperty, value);
+    }
+
+    private static void OnParallaxPropertyChanged(
+        PendoloVisualizerControl control,
+        AvaloniaPropertyChangedEventArgs e)
+    {
+        control.ApplyParallax();
+    }
+
+    private void ApplyParallax()
+    {
+        _parallax ??= new MouseParallax3D(this);
+        _parallax.Enabled = ParallaxEnabled;
+        _parallax.MaxTilt = ParallaxMaxTilt;
+        _parallax.Response = ParallaxResponse;
+        _parallax.Origin = new RelativePoint(ParallaxOriginX, ParallaxOriginY, RelativeUnit.Relative);
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _parallax ??= new MouseParallax3D(this);
+        _parallax.Attach();
+        ApplyParallax();
         RequestNextFrame();
     }
 
@@ -145,6 +231,7 @@ public sealed class PendoloVisualizerControl : Control
     {
         _frameQueued = false;
         _hasFrameTimestamp = false;
+        _parallax?.Detach();
         base.OnDetachedFromVisualTree(e);
     }
 
