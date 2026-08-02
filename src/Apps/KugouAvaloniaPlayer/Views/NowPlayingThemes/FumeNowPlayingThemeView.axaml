@@ -162,7 +162,7 @@
                                                    FontSize="16"
                                                    FontWeight="SemiBold"
                                                    Foreground="#FFF2EBDD" />
-                                        <TextBlock Text="摄影机、辉光与整篇排版"
+                                        <TextBlock Text="摄影机、辉光、排版与视差"
                                                    FontSize="11"
                                                    Foreground="#8FF2EBDD" />
                                     </StackPanel>
@@ -268,6 +268,90 @@
                                             TickFrequency="0.02"
                                             Value="{Binding FumeTuning.HeroScale}" />
                                 </StackPanel>
+
+                                <Border Height="1" Background="#20F2EBDD" Margin="0,2" />
+
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="鼠标视差"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#FFF2EBDD" />
+                                        <TextBlock Text="倾斜、响应与视觉中心"
+                                                   FontSize="11"
+                                                   Foreground="#8FF2EBDD" />
+                                    </StackPanel>
+                                    <Button Grid.Column="1"
+                                            Classes="Basic FumeSegment"
+                                            Command="{Binding FumeParallaxTuning.ResetCommand}"
+                                            Content="恢复默认"
+                                            Cursor="Hand"
+                                            IsEnabled="{Binding FumeParallaxTuning.Enabled}" />
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                    <TextBlock Classes="FumeSettingsLabel"
+                                               Text="启用视差效果"
+                                               VerticalAlignment="Center" />
+                                    <ToggleSwitch Grid.Column="1"
+                                                  IsChecked="{Binding FumeParallaxTuning.Enabled, Mode=TwoWay}" />
+                                </Grid>
+
+                                <Border IsEnabled="{Binding FumeParallaxTuning.Enabled}">
+                                    <StackPanel Spacing="16">
+                                        <StackPanel Spacing="7">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="最大倾斜角度" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeParallaxTuning.MaxTilt, StringFormat={}{0:F0}°}" />
+                                            </Grid>
+                                            <Slider Minimum="0"
+                                                    Maximum="30"
+                                                    TickFrequency="1"
+                                                    Value="{Binding FumeParallaxTuning.MaxTilt}" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="7">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="响应速度" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeParallaxTuning.Response, StringFormat={}{0:F1}}" />
+                                            </Grid>
+                                            <Slider Minimum="0.5"
+                                                    Maximum="20"
+                                                    TickFrequency="0.5"
+                                                    Value="{Binding FumeParallaxTuning.Response}" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="7">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="中心 X" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeParallaxTuning.OriginX, StringFormat={}{0:P0}}" />
+                                            </Grid>
+                                            <Slider Minimum="0"
+                                                    Maximum="1"
+                                                    TickFrequency="0.01"
+                                                    Value="{Binding FumeParallaxTuning.OriginX}" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="7">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="中心 Y" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeParallaxTuning.OriginY, StringFormat={}{0:P0}}" />
+                                            </Grid>
+                                            <Slider Minimum="0"
+                                                    Maximum="1"
+                                                    TickFrequency="0.01"
+                                                    Value="{Binding FumeParallaxTuning.OriginY}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </ScrollViewer>
                     </Border>

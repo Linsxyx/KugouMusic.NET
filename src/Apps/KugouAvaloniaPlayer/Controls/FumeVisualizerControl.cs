@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -57,7 +58,7 @@ public sealed class FumeVisualizerControl : Control
     public static readonly StyledProperty<bool> ParallaxEnabledProperty =
         AvaloniaProperty.Register<FumeVisualizerControl, bool>(
             nameof(ParallaxEnabled),
-            true);
+            false);
 
     public static readonly StyledProperty<double> ParallaxMaxTiltProperty =
         AvaloniaProperty.Register<FumeVisualizerControl, double>(
@@ -938,7 +939,7 @@ internal readonly record struct FumeBackgroundShape(
     double Depth,
     int AudioBand);
 
-internal sealed record FumeFrame(
+internal readonly record struct FumeFrame(
     FumeArticleLayout Article,
     IReadOnlyList<FumeBackgroundShape> BackgroundShapes,
     double PlaybackSeconds,
@@ -959,6 +960,7 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
     private static readonly SKColor Primary = new(242, 235, 221);
     private static readonly SKColor Accent = new(214, 169, 31);
     private static readonly SKColor Secondary = new(98, 126, 145);
+    private static readonly ConcurrentDictionary<(string Family, bool Bold), SKTypeface> TypefaceCache = new();
 
     public Rect Bounds { get; } = bounds;
 
@@ -1006,12 +1008,21 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         canvas.Scale((float)scale);
         canvas.Translate((float)-cameraX, (float)-cameraY);
 
+        using var paint = new SKPaint();
+        paint.IsAntialias = true;
+        paint.Style = SKPaintStyle.Stroke;
+        paint.StrokeCap = SKStrokeCap.Round;
         foreach (var shape in frame.BackgroundShapes)
-            DrawShape(canvas, shape, cameraX, cameraY);
+            DrawShape(canvas, shape, cameraX, cameraY, paint);
         canvas.Restore();
     }
 
-    private void DrawShape(SKCanvas canvas, FumeBackgroundShape shape, double cameraX, double cameraY)
+    private void DrawShape(
+        SKCanvas canvas,
+        FumeBackgroundShape shape,
+        double cameraX,
+        double cameraY,
+        SKPaint paint)
     {
         var band = frame.Energy.At(shape.AudioBand);
         var audioScale = Mix(0.95, 1.45, Math.Clamp(band, 0, 1));
@@ -1026,14 +1037,12 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
             0.42);
         var color = shape.Kind is FumeShapeKind.Square or FumeShapeKind.Spark ? Accent : Secondary;
 
-        using var paint = new SKPaint();
-        paint.IsAntialias = true;
-        paint.Style = SKPaintStyle.Stroke;
         paint.StrokeWidth = shape.Kind == FumeShapeKind.Spark ? 1.15f : 1.05f;
-        paint.StrokeCap = SKStrokeCap.Round;
         paint.Color = WithAlpha(color, opacity);
-        if (shape.Kind == FumeShapeKind.Spark)
-            paint.MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, (float)(3.5 * audioScale));
+        using var sparkBlur = shape.Kind == FumeShapeKind.Spark
+            ? SKMaskFilter.CreateBlur(SKBlurStyle.Normal, (float)(3.5 * audioScale))
+            : null;
+        paint.MaskFilter = sparkBlur;
 
         canvas.Save();
         canvas.Translate((float)x, (float)y);
@@ -1059,11 +1068,15 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
 
     private void DrawArticle(SKCanvas canvas)
     {
+        using var textPaint = new SKPaint();
+        textPaint.IsAntialias = true;
+        using var glowPaint = new SKPaint();
+        glowPaint.IsAntialias = true;
         foreach (var block in frame.Article.Blocks)
         {
             if (!IsVisible(block))
                 continue;
-            DrawBlock(canvas, block);
+            DrawBlock(canvas, block, textPaint, glowPaint);
         }
     }
 
@@ -1080,17 +1093,21 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
                top <= Bounds.Height + overscan;
     }
 
-    private void DrawBlock(SKCanvas canvas, FumeArticleBlock block)
+    private void DrawBlock(
+        SKCanvas canvas,
+        FumeArticleBlock block,
+        SKPaint paint,
+        SKPaint glowPaint)
     {
-        using var requestedTypeface = SKTypeface.FromFamilyName(
-            block.TypefaceFamily,
-            block.IsHero ? SKFontStyleWeight.SemiBold : SKFontStyleWeight.Normal,
-            SKFontStyleWidth.Normal,
-            SKFontStyleSlant.Upright);
-        var typeface = requestedTypeface ?? SKTypeface.Default;
+        var typeface = TypefaceCache.GetOrAdd(
+            (block.TypefaceFamily, block.IsHero),
+            static key => SKTypeface.FromFamilyName(
+                              key.Family,
+                              key.Bold ? SKFontStyleWeight.SemiBold : SKFontStyleWeight.Normal,
+                              SKFontStyleWidth.Normal,
+                              SKFontStyleSlant.Upright) ??
+                          SKTypeface.Default);
         using var font = new SKFont(typeface, (float)block.FontSize);
-        using var paint = new SKPaint();
-        paint.IsAntialias = true;
         var lineStart = block.Line.Start.TotalSeconds;
         var lineEnd = lineStart + Math.Max(block.Line.Duration.TotalSeconds, 0.12);
         var lineDuration = Math.Max(lineEnd - lineStart, 0.18);
@@ -1128,10 +1145,19 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
 
         var printedProgress = ResolvePrintedProgress(block);
         var hasTimedWords = HasTimedWordRanges(block);
+        using var glowMask = frame.GlowIntensity > 0
+            ? SKMaskFilter.CreateBlur(
+                SKBlurStyle.Normal,
+                (float)((3 + block.FontSize * 0.12) * frame.GlowIntensity))
+            : null;
+        glowPaint.MaskFilter = glowMask;
         for (var lineIndex = 0; lineIndex < block.RenderLines.Count; lineIndex++)
         {
             var renderLine = block.RenderLines[lineIndex];
             var baseline = block.Y + lineIndex * block.LineHeight + block.LineHeight * 0.78;
+            paint.Color = WithAlpha(Primary, waitingOpacity);
+            paint.MaskFilter = null;
+            canvas.DrawText(renderLine.Text, (float)block.X, (float)baseline, font, paint);
             for (var glyphIndex = renderLine.Start; glyphIndex < renderLine.End; glyphIndex++)
             {
                 var glyph = block.Graphemes[glyphIndex];
@@ -1158,10 +1184,6 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
                     0,
                     1), 1.35);
 
-                paint.Color = WithAlpha(Primary, waitingOpacity);
-                paint.MaskFilter = null;
-                canvas.DrawText(glyph, (float)x, (float)baseline, font, paint);
-
                 var playedFraction = ResolvePlayedFraction(
                     block,
                     glyphIndex,
@@ -1177,16 +1199,11 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
 
                 if (frame.GlowIntensity > 0)
                 {
-                    using var glowPaint = new SKPaint();
-                    glowPaint.IsAntialias = true;
                     glowPaint.Color = WithAlpha(
                         color,
                         (0.36 + glyphProgress * 0.36) *
                         EaseOutCubic(playedFraction) *
                         (1 - trail * 0.55));
-                    glowPaint.MaskFilter = SKMaskFilter.CreateBlur(
-                        SKBlurStyle.Normal,
-                        (float)((3 + block.FontSize * 0.12) * frame.GlowIntensity));
                     canvas.DrawText(glyph, (float)x, (float)baseline, font, glowPaint);
                 }
 
@@ -1218,11 +1235,7 @@ internal sealed class FumeDrawOperation(Rect bounds, FumeFrame frame) : ICustomD
         {
             var line = block.RenderLines[lineIndex];
             var baseline = block.Y + lineIndex * block.LineHeight + block.LineHeight * 0.78;
-            for (var glyphIndex = line.Start; glyphIndex < line.End; glyphIndex++)
-            {
-                var x = block.X + block.GlyphOffsets[glyphIndex] - block.GlyphOffsets[line.Start];
-                canvas.DrawText(block.Graphemes[glyphIndex], (float)x, (float)baseline, font, paint);
-            }
+            canvas.DrawText(line.Text, (float)block.X, (float)baseline, font, paint);
         }
     }
 

@@ -66,6 +66,7 @@ internal sealed class FumeRenderLine
 {
     public required int Start { get; init; }
     public required int End { get; init; }
+    public required string Text { get; init; }
     public required double Top { get; init; }
     public required double Width { get; init; }
 }
@@ -408,7 +409,7 @@ internal static class FumeArticleLayoutEngine
         for (var index = 0; index < advances.Length; index++)
             glyphOffsets[index + 1] = glyphOffsets[index] + advances[index];
 
-        var renderLines = BuildRenderLines(glyphOffsets, width);
+        var renderLines = BuildRenderLines(graphemes, glyphOffsets, width);
         var wordRanges = BuildWordRanges(line, graphemes);
         var rangeByGlyph = ValueEnumerable.Repeat(-1, graphemes.Count).ToArray();
         for (var rangeIndex = 0; rangeIndex < wordRanges.Count; rangeIndex++)
@@ -431,11 +432,12 @@ internal static class FumeArticleLayoutEngine
     }
 
     private static IReadOnlyList<FumeRenderLine> BuildRenderLines(
+        IReadOnlyList<string> graphemes,
         IReadOnlyList<double> glyphOffsets,
         double maxWidth)
     {
         if (glyphOffsets.Count <= 1)
-            return [new FumeRenderLine { Start = 0, End = 0, Top = 0, Width = 0 }];
+            return [new FumeRenderLine { Start = 0, End = 0, Text = string.Empty, Top = 0, Width = 0 }];
 
         var result = new List<FumeRenderLine>();
         var start = 0;
@@ -453,6 +455,7 @@ internal static class FumeArticleLayoutEngine
             {
                 Start = start,
                 End = end,
+                Text = string.Concat(graphemes.Skip(start).Take(end - start)),
                 Top = result.Count,
                 Width = glyphOffsets[end] - glyphOffsets[start]
             });

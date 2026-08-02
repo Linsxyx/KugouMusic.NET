@@ -57,7 +57,7 @@ public sealed class PendoloVisualizerControl : Control
     public static readonly StyledProperty<bool> ParallaxEnabledProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, bool>(
             nameof(ParallaxEnabled),
-            true);
+            false);
 
     public static readonly StyledProperty<double> ParallaxMaxTiltProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, double>(
