@@ -68,6 +68,11 @@
             CameraSpeed="{Binding FumeTuning.CameraSpeed}"
             GlowIntensity="{Binding FumeTuning.GlowIntensity}"
             HeroScale="{Binding FumeTuning.HeroScale}"
+            ParallaxEnabled="{Binding FumeParallaxTuning.Enabled}"
+            ParallaxMaxTilt="{Binding FumeParallaxTuning.MaxTilt}"
+            ParallaxResponse="{Binding FumeParallaxTuning.Response}"
+            ParallaxOriginX="{Binding FumeParallaxTuning.OriginX}"
+            ParallaxOriginY="{Binding FumeParallaxTuning.OriginY}"
             IsHitTestVisible="False" />
 
         <TextBlock Text="等待歌词排版"

@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using KugouAvaloniaPlayer.Models;
@@ -197,5 +199,11 @@ public partial class NowPlayingView : UserControl
 
         ThemeContentHost.Children.Clear();
         _loadedThemePreset = null;
+    }
+
+    private void ShowModeConfigurationFlyout(object? sender, PointerEventArgs e) {
+        if (sender is not Button btn)
+            return; // fastfail
+        FlyoutBase.ShowAttachedFlyout(btn);
     }
 }

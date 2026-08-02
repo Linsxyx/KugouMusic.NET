@@ -52,6 +52,10 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         _mainWindowService = mainWindowService;
         _songInteractionService = songInteractionService;
         FumeTuning = new FumeTuningViewModel();
+        PendoloParallaxTuning = new MouseParallaxTuningViewModel(
+            SettingsManager.Settings.PendoloMouseParallax ??= new MouseParallaxSettings());
+        FumeParallaxTuning = new MouseParallaxTuningViewModel(
+            SettingsManager.Settings.FumeMouseParallax ??= new MouseParallaxSettings());
 
         Player.PropertyChanged += OnPlayerPropertyChanged;
         NowPlayingLyricDisplayMode = SettingsManager.Settings.PlayPageLyricDisplayMode;
@@ -63,6 +67,18 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     public PlayerViewModel Player { get; }
     public FumeTuningViewModel FumeTuning { get; }
+    public MouseParallaxTuningViewModel PendoloParallaxTuning { get; }
+    public MouseParallaxTuningViewModel FumeParallaxTuning { get; }
+
+    // The tuning set currently visible in the parallax Flyout; follows the selected
+    // theme so each preset keeps its own MaxTilt / Response / Origin.
+    public MouseParallaxTuningViewModel ActiveParallaxTuning =>
+        SelectedThemePreset switch
+        {
+            NowPlayingThemePreset.Pendolo => PendoloParallaxTuning,
+            NowPlayingThemePreset.Fume => FumeParallaxTuning,
+            _ => PendoloParallaxTuning
+        };
 
     public IReadOnlyList<NowPlayingThemePresetOption> ThemePresets =>
         NowPlayingThemePresetRegistry.Presets;
@@ -127,6 +143,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsFumeTheme))]
     [NotifyPropertyChangedFor(nameof(IsStandardLayoutVisible))]
     [NotifyPropertyChangedFor(nameof(CurrentThemePresetName))]
+    [NotifyPropertyChangedFor(nameof(ActiveParallaxTuning))]
     public partial NowPlayingThemePreset SelectedThemePreset { get; set; } =
         NowPlayingThemePreset.Standard;
 
