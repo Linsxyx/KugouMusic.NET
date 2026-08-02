@@ -25,28 +25,18 @@ namespace KugouAvaloniaPlayer.Services;
 
 public sealed partial class AvaloniaAppServiceProvider
 {
-    public ISessionPersistence SessionPersistence { get; init; } = new KugouSessionPersistence();
-
-    public CookieContainer CookieContainer { get; init; } = new();
-
-    public required ILoggerFactory LoggerFactory { get; init; }
-
-    public required Dispatcher UiDispatcher { get; init; }
-
     [System.Diagnostics.Conditional("DI")]
-    private void Setup() => DI.Setup(nameof(AvaloniaAppServiceProvider))
-        .Root<MainWindowViewModel>()
-        .Root<PlayerViewModel>()
-        .Root<IMainWindowService>()
-        .Root<IGlobalShortcutService>()
-        .Root<ISystemMediaSessionService>()
-        .Root<IStartupActivationServer>()
-        .Root<IStartupActivationService>()
+    private static void Setup() => DI.Setup()
+        .Hint(Hint.Resolve, "Off")
+        .Root<Owned<DesktopAppRoot>>(
+            nameof(CreateRoot),
+            kind: RootKinds.Internal | RootKinds.Partial | RootKinds.Method)
+        .Bind<DesktopAppRoot>().To<DesktopAppRoot>()
 
-        .Bind<ISessionPersistence>().As(Singleton).To(_ => SessionPersistence)
-        .Bind<CookieContainer>().As(Singleton).To(_ => CookieContainer)
-        .Bind<ILoggerFactory>().As(Singleton).To(_ => LoggerFactory)
-        .Bind<Dispatcher>().As(Singleton).To(_ => UiDispatcher)
+        .RootArg<ILoggerFactory>("loggerFactory")
+        .RootArg<Dispatcher>("uiDispatcher")
+        .Bind<ISessionPersistence>().As(Singleton).To<KugouSessionPersistence>()
+        .Bind<CookieContainer>().As(Singleton).To<CookieContainer>()
         .Bind<IUiDispatcherService>().As(Singleton).To<UiDispatcherService>()
         .Bind<IUiPreferencesState>().As(Singleton).To<UiPreferencesState>()
         .Bind<IMessenger>().As(Singleton).To(_ => new WeakReferenceMessenger())
@@ -54,8 +44,9 @@ public sealed partial class AvaloniaAppServiceProvider
 
         .Bind<KgSessionManager>().As(Singleton).To<KgSessionManager>()
         .Bind<KgSignatureHandler>().To<KgSignatureHandler>()
-        .Bind<IKgTransport>().As(Singleton).To((CookieContainer cookieContainer, KgSignatureHandler signatureHandler) =>
-            CreateTransport(cookieContainer, signatureHandler))
+        .Bind<HttpClient>().As(Singleton).To((CookieContainer cookieContainer, KgSignatureHandler signatureHandler) =>
+            CreateHttpClient(cookieContainer, signatureHandler))
+        .Bind<IKgTransport>().As(Singleton).To<KgHttpTransport>()
 
         .Bind<ISukiToastManager>().As(Singleton).To<SukiToastManager>()
         .Bind<ISukiDialogManager>().As(Singleton).To<SukiDialogManager>()
@@ -121,13 +112,11 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<EqSettingsViewModel>().To<EqSettingsViewModel>()
         .Bind<RankViewModel>().As(Singleton).To<RankViewModel>();
 
-    public TService GetService<TService>()
-        where TService : class
-    {
-        return Resolve<TService>();
-    }
+    internal partial Owned<DesktopAppRoot> CreateRoot(
+        ILoggerFactory loggerFactory,
+        Dispatcher uiDispatcher);
 
-    private static KgHttpTransport CreateTransport(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
+    private static HttpClient CreateHttpClient(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
     {
         var primaryHandler = new HttpClientHandler
         {
@@ -138,7 +127,14 @@ public sealed partial class AvaloniaAppServiceProvider
 
         signatureHandler.InnerHandler = primaryHandler;
 
-        var client = new HttpClient(signatureHandler, disposeHandler: true);
-        return new KgHttpTransport(client);
+        return new HttpClient(signatureHandler, disposeHandler: true);
     }
 }
+
+internal readonly record struct DesktopAppRoot(
+    MainWindowViewModel MainWindowViewModel,
+    PlayerViewModel PlayerViewModel,
+    IMainWindowService MainWindowService,
+    IGlobalShortcutService GlobalShortcutService,
+    ISystemMediaSessionService SystemMediaSessionService,
+    IStartupActivationServer StartupActivationServer);

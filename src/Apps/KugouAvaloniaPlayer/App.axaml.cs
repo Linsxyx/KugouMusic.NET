@@ -48,17 +48,17 @@ public partial class App : Application
 
             ApplySavedTheme();
             AppFontService.ApplyGlobalFont(this);
-            _serviceProvider = new AvaloniaAppServiceProvider
-            {
-                LoggerFactory = _loggerFactory,
-                UiDispatcher = Dispatcher.CurrentDispatcher
-            };
-            var services = _serviceProvider;
+            _serviceProvider = new AvaloniaAppServiceProvider();
+            var ownedRoot = _serviceProvider.CreateRoot(
+                _loggerFactory,
+                Dispatcher.CurrentDispatcher);
+            var (vm,
+                playerVm,
+                mainWindowService,
+                globalShortcutService,
+                systemMediaSessionService,
+                startupActivationServer) = ownedRoot.Value;
 
-            var vm = services.GetService<MainWindowViewModel>();
-            var playerVm = services.GetService<PlayerViewModel>();
-            var mainWindowService = services.GetService<IMainWindowService>();
-            var startupActivationServer = services.GetService<IStartupActivationServer>();
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 var mainWindow = new MainWindow
@@ -66,9 +66,6 @@ public partial class App : Application
                     DataContext = vm
                 };
                 desktop.MainWindow = mainWindow;
-
-                var globalShortcutService = services.GetService<IGlobalShortcutService>();
-                var systemMediaSessionService = services.GetService<ISystemMediaSessionService>();
 
                 void InitializeGlobalShortcuts(object? _, EventArgs __)
                 {
@@ -103,14 +100,13 @@ public partial class App : Application
                     if (activatableLifetime != null)
                         activatableLifetime.Activated -= OnApplicationActivated;
 #endif
-                    startupActivationServer.Stop();
                     globalShortcutService.UnregisterAll();
-                    systemMediaSessionService.Shutdown();
                     ShutdownTrayIcon();
                     _imageLoader?.Dispose();
+                    ownedRoot.Dispose();
+                    _serviceProvider?.Dispose();
                     SimpleAudioPlayer.Free();
                     Program.ShutdownStartupCoordinator();
-                    _serviceProvider?.Dispose();
                     _loggerFactory?.Dispose();
                     Log.CloseAndFlush();
                 };
