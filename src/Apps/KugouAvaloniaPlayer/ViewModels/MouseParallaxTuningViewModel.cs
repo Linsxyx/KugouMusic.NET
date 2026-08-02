@@ -39,7 +39,7 @@ public sealed partial class MouseParallaxTuningViewModel : ObservableObject
     [RelayCommand]
     private void Reset()
     {
-        Enabled = true;
+        Enabled = false;
         MaxTilt = 16;
         Response = 7.5;
         OriginX = 0.3;

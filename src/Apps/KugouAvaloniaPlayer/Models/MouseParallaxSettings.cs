@@ -5,7 +5,7 @@ namespace KugouAvaloniaPlayer.Models;
 // the render pivot, combined into a RelativePoint by the visualizer controls.
 public sealed class MouseParallaxSettings
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; }
 
     public double MaxTilt { get; set; } = 14;
 

@@ -20,7 +20,7 @@ public sealed class MouseParallax3D(Control target) {
     // When disabled the plane stays flat: input is ignored and the transform is
     // reset. The property is applied live via ResetToFlatIfDisabled whenever a
     // top-level pointer event lands.
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; }
 
     private RelativePoint _origin = RelativePoint.Center;
 

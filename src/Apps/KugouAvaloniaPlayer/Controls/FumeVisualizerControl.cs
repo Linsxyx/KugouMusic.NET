@@ -57,7 +57,7 @@ public sealed class FumeVisualizerControl : Control
     public static readonly StyledProperty<bool> ParallaxEnabledProperty =
         AvaloniaProperty.Register<FumeVisualizerControl, bool>(
             nameof(ParallaxEnabled),
-            true);
+            false);
 
     public static readonly StyledProperty<double> ParallaxMaxTiltProperty =
         AvaloniaProperty.Register<FumeVisualizerControl, double>(
