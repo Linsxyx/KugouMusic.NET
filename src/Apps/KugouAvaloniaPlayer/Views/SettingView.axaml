@@ -812,6 +812,55 @@
                                     </Grid>
                                 </StackPanel>
                             </suki:GlassCard>
+                            
+                             <suki:GlassCard IsOpaque="True"
+                                            Padding="14"
+                                            IsVisible="{Binding IsTaskbarLyricsSupported}">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="任务栏歌词"
+                                               FontWeight="DemiBold"
+                                               FontSize="15" />
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="启用任务栏歌词" FontWeight="DemiBold" />
+                                            <TextBlock Text="使用 Windows 原生 DirectWrite 显示逐字高亮歌词"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding EnableTaskbarLyrics, Mode=TwoWay}" />
+                                    </Grid>
+
+                                    <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="显示翻译" FontWeight="DemiBold" />
+                                            <TextBlock Text="关闭后使用更大的单行主歌词"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding TaskbarLyricsShowTranslation, Mode=TwoWay}" />
+                                    </Grid>
+
+                                    <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="歌词对齐" FontWeight="DemiBold" />
+                                            <TextBlock Text="设置任务栏歌词区域内的左右对齐方式"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="1"
+                                                  MinWidth="140"
+                                                  ItemsSource="{Binding TaskbarLyricAlignmentOptions}"
+                                                  SelectedItem="{Binding TaskbarSelectedLyricAlignment}" />
+                                    </Grid>
+                                </StackPanel>
+                            </suki:GlassCard>
                         </StackPanel>
                     </suki:GlassCard>
 

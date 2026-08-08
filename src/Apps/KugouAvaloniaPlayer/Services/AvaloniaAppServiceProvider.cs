@@ -68,6 +68,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<IDesktopLyricWindowService>().As(Singleton).To<DesktopLyricWindowService>()
         .Bind<IGlobalShortcutService>().As(Singleton).To<GlobalShortcutServiceImpl>()
         .Bind<ISystemMediaSessionService>().As(Singleton).To<SystemMediaSessionServiceImpl>()
+        .Bind<ITaskbarLyricsService>().As(Singleton).To<TaskbarLyricsService>()
         .Bind<IFolderPickerService>().As(Singleton).To<FolderPickerService>()
         .Bind<ISongInteractionService>().As(Singleton).To<SongInteractionService>()
         .Bind<IJellyfinClient>().As(Singleton).To<JellyfinClient>()
@@ -137,4 +138,5 @@ internal readonly record struct DesktopAppRoot(
     IMainWindowService MainWindowService,
     IGlobalShortcutService GlobalShortcutService,
     ISystemMediaSessionService SystemMediaSessionService,
+    ITaskbarLyricsService TaskbarLyricsService,
     IStartupActivationServer StartupActivationServer);

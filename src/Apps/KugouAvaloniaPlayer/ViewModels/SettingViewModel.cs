@@ -53,6 +53,7 @@ public partial class SettingViewModel : PageViewModelBase
     private readonly KgSessionManager _sessionManager;
     private readonly IMainWindowService _mainWindowService;
     private readonly IMessenger _messenger;
+    private readonly ITaskbarLyricsService _taskbarLyricsService;
     private readonly IUiPreferencesState _uiPreferencesState;
     private readonly UserClient _userClient;
 
@@ -90,6 +91,15 @@ public partial class SettingViewModel : PageViewModelBase
 
     [ObservableProperty]
     public partial bool DesktopLyricDoubleLineEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool EnableTaskbarLyrics { get; set; }
+
+    [ObservableProperty]
+    public partial bool TaskbarLyricsShowTranslation { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string TaskbarSelectedLyricAlignment { get; set; } = LyricAlignmentLeft;
 
     [ObservableProperty]
     public partial bool EnableGlobalShortcuts { get; set; }
@@ -184,7 +194,7 @@ public partial class SettingViewModel : PageViewModelBase
         ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
         IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService,
         IFolderPickerService folderPickerService, IUiPreferencesState uiPreferencesState,
-        IMainWindowService mainWindowService, IMessenger messenger)
+        IMainWindowService mainWindowService, IMessenger messenger, ITaskbarLyricsService taskbarLyricsService)
     {
         _userClient = userClient;
         _authClient = authClient;
@@ -197,6 +207,7 @@ public partial class SettingViewModel : PageViewModelBase
         _uiPreferencesState = uiPreferencesState;
         _mainWindowService = mainWindowService;
         _messenger = messenger;
+        _taskbarLyricsService = taskbarLyricsService;
 
         Player = player;
         EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
@@ -227,6 +238,11 @@ public partial class SettingViewModel : PageViewModelBase
             UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
             RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
+            EnableTaskbarLyrics = IsTaskbarLyricsSupported && SettingsManager.Settings.EnableTaskbarLyrics;
+            TaskbarLyricsShowTranslation = SettingsManager.Settings.TaskbarLyricsShowTranslation;
+            TaskbarSelectedLyricAlignment = SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right
+                ? LyricAlignmentRight
+                : LyricAlignmentLeft;
             LoadDesktopLyricColorEditorFromSettings();
             LoadDesktopLyricFontEditorFromSettings();
             LoadPlayPageLyricColorEditorFromSettings();
@@ -258,6 +274,8 @@ public partial class SettingViewModel : PageViewModelBase
 
     public bool IsOutputDeviceSelectionVisible => !OperatingSystem.IsLinux();
 
+    public bool IsTaskbarLyricsSupported => _taskbarLyricsService.IsSupported;
+
     public string[] SettingsSections { get; } =
     [
         SettingsSectionGeneral, SettingsSectionPlayback, SettingsSectionShortcuts, SettingsSectionLyrics,
@@ -268,6 +286,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string[] LyricColorTargetOptions { get; } = [LyricTargetMain, LyricTargetTranslation];
     public string[] LyricSettingsScopeOptions { get; } = [LyricScopeDesktop, LyricScopePlayPage];
     public string[] LyricAlignmentOptions { get; } = [LyricAlignmentCenter, LyricAlignmentLeft, LyricAlignmentRight];
+    public string[] TaskbarLyricAlignmentOptions { get; } = [LyricAlignmentLeft, LyricAlignmentRight];
 
     public string[] LyricColorModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
     public string[] LyricFontModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
@@ -651,6 +670,43 @@ public partial class SettingViewModel : PageViewModelBase
         SettingsManager.Settings.DesktopLyricDoubleLineEnabled = value;
         SettingsManager.Save();
         NotifyUiPreferencesChanged();
+    }
+
+    partial void OnEnableTaskbarLyricsChanged(bool value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        if (!IsTaskbarLyricsSupported)
+        {
+            EnableTaskbarLyrics = false;
+            return;
+        }
+
+        _taskbarLyricsService.SetEnabled(value);
+        SettingsManager.Settings.EnableTaskbarLyrics = _taskbarLyricsService.IsEnabled;
+        if (value != _taskbarLyricsService.IsEnabled)
+            EnableTaskbarLyrics = _taskbarLyricsService.IsEnabled;
+        SettingsManager.Save();
+    }
+
+    partial void OnTaskbarLyricsShowTranslationChanged(bool value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.TaskbarLyricsShowTranslation = value;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
+    }
+
+    partial void OnTaskbarSelectedLyricAlignmentChanged(string value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.TaskbarLyricsAlignment = value == LyricAlignmentRight
+            ? LyricAlignmentOption.Right
+            : LyricAlignmentOption.Left;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
     }
 
     partial void OnDesktopSelectedLyricColorTargetChanged(string value)

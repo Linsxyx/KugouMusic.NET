@@ -17,7 +17,7 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
-    <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-windows'))">
         <DefineConstants>$(DefineConstants);KUGOU_WINDOWS</DefineConstants>
     </PropertyGroup>
     
@@ -80,6 +80,10 @@
                  CopyToPublishDirectory="PreserveNewest"
                  TargetPath="KugouTaskbarNative.dll"
                  Condition="Exists('Native\KugouTaskbarNative.dll')" />
+        <Content Include="Native\KugouTaskbarLyrics.exe"
+                 CopyToOutputDirectory="PreserveNewest"
+                 CopyToPublishDirectory="PreserveNewest"
+                 TargetPath="KugouTaskbarLyrics.exe" />
     </ItemGroup>
 
     <ItemGroup>

@@ -57,6 +57,7 @@ public partial class App : Application
                 mainWindowService,
                 globalShortcutService,
                 systemMediaSessionService,
+                taskbarLyricsService,
                 startupActivationServer) = ownedRoot.Value;
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -77,6 +78,8 @@ public partial class App : Application
 
                 mainWindow.Opened += InitializeGlobalShortcuts;
                 startupActivationServer.Start();
+                if (taskbarLyricsService.IsSupported)
+                    taskbarLyricsService.SetEnabled(SettingsManager.Settings.EnableTaskbarLyrics);
 
 #if KUGOU_MACOS
                 var activatableLifetime = this.TryGetFeature<IActivatableLifetime>();

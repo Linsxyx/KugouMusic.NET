@@ -185,6 +185,12 @@ public class AppSettings
 
     public bool UseLightweightNowPlayingLyricScroll { get; set; }
 
+    public bool EnableTaskbarLyrics { get; set; }
+
+    public bool TaskbarLyricsShowTranslation { get; set; } = true;
+
+    public LyricAlignmentOption TaskbarLyricsAlignment { get; set; } = LyricAlignmentOption.Left;
+
     public int AudioOutputDeviceId { get; set; } = SystemDefaultAudioOutputDeviceId;
 
     public float MusicVolume { get; set; } = 0.8f;
