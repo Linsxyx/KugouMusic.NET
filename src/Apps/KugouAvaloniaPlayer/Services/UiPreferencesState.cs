@@ -71,7 +71,7 @@ public sealed class UiPreferencesState : IUiPreferencesState
                 settings.DesktopLyricCustomTranslationColor,
                 settings.DesktopLyricUseCustomFont,
                 settings.DesktopLyricCustomFontFamily,
-                LyricAlignmentOption.Center,
+                settings.DesktopLyricAlignment,
                 settings.DesktopLyricFontSize),
             new LyricStylePreferences(
                 settings.PlayPageLyricUseCustomMainColor,

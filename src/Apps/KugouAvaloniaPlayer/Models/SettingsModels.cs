@@ -205,7 +205,8 @@ public class AppSettings
     public string DesktopLyricCustomTranslationColor { get; set; } = "#CCFFFFFF";
     public bool DesktopLyricUseCustomFont { get; set; }
     public string DesktopLyricCustomFontFamily { get; set; } = string.Empty;
-    public LyricAlignmentOption DesktopLyricAlignment { get; set; } = LyricAlignmentOption.Left;
+    public LyricAlignmentOption DesktopLyricAlignment { get; set; } = LyricAlignmentOption.Center;
+    public bool HasDesktopLyricAlignmentPreference { get; set; }
     public double DesktopLyricFontSize { get; set; } = 30;
     public bool DesktopLyricShowTranslation { get; set; } = true;
     public bool DesktopLyricDoubleLineEnabled { get; set; }

@@ -6,6 +6,7 @@ using Avalonia.Media;
 using AvaloniaLyrics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -48,6 +49,9 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     public partial IBrush LyricForeground { get; set; } = DefaultLyricBrush;
+
+    [ObservableProperty]
+    public partial TextAlignment LyricTextAlignment { get; set; } = TextAlignment.Center;
 
     [ObservableProperty]
     public partial double TranslationFontSize { get; set; } = 18;
@@ -274,7 +278,8 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
             lyric.UseCustomTranslationColor,
             lyric.TranslationColorHex,
             lyric.UseCustomFont,
-            lyric.FontFamilyName);
+            lyric.FontFamilyName,
+            lyric.Alignment);
     }
 
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -461,9 +466,11 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
         bool useCustomTranslationColor,
         string translationColorHex,
         bool useCustomFont,
-        string fontFamilyName)
+        string fontFamilyName,
+        LyricAlignmentOption alignment)
     {
         ApplyFontSettings(useCustomFont, fontFamilyName);
+        ApplyAlignmentSettings(alignment);
 
         LyricForeground = useCustomMainColor
             ? new SolidColorBrush(ParseColorOrDefault(mainColorHex, Colors.White))
@@ -484,6 +491,16 @@ public partial class DesktopLyricViewModel : ViewModelBase, IDisposable
     private void ApplyFontSettings(bool useCustomFont, string fontFamilyName)
     {
         LyricFontFamily = AppFontService.ResolveEffectiveLyricFontFamily(useCustomFont, fontFamilyName);
+    }
+
+    private void ApplyAlignmentSettings(LyricAlignmentOption alignment)
+    {
+        LyricTextAlignment = alignment switch
+        {
+            LyricAlignmentOption.Left => TextAlignment.Left,
+            LyricAlignmentOption.Right => TextAlignment.Right,
+            _ => TextAlignment.Center
+        };
     }
 
     private static Color ParseColorOrDefault(string? colorText, Color fallback)

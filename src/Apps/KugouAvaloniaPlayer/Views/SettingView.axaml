@@ -524,6 +524,19 @@
                                                       IsChecked="{Binding DesktopLyricDoubleLineEnabled, Mode=TwoWay}" />
                                     </Grid>
 
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="对齐方式" FontWeight="DemiBold" />
+                                            <TextBlock Text="设置桌面歌词的水平对齐方式"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="1"
+                                                  MinWidth="220"
+                                                  ItemsSource="{Binding LyricAlignmentOptions}"
+                                                  SelectedItem="{Binding DesktopSelectedLyricAlignment}" />
+                                    </Grid>
+
                                     <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
 
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">

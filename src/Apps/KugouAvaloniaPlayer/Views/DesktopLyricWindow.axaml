@@ -151,7 +151,6 @@
         </Style>
 
         <Style Selector="lyrics|LyricLineControl.DesktopLyricLine">
-            <Setter Property="Preset" Value="DesktopClassic" />
             <Setter Property="FontFamily" Value="{Binding LyricFontFamily}" />
             <Setter Property="PrimaryFontSize" Value="{Binding FontSize}" />
             <Setter Property="TranslationFontSize" Value="{Binding TranslationFontSize}" />
@@ -161,7 +160,8 @@
             <Setter Property="TranslationForeground" Value="{Binding TranslationLineForeground}" />
             <Setter Property="TranslationPlayedForeground" Value="{Binding TranslationWordForeground}" />
             <Setter Property="RomanizationForeground" Value="{Binding TranslationLineForeground}" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="{Binding LyricTextAlignment}" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
     </Window.Styles>
 
@@ -339,7 +339,7 @@
               IsHitTestVisible="False"
               Margin="32,0">
             <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Center"
+                        HorizontalAlignment="Stretch"
                         IsVisible="{Binding IsSingleLineMode}">
                 <lyrics:LyricLineControl Classes="DesktopLyricLine"
                                          Line="{Binding CurrentRenderLyricLine}"

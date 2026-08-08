@@ -136,6 +136,8 @@ public static class SettingsManager
             Settings.UserPlaylistSongSortMode = PlaylistSongSortMode.Default;
         if (!Enum.IsDefined(Settings.LocalPlaylistSongSortMode))
             Settings.LocalPlaylistSongSortMode = PlaylistSongSortMode.Default;
+        if (!Settings.HasDesktopLyricAlignmentPreference || !Enum.IsDefined(Settings.DesktopLyricAlignment))
+            Settings.DesktopLyricAlignment = LyricAlignmentOption.Center;
         Settings.CustomBackgroundImagePath = string.IsNullOrWhiteSpace(Settings.CustomBackgroundImagePath)
             ? null
             : Settings.CustomBackgroundImagePath;

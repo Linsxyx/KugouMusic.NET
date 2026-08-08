@@ -93,6 +93,9 @@ public partial class SettingViewModel : PageViewModelBase
     public partial bool DesktopLyricDoubleLineEnabled { get; set; }
 
     [ObservableProperty]
+    public partial string DesktopSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
+
+    [ObservableProperty]
     public partial bool EnableTaskbarLyrics { get; set; }
 
     [ObservableProperty]
@@ -238,6 +241,7 @@ public partial class SettingViewModel : PageViewModelBase
             UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
             RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
+            DesktopSelectedLyricAlignment = FormatAlignment(SettingsManager.Settings.DesktopLyricAlignment);
             EnableTaskbarLyrics = IsTaskbarLyricsSupported && SettingsManager.Settings.EnableTaskbarLyrics;
             TaskbarLyricsShowTranslation = SettingsManager.Settings.TaskbarLyricsShowTranslation;
             TaskbarSelectedLyricAlignment = SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right
@@ -712,6 +716,16 @@ public partial class SettingViewModel : PageViewModelBase
     partial void OnDesktopSelectedLyricColorTargetChanged(string value)
     {
         LoadDesktopLyricColorEditorFromSettings();
+    }
+
+    partial void OnDesktopSelectedLyricAlignmentChanged(string value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.DesktopLyricAlignment = ParseAlignment(value);
+        SettingsManager.Settings.HasDesktopLyricAlignmentPreference = true;
+        SettingsManager.Save();
+        NotifyUiPreferencesChanged();
     }
 
     partial void OnPlayPageSelectedLyricColorTargetChanged(string value)
