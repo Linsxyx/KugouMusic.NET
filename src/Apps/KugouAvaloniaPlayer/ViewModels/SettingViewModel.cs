@@ -41,6 +41,8 @@ public partial class SettingViewModel : PageViewModelBase
     private const string LyricAlignmentCenter = "居中";
     private const string LyricAlignmentLeft = "居左";
     private const string LyricAlignmentRight = "居右";
+    private const string DesktopLyricLayoutHorizontal = "横向";
+    private const string DesktopLyricLayoutVertical = "竖向";
     private const string LyricColorModeDefault = "默认";
     private const string LyricColorModeCustom = "自定义";
 
@@ -94,6 +96,9 @@ public partial class SettingViewModel : PageViewModelBase
 
     [ObservableProperty]
     public partial string DesktopSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
+
+    [ObservableProperty]
+    public partial string DesktopSelectedLyricLayout { get; set; } = DesktopLyricLayoutHorizontal;
 
     [ObservableProperty]
     public partial bool EnableTaskbarLyrics { get; set; }
@@ -242,6 +247,9 @@ public partial class SettingViewModel : PageViewModelBase
             RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
             DesktopSelectedLyricAlignment = FormatAlignment(SettingsManager.Settings.DesktopLyricAlignment);
+            DesktopSelectedLyricLayout = SettingsManager.Settings.DesktopLyricLayoutMode == DesktopLyricLayoutMode.Vertical
+                ? DesktopLyricLayoutVertical
+                : DesktopLyricLayoutHorizontal;
             EnableTaskbarLyrics = IsTaskbarLyricsSupported && SettingsManager.Settings.EnableTaskbarLyrics;
             TaskbarLyricsShowTranslation = SettingsManager.Settings.TaskbarLyricsShowTranslation;
             TaskbarSelectedLyricAlignment = SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right
@@ -290,6 +298,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string[] LyricColorTargetOptions { get; } = [LyricTargetMain, LyricTargetTranslation];
     public string[] LyricSettingsScopeOptions { get; } = [LyricScopeDesktop, LyricScopePlayPage];
     public string[] LyricAlignmentOptions { get; } = [LyricAlignmentCenter, LyricAlignmentLeft, LyricAlignmentRight];
+    public string[] DesktopLyricLayoutOptions { get; } = [DesktopLyricLayoutHorizontal, DesktopLyricLayoutVertical];
     public string[] TaskbarLyricAlignmentOptions { get; } = [LyricAlignmentLeft, LyricAlignmentRight];
 
     public string[] LyricColorModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
@@ -724,6 +733,17 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.DesktopLyricAlignment = ParseAlignment(value);
         SettingsManager.Settings.HasDesktopLyricAlignmentPreference = true;
+        SettingsManager.Save();
+        NotifyUiPreferencesChanged();
+    }
+
+    partial void OnDesktopSelectedLyricLayoutChanged(string value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.DesktopLyricLayoutMode = value == DesktopLyricLayoutVertical
+            ? DesktopLyricLayoutMode.Vertical
+            : DesktopLyricLayoutMode.Horizontal;
         SettingsManager.Save();
         NotifyUiPreferencesChanged();
     }

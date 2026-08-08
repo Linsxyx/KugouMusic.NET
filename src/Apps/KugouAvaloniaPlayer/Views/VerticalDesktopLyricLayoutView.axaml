@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             x:Class="KugouAvaloniaPlayer.Views.VerticalDesktopLyricLayoutView"
+             x:DataType="vm:VerticalDesktopLyricLayoutViewModel"
+             LayoutUpdated="OnLayoutUpdated">
+    <UserControl.Styles>
+        <Style Selector="suki|GlassCard#VerticalControlCard">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="RenderTransformOrigin" Value="0.5,0" />
+            <Setter Property="RenderTransform" Value="translateY(-6px)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.22" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="suki|GlassCard#VerticalControlCard.expanded">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="RenderTransform" Value="translateY(0)" />
+        </Style>
+        <Style Selector="suki|GlassCard#VerticalControlCard.locked">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="lyrics|VerticalLyricLineControl.VerticalDesktopLyricLine">
+            <Setter Property="FontFamily" Value="{Binding Owner.LyricFontFamily}" />
+            <Setter Property="PrimaryFontSize" Value="{Binding Owner.FontSize}" />
+            <Setter Property="TranslationFontSize" Value="{Binding Owner.TranslationFontSize}" />
+            <Setter Property="PrimaryForeground" Value="{Binding Owner.LyricForeground}" />
+            <Setter Property="PrimaryPlayedForeground" Value="{Binding Owner.LyricForeground}" />
+            <Setter Property="TranslationForeground" Value="{Binding Owner.TranslationLineForeground}" />
+            <Setter Property="TextAlignment" Value="{Binding Owner.LyricTextAlignment}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="112,*">
+        <Grid Grid.Row="0" Margin="12,0" Background="Transparent">
+            <suki:GlassCard Name="VerticalControlCard"
+                            Classes.expanded="{Binding Owner.IsControlBarExpanded}"
+                            Classes.locked="{Binding Owner.IsLocked}"
+                            IsHitTestVisible="{Binding Owner.IsControlBarExpanded}"
+                            Padding="10,8" Margin="0,8,0,0"
+                            Background="#8C4F4F4F" BorderBrush="#26FFFFFF" BorderThickness="1"
+                            PointerPressed="OnControlSurfacePointerPressed">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="4">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                        <Button Command="{Binding Owner.ToggleTranslationVisibilityCommand}" Classes="Basic" ToolTip.Tip="切换翻译显示">
+                            <Panel>
+                                <Svg Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18"
+                                     Css="path { fill: white; }" IsVisible="{Binding Owner.IsTranslationVisible}" />
+                                <Svg Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18" Opacity="0.38"
+                                     Css="path { fill: white; }" IsVisible="{Binding !Owner.IsTranslationVisible}" />
+                            </Panel>
+                        </Button>
+                        <Button Command="{Binding Owner.DecreaseFontSizeCommand}" Classes="Basic"><TextBlock Text="A-" Foreground="White" /></Button>
+                        <TextBlock Text="{Binding Owner.FontSizeDisplay}" Foreground="White" VerticalAlignment="Center" MinWidth="34" TextAlignment="Center" />
+                        <Button Command="{Binding Owner.IncreaseFontSizeCommand}" Classes="Basic"><TextBlock Text="A+" Foreground="White" /></Button>
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="14">
+                        <Button Command="{Binding Owner.Player.PlayPreviousCommand}" Classes="Basic">
+                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="White" />
+                        </Button>
+                        <Button Command="{Binding Owner.Player.TogglePlayPauseCommand}" Classes="Basic">
+                            <Panel>
+                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="22" Height="22"
+                                     Css="path { fill: white; }" IsVisible="{Binding Owner.Player.IsPlayingAudio}" />
+                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="22" Height="22"
+                                     Css="path { fill: white; }" IsVisible="{Binding !Owner.Player.IsPlayingAudio}" />
+                            </Panel>
+                        </Button>
+                        <Button Command="{Binding Owner.ToggleLockCommand}" Classes="Basic"
+                                IsVisible="{Binding Owner.CanMousePassthrough}" ToolTip.Tip="锁定歌词">
+                            <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="19" Height="19" Css="path { fill: white; }" />
+                        </Button>
+                        <Button Command="{Binding Owner.Player.PlayNextCommand}" Classes="Basic">
+                            <PathIcon Data="{x:Static suki:Icons.ChevronRight}" Foreground="White" />
+                        </Button>
+                        <Button Click="OnCloseClicked" Classes="Basic" ToolTip.Tip="关闭歌词">
+                            <PathIcon Data="{x:Static suki:Icons.Cross}" Foreground="White" Width="12" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </suki:GlassCard>
+        </Grid>
+
+        <Grid x:Name="LyricHost" Grid.Row="1" Margin="24,8,24,20" IsHitTestVisible="False">
+            <lyrics:VerticalLyricLineControl x:Name="SingleVerticalLine"
+                                             Classes="VerticalDesktopLyricLine"
+                                             IsVisible="{Binding Owner.IsSingleLineMode}"
+                                             Line="{Binding CurrentLine}"
+                                             ActiveLine="{Binding CurrentActiveLine}"
+                                             Position="{Binding Owner.Player.CurrentPosition}"
+                                             IsPositionClockRunning="{Binding Owner.Player.IsPlayingAudio}"
+                                             ShowTranslation="{Binding Owner.IsDesktopTranslationActuallyVisible}"
+                                             WordRenderMode="{Binding CurrentWordRenderMode}">
+                <lyrics:VerticalLyricLineControl.Effect>
+                    <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                </lyrics:VerticalLyricLineControl.Effect>
+            </lyrics:VerticalLyricLineControl>
+
+            <StackPanel x:Name="DoubleVerticalLines"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="{Binding Owner.LyricHorizontalAlignment}"
+                        VerticalAlignment="Center"
+                        Spacing="18" IsVisible="{Binding Owner.IsDoubleLineEnabled}">
+                <Panel Classes="DesktopLane" Opacity="{Binding CurrentLaneOpacity}">
+                    <Panel.RenderTransform>
+                        <TranslateTransform X="{Binding CurrentLaneTranslateX}" />
+                    </Panel.RenderTransform>
+                    <lyrics:VerticalLyricLineControl Classes="VerticalDesktopLyricLine"
+                                                     Line="{Binding CurrentLine}" ActiveLine="{Binding CurrentActiveLine}"
+                                                     Position="{Binding Owner.Player.CurrentPosition}"
+                                                     IsPositionClockRunning="{Binding Owner.Player.IsPlayingAudio}"
+                                                     ShowTranslation="False" WordRenderMode="{Binding CurrentWordRenderMode}">
+                        <lyrics:VerticalLyricLineControl.Effect>
+                            <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                        </lyrics:VerticalLyricLineControl.Effect>
+                    </lyrics:VerticalLyricLineControl>
+                </Panel>
+                <Panel Classes="DesktopLane" Opacity="{Binding NextLaneOpacity}">
+                    <Panel.RenderTransform>
+                        <TranslateTransform X="{Binding NextLaneTranslateX}" />
+                    </Panel.RenderTransform>
+                    <lyrics:VerticalLyricLineControl Classes="VerticalDesktopLyricLine"
+                                                     Line="{Binding NextLine}" ActiveLine="{x:Null}"
+                                                     Position="{Binding Owner.Player.CurrentPosition}"
+                                                     IsPositionClockRunning="False"
+                                                     ShowTranslation="False" WordRenderMode="{Binding NextWordRenderMode}">
+                        <lyrics:VerticalLyricLineControl.Effect>
+                            <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
+                        </lyrics:VerticalLyricLineControl.Effect>
+                    </lyrics:VerticalLyricLineControl>
+                </Panel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

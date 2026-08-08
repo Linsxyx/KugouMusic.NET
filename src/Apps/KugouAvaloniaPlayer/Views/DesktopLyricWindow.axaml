@@ -3,39 +3,35 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-        xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
+        xmlns:views="using:KugouAvaloniaPlayer.Views"
         xmlns:suki="https://github.com/kikipoulet/SukiUI"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="150"
         x:Class="KugouAvaloniaPlayer.Views.DesktopLyricWindow"
         x:DataType="vm:DesktopLyricViewModel"
         Title="DesktopLyric"
-        Width="1024"
-        Height="{Binding WindowHeight}"
-        WindowDecorations="None"
-        Background="Transparent"
-        TransparencyLevelHint="Transparent"
-        Topmost="True"
-        ShowInTaskbar="False"
-        WindowStartupLocation="Manual">
+        Width="1024" Height="140" CanResize="False"
+        WindowDecorations="None" Background="Transparent"
+        TransparencyLevelHint="Transparent" Topmost="True"
+        ShowInTaskbar="False" WindowStartupLocation="Manual">
+
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:HorizontalDesktopLyricLayoutViewModel">
+            <views:HorizontalDesktopLyricLayoutView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:VerticalDesktopLyricLayoutViewModel">
+            <views:VerticalDesktopLyricLayoutView />
+        </DataTemplate>
+    </Window.DataTemplates>
 
     <Window.Styles>
-
         <Style Selector="Button">
             <Setter Property="IsTabStop" Value="False" />
-            <Style Selector="^:focus-visible">
-                <Setter Property="FocusAdorner" Value="{x:Null}" />
-            </Style>
+            <Style Selector="^:focus-visible"><Setter Property="FocusAdorner" Value="{x:Null}" /></Style>
         </Style>
-
         <Style Selector="Border#BackgroundPlate">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="CornerRadius" Value="12" />
         </Style>
-
-        <Style Selector="Border#BackgroundPlate.interactive">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-
         <Style Selector="suki|GlassCard#ControlCard">
             <Setter Property="Width" Value="716" />
             <Setter Property="Opacity" Value="0" />
@@ -46,73 +42,37 @@
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.22" />
-                    <TransformOperationsTransition Property="RenderTransform"
-                                                   Duration="0:0:0.22"
-                                                   Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut" />
                 </Transitions>
             </Setter>
         </Style>
-
         <Style Selector="suki|GlassCard#ControlCard.expanded">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransform" Value="translateY(0)" />
         </Style>
-
-        <Style Selector="suki|GlassCard#ControlCard.locked">
-            <Setter Property="Opacity" Value="0" />
-        </Style>
-
+        <Style Selector="suki|GlassCard#ControlCard.locked"><Setter Property="Opacity" Value="0" /></Style>
         <Style Selector="StackPanel#LeftControls">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransformOrigin" Value="1,0.5" />
             <Setter Property="RenderTransform" Value="scaleX(1)" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
-                    <TransformOperationsTransition Property="RenderTransform"
-                                                   Duration="0:0:0.28"
-                                                   Easing="CubicEaseOut" />
-                </Transitions>
-            </Setter>
+            <Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2" /><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.28" Easing="CubicEaseOut" /></Transitions></Setter>
         </Style>
-
         <Style Selector="StackPanel#LeftControls.locked">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="RenderTransform" Value="scaleX(0.02)" />
         </Style>
-
         <Style Selector="StackPanel#RightControls">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransformOrigin" Value="0,0.5" />
             <Setter Property="RenderTransform" Value="scaleX(1)" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
-                    <TransformOperationsTransition Property="RenderTransform"
-                                                   Duration="0:0:0.28"
-                                                   Easing="CubicEaseOut" />
-                </Transitions>
-            </Setter>
+            <Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2" /><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.28" Easing="CubicEaseOut" /></Transitions></Setter>
         </Style>
-
         <Style Selector="StackPanel#RightControls.locked">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="RenderTransform" Value="scaleX(0.02)" />
         </Style>
-
-        <Style Selector="Button#CenterLockButton">
-            <Setter Property="Opacity" Value="1" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
-                </Transitions>
-            </Setter>
-        </Style>
-
-        <Style Selector="Button#CenterLockButton.locked">
-            <Setter Property="Opacity" Value="0" />
-        </Style>
-
+        <Style Selector="Button#CenterLockButton"><Setter Property="Opacity" Value="1" /><Setter Property="Transitions"><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.14" /></Transitions></Setter></Style>
+        <Style Selector="Button#CenterLockButton.locked"><Setter Property="Opacity" Value="0" /></Style>
         <Style Selector="Border#CollapsedLockBubble">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="CornerRadius" Value="16" />
@@ -122,283 +82,45 @@
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.22" />
-                    <TransformOperationsTransition Property="RenderTransform"
-                                                   Duration="0:0:0.28"
-                                                   Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.28" Easing="CubicEaseOut" />
                 </Transitions>
             </Setter>
         </Style>
-
         <Style Selector="Border#CollapsedLockBubble.locked">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="RenderTransform" Value="scaleX(1) scaleY(1)" />
         </Style>
-
         <Style Selector="Border#CollapsedLockBubble.locked.revealed">
             <Setter Property="Opacity" Value="0.96" />
             <Setter Property="RenderTransform" Value="scaleX(1.06) scaleY(1.04)" />
         </Style>
-
         <Style Selector="Panel.DesktopLane">
             <Setter Property="Transitions">
                 <Transitions>
                     <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
-                    <TransformOperationsTransition Property="RenderTransform"
-                                                   Duration="0:0:0.18"
-                                                   Easing="CubicEaseOut" />
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
                 </Transitions>
             </Setter>
         </Style>
-
-        <Style Selector="lyrics|LyricLineControl.DesktopLyricLine">
-            <Setter Property="FontFamily" Value="{Binding LyricFontFamily}" />
-            <Setter Property="PrimaryFontSize" Value="{Binding FontSize}" />
-            <Setter Property="TranslationFontSize" Value="{Binding TranslationFontSize}" />
-            <Setter Property="RomanizationFontSize" Value="{Binding TranslationFontSize}" />
-            <Setter Property="PrimaryForeground" Value="{Binding LyricForeground}" />
-            <Setter Property="PrimaryPlayedForeground" Value="{Binding LyricForeground}" />
-            <Setter Property="TranslationForeground" Value="{Binding TranslationLineForeground}" />
-            <Setter Property="TranslationPlayedForeground" Value="{Binding TranslationWordForeground}" />
-            <Setter Property="RomanizationForeground" Value="{Binding TranslationLineForeground}" />
-            <Setter Property="TextAlignment" Value="{Binding LyricTextAlignment}" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-        </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*"
-          PointerEntered="OnControlHotspotPointerEntered"
-          PointerExited="OnControlHotspotPointerExited">
-        <Border Grid.RowSpan="2"
-                Name="BackgroundPlate"
-                Classes.interactive="{Binding IsControlBarExpanded}"
-                PointerPressed="OnLyricPointerPressed"
+    <Grid PointerEntered="OnControlHotspotPointerEntered" PointerExited="OnControlHotspotPointerExited">
+        <Border Name="BackgroundPlate" PointerPressed="OnLyricPointerPressed"
                 IsHitTestVisible="{Binding IsUnlockedInteractionEnabled}" />
 
-        <Grid Grid.Row="0"
-              Width="716"
-              Height="64"
-              Background="Transparent"
-              HorizontalAlignment="Center"
-              VerticalAlignment="Top">
-            <suki:GlassCard Name="ControlCard"
-                            Classes.expanded="{Binding IsControlBarExpanded}"
-                            Classes.locked="{Binding IsLocked}"
-                            IsHitTestVisible="{Binding IsControlBarExpanded}"
-                            Padding="12,10"
-                            Margin="0,8,0,0"
-                            Background="#8C4F4F4F"
-                            BorderBrush="#26FFFFFF"
-                            BorderThickness="1"
-                            PointerPressed="OnControlSurfacePointerPressed">
-                <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" ColumnSpacing="12">
-                    <StackPanel Name="LeftControls"
-                                Grid.Column="0"
-                                Classes.locked="{Binding IsLocked}"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center"
-                                Spacing="8">
-                        <Button Command="{Binding ToggleTranslationVisibilityCommand}"
-                                Classes="Basic"
-                                ToolTip.Tip="切换翻译显示">
-                            <Panel>
-                                <Svg Path="/Assets/translation-svgrepo-com.svg"
-                                     Width="18"
-                                     Height="18"
-                                     Css="path { fill: white; }"
-                                     IsVisible="{Binding IsTranslationVisible}" />
-                                <Svg Path="/Assets/translation-svgrepo-com.svg"
-                                     Width="18"
-                                     Height="18"
-                                     Opacity="0.38"
-                                     Css="path { fill: white; }"
-                                     IsVisible="{Binding !IsTranslationVisible}" />
-                            </Panel>
-                        </Button>
+        <ContentControl Content="{Binding ActiveLayout}" />
 
-                        <Button Command="{Binding DecreaseFontSizeCommand}" Classes="Basic" ToolTip.Tip="减小歌词字号">
-                            <TextBlock Text="A-" Foreground="White" FontWeight="SemiBold" />
-                        </Button>
-
-                        <TextBlock Text="{Binding FontSizeDisplay}"
-                                   Foreground="White"
-                                   VerticalAlignment="Center" />
-
-                        <Button Command="{Binding IncreaseFontSizeCommand}" Classes="Basic" ToolTip.Tip="增大歌词字号">
-                            <TextBlock Text="A+" Foreground="White" FontWeight="SemiBold" />
-                        </Button>
-                    </StackPanel>
-
-                    <Button Name="CenterLockButton"
-                            Grid.Column="2"
-                            Classes.locked="{Binding IsLocked}"
-                            Command="{Binding ToggleLockCommand}"
-                            IsVisible="{Binding CanMousePassthrough}"
-                            Classes="Basic"
-                            Margin="75,-5,0,0"
-                            Cursor="Hand"
-                            ToolTip.Tip="锁定后收起为悬浮图标">
-                        <Svg Path="/Assets/lock2-svgrepo-com.svg"
-                             Width="22"
-                             Height="22"
-                             Css="path { fill: white; }" />
-                    </Button>
-
-                    <StackPanel Name="RightControls"
-                                Grid.Column="4"
-                                Classes.locked="{Binding IsLocked}"
-                                Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center"
-                                Spacing="16">
-                        <!--<Button Command="{Binding Player.ToggleRepeatOneModeCommand}"
-                                Classes="Basic">
-                            <Panel>
-                                <Svg Path="/Assets/repeat-one.svg"
-                                     Width="18"
-                                     Height="18"
-                                     Css="path { fill: white; }"
-                                     IsVisible="{Binding Player.IsRepeatOneMode}" />
-                                <Svg Path="/Assets/repeat-one.svg"
-                                     Width="18"
-                                     Height="18"
-                                     Css="path { fill: white; }"
-                                     Opacity="0.45"
-                                     IsVisible="{Binding !Player.IsRepeatOneMode}" />
-                            </Panel>
-                        </Button>-->
-
-                        <Button Command="{Binding Player.PlayPreviousCommand}" Classes="Basic">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="White" />
-                        </Button>
-
-                        <Button Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic">
-                            <Panel>
-                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg"
-                                     Width="24"
-                                     Height="24"
-                                     Css="path { fill: white; }"
-                                     IsVisible="{Binding Player.IsPlayingAudio}" />
-                                <Svg Path="/Assets/play-1003-svgrepo-com.svg"
-                                     Width="24"
-                                     Height="24"
-                                     Css="path { fill: white; }"
-                                     IsVisible="{Binding !Player.IsPlayingAudio}" />
-                            </Panel>
-                        </Button>
-
-                        <Button Command="{Binding Player.PlayNextCommand}" Classes="Basic">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronRight}" Foreground="White" />
-                        </Button>
-
-                        <!--<Button Command="{Binding Player.ToggleShuffleModeCommand}"
-                                Classes="Basic">
-                            <Panel>
-                                <Svg Path="/Assets/shuffle-svgrepo-com.svg"
-                                     Width="18"
-                                     Height="18"
-                                     Css="path { fill: white; }"
-                                     IsVisible="{Binding Player.IsShuffleMode}" />
-                                <Svg Path="/Assets/shuffle-svgrepo-com.svg"
-                                     Width="18"
-                                     Height="18"
-                                     Css="path { fill: white; }"
-                                     Opacity="0.45"
-                                     IsVisible="{Binding !Player.IsShuffleMode}" />
-                            </Panel>
-                        </Button>-->
-
-                        <Button Click="OnCloseClicked" Classes="Basic" ToolTip.Tip="关闭歌词">
-                            <PathIcon Data="{x:Static suki:Icons.Cross}" Foreground="White" Width="12" />
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </suki:GlassCard>
-
-            <Border Name="CollapsedLockBubble"
-                    Classes.locked="{Binding IsLocked}"
-                    Classes.revealed="{Binding IsCollapsedLockIconHovered}"
-                    IsVisible="{Binding IsEmbeddedCollapsedLockIconVisible}"
-                    IsHitTestVisible="{Binding IsCollapsedLockIconVisible}"
-                    Width="40"
-                    Height="40"
-                    Padding="8"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="0,12,0,0"
-                    PointerEntered="OnCollapsedIconPointerEntered"
-                    PointerExited="OnCollapsedIconPointerExited"
-                    PointerPressed="OnCollapsedIconPointerPressed">
-                <Svg Path="/Assets/lock2-svgrepo-com.svg"
-                     Width="22"
-                     Height="22"
-                     Css="path { fill: white; }" />
-            </Border>
-        </Grid>
-
-        <Grid Grid.Row="1"
-              IsHitTestVisible="False"
-              Margin="32,0">
-            <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Stretch"
-                        IsVisible="{Binding IsSingleLineMode}">
-                <lyrics:LyricLineControl Classes="DesktopLyricLine"
-                                         Line="{Binding CurrentRenderLyricLine}"
-                                         ActiveLine="{Binding SingleLineActiveLine}"
-                                         Position="{Binding Player.CurrentPosition}"
-                                         IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
-                                         ShowTranslation="{Binding IsDesktopTranslationActuallyVisible}"
-                                         ShowRomanization="False"
-                                         WordRenderMode="{Binding SingleLineWordRenderMode}">
-                    <lyrics:LyricLineControl.Effect>
-                        <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                    </lyrics:LyricLineControl.Effect>
-                </lyrics:LyricLineControl>
-            </StackPanel>
-
-            <Grid RowDefinitions="Auto,Auto"
-                  RowSpacing="0"
-                  VerticalAlignment="Center"
-                  IsVisible="{Binding IsDoubleLineEnabled}">
-                <Panel Grid.Row="0"
-                       Classes="DesktopLane"
-                       HorizontalAlignment="Stretch"
-                       IsVisible="{Binding IsTopLyricLineVisible}"
-                       Opacity="{Binding TopLaneOpacity}"
-                       RenderTransform="{Binding TopLaneTranslateY, Converter={StaticResource WordLiftTransformConverter}}">
-                    <lyrics:LyricLineControl Classes="DesktopLyricLine"
-                                             Line="{Binding TopLyricLine}"
-                                             ActiveLine="{Binding TopActiveLine}"
-                                             Position="{Binding Player.CurrentPosition}"
-                                             IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
-                                             ShowTranslation="False"
-                                             ShowRomanization="False"
-                                             WordRenderMode="{Binding TopLaneWordRenderMode}">
-                        <lyrics:LyricLineControl.Effect>
-                            <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                        </lyrics:LyricLineControl.Effect>
-                    </lyrics:LyricLineControl>
-                </Panel>
-
-                <Panel Grid.Row="1"
-                       Classes="DesktopLane"
-                       HorizontalAlignment="Stretch"
-                       IsVisible="{Binding IsBottomLyricLineVisible}"
-                       Opacity="{Binding BottomLaneOpacity}"
-                       RenderTransform="{Binding BottomLaneTranslateY, Converter={StaticResource WordLiftTransformConverter}}">
-                    <lyrics:LyricLineControl Classes="DesktopLyricLine"
-                                             Line="{Binding BottomLyricLine}"
-                                             ActiveLine="{Binding BottomActiveLine}"
-                                             Position="{Binding Player.CurrentPosition}"
-                                             IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
-                                             ShowTranslation="False"
-                                             ShowRomanization="False"
-                                             WordRenderMode="{Binding BottomLaneWordRenderMode}">
-                        <lyrics:LyricLineControl.Effect>
-                            <DropShadowEffect BlurRadius="4" Color="Black" Opacity="0.8" OffsetX="1" OffsetY="1" />
-                        </lyrics:LyricLineControl.Effect>
-                    </lyrics:LyricLineControl>
-                </Panel>
-            </Grid>
-        </Grid>
+        <Border Name="CollapsedLockBubble"
+                Classes.locked="{Binding IsLocked}"
+                Classes.revealed="{Binding IsCollapsedLockIconHovered}"
+                IsVisible="{Binding IsEmbeddedCollapsedLockIconVisible}"
+                IsHitTestVisible="{Binding IsCollapsedLockIconVisible}"
+                Width="40" Height="40" Padding="8"
+                HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
+                PointerEntered="OnCollapsedIconPointerEntered"
+                PointerExited="OnCollapsedIconPointerExited"
+                PointerPressed="OnCollapsedIconPointerPressed">
+            <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="22" Height="22" Css="path { fill: white; }" />
+        </Border>
     </Grid>
 </Window>

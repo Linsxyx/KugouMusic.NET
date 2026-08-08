@@ -24,6 +24,7 @@ public sealed record UiPreferencesSnapshot(
     string GlobalFontFamily,
     AppBackgroundPreferences AppBackground,
     LyricStylePreferences DesktopLyric,
+    DesktopLyricLayoutMode DesktopLyricLayoutMode,
     LyricStylePreferences PlayPageLyric,
     bool DesktopLyricDoubleLineEnabled,
     double NowPlayingBackgroundBlurRadius,
@@ -73,6 +74,7 @@ public sealed class UiPreferencesState : IUiPreferencesState
                 settings.DesktopLyricCustomFontFamily,
                 settings.DesktopLyricAlignment,
                 settings.DesktopLyricFontSize),
+            settings.DesktopLyricLayoutMode,
             new LyricStylePreferences(
                 settings.PlayPageLyricUseCustomMainColor,
                 settings.PlayPageLyricCustomMainColor,

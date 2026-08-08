@@ -515,6 +515,19 @@
 
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                         <StackPanel>
+                                            <TextBlock Text="排版方向" FontWeight="DemiBold" />
+                                            <TextBlock Text="在横向与竖向桌面歌词之间切换"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="1"
+                                                  MinWidth="220"
+                                                  ItemsSource="{Binding DesktopLyricLayoutOptions}"
+                                                  SelectedItem="{Binding DesktopSelectedLyricLayout}" />
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
                                             <TextBlock Text="双行歌词" FontWeight="DemiBold" />
                                             <TextBlock Text="按奇偶行上下错开显示，开启后不显示翻译"
                                                        FontSize="12"

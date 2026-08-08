@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using KugouAvaloniaPlayer.ViewModels;
 
 namespace KugouAvaloniaPlayer.Views;
@@ -22,11 +21,6 @@ public partial class DesktopLyricWindow : Window
         BeginMoveDrag(e);
     }
 
-    private void OnCloseClicked(object? sender, RoutedEventArgs e)
-    {
-        Close();
-    }
-
     private void OnControlHotspotPointerEntered(object? sender, PointerEventArgs e)
     {
         ViewModel?.SetControlHotspotHovered(true);
@@ -45,12 +39,6 @@ public partial class DesktopLyricWindow : Window
     private void OnCollapsedIconPointerExited(object? sender, PointerEventArgs e)
     {
         ViewModel?.SetCollapsedLockIconHovered(false);
-    }
-
-    private void OnControlSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
     }
 
     private void OnCollapsedIconPointerPressed(object? sender, PointerPressedEventArgs e)

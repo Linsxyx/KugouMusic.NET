@@ -13,6 +13,7 @@ namespace KugouAvaloniaPlayer.Services;
 [JsonSerializable(typeof(GlobalShortcutSettings))]
 [JsonSerializable(typeof(PlayMode))]
 [JsonSerializable(typeof(LyricAlignmentOption))]
+[JsonSerializable(typeof(DesktopLyricLayoutMode))]
 [JsonSerializable(typeof(NowPlayingLyricDisplayMode))]
 [JsonSerializable(typeof(NowPlayingBackgroundSource))]
 [JsonSerializable(typeof(SavedMainWindowState))]
@@ -127,6 +128,7 @@ public static class SettingsManager
         Settings.GlobalShortcuts ??= new GlobalShortcutSettings();
         Settings.MainWindowState ??= new MainWindowStateSettings();
         Settings.DesktopLyricWindowPosition ??= new DesktopLyricWindowPositionSettings();
+        Settings.VerticalDesktopLyricWindowPosition ??= new DesktopLyricWindowPositionSettings();
         Settings.AppTheme = NormalizeAppTheme(Settings.AppTheme);
         if (!Enum.IsDefined(Settings.MainWindowState.State))
             Settings.MainWindowState.State = SavedMainWindowState.Normal;
@@ -138,6 +140,8 @@ public static class SettingsManager
             Settings.LocalPlaylistSongSortMode = PlaylistSongSortMode.Default;
         if (!Settings.HasDesktopLyricAlignmentPreference || !Enum.IsDefined(Settings.DesktopLyricAlignment))
             Settings.DesktopLyricAlignment = LyricAlignmentOption.Center;
+        if (!Enum.IsDefined(Settings.DesktopLyricLayoutMode))
+            Settings.DesktopLyricLayoutMode = DesktopLyricLayoutMode.Horizontal;
         Settings.CustomBackgroundImagePath = string.IsNullOrWhiteSpace(Settings.CustomBackgroundImagePath)
             ? null
             : Settings.CustomBackgroundImagePath;

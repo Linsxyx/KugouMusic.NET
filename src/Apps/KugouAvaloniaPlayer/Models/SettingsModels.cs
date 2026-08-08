@@ -41,6 +41,12 @@ public enum LyricAlignmentOption
     Right
 }
 
+public enum DesktopLyricLayoutMode
+{
+    Horizontal,
+    Vertical
+}
+
 public enum NowPlayingLyricDisplayMode
 {
     LyricsWithTranslation,
@@ -205,6 +211,7 @@ public class AppSettings
     public string DesktopLyricCustomTranslationColor { get; set; } = "#CCFFFFFF";
     public bool DesktopLyricUseCustomFont { get; set; }
     public string DesktopLyricCustomFontFamily { get; set; } = string.Empty;
+    public DesktopLyricLayoutMode DesktopLyricLayoutMode { get; set; } = DesktopLyricLayoutMode.Horizontal;
     public LyricAlignmentOption DesktopLyricAlignment { get; set; } = LyricAlignmentOption.Center;
     public bool HasDesktopLyricAlignmentPreference { get; set; }
     public double DesktopLyricFontSize { get; set; } = 30;
@@ -212,6 +219,7 @@ public class AppSettings
     public bool DesktopLyricDoubleLineEnabled { get; set; }
     public bool OpenDesktopLyricOnStartup { get; set; }
     public DesktopLyricWindowPositionSettings DesktopLyricWindowPosition { get; set; } = new();
+    public DesktopLyricWindowPositionSettings VerticalDesktopLyricWindowPosition { get; set; } = new();
 
     public bool PlayPageLyricUseCustomMainColor { get; set; }
     public string PlayPageLyricCustomMainColor { get; set; } = "#FFFFFFFF";
