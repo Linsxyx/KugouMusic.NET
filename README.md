@@ -285,8 +285,8 @@ KugouMusic.NET
 
 <a href="https://www.star-history.com/?repos=Linsxyx%2FKugouMusic.NET&type=timeline&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Linsxyx/KugouMusic.NET&type=timeline&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Linsxyx/KugouMusic.NET&type=timeline&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Linsxyx/KugouMusic.NET&type=timeline&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Linsxyx/KugouMusic.NET&type=timeline&theme=dark&legend=top-left&sealed_token=wzW4_hbpIKDoQdW7tn5bcNpH6c7DFxIYPqvGh2wibQkklM_uKiVmIdmh3NvI12WBJghhp-mskCsRaaDsIxRzwtZMEQnAtlp5BOhGfj0tb29oSa9jzx0ACg" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Linsxyx/KugouMusic.NET&type=timeline&legend=top-left&sealed_token=wzW4_hbpIKDoQdW7tn5bcNpH6c7DFxIYPqvGh2wibQkklM_uKiVmIdmh3NvI12WBJghhp-mskCsRaaDsIxRzwtZMEQnAtlp5BOhGfj0tb29oSa9jzx0ACg" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Linsxyx/KugouMusic.NET&type=timeline&legend=top-left&sealed_token=wzW4_hbpIKDoQdW7tn5bcNpH6c7DFxIYPqvGh2wibQkklM_uKiVmIdmh3NvI12WBJghhp-mskCsRaaDsIxRzwtZMEQnAtlp5BOhGfj0tb29oSa9jzx0ACg" />
  </picture>
 </a>
