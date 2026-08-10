@@ -4,6 +4,8 @@ module;
 #include <oleacc.h>
 #include <d2d1.h>
 #include <dwrite.h>
+#include <algorithm>
+#include <cmath>
 #include <functional>
 #include <fstream>
 #include <mutex>
@@ -63,8 +65,8 @@ private:
                 return 0;
             }
             if (message == WM_APP_UPDATE_LAYOUT) {
-                that->updateWindowPosition();
                 that->updateTaskListPosition();
+                that->updateWindowPosition();
                 return 0;
             }
             return that->handleMessage(hwnd, message, wParam, lParam);
@@ -103,8 +105,8 @@ private:
                 return HTTRANSPARENT;
             case WM_TIMER: {
                 if (wParam == 1) {
-                    // 定期更新任务列表位置
                     updateTaskListPosition();
+                    updateWindowPosition();
                 } else if (wParam == 2) {
                     // 歌词滚动tick
                     this->renderer.tick();
@@ -338,90 +340,98 @@ private:
         bool isScrolling = false;  // 是否正在滚动
         const int PAUSE_DURATION = 10;  // 停顿时长（10次tick = 0.5秒，每次tick 50ms）
         
-        // 记录上次的字体大小，用于检测配置变化
-        int lastSizePrimary = 0;
-        int lastSizeSecondary = 0;
+        int lastPrimaryFontSize = 0;
+        int lastSecondaryFontSize = 0;
+        DWRITE_FONT_WEIGHT lastPrimaryWeight = DWRITE_FONT_WEIGHT_NORMAL;
+        DWRITE_FONT_WEIGHT lastSecondaryWeight = DWRITE_FONT_WEIGHT_NORMAL;
+        std::wstring lastFontFamily;
+        bool lastHasSecondary = false;
         
     public:
         auto onCreate(HWND hwnd) -> void {
             logWin10("SimpleRenderer::onCreate");
             this->hwnd = hwnd;
-            
-            createFonts();
+            const auto state = snapshotConfig();
+            createFonts(state, !state.lyric_secondary.empty() && state.lyric_secondary != L" ");
             
             logWin10("SimpleRenderer::onCreate - GDI renderer created");
         }
         
         // 创建字体
-        auto createFonts() -> void {
-            // 创建主歌词字体
+        auto createFonts(const Config &state, bool hasSecondary) -> void {
+            const auto primaryFontSize = hasSecondary ? state.size_primary : state.size_primary_single;
             if (hFont) {
                 DeleteObject(hFont);
                 hFont = nullptr;
             }
-            
+
             hFont = CreateFontW(
-                config.size_primary,
+                primaryFontSize,
                 0, 0, 0,
-                config.weight_primary,
+                state.weight_primary,
                 FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET,
                 OUT_TT_PRECIS,
                 CLIP_DEFAULT_PRECIS,
                 ANTIALIASED_QUALITY,
                 DEFAULT_PITCH | FF_DONTCARE,
-                config.font_family.c_str()
+                state.font_family.c_str()
             );
-            
-            // 创建副歌词字体
+
             if (hFontSecondary) {
                 DeleteObject(hFontSecondary);
                 hFontSecondary = nullptr;
             }
-            
+
             hFontSecondary = CreateFontW(
-                config.size_secondary,
+                state.size_secondary,
                 0, 0, 0,
-                config.weight_secondary,
+                state.weight_secondary,
                 FALSE, FALSE, FALSE,
                 DEFAULT_CHARSET,
                 OUT_TT_PRECIS,
                 CLIP_DEFAULT_PRECIS,
                 ANTIALIASED_QUALITY,
                 DEFAULT_PITCH | FF_DONTCARE,
-                config.font_family.c_str()
+                state.font_family.c_str()
             );
-            
-            lastSizePrimary = config.size_primary;
-            lastSizeSecondary = config.size_secondary;
-            
-            logWin10("createFonts - primary size: " + std::to_string(config.size_primary) + 
-                     ", secondary size: " + std::to_string(config.size_secondary));
+
+            lastPrimaryFontSize = primaryFontSize;
+            lastSecondaryFontSize = state.size_secondary;
+            lastPrimaryWeight = state.weight_primary;
+            lastSecondaryWeight = state.weight_secondary;
+            lastFontFamily = state.font_family;
+            lastHasSecondary = hasSecondary;
+
+            logWin10("createFonts - primary size: " + std::to_string(primaryFontSize) +
+                     ", secondary size: " + std::to_string(state.size_secondary));
         }
         
         auto onSize(UINT width, UINT height) -> void {
             windowWidth = width;
-            // 窗口大小改变时重新计算是否需要滚动
-            if (!lastPrimaryText.empty()) {
-                updateScrollParameters();
-            }
+            lastPrimaryText.clear();
         }
         
-        auto updateScrollParameters() -> void {
+        auto updateScrollParameters(const Config &state) -> void {
             if (!hwnd) return;
-            
+
             HDC hdc = GetDC(hwnd);
             HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
-            
-            SIZE textSize;
-            GetTextExtentPoint32W(hdc, lastPrimaryText.c_str(), lastPrimaryText.length(), &textSize);
+
+            SIZE textSize{};
+            GetTextExtentPoint32W(
+                hdc,
+                state.lyric_primary.c_str(),
+                static_cast<int>(state.lyric_primary.length()),
+                &textSize);
             textWidth = textSize.cx;
-            
+
             SelectObject(hdc, oldFont);
             ReleaseDC(hwnd, hdc);
-            
+
             needScroll = textWidth > windowWidth;
-            
+
+            lastPrimaryText = state.lyric_primary;
             if (needScroll) {
                 // 重置滚动位置到0（从左对齐开始）
                 scrollOffset = 0.0;
@@ -459,6 +469,116 @@ private:
                 scrollOffset = maxOffset;  // 停在末尾
             }
         }
+
+        static auto toColor(unsigned int argb) -> COLORREF {
+            return RGB(
+                (argb >> 16) & 0xFF,
+                (argb >> 8) & 0xFF,
+                argb & 0xFF);
+        }
+
+        static auto measureSelectedText(HDC hdc, const std::wstring &text) -> int {
+            if (text.empty()) return 0;
+            SIZE size{};
+            return GetTextExtentPoint32W(
+                hdc,
+                text.c_str(),
+                static_cast<int>(text.length()),
+                &size)
+                    ? size.cx
+                    : 0;
+        }
+
+        static auto calculatePlayedWidth(HDC hdc, const Config &state) -> int {
+            if (state.lyric_primary.empty()) return 0;
+
+            if (state.words.empty()) {
+                const auto duration = std::max(1.0, state.line_duration_ms);
+                const auto progress = std::clamp(
+                    (state.playback_position_ms - state.line_start_ms) / duration,
+                    0.0,
+                    1.0);
+                return static_cast<int>(std::round(
+                    measureSelectedText(hdc, state.lyric_primary) * progress));
+            }
+
+            std::wstring completed;
+            auto playedWidth = 0;
+            for (const auto &word : state.words) {
+                if (state.playback_position_ms >= word.start_ms + word.duration_ms) {
+                    completed += word.text;
+                    playedWidth = measureSelectedText(hdc, completed);
+                    continue;
+                }
+
+                if (state.playback_position_ms > word.start_ms) {
+                    const auto progress = std::clamp(
+                        (state.playback_position_ms - word.start_ms) /
+                            std::max(1.0, word.duration_ms),
+                        0.0,
+                        1.0);
+                    playedWidth = measureSelectedText(hdc, completed) +
+                        static_cast<int>(std::round(
+                            measureSelectedText(hdc, word.text) * progress));
+                }
+                break;
+            }
+            return playedWidth;
+        }
+
+        auto needsFontRefresh(const Config &state, bool hasSecondary) const -> bool {
+            const auto primaryFontSize = hasSecondary ? state.size_primary : state.size_primary_single;
+            return !hFont || !hFontSecondary ||
+                primaryFontSize != lastPrimaryFontSize ||
+                state.size_secondary != lastSecondaryFontSize ||
+                state.weight_primary != lastPrimaryWeight ||
+                state.weight_secondary != lastSecondaryWeight ||
+                state.font_family != lastFontFamily ||
+                hasSecondary != lastHasSecondary;
+        }
+
+        auto drawPrimary(HDC hdc, const Config &state, const RECT &bounds) -> void {
+            if (state.lyric_primary.empty() || state.lyric_primary == L" ") return;
+
+            auto drawRect = bounds;
+            auto format = DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX;
+            auto textStartX = bounds.left;
+
+            if (needScroll) {
+                textStartX = -static_cast<int>(std::round(scrollOffset));
+                drawRect.left = textStartX;
+                drawRect.right = textStartX + std::max(1, textWidth);
+                format |= DT_LEFT;
+            } else if (state.align_primary == DWRITE_TEXT_ALIGNMENT_TRAILING) {
+                textStartX = bounds.right - textWidth;
+                format |= DT_RIGHT;
+            } else if (state.align_primary == DWRITE_TEXT_ALIGNMENT_CENTER) {
+                textStartX = bounds.left + (bounds.right - bounds.left - textWidth) / 2;
+                format |= DT_CENTER;
+            } else {
+                format |= DT_LEFT;
+            }
+
+            SetTextColor(hdc, toColor(state.color_primary));
+            auto unplayedRect = drawRect;
+            DrawTextW(hdc, state.lyric_primary.c_str(), -1, &unplayedRect, format);
+
+            const auto playedWidth = std::clamp(
+                calculatePlayedWidth(hdc, state),
+                0,
+                std::max(0, textWidth));
+            const auto clipLeft = std::max<LONG>(bounds.left, textStartX);
+            const auto clipRight = std::min<LONG>(bounds.right, textStartX + playedWidth);
+            if (clipRight <= clipLeft) return;
+
+            const auto savedDc = SaveDC(hdc);
+            if (savedDc == 0) return;
+            IntersectClipRect(hdc, clipLeft, bounds.top, clipRight, bounds.bottom);
+            SetTextColor(hdc, toColor(state.color_played));
+            auto playedRect = drawRect;
+            DrawTextW(hdc, state.lyric_primary.c_str(), -1, &playedRect, format);
+            RestoreDC(hdc, savedDc);
+        }
         
         auto onPaint(HDC hdc) -> void {
             if (!hwnd) return;
@@ -469,144 +589,70 @@ private:
             int height = rc.bottom - rc.top;
             
             if (width <= 0 || height <= 0) return;
-            
+
             logWin10("onPaint - size: " + std::to_string(width) + "x" + std::to_string(height));
-            
-            // 创建内存DC
+
+            const auto state = snapshotConfig();
+            const auto hasSecondary = !state.lyric_secondary.empty() && state.lyric_secondary != L" ";
+            const auto fontChanged = needsFontRefresh(state, hasSecondary);
+            if (fontChanged) {
+                createFonts(state, hasSecondary);
+            }
+            if (fontChanged || lastPrimaryText != state.lyric_primary || windowWidth != width) {
+                windowWidth = width;
+                updateScrollParameters(state);
+            }
+
             HDC hdcMem = CreateCompatibleDC(hdc);
             HBITMAP hMemBmp = CreateCompatibleBitmap(hdc, width, height);
             HBITMAP oldBmp = (HBITMAP)SelectObject(hdcMem, hMemBmp);
-            
-            // 填充透明键背景色 RGB(0,0,1)
+
             HBRUSH hBrush = CreateSolidBrush(RGB(0, 0, 1));
             FillRect(hdcMem, &rc, hBrush);
             DeleteObject(hBrush);
-            
-            // 设置文本绘制模式
+
             SetBkMode(hdcMem, TRANSPARENT);
             SetGraphicsMode(hdcMem, GM_ADVANCED);
-            
+
             HFONT oldFont = (HFONT)SelectObject(hdcMem, hFont);
-            
-            // 检查字体大小是否变化，需要重新创建字体
-            if (lastSizePrimary != config.size_primary || lastSizeSecondary != config.size_secondary) {
-                logWin10("Font size changed, recreating fonts");
-                createFonts();
-            }
-            
-            // 检查歌词是否变化，重新计算滚动参数
-            if (lastPrimaryText != config.lyric_primary) {
-                lastPrimaryText = config.lyric_primary;
-                windowWidth = width;
-                updateScrollParameters();
-            }
-            
-            // 判断是否有副歌词
-            bool hasSecondary = !config.lyric_secondary.empty() && config.lyric_secondary != L" ";
-            
+
             if (hasSecondary) {
-                // 双行模式
-                float totalHeight = config.size_primary + config.line_spacing + config.size_secondary;
-                float startY = (height - totalHeight) / 2.0f;
-                
-                // 绘制主歌词
-                if (!config.lyric_primary.empty() && config.lyric_primary != L" ") {
-                    // 设置颜色
-                    COLORREF color = RGB(
-                        (config.color_primary >> 16) & 0xFF,
-                        (config.color_primary >> 8) & 0xFF,
-                        config.color_primary & 0xFF
-                    );
-                    SetTextColor(hdcMem, color);
-                    
-                    if (needScroll) {
-                        // 滚动模式：从左对齐开始，向左平移
-                        // 绘制当前位置的文字（左对齐，向左偏移 scrollOffset）
-                        RECT rectPrimary = {(LONG)(-scrollOffset), (LONG)startY, 
-                                           (LONG)(textWidth - scrollOffset), (LONG)(startY + config.size_primary)};
-                        DrawTextW(hdcMem, config.lyric_primary.c_str(), -1, &rectPrimary, 
-                                 DT_VCENTER | DT_SINGLELINE | DT_LEFT);
-                    } else {
-                        // 静态模式：根据对齐方式绘制
-                        RECT rectPrimary = {0, (LONG)startY, width, (LONG)(startY + config.size_primary)};
-                        UINT format = DT_VCENTER | DT_SINGLELINE;
-                        if (config.align_primary == DWRITE_TEXT_ALIGNMENT_LEADING) {
-                            format |= DT_LEFT;
-                        } else if (config.align_primary == DWRITE_TEXT_ALIGNMENT_TRAILING) {
-                            format |= DT_RIGHT;
-                        } else {
-                            format |= DT_CENTER;
-                        }
-                        DrawTextW(hdcMem, config.lyric_primary.c_str(), -1, &rectPrimary, format);
-                    }
-                }
-                
-                // 绘制副歌词
-                float secondaryY = startY + config.size_primary + config.line_spacing;
-                RECT rectSecondary = {0, (LONG)secondaryY, width, (LONG)(secondaryY + config.size_secondary)};
-                
-                HFONT oldFont2 = (HFONT)SelectObject(hdcMem, hFontSecondary);
-                
-                // 设置颜色
-                COLORREF colorSecondary = RGB(
-                    (config.color_secondary >> 16) & 0xFF,
-                    (config.color_secondary >> 8) & 0xFF,
-                    config.color_secondary & 0xFF
-                );
-                SetTextColor(hdcMem, colorSecondary);
-                
-                // 设置对齐方式
-                UINT formatSecondary = DT_VCENTER | DT_SINGLELINE;
-                if (config.align_secondary == DWRITE_TEXT_ALIGNMENT_LEADING) {
-                    formatSecondary |= DT_LEFT;
-                } else if (config.align_secondary == DWRITE_TEXT_ALIGNMENT_TRAILING) {
-                    formatSecondary |= DT_RIGHT;
+                const auto primaryLineHeight = static_cast<int>(std::ceil(state.size_primary * 1.45));
+                const auto secondaryLineHeight = static_cast<int>(std::ceil(state.size_secondary * 1.45));
+                const auto totalHeight = primaryLineHeight + state.line_spacing + secondaryLineHeight;
+                const auto primaryTop = std::max(0, (height - totalHeight) / 2);
+                const RECT primaryBounds{0, primaryTop, width, primaryTop + primaryLineHeight};
+                drawPrimary(hdcMem, state, primaryBounds);
+
+                const auto secondaryTop = primaryTop + primaryLineHeight + state.line_spacing;
+                RECT secondaryBounds{0, secondaryTop, width, secondaryTop + secondaryLineHeight};
+                HFONT previousFont = (HFONT)SelectObject(hdcMem, hFontSecondary);
+                SetTextColor(hdcMem, toColor(state.color_secondary));
+
+                auto secondaryFormat = DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX;
+                if (state.align_secondary == DWRITE_TEXT_ALIGNMENT_TRAILING) {
+                    secondaryFormat |= DT_RIGHT;
+                } else if (state.align_secondary == DWRITE_TEXT_ALIGNMENT_CENTER) {
+                    secondaryFormat |= DT_CENTER;
                 } else {
-                    formatSecondary |= DT_CENTER;
+                    secondaryFormat |= DT_LEFT;
                 }
-                
-                DrawTextW(hdcMem, config.lyric_secondary.c_str(), -1, &rectSecondary, formatSecondary);
-                
-                SelectObject(hdcMem, oldFont2);
+                DrawTextW(
+                    hdcMem,
+                    state.lyric_secondary.c_str(),
+                    -1,
+                    &secondaryBounds,
+                    secondaryFormat);
+                SelectObject(hdcMem, previousFont);
             } else {
-                // 单行模式：只有主歌词
-                if (!config.lyric_primary.empty() && config.lyric_primary != L" ") {
-                    // 设置颜色
-                    COLORREF color = RGB(
-                        (config.color_primary >> 16) & 0xFF,
-                        (config.color_primary >> 8) & 0xFF,
-                        config.color_primary & 0xFF
-                    );
-                    SetTextColor(hdcMem, color);
-                    
-                    if (needScroll) {
-                        // 滚动模式：从左对齐开始，向左平移
-                        // 绘制当前位置的文字（左对齐，向左偏移 scrollOffset）
-                        RECT rect = {(LONG)(-scrollOffset), 0, 
-                                    (LONG)(textWidth - scrollOffset), height};
-                        DrawTextW(hdcMem, config.lyric_primary.c_str(), -1, &rect, 
-                                 DT_VCENTER | DT_SINGLELINE | DT_LEFT);
-                    } else {
-                        // 静态模式：根据对齐方式绘制
-                        RECT rect = {0, 0, width, height};
-                        UINT format = DT_VCENTER | DT_SINGLELINE;
-                        if (config.align_primary == DWRITE_TEXT_ALIGNMENT_LEADING) {
-                            format |= DT_LEFT;
-                        } else if (config.align_primary == DWRITE_TEXT_ALIGNMENT_TRAILING) {
-                            format |= DT_RIGHT;
-                        } else {
-                            format |= DT_CENTER;
-                        }
-                        DrawTextW(hdcMem, config.lyric_primary.c_str(), -1, &rect, format);
-                    }
-                }
+                const RECT primaryBounds{0, 0, width, height};
+                drawPrimary(hdcMem, state, primaryBounds);
             }
-            
+
             SelectObject(hdcMem, oldFont);
-            
-            // 复制到窗口DC
+
             BitBlt(hdc, 0, 0, width, height, hdcMem, 0, 0, SRCCOPY);
-            
+
             SelectObject(hdcMem, oldBmp);
             DeleteObject(hMemBmp);
             DeleteDC(hdcMem);
@@ -735,13 +781,10 @@ public:
         SetParent(hwnd, taskbarHwnd);
         logWin10("create() - SetParent completed");
 
-        // 更新窗口位置
-        updateWindowPosition();
-
-        // 移动任务列表
         if (taskListHwnd) {
             updateTaskListPosition();
         }
+        updateWindowPosition();
 
         // 设置分层窗口属性：使用透明色键 RGB(0,0,1)
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 1), 0, LWA_COLORKEY);
@@ -763,30 +806,43 @@ public:
     auto updateWindowPosition() -> void {
         if (!hwnd || !taskbarHwnd || !trayNotifyHwnd) return;
 
-        RECT taskbarRect, trayRect;
+        RECT taskbarRect{}, trayRect{}, taskListRect{};
         GetWindowRect(taskbarHwnd, &taskbarRect);
         GetWindowRect(trayNotifyHwnd, &trayRect);
-        
-        int taskbarHeight = taskbarRect.bottom - taskbarRect.top;
-        
-        // 按照 TrayS 的方式：歌词显示在托盘左侧（TrayNotifyWnd 左侧）
-        // 将屏幕坐标转换为任务栏客户区坐标
+
+        const auto taskbarHeight = static_cast<int>(taskbarRect.bottom - taskbarRect.top);
         POINT trayLeftTop = {trayRect.left, trayRect.top};
         ScreenToClient(taskbarHwnd, &trayLeftTop);
-        
-        int xPos = trayLeftTop.x - lyricsWidth;
-        
-        logWin10("updateWindowPosition - trayLeft: " + std::to_string(trayRect.left) + 
-                 ", clientX: " + std::to_string(trayLeftTop.x) +
-                 ", xPos: " + std::to_string(xPos) + 
-                 ", width: " + std::to_string(lyricsWidth) + 
+
+        auto availableLeft = 0;
+        if (taskListHwnd && GetWindowRect(taskListHwnd, &taskListRect)) {
+            POINT taskListLeftTop = {taskListRect.left, taskListRect.top};
+            ScreenToClient(taskbarHwnd, &taskListLeftTop);
+            availableLeft = std::max(0, static_cast<int>(taskListLeftTop.x) + taskIconsWidth);
+        }
+
+        const auto availableRight = static_cast<int>(trayLeftTop.x);
+        const auto availableWidth = std::max(0, availableRight - availableLeft);
+        if (availableWidth <= 0) return;
+
+        const auto currentWidth = std::min(lyricsWidth, availableWidth);
+        const auto state = snapshotConfig();
+        auto xPos = availableRight - currentWidth;
+        if (state.window_alignment == TASKBAR_WINDOW_ALIGNMENT_LEFT) {
+            xPos = availableLeft;
+        } else if (state.window_alignment == TASKBAR_WINDOW_ALIGNMENT_CENTER) {
+            xPos = availableLeft + (availableWidth - currentWidth) / 2;
+        }
+
+        logWin10("updateWindowPosition - availableLeft: " + std::to_string(availableLeft) +
+                 ", trayLeft: " + std::to_string(availableRight) +
+                 ", xPos: " + std::to_string(xPos) +
+                 ", width: " + std::to_string(currentWidth) +
                  ", height: " + std::to_string(taskbarHeight));
 
-        // 先设置位置和大小
-        SetWindowPos(hwnd, nullptr, xPos, 0, lyricsWidth, taskbarHeight,
+        SetWindowPos(hwnd, nullptr, xPos, 0, currentWidth, taskbarHeight,
                      SWP_NOZORDER | SWP_NOACTIVATE);
-        
-        // 再设置为TOPMOST确保可见
+
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, 
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     }

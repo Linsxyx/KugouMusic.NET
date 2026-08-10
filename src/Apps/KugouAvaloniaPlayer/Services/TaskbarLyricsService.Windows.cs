@@ -17,8 +17,7 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
 {
     private static readonly TimeSpan UpdateInterval = TimeSpan.FromMilliseconds(16);
     private readonly ILogger<TaskbarLyricsService> _logger;
-    private readonly object _lifecycleGate = new();
-    private readonly object _sync = new();
+    private readonly Lock _sync = new();
     private readonly PlayerViewModel _player;
     private Process? _process;
     private StreamWriter? _writer;
@@ -49,21 +48,22 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
 
     public void SetEnabled(bool enabled)
     {
-        lock (_lifecycleGate)
+        DetachedSession? sessionToDispose;
+        bool captureLatest;
+        lock (_sync)
         {
-            DetachedSession? sessionToDispose;
-            lock (_sync)
-            {
-                if (_disposed || enabled == _isEnabled)
-                    return;
+            if (_disposed || enabled == _isEnabled)
+                return;
 
-                sessionToDispose = enabled
-                    ? StartCoreLocked()
-                    : DetachSessionLocked();
-            }
-
-            DisposeSession(sessionToDispose);
+            sessionToDispose = enabled
+                ? StartCoreLocked()
+                : DetachSessionLocked();
+            captureLatest = enabled && _isEnabled;
         }
+
+        if (captureLatest)
+            CaptureLatestMessage();
+        DisposeSession(sessionToDispose);
     }
 
     public void Refresh()
@@ -108,8 +108,7 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
             _writer.AutoFlush = true;
             _isEnabled = true;
             _sentVersion = -1;
-            CaptureLatestMessage();
-            _updateTimer = new Timer(SendLatestMessage, null, TimeSpan.Zero, UpdateInterval);
+            _updateTimer = new Timer(SendLatestMessage, null, UpdateInterval, UpdateInterval);
             return null;
         }
         catch (Exception ex)
@@ -150,11 +149,9 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
                 process.Exited -= OnProcessExited;
 
             session.Writer?.Dispose();
-            if (process is { HasExited: false } && !process.WaitForExit(500))
-            {
-                process.Kill(entireProcessTree: true);
-                process.WaitForExit(500);
-            }
+            if (process is not { HasExited: false } || process.WaitForExit(500)) return;
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit(500);
         }
         catch (Exception ex)
         {
@@ -162,8 +159,7 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
         }
         finally
         {
-            if (process != null)
-                process.Dispose();
+            process?.Dispose();
         }
     }
 
@@ -272,17 +268,14 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "向原生任务栏歌词发送数据失败。");
-                lock (_lifecycleGate)
+                DetachedSession? failedSession = null;
+                lock (_sync)
                 {
-                    DetachedSession? failedSession = null;
-                    lock (_sync)
-                    {
-                        if (ReferenceEquals(writer, _writer))
-                            failedSession = DetachSessionLocked();
-                    }
-
-                    DisposeSession(failedSession);
+                    if (ReferenceEquals(writer, _writer))
+                        failedSession = DetachSessionLocked();
                 }
+
+                DisposeSession(failedSession);
             }
         }
         finally
@@ -313,22 +306,18 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
 
     public void Dispose()
     {
-        lock (_lifecycleGate)
+        DetachedSession? session;
+        lock (_sync)
         {
-            DetachedSession? session;
-            lock (_sync)
-            {
-                if (_disposed)
-                    return;
+            if (_disposed)
+                return;
 
-                _disposed = true;
-                session = DetachSessionLocked();
-            }
-
-            _player.PropertyChanged -= OnPlayerPropertyChanged;
-            DisposeSession(session);
+            _disposed = true;
+            session = DetachSessionLocked();
         }
-        GC.SuppressFinalize(this);
+
+        _player.PropertyChanged -= OnPlayerPropertyChanged;
+        DisposeSession(session);
     }
 
     private sealed record DetachedSession(Process? Process, StreamWriter? Writer, Timer? Timer);
