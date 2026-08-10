@@ -197,6 +197,14 @@ public class AppSettings
 
     public LyricAlignmentOption TaskbarLyricsAlignment { get; set; } = LyricAlignmentOption.Left;
 
+    public string TaskbarLyricsFontFamily { get; set; } = "Microsoft YaHei UI";
+
+    public int TaskbarLyricsFontSize { get; set; } = 17;
+
+    public string TaskbarLyricsUnplayedColor { get; set; } = "#FF2E2E2E";
+
+    public string TaskbarLyricsPlayedColor { get; set; } = "#FF268EEB";
+
     public int AudioOutputDeviceId { get; set; } = SystemDefaultAudioOutputDeviceId;
 
     public float MusicVolume { get; set; } = 0.8f;

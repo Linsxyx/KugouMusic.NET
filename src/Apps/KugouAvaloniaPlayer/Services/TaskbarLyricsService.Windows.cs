@@ -17,6 +17,7 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
 {
     private static readonly TimeSpan UpdateInterval = TimeSpan.FromMilliseconds(16);
     private readonly ILogger<TaskbarLyricsService> _logger;
+    private readonly object _lifecycleGate = new();
     private readonly object _sync = new();
     private readonly PlayerViewModel _player;
     private Process? _process;
@@ -25,6 +26,8 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
     private string? _latestMessage;
     private int _messageVersion;
     private int _sentVersion = -1;
+    private int _sendActive;
+    private bool _isEnabled;
     private bool _disposed;
 
     public TaskbarLyricsService(PlayerViewModel player, ILogger<TaskbarLyricsService> logger)
@@ -35,19 +38,31 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
     }
 
     public bool IsSupported => true;
-    public bool IsEnabled { get; private set; }
+    public bool IsEnabled
+    {
+        get
+        {
+            lock (_sync)
+                return _isEnabled;
+        }
+    }
 
     public void SetEnabled(bool enabled)
     {
-        lock (_sync)
+        lock (_lifecycleGate)
         {
-            if (_disposed || enabled == IsEnabled)
-                return;
+            DetachedSession? sessionToDispose;
+            lock (_sync)
+            {
+                if (_disposed || enabled == _isEnabled)
+                    return;
 
-            if (enabled)
-                StartCore();
-            else
-                StopCore();
+                sessionToDispose = enabled
+                    ? StartCoreLocked()
+                    : DetachSessionLocked();
+            }
+
+            DisposeSession(sessionToDispose);
         }
     }
 
@@ -57,13 +72,13 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
             CaptureLatestMessage();
     }
 
-    private void StartCore()
+    private DetachedSession? StartCoreLocked()
     {
         var executablePath = Path.Combine(AppContext.BaseDirectory, "KugouTaskbarLyrics.exe");
         if (!File.Exists(executablePath))
         {
             _logger.LogWarning("找不到原生任务栏歌词程序: {ExecutablePath}", executablePath);
-            return;
+            return null;
         }
 
         try
@@ -85,39 +100,61 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
             if (!process.Start())
             {
                 process.Dispose();
-                return;
+                return null;
             }
 
             _process = process;
             _writer = process.StandardInput;
             _writer.AutoFlush = true;
-            IsEnabled = true;
+            _isEnabled = true;
+            _sentVersion = -1;
             CaptureLatestMessage();
             _updateTimer = new Timer(SendLatestMessage, null, TimeSpan.Zero, UpdateInterval);
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "启动原生任务栏歌词失败。");
-            StopCore();
+            return DetachSessionLocked();
         }
     }
 
-    private void StopCore()
+    private DetachedSession? DetachSessionLocked()
     {
-        IsEnabled = false;
-        _updateTimer?.Dispose();
-        _updateTimer = null;
+        _isEnabled = false;
 
         var process = _process;
-        _process = null;
         var writer = _writer;
+        var timer = _updateTimer;
+
+        _process = null;
         _writer = null;
+        _updateTimer = null;
+
+        return process == null && writer == null && timer == null
+            ? null
+            : new DetachedSession(process, writer, timer);
+    }
+
+    private void DisposeSession(DetachedSession? session)
+    {
+        if (session == null)
+            return;
+
+        session.Timer?.Dispose();
+        var process = session.Process;
 
         try
         {
-            writer?.Dispose();
+            if (process != null)
+                process.Exited -= OnProcessExited;
+
+            session.Writer?.Dispose();
             if (process is { HasExited: false } && !process.WaitForExit(500))
+            {
                 process.Kill(entireProcessTree: true);
+                process.WaitForExit(500);
+            }
         }
         catch (Exception ex)
         {
@@ -126,28 +163,22 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
         finally
         {
             if (process != null)
-            {
-                process.Exited -= OnProcessExited;
                 process.Dispose();
-            }
         }
     }
 
     private void OnProcessExited(object? sender, EventArgs e)
     {
+        DetachedSession? session;
         lock (_sync)
         {
             if (!ReferenceEquals(sender, _process))
                 return;
 
-            _updateTimer?.Dispose();
-            _updateTimer = null;
-            _writer?.Dispose();
-            _writer = null;
-            _process?.Dispose();
-            _process = null;
-            IsEnabled = false;
+            session = DetachSessionLocked();
         }
+
+        DisposeSession(session);
     }
 
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -173,6 +204,10 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
             ? line?.Translation ?? string.Empty
             : string.Empty;
         var alignment = settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right ? "1" : "0";
+        var fontFamily = string.IsNullOrWhiteSpace(settings.TaskbarLyricsFontFamily)
+            ? "Microsoft YaHei UI"
+            : settings.TaskbarLyricsFontFamily.Trim();
+        var fontSize = Math.Clamp(settings.TaskbarLyricsFontSize, 12, 24);
         var words = line?.Words
             .Select(word => string.Join(',',
                 FormatNumber(word.StartTime),
@@ -190,7 +225,11 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
             EncodeText(primary),
             EncodeText(secondary),
             string.Join(';', words),
-            alignment);
+            alignment,
+            EncodeText(fontFamily),
+            fontSize.ToString(CultureInfo.InvariantCulture),
+            FormatArgb(settings.TaskbarLyricsUnplayedColor, 0xFF2E2E2E),
+            FormatArgb(settings.TaskbarLyricsPlayedColor, 0xFF268EEB));
 
         lock (_sync)
         {
@@ -201,21 +240,54 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
 
     private void SendLatestMessage(object? state)
     {
-        lock (_sync)
+        if (Interlocked.CompareExchange(ref _sendActive, 1, 0) != 0)
+            return;
+
+        try
         {
-            if (!IsEnabled || _writer == null || _sentVersion == _messageVersion || _latestMessage == null)
-                return;
+            StreamWriter? writer;
+            string? message;
+            int version;
+
+            lock (_sync)
+            {
+                if (!_isEnabled || _writer == null || _sentVersion == _messageVersion || _latestMessage == null)
+                    return;
+
+                writer = _writer;
+                message = _latestMessage;
+                version = _messageVersion;
+            }
 
             try
             {
-                _writer.WriteLine(_latestMessage);
-                _sentVersion = _messageVersion;
+                writer.WriteLine(message);
+
+                lock (_sync)
+                {
+                    if (ReferenceEquals(writer, _writer))
+                        _sentVersion = version;
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "向原生任务栏歌词发送数据失败。");
-                StopCore();
+                lock (_lifecycleGate)
+                {
+                    DetachedSession? failedSession = null;
+                    lock (_sync)
+                    {
+                        if (ReferenceEquals(writer, _writer))
+                            failedSession = DetachSessionLocked();
+                    }
+
+                    DisposeSession(failedSession);
+                }
             }
+        }
+        finally
+        {
+            Volatile.Write(ref _sendActive, 0);
         }
     }
 
@@ -224,18 +296,41 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
     private static string FormatNumber(double value) =>
         value.ToString("0.###", CultureInfo.InvariantCulture);
 
+    private static string FormatArgb(string? value, uint fallback)
+    {
+        var hex = value?.Trim().TrimStart('#');
+        if (hex?.Length == 6)
+            hex = $"FF{hex}";
+
+        return hex?.Length == 8 && uint.TryParse(
+            hex,
+            NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture,
+            out var argb)
+                ? $"0x{argb:X8}"
+                : $"0x{fallback:X8}";
+    }
+
     public void Dispose()
     {
-        lock (_sync)
+        lock (_lifecycleGate)
         {
-            if (_disposed)
-                return;
+            DetachedSession? session;
+            lock (_sync)
+            {
+                if (_disposed)
+                    return;
 
-            _disposed = true;
+                _disposed = true;
+                session = DetachSessionLocked();
+            }
+
             _player.PropertyChanged -= OnPlayerPropertyChanged;
-            StopCore();
+            DisposeSession(session);
         }
         GC.SuppressFinalize(this);
     }
+
+    private sealed record DetachedSession(Process? Process, StreamWriter? Writer, Timer? Timer);
 }
 #endif

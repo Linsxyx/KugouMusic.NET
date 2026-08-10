@@ -843,9 +843,16 @@
                                             Padding="14"
                                             IsVisible="{Binding IsTaskbarLyricsSupported}">
                                 <StackPanel Spacing="10">
-                                    <TextBlock Text="任务栏歌词"
-                                               FontWeight="DemiBold"
-                                               FontSize="15" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Text="任务栏歌词"
+                                                   FontWeight="DemiBold"
+                                                   FontSize="15"
+                                                   VerticalAlignment="Center" />
+                                        <Button Grid.Column="1"
+                                                Classes="Basic"
+                                                Content="恢复默认"
+                                                Command="{Binding ResetTaskbarLyricsAppearanceCommand}" />
+                                    </Grid>
 
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                         <StackPanel>
@@ -884,6 +891,91 @@
                                                   MinWidth="140"
                                                   ItemsSource="{Binding TaskbarLyricAlignmentOptions}"
                                                   SelectedItem="{Binding TaskbarSelectedLyricAlignment}" />
+                                    </Grid>
+
+                                    <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
+
+                                    <TextBlock Text="字体与颜色"
+                                               FontWeight="DemiBold"
+                                               FontSize="14"
+                                               Margin="0,2" />
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="字体" FontWeight="DemiBold" />
+                                            <TextBlock Text="使用已获取的系统字体列表"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="1"
+                                                  MinWidth="220"
+                                                  ItemsSource="{Binding LyricFontFamilyOptions}"
+                                                  SelectedItem="{Binding TaskbarSelectedLyricFontFamily}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate DataType="x:String">
+                                                    <TextBlock Text="{Binding .}" FontFamily="{Binding .}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="字号" FontWeight="DemiBold" />
+                                            <TextBlock Text="隐藏翻译时会在此基础上自动放大"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="1"
+                                                  MinWidth="100"
+                                                  ItemsSource="{Binding TaskbarLyricFontSizeOptions}"
+                                                  SelectedItem="{Binding TaskbarLyricsFontSize}" />
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,Auto,150,Auto" ColumnSpacing="8" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="未播放颜色" FontWeight="DemiBold" />
+                                            <TextBlock Text="同时用于翻译文字"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1"
+                                                Width="28"
+                                                Height="28"
+                                                CornerRadius="4"
+                                                BorderThickness="1"
+                                                BorderBrush="{DynamicResource SukiBorder}"
+                                                Background="{Binding TaskbarUnplayedColorPreviewBrush}" />
+                                        <TextBox Grid.Column="2"
+                                                 PlaceholderText="#FF2E2E2E"
+                                                 Text="{Binding TaskbarUnplayedColorHexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="3"
+                                                MinWidth="64"
+                                                Content="应用"
+                                                Command="{Binding ApplyTaskbarUnplayedColorHexCommand}" />
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,Auto,150,Auto" ColumnSpacing="8" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="已播放颜色" FontWeight="DemiBold" />
+                                            <TextBlock Text="用于逐字高亮进度"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1"
+                                                Width="28"
+                                                Height="28"
+                                                CornerRadius="4"
+                                                BorderThickness="1"
+                                                BorderBrush="{DynamicResource SukiBorder}"
+                                                Background="{Binding TaskbarPlayedColorPreviewBrush}" />
+                                        <TextBox Grid.Column="2"
+                                                 PlaceholderText="#FF268EEB"
+                                                 Text="{Binding TaskbarPlayedColorHexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="3"
+                                                MinWidth="64"
+                                                Content="应用"
+                                                Command="{Binding ApplyTaskbarPlayedColorHexCommand}" />
                                     </Grid>
                                 </StackPanel>
                             </suki:GlassCard>

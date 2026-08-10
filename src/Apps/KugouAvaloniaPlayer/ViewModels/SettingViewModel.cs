@@ -45,6 +45,9 @@ public partial class SettingViewModel : PageViewModelBase
     private const string DesktopLyricLayoutVertical = "竖向";
     private const string LyricColorModeDefault = "默认";
     private const string LyricColorModeCustom = "自定义";
+    private const string DefaultTaskbarFontFamily = "Microsoft YaHei UI";
+    private const string DefaultTaskbarUnplayedColor = "#FF2E2E2E";
+    private const string DefaultTaskbarPlayedColor = "#FF268EEB";
 
     private readonly LoginClient _authClient;
     private readonly ISukiDialogManager _dialogManager;
@@ -108,6 +111,20 @@ public partial class SettingViewModel : PageViewModelBase
 
     [ObservableProperty]
     public partial string TaskbarSelectedLyricAlignment { get; set; } = LyricAlignmentLeft;
+
+    [ObservableProperty]
+    public partial string? TaskbarSelectedLyricFontFamily { get; set; }
+
+    [ObservableProperty]
+    public partial int TaskbarLyricsFontSize { get; set; } = 17;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TaskbarUnplayedColorPreviewBrush))]
+    public partial string TaskbarUnplayedColorHexInput { get; set; } = DefaultTaskbarUnplayedColor;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TaskbarPlayedColorPreviewBrush))]
+    public partial string TaskbarPlayedColorHexInput { get; set; } = DefaultTaskbarPlayedColor;
 
     [ObservableProperty]
     public partial bool EnableGlobalShortcuts { get; set; }
@@ -255,6 +272,13 @@ public partial class SettingViewModel : PageViewModelBase
             TaskbarSelectedLyricAlignment = SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right
                 ? LyricAlignmentRight
                 : LyricAlignmentLeft;
+            TaskbarSelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.TaskbarLyricsFontFamily)
+                ?? GetDefaultTaskbarFontFamily();
+            TaskbarLyricsFontSize = Math.Clamp(SettingsManager.Settings.TaskbarLyricsFontSize, 12, 24);
+            TaskbarUnplayedColorHexInput = NormalizeColorHex(SettingsManager.Settings.TaskbarLyricsUnplayedColor)
+                ?? DefaultTaskbarUnplayedColor;
+            TaskbarPlayedColorHexInput = NormalizeColorHex(SettingsManager.Settings.TaskbarLyricsPlayedColor)
+                ?? DefaultTaskbarPlayedColor;
             LoadDesktopLyricColorEditorFromSettings();
             LoadDesktopLyricFontEditorFromSettings();
             LoadPlayPageLyricColorEditorFromSettings();
@@ -300,6 +324,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string[] LyricAlignmentOptions { get; } = [LyricAlignmentCenter, LyricAlignmentLeft, LyricAlignmentRight];
     public string[] DesktopLyricLayoutOptions { get; } = [DesktopLyricLayoutHorizontal, DesktopLyricLayoutVertical];
     public string[] TaskbarLyricAlignmentOptions { get; } = [LyricAlignmentLeft, LyricAlignmentRight];
+    public int[] TaskbarLyricFontSizeOptions { get; } = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
 
     public string[] LyricColorModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
     public string[] LyricFontModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
@@ -363,6 +388,12 @@ public partial class SettingViewModel : PageViewModelBase
 
     public IBrush PlayPageLyricColorPreviewBrush =>
         new SolidColorBrush(ParseColorOrDefault(PlayPageLyricColorHexInput, Colors.Transparent));
+
+    public IBrush TaskbarUnplayedColorPreviewBrush =>
+        new SolidColorBrush(ParseColorOrDefault(TaskbarUnplayedColorHexInput, Colors.Transparent));
+
+    public IBrush TaskbarPlayedColorPreviewBrush =>
+        new SolidColorBrush(ParseColorOrDefault(TaskbarPlayedColorHexInput, Colors.Transparent));
 
     public string PlayPageLyricFontSizeDisplay => $"{Math.Round(PlayPageLyricFontSize):0}pt";
     public string NowPlayingBackgroundBlurRadiusDisplay => $"{Math.Round(NowPlayingBackgroundBlurRadius):0}px";
@@ -515,6 +546,55 @@ public partial class SettingViewModel : PageViewModelBase
         OnPropertyChanged(nameof(PlayPageLyricColorPreviewBrush));
         SettingsManager.Save();
         NotifyUiPreferencesChanged();
+    }
+
+    [RelayCommand]
+    private void ApplyTaskbarUnplayedColorHex()
+    {
+        var normalized = NormalizeColorHex(TaskbarUnplayedColorHexInput);
+        if (normalized == null) return;
+
+        TaskbarUnplayedColorHexInput = normalized;
+        SettingsManager.Settings.TaskbarLyricsUnplayedColor = normalized;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
+    }
+
+    [RelayCommand]
+    private void ApplyTaskbarPlayedColorHex()
+    {
+        var normalized = NormalizeColorHex(TaskbarPlayedColorHexInput);
+        if (normalized == null) return;
+
+        TaskbarPlayedColorHexInput = normalized;
+        SettingsManager.Settings.TaskbarLyricsPlayedColor = normalized;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
+    }
+
+    [RelayCommand]
+    private void ResetTaskbarLyricsAppearance()
+    {
+        var fontFamily = GetDefaultTaskbarFontFamily();
+        _isApplyingSettingsSnapshot = true;
+        try
+        {
+            TaskbarSelectedLyricFontFamily = fontFamily;
+            TaskbarLyricsFontSize = 17;
+            TaskbarUnplayedColorHexInput = DefaultTaskbarUnplayedColor;
+            TaskbarPlayedColorHexInput = DefaultTaskbarPlayedColor;
+        }
+        finally
+        {
+            _isApplyingSettingsSnapshot = false;
+        }
+
+        SettingsManager.Settings.TaskbarLyricsFontFamily = fontFamily;
+        SettingsManager.Settings.TaskbarLyricsFontSize = 17;
+        SettingsManager.Settings.TaskbarLyricsUnplayedColor = DefaultTaskbarUnplayedColor;
+        SettingsManager.Settings.TaskbarLyricsPlayedColor = DefaultTaskbarPlayedColor;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
     }
 
     public event Action? CheckForUpdateRequested;
@@ -718,6 +798,34 @@ public partial class SettingViewModel : PageViewModelBase
         SettingsManager.Settings.TaskbarLyricsAlignment = value == LyricAlignmentRight
             ? LyricAlignmentOption.Right
             : LyricAlignmentOption.Left;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
+    }
+
+    partial void OnTaskbarSelectedLyricFontFamilyChanged(string? value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        var normalized = NormalizeFontName(value);
+        if (normalized == null) return;
+
+        SettingsManager.Settings.TaskbarLyricsFontFamily = normalized;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
+    }
+
+    partial void OnTaskbarLyricsFontSizeChanged(int value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        var normalized = Math.Clamp(value, 12, 24);
+        if (normalized != value)
+        {
+            TaskbarLyricsFontSize = normalized;
+            return;
+        }
+
+        SettingsManager.Settings.TaskbarLyricsFontSize = normalized;
         SettingsManager.Save();
         _taskbarLyricsService.Refresh();
     }
@@ -1253,6 +1361,12 @@ public partial class SettingViewModel : PageViewModelBase
             LyricAlignmentOption.Right => LyricAlignmentRight,
             _ => LyricAlignmentCenter
         };
+    }
+
+    private string GetDefaultTaskbarFontFamily()
+    {
+        return NormalizeFontName(DefaultTaskbarFontFamily)
+            ?? (LyricFontFamilyOptions.Length > 0 ? LyricFontFamilyOptions[0] : DefaultTaskbarFontFamily);
     }
 
     partial void OnSelectedSettingsSectionChanged(string value)

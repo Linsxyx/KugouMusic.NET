@@ -38,7 +38,7 @@ auto decodeHex(const std::string &value) -> std::string {
 
 auto applyUpdate(const std::string &line) -> void {
     auto fields = splitTabs(line);
-    if (fields.size() < 10 || fields[0] != "U") return;
+    if (fields.size() < 14 || fields[0] != "U") return;
     setConfig("playback_position_ms", fields[1]);
     setConfig("line_start_ms", fields[4]);
     setConfig("line_duration_ms", fields[5]);
@@ -49,6 +49,11 @@ auto applyUpdate(const std::string &line) -> void {
     const auto layoutChanged = setConfig(
         "window_alignment",
         fields[9] == "1" ? "3" : "1");
+    setConfig("font_family", decodeHex(fields[10]));
+    setConfig("size_primary", fields[11]);
+    setConfig("color_primary", fields[12]);
+    setConfig("color_secondary", fields[12]);
+    setConfig("color_played", fields[13]);
     if (layoutChanged) Plugin::updateLayout();
     Plugin::refresh();
 }

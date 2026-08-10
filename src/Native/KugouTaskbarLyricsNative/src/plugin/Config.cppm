@@ -143,7 +143,9 @@ export auto setConfig(const std::string &key, const std::string &value) -> bool 
             if (alignment == config.window_alignment) return false;
             config.window_alignment = alignment;
         } else if (key == "size_primary") {
-            config.size_primary = std::stoi(value);
+            config.size_primary = std::clamp(std::stoi(value), 12, 24);
+            config.size_primary_single = config.size_primary + 3;
+            config.size_secondary = std::max(10, config.size_primary - 5);
         } else if (key == "color_primary") {
             config.color_primary = std::stoul(value, nullptr, 0);
         } else if (key == "color_played") {
