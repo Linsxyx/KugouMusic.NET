@@ -79,8 +79,8 @@ public record PlaylistSong : KgBaseModel
     [property: JsonPropertyName("cover")]
     public string? Cover
     {
-        get => field?.Replace("{size}", "400");
-        set;
+       get;
+    set => field = value?.Replace("{size}", "400");
     }
     
     /// <summary>
@@ -130,8 +130,8 @@ public record SingerLite : KgBaseModel
     [property: JsonPropertyName("avatar")]
     public string SingerPic
     {
-        get => field.Replace("{size}", "400");
-        set;
+        get;
+        set => field = value.Replace("{size}", "400");
     } = "";
 }
 

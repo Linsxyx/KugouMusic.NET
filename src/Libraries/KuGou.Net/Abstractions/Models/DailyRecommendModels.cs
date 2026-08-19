@@ -91,8 +91,8 @@ public record DailyRecommendSong : KgBaseModel
     [property: JsonPropertyName("sizable_cover")]
     public string? SizableCover
     {
-        get => field?.Replace("{size}", "400");
-        set;
+       get;
+    set => field = value?.Replace("{size}", "400");
     }
 
     /// <summary>

@@ -73,8 +73,8 @@ public record MusicCommentItem
     [property: JsonPropertyName("user_pic")]
     public string? UserPic 
     { 
-        get => field?.Replace("{size}", "150"); 
-        set; 
+        get; 
+        set => field = value?.Replace("{size}", "150"); 
     }
 
     [property: JsonPropertyName("user_sex")]

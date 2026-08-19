@@ -25,7 +25,7 @@ public record SingerDetailResponse : KgBaseModel
     [property: JsonPropertyName("sizable_avatar")]
     public string Cover
     {
-        get => field.Replace("{size}", "400");
-        set;
+        get;
+        set => field = value.Replace("{size}", "400");
     } = "";
 }

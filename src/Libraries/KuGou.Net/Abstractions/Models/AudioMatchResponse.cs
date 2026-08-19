@@ -50,8 +50,8 @@ public record AudioMatchItem
     [property: JsonPropertyName("union_cover")]
     public string UnionCover
     {
-        get => field.Replace("{size}", "400");
-        set => field = value ?? string.Empty;
+        get;
+        set => field = value.Replace("{size}", "400");
     } = string.Empty;
 
     [property: JsonPropertyName("hash_128")] public string Hash128 { get; set; } = string.Empty;

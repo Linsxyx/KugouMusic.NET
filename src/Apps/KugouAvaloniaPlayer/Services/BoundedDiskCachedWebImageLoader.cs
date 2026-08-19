@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using ZLinq;
-using System.Net.Http;
+using System.IO.Enumeration;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ATL;
 using AsyncImageLoader.Loaders;
@@ -14,58 +14,44 @@ using KugouAvaloniaPlayer.Converters;
 
 namespace KugouAvaloniaPlayer.Services;
 
-public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
+public sealed class BoundedDiskCachedWebImageLoader(
+    string cacheFolder,
+    TimeSpan diskCacheLifetime,
+    int maxMemoryEntries = BoundedDiskCachedWebImageLoader.DefaultMaxMemoryEntries,
+    long maxMemoryBytes = BoundedDiskCachedWebImageLoader.DefaultMaxMemoryBytes,
+    long maxDiskBytes = BoundedDiskCachedWebImageLoader.DefaultMaxDiskBytes)
+    : BaseWebImageLoader
 {
     private const int DefaultMaxMemoryEntries = 200;
     private const long DefaultMaxMemoryBytes = 32L * 1024 * 1024;
     private const long DefaultMaxDiskBytes = 256L * 1024 * 1024;
     private const int EmbeddedCoverDecodeWidth = 128;
+    private const int DiskMaintenanceWriteThreshold = 64;
+    private const long DiskMaintenanceByteThreshold = 16L * 1024 * 1024;
+    private static readonly TimeSpan DiskMaintenanceMinInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan DiskMaintenanceMaxInterval = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan DiskCacheTouchInterval = TimeSpan.FromHours(1);
 
-    private readonly string _cacheFolder;
-    private readonly TimeSpan _diskCacheLifetime;
-    private readonly int _maxMemoryEntries;
-    private readonly long _maxMemoryBytes;
-    private readonly long _maxDiskBytes;
-    private readonly object _sync = new();
+    private readonly int _maxMemoryEntries = Math.Max(1, maxMemoryEntries);
+    private readonly long _maxMemoryBytes = Math.Max(1, maxMemoryBytes);
+    private readonly long _maxDiskBytes = Math.Max(1, maxDiskBytes);
+    private readonly Lock _sync = new();
     private readonly Dictionary<string, CacheEntry> _memoryCache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WeakReference<Bitmap>> _embeddedBitmapCache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Task<Bitmap?>> _pendingEmbeddedLoads = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Task<byte[]?>> _pendingLoads = new(StringComparer.Ordinal);
     private readonly LinkedList<string> _leastRecentlyUsed = new();
+    private readonly CancellationTokenSource _diskMaintenanceCancellation = new();
 
     private bool _disposed;
     private long _memoryBytes;
+    private int _diskWritesSinceMaintenance;
+    private long _diskBytesWrittenSinceMaintenance;
+    private long _lastDiskMaintenanceTick;
+    private int _diskMaintenanceHasRun;
+    private int _diskMaintenanceRunning;
+    private int _diskMaintenanceStopped;
 
-    public BoundedDiskCachedWebImageLoader(
-        string cacheFolder,
-        TimeSpan diskCacheLifetime,
-        int maxMemoryEntries = DefaultMaxMemoryEntries,
-        long maxMemoryBytes = DefaultMaxMemoryBytes,
-        long maxDiskBytes = DefaultMaxDiskBytes)
-    {
-        _cacheFolder = cacheFolder;
-        _diskCacheLifetime = diskCacheLifetime;
-        _maxMemoryEntries = Math.Max(1, maxMemoryEntries);
-        _maxMemoryBytes = Math.Max(1, maxMemoryBytes);
-        _maxDiskBytes = Math.Max(1, maxDiskBytes);
-    }
-
-    public BoundedDiskCachedWebImageLoader(
-        HttpClient httpClient,
-        bool disposeHttpClient,
-        string cacheFolder,
-        TimeSpan diskCacheLifetime,
-        int maxMemoryEntries = DefaultMaxMemoryEntries,
-        long maxMemoryBytes = DefaultMaxMemoryBytes,
-        long maxDiskBytes = DefaultMaxDiskBytes)
-        : base(httpClient, disposeHttpClient)
-    {
-        _cacheFolder = cacheFolder;
-        _diskCacheLifetime = diskCacheLifetime;
-        _maxMemoryEntries = Math.Max(1, maxMemoryEntries);
-        _maxMemoryBytes = Math.Max(1, maxMemoryBytes);
-        _maxDiskBytes = Math.Max(1, maxDiskBytes);
-    }
 
     public override async Task<Bitmap?> ProvideImageAsync(string url)
     {
@@ -283,7 +269,7 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
             if (!fileInfo.Exists)
                 return null;
 
-            if (DateTimeOffset.UtcNow - fileInfo.LastWriteTimeUtc > _diskCacheLifetime)
+            if (DateTimeOffset.UtcNow - fileInfo.LastWriteTimeUtc > diskCacheLifetime)
             {
                 TryDelete(fileInfo.FullName);
                 return null;
@@ -305,9 +291,9 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
             if (bytes.LongLength > _maxDiskBytes)
                 return;
 
-            Directory.CreateDirectory(_cacheFolder);
+            Directory.CreateDirectory(cacheFolder);
             await File.WriteAllBytesAsync(GetCachePath(url), bytes).ConfigureAwait(false);
-            TrimDiskCache();
+            RecordDiskCacheWrite(bytes.LongLength);
         }
         catch
         {
@@ -318,7 +304,7 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
     private string GetCachePath(string url)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(url));
-        return Path.Combine(_cacheFolder, Convert.ToHexString(hash).ToLowerInvariant());
+        return Path.Combine(cacheFolder, Convert.ToHexString(hash).ToLowerInvariant());
     }
 
     private void RemovePendingLoad(string url, Task<byte[]?> loadTask)
@@ -345,11 +331,120 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 
-    private static void TryDelete(string path)
+    private static bool TryDelete(string path)
     {
         try
         {
             File.Delete(path);
+            return true;
+        }
+        catch
+        {
+            // Best effort cleanup only.
+            return false;
+        }
+    }
+
+    private void RecordDiskCacheWrite(long byteCount)
+    {
+        Interlocked.Increment(ref _diskWritesSinceMaintenance);
+        Interlocked.Add(ref _diskBytesWrittenSinceMaintenance, byteCount);
+        TryScheduleDiskMaintenance();
+    }
+
+    private void TryScheduleDiskMaintenance()
+    {
+        if (Volatile.Read(ref _diskMaintenanceStopped) != 0)
+            return;
+
+        var hasRun = Volatile.Read(ref _diskMaintenanceHasRun) != 0;
+        var writeCount = Volatile.Read(ref _diskWritesSinceMaintenance);
+        if (hasRun && writeCount == 0)
+            return;
+
+        var now = Environment.TickCount64;
+        var elapsedMilliseconds = hasRun
+            ? Math.Max(0, now - Volatile.Read(ref _lastDiskMaintenanceTick))
+            : long.MaxValue;
+        var thresholdReached = writeCount >= DiskMaintenanceWriteThreshold ||
+                               Interlocked.Read(ref _diskBytesWrittenSinceMaintenance) >= DiskMaintenanceByteThreshold;
+        var maximumIntervalReached = hasRun &&
+                                     elapsedMilliseconds >= (long)DiskMaintenanceMaxInterval.TotalMilliseconds;
+
+        if (hasRun && !thresholdReached && !maximumIntervalReached)
+            return;
+
+        var delayMilliseconds = hasRun
+            ? Math.Max(0, (long)DiskMaintenanceMinInterval.TotalMilliseconds - elapsedMilliseconds)
+            : 0;
+
+        if (Interlocked.CompareExchange(ref _diskMaintenanceRunning, 1, 0) != 0)
+            return;
+
+        _ = Task.Run(() => RunScheduledDiskMaintenanceAsync(delayMilliseconds));
+    }
+
+    private async Task RunScheduledDiskMaintenanceAsync(long delayMilliseconds)
+    {
+        try
+        {
+            var cancellationToken = _diskMaintenanceCancellation.Token;
+            if (delayMilliseconds > 0)
+                await Task.Delay(TimeSpan.FromMilliseconds(delayMilliseconds), cancellationToken).ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            Interlocked.Exchange(ref _diskWritesSinceMaintenance, 0);
+            Interlocked.Exchange(ref _diskBytesWrittenSinceMaintenance, 0);
+            TrimDiskCache(cancellationToken);
+            Volatile.Write(ref _lastDiskMaintenanceTick, Environment.TickCount64);
+            Volatile.Write(ref _diskMaintenanceHasRun, 1);
+        }
+        catch (OperationCanceledException)
+        {
+            // Loader disposal cancels pending maintenance.
+        }
+        catch
+        {
+            // Disk cache maintenance is best effort only.
+        }
+        finally
+        {
+            Volatile.Write(ref _diskMaintenanceRunning, 0);
+            TryScheduleDiskMaintenance();
+        }
+    }
+
+    private void TrimDiskCache(CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!Directory.Exists(cacheFolder))
+                return;
+
+            var totalBytes = MeasureDiskCacheAndDeleteExpiredFiles(cancellationToken);
+            if (totalBytes <= _maxDiskBytes)
+                return;
+
+            var files = CollectDiskCacheFiles(cancellationToken, out totalBytes);
+            if (totalBytes <= _maxDiskBytes)
+                return;
+
+            files.Sort(static (left, right) => left.LastWriteTimeUtc.CompareTo(right.LastWriteTimeUtc));
+            var lowWatermarkBytes = _maxDiskBytes - Math.Max(1, _maxDiskBytes / 10);
+
+            foreach (var file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (totalBytes <= lowWatermarkBytes)
+                    break;
+
+                if (TryDelete(Path.Combine(cacheFolder, file.FileName)))
+                    totalBytes -= file.Length;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {
@@ -357,43 +452,62 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
         }
     }
 
-    private void TrimDiskCache()
+    private long MeasureDiskCacheAndDeleteExpiredFiles(CancellationToken cancellationToken)
     {
-        try
+        var totalBytes = 0L;
+        var expirationThresholdUtc = DateTime.UtcNow - diskCacheLifetime;
+
+        foreach (var file in EnumerateDiskCacheFiles())
         {
-            var directory = new DirectoryInfo(_cacheFolder);
-            if (!directory.Exists)
-                return;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (file.LastWriteTimeUtc < expirationThresholdUtc &&
+                TryDelete(Path.Combine(cacheFolder, file.FileName)))
+                continue;
 
-            var files = directory
-                .EnumerateFiles()
-                .AsValueEnumerable().OrderByDescending(static x => x.LastWriteTimeUtc)
-                .ToList();
-            var totalBytes = files.AsValueEnumerable().Sum(static x => x.Length);
-            if (totalBytes <= _maxDiskBytes)
-                return;
-
-            foreach (var file in files.AsValueEnumerable().Reverse())
-            {
-                if (totalBytes <= _maxDiskBytes)
-                    break;
-
-                var length = file.Length;
-                TryDelete(file.FullName);
-                totalBytes -= length;
-            }
+            totalBytes += file.Length;
         }
-        catch
+
+        return totalBytes;
+    }
+
+    private List<DiskCacheFile> CollectDiskCacheFiles(
+        CancellationToken cancellationToken,
+        out long totalBytes)
+    {
+        var files = new List<DiskCacheFile>();
+        totalBytes = 0;
+
+        foreach (var file in EnumerateDiskCacheFiles())
         {
-            // Best effort cleanup only.
+            cancellationToken.ThrowIfCancellationRequested();
+            files.Add(file);
+            totalBytes += file.Length;
         }
+
+        return files;
+    }
+
+    private FileSystemEnumerable<DiskCacheFile> EnumerateDiskCacheFiles()
+    {
+        var files = new FileSystemEnumerable<DiskCacheFile>(
+            cacheFolder,
+            static (ref entry) => new DiskCacheFile(
+                entry.FileName.ToString(),
+                entry.Length,
+                entry.LastWriteTimeUtc.UtcDateTime))
+        {
+            ShouldIncludePredicate = static (ref entry) => !entry.IsDirectory
+        };
+        return files;
     }
 
     private static void TouchCacheFile(FileInfo fileInfo)
     {
         try
         {
-            fileInfo.LastWriteTimeUtc = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            if (now - fileInfo.LastWriteTimeUtc >= DiskCacheTouchInterval)
+                fileInfo.LastWriteTimeUtc = now;
         }
         catch
         {
@@ -405,6 +519,9 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
     {
         if (disposing)
         {
+            Volatile.Write(ref _diskMaintenanceStopped, 1);
+            _diskMaintenanceCancellation.Cancel();
+
             lock (_sync)
             {
                 _disposed = true;
@@ -419,4 +536,6 @@ public sealed class BoundedDiskCachedWebImageLoader : BaseWebImageLoader
     }
 
     private sealed record CacheEntry(byte[] Bytes, long Size, LinkedListNode<string> Node);
+
+    private readonly record struct DiskCacheFile(string FileName, long Length, DateTime LastWriteTimeUtc);
 }

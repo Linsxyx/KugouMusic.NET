@@ -49,8 +49,8 @@ public record AudioMvItem
     [property: JsonPropertyName("thumb")]
     public string? Thumb
     {
-        get => field?.Replace("{size}", "400");
-        set;
+       get;
+    set => field = value?.Replace("{size}", "400");
     }
 
     [property: JsonPropertyName("desc")] 
@@ -74,8 +74,8 @@ public record AudioMvItem
     [property: JsonPropertyName("hdpic")]
     public string? HdPic
     {
-        get => field?.Replace("{size}", "400");
-        set;
+       get;
+    set => field = value?.Replace("{size}", "400");
     }
 
     [property: JsonPropertyName("is_ugc")] 

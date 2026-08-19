@@ -150,8 +150,8 @@ public record UserCloudAuthor : KgBaseModel
     [JsonPropertyName("sizable_avatar")]
     public string? Avatar
     {
-        get => field?.Replace("{size}", "400");
-        set;
+       get;
+       set => field = value?.Replace("{size}", "400");
     }
 }
 
@@ -191,8 +191,8 @@ public record UserCloudAlbumInfo : KgBaseModel
     [JsonPropertyName("sizable_cover")]
     public string? Cover
     {
-        get => field?.Replace("{size}", "400");
-        set;
+       get;
+    set => field = value?.Replace("{size}", "400");
     }
 }
 

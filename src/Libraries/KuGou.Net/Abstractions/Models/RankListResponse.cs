@@ -24,8 +24,8 @@ public record RankListItem
     [property: JsonPropertyName("img_9")]
     public string? Cover
     {
-        get => field?.Replace("{size}", "250");
-        set;
+        get;
+        set => field = value?.Replace("{size}", "250");
     }
 
     /// <summary>
