@@ -197,7 +197,10 @@ public partial class SimpleAudioPlayer : IDisposable
 
     public void SetNormalizationGain(float gain)
     {
-        VolumeNormalizationGain = Math.Clamp(gain, 0.5f, 1.5f);
+        VolumeNormalizationGain = Math.Clamp(
+            gain,
+            TrackVolumeNormalizer.MinNormalizationGain,
+            TrackVolumeNormalizer.MaxNormalizationGain);
         UpdateActualVolume();
     }
 
@@ -274,7 +277,9 @@ public partial class SimpleAudioPlayer : IDisposable
             var headroom = hasSpatialFx || CurrentEq.Any(g => g > 3f) ? 0.8f : 1.0f;
             var actualVolume = (float)Math.Pow(UserVolume, 2) * VolumeNormalizationGain * headroom * toneHeadroom *
                                Math.Clamp(TransitionGain, 0f, 1.25f);
-            Bass.ChannelSetAttribute(Stream, ChannelAttribute.Volume, Math.Clamp(actualVolume, 0f, 1f));
+            // BASS_ATTRIB_VOL explicitly supports values above 1.0 for amplification.
+            // The per-track true-peak measurement has already limited unsafe positive gain.
+            Bass.ChannelSetAttribute(Stream, ChannelAttribute.Volume, Math.Max(actualVolume, 0f));
         }
     }
 

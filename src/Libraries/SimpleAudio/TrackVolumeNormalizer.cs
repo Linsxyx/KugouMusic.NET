@@ -7,10 +7,11 @@ namespace SimpleAudio;
 public static class TrackVolumeNormalizer
 {
     private const float TargetIntegratedLufs = -16.0f;
-    private const float PeakSafetyMargin = 0.98f;
-    private const float MinNormalizationGain = 0.70f;
-    private const float MaxNormalizationGain = 1.35f;
+    private const float TargetTruePeakDbtp = -1.0f;
+    internal const float MinNormalizationGain = 0f;
+    internal const float MaxNormalizationGain = 4.0f;
     private const int MeasurementReadBufferLength = 16 * 1024;
+    private static readonly float MaxTruePeakLinear = MathF.Pow(10f, TargetTruePeakDbtp / 20f);
     private static readonly ConcurrentDictionary<string, Lazy<Task<float>>> GainCache = new(StringComparer.OrdinalIgnoreCase);
 
     public static Task<float> EstimateGainAsync(
@@ -136,8 +137,8 @@ public static class TrackVolumeNormalizer
             return gain;
         }
 
-        var maxSafeGain = PeakSafetyMargin / truePeakLinear;
-        return Math.Clamp(Math.Min(gain, maxSafeGain), MinNormalizationGain, MaxNormalizationGain);
+        var maxSafeGain = MaxTruePeakLinear / truePeakLinear;
+        return Math.Clamp(Math.Min(gain, maxSafeGain), 0f, MaxNormalizationGain);
     }
 
     private static void DrainDecodeStream(int handle, CancellationToken cancellationToken)

@@ -400,7 +400,10 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
     private void SetStoredNormalizationGain(SimpleAudioPlayer deck, float gain)
     {
-        var clamped = Math.Clamp(gain, 0.5f, 1.5f);
+        var clamped = Math.Clamp(
+            gain,
+            TrackVolumeNormalizer.MinNormalizationGain,
+            TrackVolumeNormalizer.MaxNormalizationGain);
         if (ReferenceEquals(deck, _deckA))
         {
             _deckANormalizationGain = clamped;

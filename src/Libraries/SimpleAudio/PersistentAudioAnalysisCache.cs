@@ -7,7 +7,7 @@ namespace SimpleAudio;
 internal static class PersistentAudioAnalysisCache
 {
     private const int TrackAnalysisSchemaVersion = 1;
-    private const int NormalizationGainSchemaVersion = 1;
+    private const int NormalizationGainSchemaVersion = 2;
     private const int MaxCacheFiles = 8192;
     private const long MaxCacheBytes = 64L * 1024 * 1024;
 
