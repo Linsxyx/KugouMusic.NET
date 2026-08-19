@@ -26,11 +26,11 @@ public partial class SimpleAudioPlayer
         SurroundEnabled = enable;
         if (enable)
         {
-            StereoWidth = 0.20f;
-            ReverbAmount = 0.15f;
-            ReverbTimeMs = 1500f;
-            ChorusMix = 0.20f;
-            EchoMix = 0.15f;
+            StereoWidth = LiveHouseStereoWidth;
+            ReverbAmount = LiveHouseReverbAmount;
+            ReverbTimeMs = LiveHouseReverbTimeMs;
+            ChorusMix = LiveHouseChorusMix;
+            EchoMix = LiveHouseEchoMix;
         }
         else
         {
@@ -62,7 +62,7 @@ public partial class SimpleAudioPlayer
 
     public void SetReverbTime(float milliseconds)
     {
-        ReverbTimeMs = Math.Clamp(milliseconds, 100f, 4000f);
+        ReverbTimeMs = Math.Clamp(milliseconds, 100f, 3000f);
         SurroundEnabled = HasAnySpatialEffectEnabled();
         ApplySpatialEffects();
     }
@@ -262,10 +262,11 @@ public partial class SimpleAudioPlayer
         {
             var reverb = new DXReverbParameters
             {
-                fInGain = 0f,
-                fReverbMix = -18f + ReverbAmount * 12f,
+                // Let the room be obvious: the direct PA stays present under a long, lively tail.
+                fInGain = -0.8f,
+                fReverbMix = Math.Clamp(-22f + ReverbAmount * 34f, -22f, -2f),
                 fReverbTime = ReverbTimeMs,
-                fHighFreqRTRatio = 0.2f + ReverbAmount * 0.35f
+                fHighFreqRTRatio = 0.38f + ReverbAmount * 0.42f
             };
             Bass.FXSetParameters(ReverbHandle, reverb);
         }
@@ -287,12 +288,13 @@ public partial class SimpleAudioPlayer
         {
             var chorus = new DXChorusParameters
             {
-                fDelay = 8f + ChorusMix * 8f,
-                fDepth = 3f + ChorusMix * 10f,
-                fFeedback = 4f + ChorusMix * 12f,
-                fFrequency = 0.18f + ChorusMix * 0.3f,
+                // Very light decorrelation: enough to open the room without a synthetic swirl.
+                fDelay = 12f + ChorusMix * 5f,
+                fDepth = 2f + ChorusMix * 8f,
+                fFeedback = -2f + ChorusMix * 4f,
+                fFrequency = 0.12f + ChorusMix * 0.18f,
                 lWaveform = DXWaveform.Sine,
-                fWetDryMix = ChorusMix * 35f,
+                fWetDryMix = ChorusMix * 18f,
                 lPhase = DXPhase.Positive180
             };
             Bass.FXSetParameters(ChorusHandle, chorus);
@@ -315,11 +317,12 @@ public partial class SimpleAudioPlayer
         {
             Bass.FXSetParameters(EchoHandle, new EchoParameters
             {
-                fDryMix = Math.Clamp(1f - EchoMix * 0.18f, 0.75f, 1f),
-                fWetMix = EchoMix * 0.28f,
-                fFeedback = 0.08f + EchoMix * 0.24f,
-                fDelay = 0.16f + EchoMix * 0.18f,
-                bStereo = 0
+                // An audible, cross-channel delayed reflection recreates the rear-wall bounce.
+                fDryMix = Math.Clamp(1f - EchoMix * 0.12f, 0.82f, 1f),
+                fWetMix = EchoMix * 0.36f,
+                fFeedback = 0.12f + EchoMix * 0.55f,
+                fDelay = 0.10f + EchoMix * 0.30f,
+                bStereo = info.Channels == 2 ? 1 : 0
             });
         }
     }
@@ -400,15 +403,26 @@ public partial class SimpleAudioPlayer
 
         Marshal.Copy(buffer, DspBuffer, 0, floatCount);
 
-        var width = StereoWidth;
+        var sideGain = 1f + StereoWidth * 0.65f;
+        var normalization = 1f / MathF.Sqrt((1f + sideGain * sideGain) * 0.5f);
         for (var i = 0; i < floatCount - 1; i += 2)
         {
             var l = DspBuffer[i];
             var r = DspBuffer[i + 1];
-            DspBuffer[i] = l + (l - r) * width;
-            DspBuffer[i + 1] = r + (r - l) * width;
+            var mid = (l + r) * 0.5f;
+            var side = (l - r) * 0.5f * sideGain;
+            var widenedLeft = (mid + side) * normalization;
+            var widenedRight = (mid - side) * normalization;
+            DspBuffer[i] = ApplyLiveHouseSaturation(widenedLeft);
+            DspBuffer[i + 1] = ApplyLiveHouseSaturation(widenedRight);
         }
 
         Marshal.Copy(DspBuffer, 0, buffer, floatCount);
+    }
+
+    private static float ApplyLiveHouseSaturation(float sample)
+    {
+        return sample * (1f + LiveHouseSaturation) /
+               (1f + LiveHouseSaturation * MathF.Abs(sample));
     }
 }

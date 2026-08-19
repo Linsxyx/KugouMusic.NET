@@ -233,15 +233,15 @@ public sealed class DualTrackAudioPlayer : IDisposable
         _surroundEnabled = enable;
         if (enable)
         {
-            _currentStereoWidth = 0.20f;
-            _currentReverbAmount = 0.15f;
-            _currentReverbTimeMs = 1500f;
+            _currentStereoWidth = SimpleAudioPlayer.LiveHouseStereoWidth;
+            _currentReverbAmount = SimpleAudioPlayer.LiveHouseReverbAmount;
+            _currentReverbTimeMs = SimpleAudioPlayer.LiveHouseReverbTimeMs;
         }
         else
         {
             _currentStereoWidth = 0f;
             _currentReverbAmount = 0f;
-            _currentReverbTimeMs = 1500f;
+            _currentReverbTimeMs = SimpleAudioPlayer.LiveHouseReverbTimeMs;
         }
 
         _activeDeck.SetSurround(enable);
@@ -267,7 +267,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
     public void SetReverbTime(float milliseconds)
     {
-        _currentReverbTimeMs = Math.Clamp(milliseconds, 100f, 4000f);
+        _currentReverbTimeMs = Math.Clamp(milliseconds, 100f, 3000f);
         _activeDeck.SetReverbTime(_currentReverbTimeMs);
         _standbyDeck.SetReverbTime(_currentReverbTimeMs);
         _fadingDeck?.SetReverbTime(_currentReverbTimeMs);

@@ -424,7 +424,7 @@
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                 <StackPanel>
                                     <TextBlock Text="空间音效" FontWeight="DemiBold" />
-                                    <TextBlock Text="3D音效，不保证好用"
+                                    <TextBlock Text="不保证好用"
                                                FontSize="12"
                                                Foreground="{DynamicResource SukiLowText}" />
                                 </StackPanel>

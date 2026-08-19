@@ -11,8 +11,14 @@ public partial class SimpleAudioPlayer
     private const int NetworkReadTimeoutMilliseconds = 45000;
     private const float DefaultHighShelfCenterHz = 4800f;
     private const float DefaultLowPassCutoffHz = 18000f;
+    internal const float LiveHouseChorusMix = 0.07f;
+    internal const float LiveHouseEchoMix = 0.24f;
+    internal const float LiveHouseReverbAmount = 0.34f;
+    internal const float LiveHouseReverbTimeMs = 3000f;
+    internal const float LiveHouseStereoWidth = 0.22f;
+    private const float LiveHouseSaturation = 0.12f;
     private static readonly float[] EQFreqs = [141f, 234f, 469f, 844f, 1300f, 2200f, 3700f, 5800f, 9000f, 13800f];
-    private static readonly object BassDeviceGate = new();
+    private static readonly Lock BassDeviceGate = new();
     private static bool _bassDeviceConfigurationApplied;
     private static int _actualSystemDefaultDeviceId = Bass.DefaultDevice;
     private static int _preferredOutputDeviceId = Bass.DefaultDevice;
