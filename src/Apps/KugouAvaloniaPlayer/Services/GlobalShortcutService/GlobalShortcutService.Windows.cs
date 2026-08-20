@@ -28,23 +28,37 @@ public sealed partial class GlobalShortcutService
         Win32Properties.AddWndProcHookCallback(mainWindow, _wndProcHook);
     }
 
-    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture, out string? errorMessage)
+    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture,
+        out string? errorMessage, out GlobalShortcutRegistrationFailureKind failureKind)
     {
         errorMessage = null;
+        failureKind = GlobalShortcutRegistrationFailureKind.None;
         var handle = _mainWindow?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (handle == IntPtr.Zero)
         {
             errorMessage = "主窗口尚未准备好。";
+            failureKind = GlobalShortcutRegistrationFailureKind.PlatformError;
+            return false;
+        }
+
+        var virtualKey = ToVirtualKey(gesture.Key);
+        if (virtualKey is null)
+        {
+            errorMessage = "该按键暂不支持 Windows 全局快捷键。";
+            failureKind = GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
 
         var hotKeyId = 10_000 + (int)action;
-        if (!RegisterHotKey(handle, hotKeyId, ToNativeModifiers(gesture.Modifiers), ToVirtualKey(gesture.Key)))
+        if (!RegisterHotKey(handle, hotKeyId, ToNativeModifiers(gesture.Modifiers), virtualKey.Value))
         {
             var errorCode = Marshal.GetLastWin32Error();
             errorMessage = errorCode == 1409
                 ? "该组合已被系统或其他应用占用。"
                 : $"注册失败 ({errorCode})";
+            failureKind = errorCode == 1409
+                ? GlobalShortcutRegistrationFailureKind.Conflict
+                : GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
 
@@ -95,7 +109,7 @@ public sealed partial class GlobalShortcutService
         return native;
     }
 
-    private static uint ToVirtualKey(Avalonia.Input.Key key)
+    private static uint? ToVirtualKey(Avalonia.Input.Key key)
     {
         return key switch
         {
@@ -106,7 +120,28 @@ public sealed partial class GlobalShortcutService
             Avalonia.Input.Key.Down => 0x28,
             >= Avalonia.Input.Key.A and <= Avalonia.Input.Key.Z => (uint)('A' + (key - Avalonia.Input.Key.A)),
             >= Avalonia.Input.Key.D0 and <= Avalonia.Input.Key.D9 => (uint)('0' + (key - Avalonia.Input.Key.D0)),
-            _ => (uint)key
+            >= Avalonia.Input.Key.NumPad0 and <= Avalonia.Input.Key.NumPad9 =>
+                0x60u + (uint)(key - Avalonia.Input.Key.NumPad0),
+            Avalonia.Input.Key.Multiply => 0x6A,
+            Avalonia.Input.Key.Add => 0x6B,
+            Avalonia.Input.Key.Separator => 0x6C,
+            Avalonia.Input.Key.Subtract => 0x6D,
+            Avalonia.Input.Key.Decimal => 0x6E,
+            Avalonia.Input.Key.Divide => 0x6F,
+            Avalonia.Input.Key.OemSemicolon => 0xBA,
+            Avalonia.Input.Key.OemPlus => 0xBB,
+            Avalonia.Input.Key.OemComma => 0xBC,
+            Avalonia.Input.Key.OemMinus => 0xBD,
+            Avalonia.Input.Key.OemPeriod => 0xBE,
+            Avalonia.Input.Key.OemQuestion => 0xBF,
+            Avalonia.Input.Key.Oem3 => 0xC0,
+            Avalonia.Input.Key.Oem4 => 0xDB,
+            Avalonia.Input.Key.OemPipe => 0xDC,
+            Avalonia.Input.Key.OemCloseBrackets => 0xDD,
+            Avalonia.Input.Key.OemQuotes => 0xDE,
+            Avalonia.Input.Key.Oem8 => 0xDF,
+            Avalonia.Input.Key.OemBackslash => 0xE2,
+            _ => null
         };
     }
 

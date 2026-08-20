@@ -58,12 +58,15 @@ public sealed partial class GlobalShortcutService
         }
     }
 
-    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture, out string? errorMessage)
+    private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture,
+        out string? errorMessage, out GlobalShortcutRegistrationFailureKind failureKind)
     {
         errorMessage = null;
+        failureKind = GlobalShortcutRegistrationFailureKind.None;
         if (_macEventHandlerRef == IntPtr.Zero)
         {
             errorMessage = "macOS 全局快捷键初始化失败。";
+            failureKind = GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
 
@@ -71,6 +74,7 @@ public sealed partial class GlobalShortcutService
         if (keyCode is null)
         {
             errorMessage = "该按键暂不支持 macOS 全局快捷键。";
+            failureKind = GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
 
@@ -93,6 +97,9 @@ public sealed partial class GlobalShortcutService
             errorMessage = status == -9878
                 ? "该组合已被系统或其他应用占用。"
                 : $"注册失败 ({status})";
+            failureKind = status == -9878
+                ? GlobalShortcutRegistrationFailureKind.Conflict
+                : GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
 
@@ -193,6 +200,34 @@ public sealed partial class GlobalShortcutService
             Avalonia.Input.Key.D7 => 26,
             Avalonia.Input.Key.D8 => 28,
             Avalonia.Input.Key.D9 => 25,
+            Avalonia.Input.Key.NumPad0 => 82,
+            Avalonia.Input.Key.NumPad1 => 83,
+            Avalonia.Input.Key.NumPad2 => 84,
+            Avalonia.Input.Key.NumPad3 => 85,
+            Avalonia.Input.Key.NumPad4 => 86,
+            Avalonia.Input.Key.NumPad5 => 87,
+            Avalonia.Input.Key.NumPad6 => 88,
+            Avalonia.Input.Key.NumPad7 => 89,
+            Avalonia.Input.Key.NumPad8 => 91,
+            Avalonia.Input.Key.NumPad9 => 92,
+            Avalonia.Input.Key.Multiply => 67,
+            Avalonia.Input.Key.Add => 69,
+            Avalonia.Input.Key.Separator => 81,
+            Avalonia.Input.Key.Subtract => 78,
+            Avalonia.Input.Key.Decimal => 65,
+            Avalonia.Input.Key.Divide => 75,
+            Avalonia.Input.Key.OemSemicolon => 41,
+            Avalonia.Input.Key.OemPlus => 24,
+            Avalonia.Input.Key.OemComma => 43,
+            Avalonia.Input.Key.OemMinus => 27,
+            Avalonia.Input.Key.OemPeriod => 47,
+            Avalonia.Input.Key.OemQuestion => 44,
+            Avalonia.Input.Key.Oem3 => 50,
+            Avalonia.Input.Key.Oem4 => 33,
+            Avalonia.Input.Key.OemPipe => 42,
+            Avalonia.Input.Key.OemCloseBrackets => 30,
+            Avalonia.Input.Key.OemQuotes => 39,
+            Avalonia.Input.Key.OemBackslash => 10,
             _ => null
         };
     }

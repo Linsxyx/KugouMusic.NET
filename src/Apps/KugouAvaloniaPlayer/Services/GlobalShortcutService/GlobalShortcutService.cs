@@ -323,7 +323,7 @@ public sealed partial class GlobalShortcutService(
                 continue;
             }
 
-            if (TryRegisterPlatformShortcut(action, gesture, out var errorMessage))
+            if (TryRegisterPlatformShortcut(action, gesture, out var errorMessage, out var failureKind))
             {
                 _activeGestures[action] = gesture;
                 results[action] = new GlobalShortcutRegistrationResult(true);
@@ -332,8 +332,7 @@ public sealed partial class GlobalShortcutService(
             }
 
             allSucceeded = false;
-            var result = new GlobalShortcutRegistrationResult(false, errorMessage,
-                GlobalShortcutRegistrationFailureKind.Conflict);
+            var result = new GlobalShortcutRegistrationResult(false, errorMessage, failureKind);
             results[action] = result;
             _currentResults[action] = result;
 
@@ -433,7 +432,7 @@ public sealed partial class GlobalShortcutService(
     private partial void InitializePlatform(Window mainWindow);
 
     private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture,
-        out string? errorMessage);
+        out string? errorMessage, out GlobalShortcutRegistrationFailureKind failureKind);
 
     private partial void UnregisterPlatformShortcut(GlobalShortcutAction action);
 }

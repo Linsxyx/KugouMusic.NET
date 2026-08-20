@@ -80,14 +80,16 @@ public sealed partial class GlobalShortcutService
     }
 
     private partial bool TryRegisterPlatformShortcut(GlobalShortcutAction action, GlobalShortcutGesture gesture,
-        out string? errorMessage)
+        out string? errorMessage, out GlobalShortcutRegistrationFailureKind failureKind)
     {
         errorMessage = null;
+        failureKind = GlobalShortcutRegistrationFailureKind.None;
         if (_x11Display == IntPtr.Zero || _x11RootWindow == IntPtr.Zero)
         {
             errorMessage = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DISPLAY"))
                 ? "当前会话不是 X11，暂不支持全局快捷键。"
                 : "无法连接到 X11，暂不支持全局快捷键。";
+            failureKind = GlobalShortcutRegistrationFailureKind.UnsupportedPlatform;
             return false;
         }
 
@@ -95,6 +97,7 @@ public sealed partial class GlobalShortcutService
         if (keysym == IntPtr.Zero)
         {
             errorMessage = "该按键暂不支持 Linux 全局快捷键。";
+            failureKind = GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
 
@@ -107,11 +110,12 @@ public sealed partial class GlobalShortcutService
         if (keycode == 0)
         {
             errorMessage = "无法解析该按键在当前键盘布局下的键位。";
+            failureKind = GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
 
         var baseModifiers = ToX11Modifiers(gesture.Modifiers);
-        if (!TryGrabX11Key(keycode, baseModifiers, out errorMessage))
+        if (!TryGrabX11Key(keycode, baseModifiers, out errorMessage, out failureKind))
             return false;
 
         _linuxRegistrations[action] = new LinuxShortcutRegistration(keycode, baseModifiers);
@@ -131,9 +135,11 @@ public sealed partial class GlobalShortcutService
         }
     }
 
-    private bool TryGrabX11Key(byte keycode, uint baseModifiers, out string? errorMessage)
+    private bool TryGrabX11Key(byte keycode, uint baseModifiers, out string? errorMessage,
+        out GlobalShortcutRegistrationFailureKind failureKind)
     {
         errorMessage = null;
+        failureKind = GlobalShortcutRegistrationFailureKind.None;
         lock (_x11SyncRoot)
         {
             lock (X11ErrorSyncRoot)
@@ -166,6 +172,9 @@ public sealed partial class GlobalShortcutService
             errorMessage = errorCode == X11BadAccess
                 ? "该组合已被系统或其他应用占用。"
                 : $"X11 注册失败 ({errorCode})";
+            failureKind = errorCode == X11BadAccess
+                ? GlobalShortcutRegistrationFailureKind.Conflict
+                : GlobalShortcutRegistrationFailureKind.PlatformError;
             return false;
         }
     }
@@ -236,6 +245,25 @@ public sealed partial class GlobalShortcutService
             Key.Down => new IntPtr(0xFF54),
             >= Key.A and <= Key.Z => new IntPtr('a' + (key - Key.A)),
             >= Key.D0 and <= Key.D9 => new IntPtr('0' + (key - Key.D0)),
+            >= Key.NumPad0 and <= Key.NumPad9 => new IntPtr(0xFFB0 + (key - Key.NumPad0)),
+            Key.Multiply => new IntPtr(0xFFAA),
+            Key.Add => new IntPtr(0xFFAB),
+            Key.Separator => new IntPtr(0xFFAC),
+            Key.Subtract => new IntPtr(0xFFAD),
+            Key.Decimal => new IntPtr(0xFFAE),
+            Key.Divide => new IntPtr(0xFFAF),
+            Key.OemSemicolon => new IntPtr(';'),
+            Key.OemPlus => new IntPtr('='),
+            Key.OemComma => new IntPtr(','),
+            Key.OemMinus => new IntPtr('-'),
+            Key.OemPeriod => new IntPtr('.'),
+            Key.OemQuestion => new IntPtr('/'),
+            Key.Oem3 => new IntPtr('`'),
+            Key.Oem4 => new IntPtr('['),
+            Key.OemPipe => new IntPtr('\\'),
+            Key.OemCloseBrackets => new IntPtr(']'),
+            Key.OemQuotes => new IntPtr('\''),
+            Key.OemBackslash => new IntPtr('<'),
             _ => IntPtr.Zero
         };
     }
