@@ -12,6 +12,7 @@ public partial class DesktopLyricLockOverlayWindow : Window
     }
 
     public DesktopLyricViewModel? ViewModel => DataContext as DesktopLyricViewModel;
+    public Window? MoveTarget { get; init; }
 
     private void OnHotspotPointerEntered(object? sender, PointerEventArgs e)
     {
@@ -28,7 +29,7 @@ public partial class DesktopLyricLockOverlayWindow : Window
         var properties = e.GetCurrentPoint(this).Properties;
         if (properties.IsRightButtonPressed)
         {
-            BeginMoveDrag(e);
+            (MoveTarget ?? this).BeginMoveDrag(e);
             return;
         }
 

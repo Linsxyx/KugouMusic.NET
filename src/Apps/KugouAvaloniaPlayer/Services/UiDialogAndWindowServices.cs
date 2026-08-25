@@ -139,7 +139,6 @@ public sealed class DesktopLyricWindowService(
                      or nameof(DesktopLyricViewModel.VerticalDesiredWidth))
             {
                 ApplyWindowSize(lyricWindow, lyricViewModel);
-                ClampWindowToWorkingArea(lyricWindow);
                 UpdateHitTestState(lyricWindow, lyricViewModel);
                 SyncOverlayPositionFromLyricWindow();
             }
@@ -220,6 +219,7 @@ public sealed class DesktopLyricWindowService(
         var overlayWindow = new DesktopLyricLockOverlayWindow
         {
             DataContext = lyricViewModel,
+            MoveTarget = _lyricWindow,
             Position = GetOverlayPosition(_lyricWindow)
         };
 
@@ -232,11 +232,6 @@ public sealed class DesktopLyricWindowService(
 
         _lockOverlayWindow = overlayWindow;
         overlayWindow.Show();
-        overlayWindow.PositionChanged += (_, _) =>
-        {
-            if (_isSynchronizingWindowPositions) return;
-            SyncLyricWindowPositionFromOverlay();
-        };
     }
 
     private void CloseLockOverlayWindow()
@@ -265,23 +260,6 @@ public sealed class DesktopLyricWindowService(
         }
     }
 
-    private void SyncLyricWindowPositionFromOverlay()
-    {
-        if (_lyricWindow == null || _lockOverlayWindow == null)
-            return;
-
-        _isSynchronizingWindowPositions = true;
-        try
-        {
-            _lyricWindow.Position = GetLyricWindowPosition(_lyricWindow, _lockOverlayWindow);
-            CaptureLyricWindowPosition(_lyricWindow, _activeLayoutMode);
-        }
-        finally
-        {
-            _isSynchronizingWindowPositions = false;
-        }
-    }
-
     private static PixelRect GetCollapsedIconRegion(Window lyricWindow)
     {
         var width = (int)Math.Ceiling(lyricWindow.Bounds.Width);
@@ -295,14 +273,6 @@ public sealed class DesktopLyricWindowService(
         return new PixelPoint(
             lyricWindow.Position.X + region.X - (CollapsedIconSize - region.Width) / 2,
             lyricWindow.Position.Y + region.Y - (CollapsedIconSize - region.Height) / 2);
-    }
-
-    private static PixelPoint GetLyricWindowPosition(Window lyricWindow, Window overlayWindow)
-    {
-        var region = GetCollapsedIconRegion(lyricWindow);
-        return new PixelPoint(
-            overlayWindow.Position.X - region.X + (CollapsedIconSize - region.Width) / 2,
-            overlayWindow.Position.Y - region.Y + (CollapsedIconSize - region.Height) / 2);
     }
 
     private void SwitchWindowLayout(DesktopLyricWindow lyricWindow, DesktopLyricViewModel lyricViewModel)
@@ -379,7 +349,6 @@ public sealed class DesktopLyricWindowService(
         if (IsVisibleOnAnyScreen(lyricWindow, savedPosition))
         {
             lyricWindow.Position = savedPosition;
-            ClampWindowToWorkingArea(lyricWindow);
             return true;
         }
 
@@ -420,8 +389,17 @@ public sealed class DesktopLyricWindowService(
 
     private static bool IsVisibleOnAnyScreen(Window window, PixelPoint position)
     {
+        var scaling = window.RenderScaling;
+        var width = Math.Max(1, (int)Math.Ceiling(window.Width * scaling));
+        var height = Math.Max(1, (int)Math.Ceiling(window.Height * scaling));
+        var right = (long)position.X + width;
+        var bottom = (long)position.Y + height;
+
         return window.Screens.All.AsValueEnumerable().Any(screen =>
-            screen.Bounds.Contains(position) || screen.WorkingArea.Contains(position));
+            position.X < screen.Bounds.Right &&
+            right > screen.Bounds.X &&
+            position.Y < screen.Bounds.Bottom &&
+            bottom > screen.Bounds.Y);
     }
 }
 
