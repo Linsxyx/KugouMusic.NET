@@ -182,7 +182,11 @@ public partial class SimpleAudioPlayer
             TryLoadBassPlugin("bassdsd");
             TryLoadBassPlugin("basswebm");
             TryLoadBassPlugin("bassape");
-            if (!OperatingSystem.IsMacOS())
+            var usesSystemAacDecoder = OperatingSystem.IsMacOS() ||
+                                       (OperatingSystem.IsWindows() &&
+                                        System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture ==
+                                        System.Runtime.InteropServices.Architecture.Arm64);
+            if (!usesSystemAacDecoder)
             {
                 TryLoadBassPlugin("bass_aac");
             }
