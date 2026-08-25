@@ -15,7 +15,10 @@ jobs:
         include:
           - os: windows-latest
             rid: win-x64
-            name: windows-x64
+            name: win-x64
+          - os: windows-latest
+            rid: win-arm64
+            name: win-arm64
           - os: ubuntu-latest
             rid: linux-x64
             name: linux-x64
@@ -59,16 +62,15 @@ jobs:
           find ./publish -type f \( -name '*.pdb' -o -name '*.dbg' \) -delete
 
       - name: Download previous Velopack release
-        if: ${{ matrix.rid != 'linux-arm64' }}
         shell: bash
         run: |
           vpk download github \
             --repoUrl "https://github.com/${{ github.repository }}" \
             --token "${{ secrets.GITHUB_TOKEN }}" \
+            --channel "${{ matrix.rid }}" \
             -o ./releases || true
 
       - name: Pack with Velopack
-        if: ${{ matrix.rid != 'linux-arm64' }}
         shell: bash
         run: |
           VERSION=${GITHUB_REF_NAME#v}
@@ -86,17 +88,12 @@ jobs:
             -p ./publish \
             -e "$EXE_NAME" \
             -i "$ICON_PATH" \
+            -c "${{ matrix.rid }}" \
+            -r "${{ matrix.rid }}" \
             -o ./releases
 
           find ./releases -type f -name '*.nupkg' ! -name "KugouAvaloniaPlayer-${VERSION}-*.nupkg" -delete
           find ./releases -type f -iname '*-delta.nupkg' -delete
-
-      - name: Create linux-arm64 archive (no auto-update)
-        if: ${{ matrix.rid == 'linux-arm64' }}
-        shell: bash
-        run: |
-          mkdir -p ./releases
-          tar -czf ./releases/KugouAvaloniaPlayer-linux-arm64.tar.gz -C ./publish .
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -110,10 +107,10 @@ jobs:
         include:
           - os: macos-latest
             rid: osx-arm64
-            name: macos-arm64
+            name: osx-arm64
           - os: macos-15-intel
             rid: osx-x64
-            name: macos-x64
+            name: osx-x64
 
     runs-on: ${{ matrix.os }}
 
@@ -256,38 +253,16 @@ jobs:
             "./dist/${APP_NAME}.app" \
             "./releases/${APP_NAME}-${RID}.app.zip"
 
-      - name: Build unsigned pkg
-        if: ${{ matrix.rid == 'osx-arm64' }}
-        shell: bash
-        run: |
-          mkdir -p ./pkgroot/Applications
-          cp -R "./dist/${APP_NAME}.app" "./pkgroot/Applications/"
-
-          pkgbuild \
-            --root ./pkgroot \
-            --identifier "${BUNDLE_ID}" \
-            --version "${VERSION}" \
-            --install-location / \
-            "./releases/${APP_NAME}-${RID}-unsigned.pkg"
-
-      - name: Inspect pkg signature status
-        if: ${{ matrix.rid == 'osx-arm64' }}
-        shell: bash
-        run: |
-          spctl -a -vv -t install "./releases/${APP_NAME}-${RID}-unsigned.pkg" || true
-          pkgutil --check-signature "./releases/${APP_NAME}-${RID}-unsigned.pkg" || true
-
       - name: Download previous Velopack release
-        if: ${{ matrix.rid == 'osx-arm64' }}
         shell: bash
         run: |
           vpk download github \
             --repoUrl "https://github.com/${{ github.repository }}" \
             --token "${{ secrets.GITHUB_TOKEN }}" \
+            --channel "$RID" \
             -o ./releases || true
 
       - name: Pack with Velopack (macOS)
-        if: ${{ matrix.rid == 'osx-arm64' }}
         shell: bash
         run: |
           vpk pack \
@@ -296,6 +271,8 @@ jobs:
             -p ./publish/macos \
             -e "$APP_NAME" \
             -i ./dist/KugouAvaloniaPlayer.icns \
+            -c "$RID" \
+            -r "$RID" \
             -o ./releases
 
           find ./releases -type f -name '*.nupkg' ! -name "${APP_NAME}-${VERSION}-*.nupkg" -delete
@@ -329,26 +306,36 @@ jobs:
         run: |
           mkdir -p ./release_files
 
-          cp ./all_artifacts/releases-windows-x64/*.exe ./release_files/KugouAvaloniaPlayer-win-x64.exe 2>/dev/null || true
-          cp ./all_artifacts/releases-windows-x64/*.zip ./release_files/KugouAvaloniaPlayer-win-x64.zip 2>/dev/null || true
+          cp ./all_artifacts/releases-win-x64/*-Setup.exe ./release_files/KugouAvaloniaPlayer-win-x64.exe 2>/dev/null || true
+          cp ./all_artifacts/releases-win-x64/*-Portable.zip ./release_files/KugouAvaloniaPlayer-win-x64.zip 2>/dev/null || true
+          cp ./all_artifacts/releases-win-arm64/*-Setup.exe ./release_files/KugouAvaloniaPlayer-win-arm64.exe 2>/dev/null || true
+          cp ./all_artifacts/releases-win-arm64/*-Portable.zip ./release_files/KugouAvaloniaPlayer-win-arm64.zip 2>/dev/null || true
           cp ./all_artifacts/releases-linux-x64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage 2>/dev/null || true
-          cp ./all_artifacts/releases-linux-arm64/*.tar.gz ./release_files/KugouAvaloniaPlayer-linux-arm64.tar.gz 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-arm64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-arm64.AppImage 2>/dev/null || true
 
-          cp ./all_artifacts/releases-macos-arm64/*osx-arm64.app.zip ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip 2>/dev/null || true
-          cp ./all_artifacts/releases-macos-x64/*osx-x64.app.zip ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip 2>/dev/null || true
-          cp ./all_artifacts/releases-macos-arm64/*-osx-Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg 2>/dev/null || true
+          cp ./all_artifacts/releases-osx-arm64/*osx-arm64.app.zip ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip 2>/dev/null || true
+          cp ./all_artifacts/releases-osx-x64/*osx-x64.app.zip ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip 2>/dev/null || true
+          cp ./all_artifacts/releases-osx-arm64/*-Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg 2>/dev/null || true
+          cp ./all_artifacts/releases-osx-x64/*-Setup.pkg ./release_files/KugouAvaloniaPlayer-mac-x64-Setup.pkg 2>/dev/null || true
 
-          cp ./all_artifacts/releases-windows-x64/*.nupkg ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/releases-linux-x64/*.nupkg ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/releases-macos-arm64/*.nupkg ./release_files/ 2>/dev/null || true
+          for rid in win-x64 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64; do
+            source_dir="./all_artifacts/releases-${rid}"
+            for package in "$source_dir"/*.nupkg; do
+              [[ -f "$package" ]] || continue
+              base=$(basename "$package")
+              cp "$package" "./release_files/${rid}-${base}"
+            done
+            for index in "$source_dir"/releases.*.json; do
+              [[ -f "$index" ]] || continue
+              base=$(basename "$index")
+              cp "$index" "./release_files/$base"
+              sed -E -i "s#([\"/:])KugouAvaloniaPlayer-#\1${rid}-KugouAvaloniaPlayer-#g" "./release_files/$base"
+            done
+          done
 
-          cp ./all_artifacts/releases-windows-x64/RELEASES* ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/releases-linux-x64/RELEASES* ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/releases-macos-arm64/RELEASES* ./release_files/ 2>/dev/null || true
-
-          cp ./all_artifacts/releases-windows-x64/releases.*.json ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/releases-linux-x64/releases.*.json ./release_files/ 2>/dev/null || true
-          cp ./all_artifacts/releases-macos-arm64/releases.*.json ./release_files/ 2>/dev/null || true
+          cp ./release_files/releases.win-x64.json ./release_files/releases.win.json
+          cp ./release_files/releases.linux-x64.json ./release_files/releases.linux.json
+          cp ./release_files/releases.osx-arm64.json ./release_files/releases.osx.json
 
           find ./release_files -type f -iname '*-delta.nupkg' -delete
 
@@ -372,15 +359,11 @@ jobs:
             cp "$source_file" "$target_dir/"
           }
 
-          copy_required "./release_files/releases.win.json" ./gitee_release_files
-          copy_required "./release_files/releases.linux.json" ./gitee_release_files
-          copy_required "./release_files/releases.osx.json" ./gitee_release_files
-          copy_required "./release_files/RELEASES" ./gitee_release_files
-          copy_required "./release_files/RELEASES-osx" ./gitee_release_files
-          copy_required "./release_files/RELEASES-linux" ./gitee_release_files
-
+          for channel in win-x64 win-arm64 linux-x64 linux-arm64 osx-x64 osx-arm64 win linux osx; do
+            copy_required "./release_files/releases.${channel}.json" ./gitee_release_files
+          done
           shopt -s nullglob
-          update_packages=(./release_files/KugouAvaloniaPlayer-"${VERSION}"-*.nupkg)
+          update_packages=(./release_files/*-KugouAvaloniaPlayer-"${VERSION}"-*.nupkg)
           if [[ ${#update_packages[@]} -eq 0 ]]; then
             echo "Missing required Gitee update packages for version: ${VERSION}"
             exit 1
@@ -389,13 +372,12 @@ jobs:
           cp "${update_packages[@]}" ./gitee_release_files/
 
           ls -lah ./gitee_release_files
-          zip -r ./gitee-release-files.zip ./gitee_release_files
 
       - name: Upload Gitee update package
         uses: actions/upload-artifact@v4
         with:
           name: gitee-update-files
-          path: ./gitee-release-files.zip
+          path: ./gitee_release_files/*
 
       - name: Extract latest changelog from README
         shell: bash
@@ -419,11 +401,12 @@ jobs:
           {
             echo "## 下载"
             echo
-            echo "- Windows: [KugouAvaloniaPlayer-win-x64.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-x64.exe)"
+            echo "- Windows x64: [KugouAvaloniaPlayer-win-x64.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-x64.exe)"
+            echo "- Windows ARM64: [KugouAvaloniaPlayer-win-arm64.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-arm64.exe)"
             echo "- Linux x64: [KugouAvaloniaPlayer-linux-x64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-x64.AppImage)"
-            echo "- Linux arm64: [KugouAvaloniaPlayer-linux-arm64.tar.gz](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-arm64.tar.gz)"
+            echo "- Linux ARM64: [KugouAvaloniaPlayer-linux-arm64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-arm64.AppImage)"
             echo "- macOS Apple Silicon: [KugouAvaloniaPlayer-mac-arm64-Setup.pkg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-arm64-Setup.pkg)"
-            echo "- macOS Intel: [KugouAvaloniaPlayer-mac-x64.app.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-x64.app.zip)"
+            echo "- macOS Intel: [KugouAvaloniaPlayer-mac-x64-Setup.pkg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-x64-Setup.pkg)"
             echo
             cat RELEASE_NOTES.md
           } > RELEASE_NOTES_WITH_DOWNLOADS.md
@@ -440,13 +423,15 @@ jobs:
           files: |
             ./release_files/KugouAvaloniaPlayer-win-x64.exe
             ./release_files/KugouAvaloniaPlayer-win-x64.zip
+            ./release_files/KugouAvaloniaPlayer-win-arm64.exe
+            ./release_files/KugouAvaloniaPlayer-win-arm64.zip
             ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage
-            ./release_files/KugouAvaloniaPlayer-linux-arm64.tar.gz
+            ./release_files/KugouAvaloniaPlayer-linux-arm64.AppImage
             ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip
             ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip
             ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg
+            ./release_files/KugouAvaloniaPlayer-mac-x64-Setup.pkg
             ./release_files/*.nupkg
-            ./release_files/RELEASES*
             ./release_files/releases.*.json
           body_path: RELEASE_NOTES.md
           token: ${{ secrets.GITHUB_TOKEN }}
