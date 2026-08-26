@@ -113,6 +113,9 @@ public partial class SettingViewModel : PageViewModelBase
     public partial string TaskbarSelectedLyricAlignment { get; set; } = LyricAlignmentLeft;
 
     [ObservableProperty]
+    public partial int TaskbarLyricsHorizontalOffset { get; set; }
+
+    [ObservableProperty]
     public partial string? TaskbarSelectedLyricFontFamily { get; set; }
 
     [ObservableProperty]
@@ -269,6 +272,7 @@ public partial class SettingViewModel : PageViewModelBase
                 : DesktopLyricLayoutHorizontal;
             EnableTaskbarLyrics = IsTaskbarLyricsSupported && SettingsManager.Settings.EnableTaskbarLyrics;
             TaskbarLyricsShowTranslation = SettingsManager.Settings.TaskbarLyricsShowTranslation;
+            TaskbarLyricsHorizontalOffset = Math.Clamp(SettingsManager.Settings.TaskbarLyricsHorizontalOffset, -200, 200);
             TaskbarSelectedLyricAlignment = SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right
                 ? LyricAlignmentRight
                 : LyricAlignmentLeft;
@@ -581,6 +585,7 @@ public partial class SettingViewModel : PageViewModelBase
         {
             TaskbarSelectedLyricFontFamily = fontFamily;
             TaskbarLyricsFontSize = 17;
+            TaskbarLyricsHorizontalOffset = 0;
             TaskbarUnplayedColorHexInput = DefaultTaskbarUnplayedColor;
             TaskbarPlayedColorHexInput = DefaultTaskbarPlayedColor;
         }
@@ -591,6 +596,7 @@ public partial class SettingViewModel : PageViewModelBase
 
         SettingsManager.Settings.TaskbarLyricsFontFamily = fontFamily;
         SettingsManager.Settings.TaskbarLyricsFontSize = 17;
+        SettingsManager.Settings.TaskbarLyricsHorizontalOffset = 0;
         SettingsManager.Settings.TaskbarLyricsUnplayedColor = DefaultTaskbarUnplayedColor;
         SettingsManager.Settings.TaskbarLyricsPlayedColor = DefaultTaskbarPlayedColor;
         SettingsManager.Save();
@@ -787,6 +793,22 @@ public partial class SettingViewModel : PageViewModelBase
         if (_isApplyingSettingsSnapshot) return;
 
         SettingsManager.Settings.TaskbarLyricsShowTranslation = value;
+        SettingsManager.Save();
+        _taskbarLyricsService.Refresh();
+    }
+
+    partial void OnTaskbarLyricsHorizontalOffsetChanged(int value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        var normalized = Math.Clamp(value, -200, 200);
+        if (normalized != value)
+        {
+            TaskbarLyricsHorizontalOffset = normalized;
+            return;
+        }
+
+        SettingsManager.Settings.TaskbarLyricsHorizontalOffset = normalized;
         SettingsManager.Save();
         _taskbarLyricsService.Refresh();
     }

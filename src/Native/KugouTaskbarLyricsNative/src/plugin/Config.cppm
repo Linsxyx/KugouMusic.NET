@@ -59,6 +59,7 @@ export struct Config {
     double line_duration_ms = 0;
     int margin_left = 0;
     int margin_right = 0;
+    int horizontal_offset = 0;
     int line_spacing = 2;
     TASKBAR_WINDOW_ALIGNMENT window_alignment = TASKBAR_WINDOW_ALIGNMENT_AUTO;
     unsigned int color_primary = 0xFF2E2E2E;
@@ -136,6 +137,10 @@ export auto setConfig(const std::string &key, const std::string &value) -> bool 
             config.margin_left = std::stoi(value);
         } else if (key == "margin_right") {
             config.margin_right = std::stoi(value);
+        } else if (key == "horizontal_offset") {
+            const auto offset = std::clamp(std::stoi(value), -200, 200);
+            if (offset == config.horizontal_offset) return false;
+            config.horizontal_offset = offset;
         } else if (key == "line_spacing") {
             config.line_spacing = std::stoi(value);
         } else if (key == "window_alignment") {

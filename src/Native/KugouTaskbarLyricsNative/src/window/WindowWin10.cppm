@@ -833,6 +833,10 @@ public:
         } else if (state.window_alignment == TASKBAR_WINDOW_ALIGNMENT_CENTER) {
             xPos = availableLeft + (availableWidth - currentWidth) / 2;
         }
+        xPos = std::clamp(
+            xPos + state.horizontal_offset,
+            0,
+            std::max(0, static_cast<int>(taskbarRect.right - taskbarRect.left) - currentWidth));
 
         logWin10("updateWindowPosition - availableLeft: " + std::to_string(availableLeft) +
                  ", trayLeft: " + std::to_string(availableRight) +

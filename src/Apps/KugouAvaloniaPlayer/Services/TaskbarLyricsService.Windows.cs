@@ -225,7 +225,8 @@ public sealed class TaskbarLyricsService : ITaskbarLyricsService
             EncodeText(fontFamily),
             fontSize.ToString(CultureInfo.InvariantCulture),
             FormatArgb(settings.TaskbarLyricsUnplayedColor, 0xFF2E2E2E),
-            FormatArgb(settings.TaskbarLyricsPlayedColor, 0xFF268EEB));
+            FormatArgb(settings.TaskbarLyricsPlayedColor, 0xFF268EEB),
+            Math.Clamp(settings.TaskbarLyricsHorizontalOffset, -200, 200).ToString(CultureInfo.InvariantCulture));
 
         lock (_sync)
         {

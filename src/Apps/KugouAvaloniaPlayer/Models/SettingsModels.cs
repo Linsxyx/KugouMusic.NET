@@ -197,6 +197,8 @@ public class AppSettings
 
     public LyricAlignmentOption TaskbarLyricsAlignment { get; set; } = LyricAlignmentOption.Left;
 
+    public int TaskbarLyricsHorizontalOffset { get; set; }
+
     public string TaskbarLyricsFontFamily { get; set; } = "Microsoft YaHei UI";
 
     public int TaskbarLyricsFontSize { get; set; } = 17;

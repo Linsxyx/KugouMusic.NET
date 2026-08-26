@@ -1,6 +1,7 @@
 module;
 
 #include <Windows.h>
+#include <algorithm>
 #include <functional>
 #include <fstream>
 #include <mutex>
@@ -264,6 +265,13 @@ public:
 
         offset += config.margin_left;
         width -= config.margin_right + offset;
+        RECT taskbarClientRect{};
+        if (GetClientRect(Taskbar::getHWND(), &taskbarClientRect)) {
+            const auto maximumOffset = std::max(0L, taskbarClientRect.right - width);
+            offset = std::clamp(offset + config.horizontal_offset, 0L, maximumOffset);
+        } else {
+            offset += config.horizontal_offset;
+        }
         height += taskbarFrame.bottom - taskbarFrame.top;
 
         logWindow("update() - final position: offset=" + std::to_string(offset) + 

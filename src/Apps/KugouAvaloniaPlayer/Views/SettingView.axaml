@@ -893,6 +893,23 @@
                                                   SelectedItem="{Binding TaskbarSelectedLyricAlignment}" />
                                     </Grid>
 
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                                        <StackPanel>
+                                            <TextBlock Text="水平微调" FontWeight="DemiBold" />
+                                            <TextBlock Text="负值向左、正值向右，使用方向键可逐像素调整"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SukiLowText}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                            <Slider Width="220" Minimum="-200" Maximum="200"
+                                                    TickFrequency="1" SmallChange="1" LargeChange="20"
+                                                    IsSnapToTickEnabled="True"
+                                                    Value="{Binding TaskbarLyricsHorizontalOffset, Mode=TwoWay}" />
+                                            <TextBlock MinWidth="52" VerticalAlignment="Center"
+                                                       Text="{Binding TaskbarLyricsHorizontalOffset, StringFormat={}{0} px}" />
+                                        </StackPanel>
+                                    </Grid>
+
                                     <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6" />
 
                                     <TextBlock Text="字体与颜色"
@@ -1166,9 +1183,9 @@
                             </Grid>
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
-                                <StackPanel>
+                                <!--<StackPanel>
                                     <TextBlock Text="退出登录" FontWeight="DemiBold" />
-                                </StackPanel>
+                                </StackPanel>-->
                                 <Button Grid.Column="1"
                                         Classes="Basic"
                                         Command="{Binding LogoutCommand}"
