@@ -209,8 +209,7 @@
     </localControls:KugouWindow.Styles>
 
     <suki:SukiMainHost Name="WindowHost"
-                       BackgroundStyle="Bubble"
-                       CornerRadius="10">
+                       BackgroundStyle="Bubble">
         <suki:SukiMainHost.Hosts>
             <suki:SukiToastHost Manager="{Binding ToastManager}" />
             <suki:SukiDialogHost Manager="{Binding DialogManager}" />
