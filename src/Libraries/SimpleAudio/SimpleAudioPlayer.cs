@@ -17,7 +17,7 @@ public partial class SimpleAudioPlayer
     internal const float LiveHouseReverbTimeMs = 3000f;
     internal const float LiveHouseStereoWidth = 0.22f;
     private const float LiveHouseSaturation = 0.12f;
-    private static readonly float[] EQFreqs = [141f, 234f, 469f, 844f, 1300f, 2200f, 3700f, 5800f, 9000f, 13800f];
+    private static readonly float[] EQFreqs = [32f, 63f, 125f, 250f, 500f, 1000f, 2000f, 4000f, 8000f, 16000f];
     private static readonly Lock BassDeviceGate = new();
     private static bool _bassDeviceConfigurationApplied;
     private static int _actualSystemDefaultDeviceId = Bass.DefaultDevice;
