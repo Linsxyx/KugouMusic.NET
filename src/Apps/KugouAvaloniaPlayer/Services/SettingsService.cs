@@ -25,6 +25,8 @@ namespace KugouAvaloniaPlayer.Services;
 [JsonSerializable(typeof(Dictionary<string, JellyfinServerSettings>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(AppSettings))]
+[JsonSerializable(typeof(AdvancedAudioEffectsSettings))]
+[JsonSerializable(typeof(AudioEffectsPreset))]
 internal partial class AppSettingsJsonContext : JsonSerializerContext
 {
 }
@@ -151,6 +153,32 @@ public static class SettingsManager
         if (!SimpleAudioPlayer.IsOutputDeviceAvailable(Settings.AudioOutputDeviceId))
             Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
         Settings.CustomEqGains = NormalizeCustomEqGains(Settings.CustomEqGains);
+        Settings.AdvancedAudioEffects ??= new AdvancedAudioEffectsSettings();
+        var fx = Settings.AdvancedAudioEffects;
+        fx.StereoWidth = Math.Clamp(fx.StereoWidth, 0f, 1f);
+        fx.StereoOutputGain = Math.Clamp(fx.StereoOutputGain, 0f, 2f);
+        fx.ReverbAmount = Math.Clamp(fx.ReverbAmount, 0f, 1f);
+        fx.ReverbTimeMs = Math.Clamp(fx.ReverbTimeMs, 100f, 3000f);
+        fx.EchoMix = Math.Clamp(fx.EchoMix, 0f, 1f);
+        fx.EchoFeedback = Math.Clamp(fx.EchoFeedback, 0f, 0.95f);
+        fx.EchoDelayMs = Math.Clamp(fx.EchoDelayMs, 1f, 1000f);
+        fx.ChorusMix = Math.Clamp(fx.ChorusMix, 0f, 1f);
+        fx.ChorusDepth = Math.Clamp(fx.ChorusDepth, 0f, 100f);
+        fx.ChorusRate = Math.Clamp(fx.ChorusRate, 0.01f, 10f);
+        fx.CompressorThreshold = Math.Clamp(fx.CompressorThreshold, -60f, 0f);
+        fx.CompressorRatio = Math.Clamp(fx.CompressorRatio, 1f, 20f);
+        fx.CompressorAttackMs = Math.Clamp(fx.CompressorAttackMs, 0.1f, 200f);
+        fx.CompressorReleaseMs = Math.Clamp(fx.CompressorReleaseMs, 1f, 1000f);
+        fx.DistortionDrive = Math.Clamp(fx.DistortionDrive, 0f, 1f);
+        fx.DistortionMix = Math.Clamp(fx.DistortionMix, 0f, 1f);
+        fx.BqfCenterHz = Math.Clamp(fx.BqfCenterHz, 20f, 20000f);
+        fx.BqfGainDb = Math.Clamp(fx.BqfGainDb, -24f, 24f);
+        fx.BqfQ = Math.Clamp(fx.BqfQ, 0.1f, 10f);
+        fx.FlangerMix = Math.Clamp(fx.FlangerMix, 0f, 1f); fx.FlangerDepth = Math.Clamp(fx.FlangerDepth, 0f, 100f); fx.FlangerRate = Math.Clamp(fx.FlangerRate, 0.01f, 10f);
+        fx.PhaserMix = Math.Clamp(fx.PhaserMix, 0f, 1f); fx.PhaserRate = Math.Clamp(fx.PhaserRate, 0.01f, 10f); fx.PhaserRange = Math.Clamp(fx.PhaserRange, 0f, 10f); fx.PhaserFrequency = Math.Clamp(fx.PhaserFrequency, 20f, 20000f);
+        fx.GargleRateHz = Math.Clamp(fx.GargleRateHz, 1, 2000);
+        fx.AutoWahMix = Math.Clamp(fx.AutoWahMix, 0f, 1f); fx.AutoWahRate = Math.Clamp(fx.AutoWahRate, 0.01f, 10f); fx.AutoWahRange = Math.Clamp(fx.AutoWahRange, 0f, 10f); fx.AutoWahFrequency = Math.Clamp(fx.AutoWahFrequency, 20f, 20000f);
+        fx.DampTarget = Math.Clamp(fx.DampTarget, 0f, 1f); fx.DampQuiet = Math.Clamp(fx.DampQuiet, 0f, 1f); fx.DampRate = Math.Clamp(fx.DampRate, 0f, 10f); fx.DampGain = Math.Clamp(fx.DampGain, 0f, 2f); fx.DampDelay = Math.Clamp(fx.DampDelay, 0f, 1000f);
     }
 
     private static float[] NormalizeCustomEqGains(float[]? gains)

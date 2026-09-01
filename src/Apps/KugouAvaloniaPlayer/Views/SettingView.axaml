@@ -309,7 +309,7 @@
                                                Foreground="{DynamicResource SukiLowText}" />
                                 </StackPanel>
                                 <Grid Grid.Column="1"
-                                      ColumnDefinitions="*,Auto"
+                                      ColumnDefinitions="*,Auto,Auto"
                                       ColumnSpacing="8"
                                       MinWidth="280">
                                     <ComboBox Grid.Column="0"

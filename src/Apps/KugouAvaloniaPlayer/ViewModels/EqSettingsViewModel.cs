@@ -28,9 +28,11 @@ public partial class EqSettingsViewModel : ObservableObject
     private readonly PlayerViewModel _player;
     private bool _isInitializing;
 
-    public EqSettingsViewModel(PlayerViewModel player)
+    public EqSettingsViewModel(PlayerViewModel player, AdvancedAudioEffectsViewModel advancedAudioEffects)
     {
         _player = player;
+        AdvancedEffects = advancedAudioEffects;
+        AdvancedEffects.PresetImported += ReloadFromSettings;
         var savedGains = SettingsManager.Settings.CustomEqGains;
 
         _isInitializing = true;
@@ -45,6 +47,7 @@ public partial class EqSettingsViewModel : ObservableObject
     }
 
     public ObservableCollection<EqBandViewModel> Bands { get; } = new();
+    public AdvancedAudioEffectsViewModel AdvancedEffects { get; }
 
     public void ReloadFromSettings()
     {

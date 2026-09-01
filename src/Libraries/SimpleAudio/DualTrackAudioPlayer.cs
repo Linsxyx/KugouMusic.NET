@@ -21,6 +21,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
     private float _currentReverbAmount;
     private float _currentReverbTimeMs = 1500f;
     private float _currentStereoWidth;
+    private AdvancedAudioEffectsSettings _advancedEffects = new();
     private float _playbackSpeed = 1.0f;
     private float _deckANormalizationGain = 1.0f;
     private float _deckBNormalizationGain = 1.0f;
@@ -228,6 +229,14 @@ public sealed class DualTrackAudioPlayer : IDisposable
         _standbyDeck.SetEQ(_currentEq);
     }
 
+    public void ApplyAdvancedEffects(AdvancedAudioEffectsSettings settings)
+    {
+        _advancedEffects = settings.Clone();
+        _activeDeck.ApplyAdvancedEffects(_advancedEffects);
+        _standbyDeck.ApplyAdvancedEffects(_advancedEffects);
+        _fadingDeck?.ApplyAdvancedEffects(_advancedEffects);
+    }
+
     public void SetSurround(bool enable)
     {
         _surroundEnabled = enable;
@@ -381,6 +390,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
         deck.SetNormalizationGain(GetEffectiveNormalizationGain(deck));
         deck.SetTransitionGain(1f);
         deck.SetTransitionTone(0f);
+        deck.ApplyAdvancedEffects(_advancedEffects);
     }
 
     private float GetEffectiveNormalizationGain(SimpleAudioPlayer? deck)

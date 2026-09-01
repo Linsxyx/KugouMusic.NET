@@ -26,6 +26,16 @@ public sealed class PlaybackAudioEffectsService(
         _player.SetEQ(gains);
     }
 
+    public void ApplyAdvancedEffects(AdvancedAudioEffectsSettings settings)
+    {
+        _player.ApplyAdvancedEffects(settings);
+        if (!settings.StereoEnabled && !settings.ReverbEnabled && !settings.ChorusEnabled && !settings.EchoEnabled)
+            _player.SetSurround(SettingsManager.Settings.EnableSurround);
+    }
+
+    public AdvancedAudioEffectsSettings GetAdvancedEffects() =>
+        SettingsManager.Settings.AdvancedAudioEffects;
+
     public void UpdateAudioEffects(string preset, bool surround)
     {
         if (preset == "自定义")
@@ -34,6 +44,7 @@ public sealed class PlaybackAudioEffectsService(
             _player.SetEQ(GetEqPreset(preset));
 
         _player.SetSurround(surround);
+        _player.ApplyAdvancedEffects(SettingsManager.Settings.AdvancedAudioEffects);
     }
 
     public async Task SetVolumeNormalizationEnabledAsync(SongItem? currentSong)

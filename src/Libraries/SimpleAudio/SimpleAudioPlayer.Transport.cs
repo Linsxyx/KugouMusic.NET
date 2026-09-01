@@ -70,12 +70,17 @@ public partial class SimpleAudioPlayer : IDisposable
         ReverbHandle = 0;
         ChorusHandle = 0;
         EchoHandle = 0;
+        CompressorHandle = 0;
+        DistortionHandle = 0;
+        BqfHandle = 0;
+        FlangerHandle = 0; PhaserHandle = 0; GargleHandle = 0; AutoWahHandle = 0; DampHandle = 0;
         HighShelfHandle = 0;
         LowPassHandle = 0;
         TransitionGain = 1.0f;
         TransitionToneDepth = 0f;
 
         ApplyEQ();
+        ApplyAdvancedEffects(_state.AdvancedEffects);
         ApplySpatialEffects();
         ApplyTransitionTone();
         ApplyPlaybackSpeed();

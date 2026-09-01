@@ -1073,6 +1073,7 @@ public partial class SettingViewModel : PageViewModelBase
             .TryShow();
     }
 
+
     [RelayCommand]
     private async Task PickCustomBackgroundImage()
     {

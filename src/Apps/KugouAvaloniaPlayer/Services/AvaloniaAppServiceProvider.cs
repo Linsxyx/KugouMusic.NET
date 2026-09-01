@@ -111,6 +111,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<LocalMusicLibraryViewModel>().To<LocalMusicLibraryViewModel>()
         .Bind<MyPlaylistsViewModel>().To<MyPlaylistsViewModel>()
         .Bind<EqSettingsViewModel>().To<EqSettingsViewModel>()
+        .Bind<AdvancedAudioEffectsViewModel>().To<AdvancedAudioEffectsViewModel>()
         .Bind<RankViewModel>().As(Singleton).To<RankViewModel>();
 
     internal partial Owned<DesktopAppRoot> CreateRoot(

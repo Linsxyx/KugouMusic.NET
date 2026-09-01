@@ -31,6 +31,14 @@ public partial class SimpleAudioPlayer
         get => _state.ChorusHandle;
         set => _state.ChorusHandle = value;
     }
+    private int CompressorHandle { get => _state.CompressorHandle; set => _state.CompressorHandle = value; }
+    private int DistortionHandle { get => _state.DistortionHandle; set => _state.DistortionHandle = value; }
+    private int BqfHandle { get => _state.BqfHandle; set => _state.BqfHandle = value; }
+    private int FlangerHandle { get => _state.FlangerHandle; set => _state.FlangerHandle = value; }
+    private int PhaserHandle { get => _state.PhaserHandle; set => _state.PhaserHandle = value; }
+    private int GargleHandle { get => _state.GargleHandle; set => _state.GargleHandle = value; }
+    private int AutoWahHandle { get => _state.AutoWahHandle; set => _state.AutoWahHandle = value; }
+    private int DampHandle { get => _state.DampHandle; set => _state.DampHandle = value; }
 
     private float ChorusMix
     {

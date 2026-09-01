@@ -7,7 +7,16 @@ public partial class SimpleAudioPlayer
     private sealed class PlayerRuntimeState
     {
         public float ChorusMix { get; set; }
+        public AdvancedAudioEffectsSettings AdvancedEffects { get; set; } = new();
         public int ChorusHandle { get; set; }
+        public int CompressorHandle { get; set; }
+        public int DistortionHandle { get; set; }
+        public int BqfHandle { get; set; }
+        public int FlangerHandle { get; set; }
+        public int PhaserHandle { get; set; }
+        public int GargleHandle { get; set; }
+        public int AutoWahHandle { get; set; }
+        public int DampHandle { get; set; }
         public float[] CurrentEQ { get; set; } = new float[10];
         public float[] DspBuffer { get; set; } = Array.Empty<float>();
         public float EchoMix { get; set; }

@@ -1,9 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:views="using:KugouAvaloniaPlayer.Views"
              x:Class="KugouAvaloniaPlayer.Views.EqSettingsView"
              x:DataType="vm:EqSettingsViewModel">
-    <StackPanel Spacing="20" Margin="10" Width="550">
+    <ScrollViewer MaxHeight="760" VerticalScrollBarVisibility="Auto">
+    <StackPanel Spacing="20" Margin="10" MinWidth="360" MaxWidth="680">
         <Grid ColumnDefinitions="*, Auto">
             <StackPanel>
                 <TextBlock Text="均衡器设置" FontSize="18" FontWeight="Bold" />
@@ -43,5 +45,9 @@
 
         <TextBlock Text="注意：调整将自动切换至“自定义”预设模式"
                    FontSize="11" HorizontalAlignment="Center" Opacity="0.5" />
+        <Expander Header="进阶音效 · Advanced Effects" IsExpanded="False">
+            <views:AdvancedAudioEffectsView DataContext="{Binding AdvancedEffects}" />
+        </Expander>
     </StackPanel>
+    </ScrollViewer>
 </UserControl>

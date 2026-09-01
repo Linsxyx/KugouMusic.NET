@@ -13,6 +13,8 @@ public interface IFolderPickerService
     Task<string?> PickSingleFolderAsync(string title);
     Task<string?> PickSingleImageFileAsync(string title);
     Task<IReadOnlyList<string>> PickAudioFilesAsync(string title);
+    Task<string?> PickJsonFileAsync(string title);
+    Task<string?> PickSaveJsonFileAsync(string title, string suggestedFileName);
 }
 
 public sealed class FolderPickerService : IFolderPickerService
@@ -80,5 +82,19 @@ public sealed class FolderPickerService : IFolderPickerService
         });
 
         return files.AsValueEnumerable().Select(x => x.Path.LocalPath).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+    }
+
+    public async Task<string?> PickJsonFileAsync(string title)
+    {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null) return null;
+        var files = await desktop.MainWindow.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = title, AllowMultiple = false, FileTypeFilter = [new FilePickerFileType("JSON 文件") { Patterns = ["*.json"], MimeTypes = ["application/json"] }] });
+        return files.Count == 0 ? null : files[0].Path.LocalPath;
+    }
+
+    public async Task<string?> PickSaveJsonFileAsync(string title, string suggestedFileName)
+    {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop || desktop.MainWindow == null) return null;
+        var file = await desktop.MainWindow.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = title, SuggestedFileName = suggestedFileName, DefaultExtension = "json", FileTypeChoices = [new FilePickerFileType("JSON 文件") { Patterns = ["*.json"], MimeTypes = ["application/json"] }] });
+        return file?.Path.LocalPath;
     }
 }

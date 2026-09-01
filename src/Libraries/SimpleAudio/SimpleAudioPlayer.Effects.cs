@@ -21,6 +21,50 @@ public partial class SimpleAudioPlayer
         UpdateActualVolume();
     }
 
+    public void ApplyAdvancedEffects(AdvancedAudioEffectsSettings settings)
+    {
+        _state.AdvancedEffects = settings.Clone();
+        ApplyAdvancedDynamics(settings);
+        if (settings.StereoEnabled || settings.ReverbEnabled || settings.ChorusEnabled || settings.EchoEnabled)
+        {
+            StereoWidth = settings.StereoEnabled ? Math.Clamp(settings.StereoWidth, 0f, 1f) : 0f;
+            ReverbAmount = settings.ReverbEnabled ? Math.Clamp(settings.ReverbAmount, 0f, 1f) : 0f;
+            ReverbTimeMs = Math.Clamp(settings.ReverbTimeMs, 100f, 3000f);
+            ChorusMix = settings.ChorusEnabled ? Math.Clamp(settings.ChorusMix, 0f, 1f) : 0f;
+            EchoMix = settings.EchoEnabled ? Math.Clamp(settings.EchoMix, 0f, 1f) : 0f;
+            SurroundEnabled = HasAnySpatialEffectEnabled();
+            ApplySpatialEffects();
+        }
+        UpdateActualVolume();
+    }
+
+    public AdvancedAudioEffectsSettings GetAdvancedEffects() => _state.AdvancedEffects.Clone();
+
+    private void ApplyAdvancedDynamics(AdvancedAudioEffectsSettings settings)
+    {
+        if (Stream == 0) return;
+        CompressorHandle = ApplySimpleFx(settings.CompressorEnabled, EffectType.Compressor, CompressorHandle, new CompressorParameters { fThreshold = settings.CompressorThreshold, fRatio = settings.CompressorRatio, fAttack = settings.CompressorAttackMs, fRelease = settings.CompressorReleaseMs });
+        DistortionHandle = ApplySimpleFx(settings.DistortionEnabled, EffectType.Distortion, DistortionHandle, new DistortionParameters { fDrive = settings.DistortionDrive * 100f, fDryMix = 1f - settings.DistortionMix, fWetMix = settings.DistortionMix, fVolume = 0.3f });
+        BqfHandle = ApplySimpleFx(settings.BqfEnabled, EffectType.BQF, BqfHandle, new BQFParameters { lFilter = BQFType.PeakingEQ, fCenter = settings.BqfCenterHz, fGain = settings.BqfGainDb, fQ = settings.BqfQ });
+        FlangerHandle = ApplySimpleFx(settings.FlangerEnabled, EffectType.DXFlanger, FlangerHandle, new DXFlangerParameters { fWetDryMix = settings.FlangerMix * 100f, fDepth = settings.FlangerDepth, fFrequency = settings.FlangerRate, fDelay = 2f });
+        PhaserHandle = ApplySimpleFx(settings.PhaserEnabled, EffectType.Phaser, PhaserHandle, new PhaserParameters { fDryMix = 1f - settings.PhaserMix, fWetMix = settings.PhaserMix, fRate = settings.PhaserRate, fRange = settings.PhaserRange, fFreq = settings.PhaserFrequency });
+        GargleHandle = ApplySimpleFx(settings.GargleEnabled, EffectType.DXGargle, GargleHandle, new DXGargleParameters { dwRateHz = settings.GargleRateHz });
+        AutoWahHandle = ApplySimpleFx(settings.AutoWahEnabled, EffectType.AutoWah, AutoWahHandle, new AutoWahParameters { fDryMix = 1f - settings.AutoWahMix, fWetMix = settings.AutoWahMix, fRate = settings.AutoWahRate, fRange = settings.AutoWahRange, fFreq = settings.AutoWahFrequency });
+        DampHandle = ApplySimpleFx(settings.DampEnabled, EffectType.Damp, DampHandle, new DampParameters { fTarget = settings.DampTarget, fQuiet = settings.DampQuiet, fRate = settings.DampRate, fGain = settings.DampGain, fDelay = settings.DampDelay });
+    }
+
+    private int ApplySimpleFx<T>(bool enabled, EffectType type, int handle, T parameters) where T : class, IEffectParameter
+    {
+        if (!enabled)
+        {
+            if (handle != 0) Bass.ChannelRemoveFX(Stream, handle);
+            return 0;
+        }
+        if (handle == 0) handle = Bass.ChannelSetFX(Stream, type, 20);
+        if (handle != 0) Bass.FXSetParameters(handle, parameters);
+        return handle;
+    }
+
     public void SetSurround(bool enable)
     {
         SurroundEnabled = enable;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using KuGou.Net.Abstractions;
+using SimpleAudio;
 
 namespace KugouAvaloniaPlayer.Models;
 
@@ -182,6 +183,8 @@ public class AppSettings
     public string EQPreset { get; set; } = "原声";
 
     public bool EnableSurround { get; set; }
+
+    public AdvancedAudioEffectsSettings AdvancedAudioEffects { get; set; } = new();
 
     public bool EnableVolumeNormalization { get; set; }
 
