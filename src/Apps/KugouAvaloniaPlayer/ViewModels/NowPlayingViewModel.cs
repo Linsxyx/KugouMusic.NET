@@ -131,6 +131,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsStandardTheme))]
     [NotifyPropertyChangedFor(nameof(IsPendoloTheme))]
     [NotifyPropertyChangedFor(nameof(IsFumeTheme))]
+    [NotifyPropertyChangedFor(nameof(IsSonnetTheme))]
     [NotifyPropertyChangedFor(nameof(IsStandardLayoutVisible))]
     [NotifyPropertyChangedFor(nameof(CurrentThemePresetName))]
     public partial NowPlayingThemePreset SelectedThemePreset { get; set; } =
@@ -208,6 +209,8 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public bool IsPendoloTheme => SelectedThemePreset == NowPlayingThemePreset.Pendolo;
 
     public bool IsFumeTheme => SelectedThemePreset == NowPlayingThemePreset.Fume;
+
+    public bool IsSonnetTheme => SelectedThemePreset == NowPlayingThemePreset.Sonnet;
 
     public bool IsStandardLayoutVisible => IsStandardTheme && !HasPortraitBackground;
 
@@ -452,7 +455,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (value is NowPlayingThemePreset.Pendolo or NowPlayingThemePreset.Fume)
+        if (value is NowPlayingThemePreset.Pendolo or NowPlayingThemePreset.Fume or NowPlayingThemePreset.Sonnet)
             IsPortraitModeEnabled = false;
 
         SettingsManager.Settings.NowPlayingThemePreset = value;

@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:effects="using:AvaloniaSilkEffects"
+             x:Class="KugouAvaloniaPlayer.Views.NowPlayingThemes.SonnetNowPlayingThemeView"
+             ClipToBounds="True">
+    <Grid x:Name="EffectViewport" ClipToBounds="True">
+        <effects:SilkEffectControl x:Name="EffectSurface"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch"
+                                   ClipToBounds="True"
+                                   ClearColor="#FF080912"
+                                   RenderMode="Continuous"
+                                   TargetFrameRate="60" />
+
+        <Border x:Name="DiagnosticOverlay"
+                Margin="40"
+                Padding="18,14"
+                MaxWidth="440"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Background="#D9141720"
+                BorderBrush="#55FFFFFF"
+                BorderThickness="1"
+                CornerRadius="12"
+                IsHitTestVisible="False">
+            <TextBlock x:Name="DiagnosticText"
+                       Text="正在初始化 Sonnet OpenGL 渲染器…"
+                       Foreground="White"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap" />
+        </Border>
+    </Grid>
+</UserControl>

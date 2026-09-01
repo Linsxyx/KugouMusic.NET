@@ -69,6 +69,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\Libraries\AvaloniaSilkEffects\AvaloniaSilkEffects.csproj"/>
         <ProjectReference Include="..\..\Libraries\AvaloniaLyrics\AvaloniaLyrics.csproj"/>
         <ProjectReference Include="..\..\Libraries\SimpleAudio\SimpleAudio.csproj"/>
         <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj"/>

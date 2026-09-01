@@ -273,6 +273,7 @@ public partial class NowPlayingView : UserControl
         {
             NowPlayingThemePreset.Pendolo => new PendoloNowPlayingThemeView(),
             NowPlayingThemePreset.Fume => new FumeNowPlayingThemeView(),
+            NowPlayingThemePreset.Sonnet => new SonnetNowPlayingThemeView(),
             _ => new StandardNowPlayingThemeView()
         };
 

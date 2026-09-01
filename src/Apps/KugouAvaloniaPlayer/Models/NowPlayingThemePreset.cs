@@ -7,7 +7,8 @@ public enum NowPlayingThemePreset
 {
     Standard,
     Pendolo,
-    Fume
+    Fume,
+    Sonnet
 }
 
 public sealed record NowPlayingThemePresetOption(
@@ -18,6 +19,9 @@ public static class NowPlayingThemePresetRegistry
 {
     public static IReadOnlyList<NowPlayingThemePresetOption> Presets { get; } =
     [
+        new(
+            NowPlayingThemePreset.Sonnet,
+            "十四行诗"),
         new(
             NowPlayingThemePreset.Pendolo,
             "摆钟"),
@@ -33,7 +37,8 @@ public static class NowPlayingThemePresetRegistry
     {
         return preset is NowPlayingThemePreset.Standard or
             NowPlayingThemePreset.Pendolo or
-            NowPlayingThemePreset.Fume
+            NowPlayingThemePreset.Fume or
+            NowPlayingThemePreset.Sonnet
             ? preset
             : NowPlayingThemePreset.Standard;
     }

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>AvaloniaSilkEffects</AssemblyName>
+    <PackageId>AvaloniaSilkEffects</PackageId>
+    <Description>A small OpenGL effects layer for Avalonia, built for kinetic typography and post-processing.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Silk.NET.Core" />
+    <PackageReference Include="Silk.NET.OpenGL" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.HarfBuzz" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>AvaloniaSilkEffects.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

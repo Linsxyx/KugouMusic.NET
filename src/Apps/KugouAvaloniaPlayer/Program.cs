@@ -54,8 +54,26 @@ internal sealed class Program
     }
 
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
+
+#if KUGOU_MACOS
+        // Sonnet uses OpenGlControlBase. Prefer OpenGL on macOS while retaining
+        // the existing Metal renderer and software renderer as fallbacks.
+        builder = builder.With(new AvaloniaNativePlatformOptions
+        {
+            RenderingMode =
+            [
+                AvaloniaNativeRenderingMode.OpenGl,
+                AvaloniaNativeRenderingMode.Metal,
+                AvaloniaNativeRenderingMode.Software,
+            ],
+        });
+#endif
+
+        return builder;
+    }
 }

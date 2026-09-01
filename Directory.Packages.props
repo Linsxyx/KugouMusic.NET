@@ -20,6 +20,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
     <PackageVersion Include="Microsoft.OpenApi" Version="2.10.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="Pure.DI" Version="2.5.2" />
     <PackageVersion Include="Pure.DI.MS" Version="2.4.3" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.12.8" />
@@ -31,6 +32,10 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageVersion Include="Silk.NET.Core" Version="2.23.0" />
+    <PackageVersion Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <PackageVersion Include="SkiaSharp" Version="3.119.4" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="3.119.1" />
     <PackageVersion Include="Spectre.Console" Version="0.55.0" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageVersion Include="SukiUI" Version="7.0.2-nightly20260625" />
@@ -38,6 +43,8 @@
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
     <PackageVersion Include="Tmds.DBus.Protocol" Version="0.94.2" />
     <PackageVersion Include="Velopack" Version="1.2.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="ZLinq" Version="1.5.6" />
     <PackageVersion Include="z440.atl.core" Version="7.15.3" />
   </ItemGroup>
