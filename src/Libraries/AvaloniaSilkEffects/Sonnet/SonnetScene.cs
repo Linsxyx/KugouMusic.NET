@@ -117,6 +117,9 @@ public sealed class SonnetScene : EffectScene
     {
         var paragraph = Program.Paragraphs[index];
         var root = new EffectContainer { IsVisible = false };
+        var sceneSeed = SonnetRandom.Hash($"{Program.Seed}:{paragraph.Id}");
+        root.Add(SonnetMgBuilder.BuildSceneBackdrop(
+            Theme, _size.Width, _size.Height, sceneSeed, Tuning, Options.TransparentBackground));
         var shots = new List<ShotView>();
         for (var shotIndex = 0; shotIndex < paragraph.Shots.Count; shotIndex++)
         {
@@ -136,8 +139,9 @@ public sealed class SonnetScene : EffectScene
                 }, Theme.FontWeight);
 
             var shotRoot = new EffectContainer { IsVisible = false };
-            var mg = SonnetMgBuilder.BuildShot(shot, Theme, _size.Width, _size.Height,
-                SonnetRandom.Hash($"{Program.Seed}:{shot.Id}:mg"), Tuning);
+            var shotSeed = unchecked(sceneSeed + (uint)(shotIndex * 97));
+            var mg = SonnetMgBuilder.BuildShot(
+                shot, Theme, _size.Width, _size.Height, shotSeed, Tuning);
             if (!Tuning.ShowOnlyText) shotRoot.Add(mg.Root);
             var glyphs = new List<GlyphView>();
             var guides = new List<SonnetGuideView>();
@@ -242,7 +246,8 @@ public sealed class SonnetScene : EffectScene
         var cameraOffset = new Vector2(
             _size.Width * (float)(camera.X * cameraIntensity + breath.X * breathWeight),
             _size.Height * (float)(camera.Y * cameraIntensity + breath.Y * breathWeight));
-        view.Mg.Update(time, view.Shot.StartTime, Audio, cameraOffset, (float)camera.Scale);
+        view.Mg.Update(time, view.Shot.StartTime, view.Shot.EndTime, Audio, cameraOffset,
+            (float)camera.Scale, view.Root.Rotation);
 
         foreach (var guide in view.Guides)
         {

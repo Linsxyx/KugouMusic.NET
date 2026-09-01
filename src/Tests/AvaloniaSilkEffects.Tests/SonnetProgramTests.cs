@@ -87,9 +87,9 @@ public sealed class SonnetProgramTests
     {
         var first = BuildMg(0x1234abcd);
         var second = BuildMg(0x1234abcd);
-        first.Update(8.25, 2, new(0.4f, 0.7f, 0.2f), new(24, -12), 1.08f);
-        second.Update(3.1, 2, new(0, 0, 0), Vector2.Zero, 1);
-        second.Update(8.25, 2, new(0.4f, 0.7f, 0.2f), new(24, -12), 1.08f);
+        first.Update(8.25, 2, 12, new(0.4f, 0.7f, 0.2f), new(24, -12), 1.08f, 0.12f);
+        second.Update(3.1, 2, 12, new(0, 0, 0), Vector2.Zero, 1, 0);
+        second.Update(8.25, 2, 12, new(0.4f, 0.7f, 0.2f), new(24, -12), 1.08f, 0.12f);
 
         var firstSnapshot = first.Snapshot();
         var secondSnapshot = second.Snapshot();
@@ -111,9 +111,9 @@ public sealed class SonnetProgramTests
     public void MotionGraphics_ClampAudioWithoutChangingBasePathsOrParticlePositions()
     {
         var view = BuildMg(0x10203040);
-        view.Update(4.5, 0, new(-20, float.PositiveInfinity, float.NaN), new(8, 12), 1.04f);
+        view.Update(4.5, 0, 12, new(-20, float.PositiveInfinity, float.NaN), new(8, 12), 1.04f, 0.08f);
         var clamped = view.Snapshot();
-        view.Update(4.5, 0, new(0, 0, 0), new(8, 12), 1.04f);
+        view.Update(4.5, 0, 12, new(0, 0, 0), new(8, 12), 1.04f, 0.08f);
         var zero = view.Snapshot();
 
         Assert.Equal(clamped.Select(particle => particle.Position),
@@ -125,12 +125,74 @@ public sealed class SonnetProgramTests
         });
     }
 
+    [Fact]
+    public void MotionGraphics_ApplyOriginalLayerParallaxAndUprightFixedGeometry()
+    {
+        var view = BuildMg(0x22446688);
+
+        view.Update(5, 2, 12, new(0.8f, 0.7f, 0.6f), new(20, -10), 1.1f, 0.2f);
+
+        Assert.Equal(new Vector2(8, -4), view.ParticleLayer.Position);
+        Assert.Equal(0.15f, view.ParticleLayer.Rotation, 5);
+        Assert.Equal(1.03f, view.ParticleLayer.Scale.X, 5);
+        Assert.NotNull(view.FixedGeometryLayer);
+        Assert.Equal(-0.2f, view.FixedGeometryLayer!.Rotation, 5);
+        Assert.NotEmpty(view.FixedGeometryLayer.Children);
+    }
+
+    [Fact]
+    public void MotionGraphics_StaggerFlowerIconsAndReactToAudio()
+    {
+        var view = BuildMg(0x1234abcd);
+
+        view.Update(2, 2, 12, default, Vector2.Zero, 1, 0);
+        var entering = view.Snapshot();
+        Assert.Equal(6, entering.Count(item => item.Alpha == 0));
+
+        view.Update(11.5, 2, 12, new(1, 1, 1), Vector2.Zero, 1, 0);
+        var revealed = view.Snapshot();
+        Assert.All(revealed.Where(item => item.Alpha < 1), item => Assert.True(item.Alpha > 0));
+        Assert.Contains(revealed, item => item.Scale.X > 1.35f);
+    }
+
+    [Fact]
+    public void ThemedMotionGraphics_ProvideTwelveDistinctFiniteCompositions()
+    {
+        var signatures = new HashSet<int>();
+        for (uint seed = 24; seed <= 35; seed++)
+        {
+            var view = BuildMg(seed);
+            var mainLayer = view.Root.Children.OfType<EffectContainer>()
+                .First(layer => layer != view.ParticleLayer && layer != view.FixedGeometryLayer);
+
+            Assert.NotEmpty(mainLayer.Children);
+            Assert.All(Flatten(mainLayer), node =>
+            {
+                Assert.True(float.IsFinite(node.Position.X));
+                Assert.True(float.IsFinite(node.Position.Y));
+                Assert.True(float.IsFinite(node.Alpha));
+            });
+            signatures.Add(Flatten(mainLayer).Count());
+        }
+
+        Assert.True(signatures.Count >= 10);
+    }
+
     private static SonnetMgView BuildMg(uint seed)
     {
         var shot = new SonnetShot("shot", SonnetShotKind.TypeImpact, 1, 12, [0], [], new(0, 0, 1, 0));
         var theme = new SonnetTheme(new(0.02f, 0.03f, 0.05f), new(0.95f, 0.95f, 0.92f),
             new(1, 0.25f, 0.42f), new(0.1f, 0.8f, 0.94f));
         return SonnetMgBuilder.BuildShot(shot, theme, 1280, 720, seed, new SonnetTuning());
+    }
+
+    private static IEnumerable<EffectNode> Flatten(EffectNode node)
+    {
+        yield return node;
+        if (node is not EffectContainer container) yield break;
+        foreach (var child in container.Children)
+        foreach (var descendant in Flatten(child))
+            yield return descendant;
     }
 
     private static SonnetGuideView BuildGuide(uint seed)

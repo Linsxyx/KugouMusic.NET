@@ -17,15 +17,15 @@ namespace KugouAvaloniaPlayer.Views.NowPlayingThemes;
 public partial class SonnetNowPlayingThemeView : UserControl
 {
     private static readonly SonnetTheme PlayerTheme = new(
-        Background: new(0.025f, 0.03f, 0.055f, 1),
-        Primary: new(0.96f, 0.95f, 0.9f, 1),
-        Accent: new(0.2f, 0.91f, 1f, 1),
-        Secondary: new(1f, 0.28f, 0.62f, 1),
+        Background: new(0.051f, 0.071f, 0.208f, 1),
+        Primary: new(0.9f, 0.91f, 0.95f, 1),
+        Accent: new(0.55f, 0.59f, 0.72f, 1),
+        Secondary: new(0.42f, 0.45f, 0.57f, 1),
         FontFamily: ResolveSonnetFontFamily(),
         FontWeight: 600,
         AnimationIntensity: SonnetAnimationIntensity.Normal,
-        Name: "Sonnet",
-        Description: "Folia Sonnet v0.7.2 player port");
+        Name: "Midnight Dream",
+        Description: "SONNET / FOLIA v0.7.2");
 
     private static string ResolveSonnetFontFamily()
     {
@@ -167,6 +167,8 @@ public partial class SonnetNowPlayingThemeView : UserControl
                     TextureResolution = 1.5f,
                     PostProcessEnabled = true,
                     ShowChromaticSplit = false,
+                    PostProcessRgbShift = 0,
+                    PostProcessLensDispersion = 0,
                 },
             });
             EffectSurface.Scene = _scene;
