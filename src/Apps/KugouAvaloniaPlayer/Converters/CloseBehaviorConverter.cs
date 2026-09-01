@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Avalonia;
 using Avalonia.Data.Converters;
 using KugouAvaloniaPlayer.Models;
 
@@ -21,6 +22,6 @@ public class CloseBehaviorConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return value;
+        return AvaloniaProperty.UnsetValue;
     }
 }

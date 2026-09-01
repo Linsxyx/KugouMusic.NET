@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Avalonia;
 using Avalonia.Data.Converters;
 using KuGou.Net.Abstractions.Models;
 
@@ -16,6 +17,6 @@ public class SingerNameConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return value;
+        return AvaloniaProperty.UnsetValue;
     }
 }

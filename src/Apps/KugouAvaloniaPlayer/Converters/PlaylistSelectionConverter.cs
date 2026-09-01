@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Avalonia;
 using Avalonia.Data.Converters;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
@@ -26,7 +27,7 @@ public class PlaylistSelectionConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return value;
+        return AvaloniaProperty.UnsetValue;
     }
 
     private static bool SameOnlinePlaylist(PlaylistItem selected, PlaylistItem candidate)

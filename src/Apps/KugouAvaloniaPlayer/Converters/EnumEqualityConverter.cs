@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Avalonia;
 using Avalonia.Data.Converters;
 
 namespace KugouAvaloniaPlayer.Converters;
@@ -29,6 +30,6 @@ public class EnumEqualityConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        return value;
+        return AvaloniaProperty.UnsetValue;
     }
 }

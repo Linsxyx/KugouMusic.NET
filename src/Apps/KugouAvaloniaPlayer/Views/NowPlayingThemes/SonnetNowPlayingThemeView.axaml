@@ -24,7 +24,7 @@
                 CornerRadius="12"
                 IsHitTestVisible="False">
             <TextBlock x:Name="DiagnosticText"
-                       Text="正在初始化 Sonnet OpenGL 渲染器…"
+                       Text="正在初始化"
                        Foreground="White"
                        TextAlignment="Center"
                        TextWrapping="Wrap" />
