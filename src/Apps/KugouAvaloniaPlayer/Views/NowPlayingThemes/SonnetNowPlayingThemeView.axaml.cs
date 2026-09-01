@@ -21,11 +21,24 @@ public partial class SonnetNowPlayingThemeView : UserControl
         Primary: new(0.96f, 0.95f, 0.9f, 1),
         Accent: new(0.2f, 0.91f, 1f, 1),
         Secondary: new(1f, 0.28f, 0.62f, 1),
-        FontFamily: "PingFang SC",
+        FontFamily: ResolveSonnetFontFamily(),
         FontWeight: 600,
         AnimationIntensity: SonnetAnimationIntensity.Normal,
         Name: "Sonnet",
         Description: "Folia Sonnet v0.7.2 player port");
+
+    private static string ResolveSonnetFontFamily()
+    {
+#if KUGOU_WINDOWS
+        return "Microsoft YaHei UI";
+#elif KUGOU_LINUX
+        return "Noto Sans CJK SC";
+#elif KUGOU_MACOS
+        return "PingFang SC";
+#else
+        return "Noto Sans CJK SC";
+#endif
+    }
 
     private readonly DispatcherTimer _diagnosticTimer;
     private NowPlayingViewModel? _viewModel;

@@ -42,6 +42,8 @@ internal sealed class EffectShaderProgram : IDisposable
 
     private uint Compile(ShaderType type, string source, string name)
     {
+        if (_gl.GetStringS(StringName.Version).Contains("OpenGL ES", StringComparison.OrdinalIgnoreCase))
+            source = source.Replace("#version 330 core", "#version 300 es\nprecision highp float;");
         var shader = _gl.CreateShader(type);
         _gl.ShaderSource(shader, source);
         _gl.CompileShader(shader);

@@ -16,8 +16,10 @@ public sealed class EffectDevice : IDisposable
         Renderer = gl.GetStringS(StringName.Renderer);
         gl.GetInteger(GetPName.MajorVersion, out var major);
         gl.GetInteger(GetPName.MinorVersion, out var minor);
-        if (major < 3 || major == 3 && minor < 3)
-            throw new NotSupportedException($"AvaloniaSilkEffects requires OpenGL 3.3 or newer; current context is {OpenGlVersion}.");
+        var isGles = OpenGlVersion.Contains("OpenGL ES", StringComparison.OrdinalIgnoreCase);
+        if ((!isGles && (major < 3 || major == 3 && minor < 3)) ||
+            (isGles && (major < 3)))
+            throw new NotSupportedException($"AvaloniaSilkEffects requires OpenGL 3.3+ or OpenGL ES 3.0+; current context is {OpenGlVersion}.");
         Primitives = new(gl);
         Textures = new(gl);
         PostProcess = new();
