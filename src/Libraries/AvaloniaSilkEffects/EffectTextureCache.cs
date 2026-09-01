@@ -1,7 +1,7 @@
 using System.Numerics;
 using SkiaSharp;
-using SkiaSharp.HarfBuzz;
 using Silk.NET.OpenGL;
+using ZLinq;
 
 namespace AvaloniaSilkEffects;
 
@@ -16,6 +16,20 @@ public sealed class EffectTextureCache : IDisposable
 
     public const long DefaultResidentByteLimit = 256L * 1024 * 1024;
     public const int DefaultResidentTextureLimit = 1024;
+
+    // 常见跨平台中文字体候选列表（优先匹配）
+    private static readonly string[] FallbackFontFamilies =
+    [
+        "Noto Sans CJK SC",
+        "Source Han Sans SC",
+        "Source Han Sans CN",
+        "WenQuanYi Micro Hei",
+        "WenQuanYi Zen Hei",
+        "Microsoft YaHei",
+        "PingFang SC",
+        "SimHei",
+        "Droid Sans Fallback"
+    ];
 
     internal EffectTextureCache(GL gl) => _gl = gl;
 
@@ -32,15 +46,74 @@ public sealed class EffectTextureCache : IDisposable
             _lastUsedFrame[texture] = _frame;
     }
 
-    public Vector2 MeasureText(string text, string fontFamily, float fontSize, int fontWeight)
+    /// <summary>
+    /// 获取能够支持当前文本的 Typeface（包含 Linux 中文 Fallback）
+    /// </summary>
+    private static SKTypeface ResolveTypeface(string? fontFamily, SKFontStyle style, string? sampleText = null)
     {
+        // 1. 尝试匹配用户指定的 fontFamily
+        if (!string.IsNullOrWhiteSpace(fontFamily))
+        {
+            var matched = SKFontManager.Default.MatchFamily(fontFamily, style);
+            if (matched != null)
+            {
+                // 如果没有提供采样文本，或该字体包含文本中的首个非空字符，则直接采用
+                if (string.IsNullOrEmpty(sampleText) || ContainsGlyph(matched, sampleText))
+                    return matched;
+            }
+        }
+
+        // 2. 如果文本中有中文等特殊字符，优先使用 MatchCharacter 获取支持该字符的系统字体
+        if (!string.IsNullOrEmpty(sampleText))
+        {
+            foreach (var ch in sampleText)
+            {
+                if (!char.IsWhiteSpace(ch) && ch > 127)
+                {
+                    var charMatched = SKFontManager.Default.MatchCharacter(ch);
+                    if (charMatched != null)
+                        return charMatched;
+                    break;
+                }
+            }
+        }
+
+        // 3. 尝试常用的中文字体名
+        foreach (var fallbackName in FallbackFontFamilies)
+        {
+            var fallback = SKFontManager.Default.MatchFamily(fallbackName, style);
+            if (fallback != null)
+                return fallback;
+        }
+
+        // 4. 最后降级到系统默认字体
+        return SKTypeface.Default;
+    }
+
+    private static bool ContainsGlyph(SKTypeface typeface, string text)
+    {
+        foreach (var ch in text)
+        {
+            if (ch > 127 && !char.IsWhiteSpace(ch))
+            {
+                return typeface.ContainsGlyph(ch);
+            }
+        }
+        return true;
+    }
+
+    public static Vector2 MeasureText(string text, string fontFamily, float fontSize, int fontWeight)
+    {
+        if (string.IsNullOrEmpty(text))
+            return Vector2.Zero;
+
         var style = fontWeight >= 700 ? SKFontStyle.Bold : SKFontStyle.Normal;
-        using var matchedTypeface = SKFontManager.Default.MatchFamily(fontFamily, style);
-        using var font = new SKFont(matchedTypeface ?? SKTypeface.Default, fontSize);
-        using var shaper = new SKShaper(font.Typeface);
-        var shaped = shaper.Shape(text, font);
+        using var typeface = ResolveTypeface(fontFamily, style, text);
+        using var font = new SKFont(typeface, fontSize);
+
+        var width = font.MeasureText(text);
         font.GetFontMetrics(out var metrics);
-        return new(shaped.Width, metrics.Descent - metrics.Ascent);
+        return new Vector2(width, metrics.Descent - metrics.Ascent);
     }
 
     public EffectTexture GetOrCreateText(
@@ -131,21 +204,18 @@ public sealed class EffectTextureCache : IDisposable
 
     private unsafe EffectTexture RasterizeText(TextTextureKey key)
     {
-        var style = key.FontWeight >= 700
-            ? SKFontStyle.Bold
-            : key.FontWeight >= 500 ? SKFontStyle.Normal : SKFontStyle.Normal;
-        using var matchedTypeface = SKFontManager.Default.MatchFamily(key.FontFamily, style);
-        var typeface = matchedTypeface ?? SKTypeface.Default;
+        var style = key.FontWeight >= 700 ? SKFontStyle.Bold : SKFontStyle.Normal;
+        using var typeface = ResolveTypeface(key.FontFamily, style, key.Text);
         using var font = new SKFont(typeface, key.FontSize * key.RasterScale)
         {
             Edging = SKFontEdging.Antialias,
             Subpixel = true,
         };
-        using var shaper = new SKShaper(typeface);
-        var shaped = shaper.Shape(key.Text, font);
+
+        var textWidth = font.MeasureText(key.Text);
         font.GetFontMetrics(out var metrics);
         const int padding = 12;
-        var width = Math.Max(1, (int)Math.Ceiling(shaped.Width) + padding * 2);
+        var width = Math.Max(1, (int)Math.Ceiling(textWidth) + padding * 2);
         var height = Math.Max(1, (int)Math.Ceiling(metrics.Descent - metrics.Ascent) + padding * 2);
 
         using var bitmap = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
@@ -160,7 +230,10 @@ public sealed class EffectTextureCache : IDisposable
                 (byte)Math.Clamp(key.Color.A * 255, 0, 255)),
         };
         canvas.Clear(SKColors.Transparent);
-        canvas.DrawShapedText(shaper, key.Text, padding, padding - metrics.Ascent, SKTextAlign.Left, font, paint);
+
+        // 基线 y 坐标计算
+        var y = padding - metrics.Ascent;
+        canvas.DrawText(key.Text, padding, y, font, paint);
         canvas.Flush();
 
         var handle = _gl.GenTexture();
@@ -194,6 +267,7 @@ public sealed class EffectTextureCache : IDisposable
 
         while ((_ownedTextures.Count > ResidentTextureLimit || ResidentBytes > ResidentByteLimit)
             && _ownedTextures
+                .AsValueEnumerable()
                 .Where(texture => _lastUsedFrame.GetValueOrDefault(texture) < _frame)
                 .OrderBy(texture => _lastUsedFrame.GetValueOrDefault(texture))
                 .FirstOrDefault() is { } oldest)

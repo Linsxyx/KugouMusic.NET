@@ -15,6 +15,7 @@
     <PackageReference Include="Silk.NET.OpenGL" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.HarfBuzz" />
+    <PackageReference Include="ZLinq" />
   </ItemGroup>
 
   <ItemGroup>

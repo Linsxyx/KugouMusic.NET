@@ -134,7 +134,7 @@ public sealed class SonnetScene : EffectScene
                 segmentsByLine, shot.Kind, paragraph.Kind, _size.Width, _size.Height, baseFontSize,
                 (text, size, weight) =>
                 {
-                    var measured = Device.Textures.MeasureText(text, Theme.FontFamily, size, weight);
+                    var measured = EffectTextureCache.MeasureText(text, Theme.FontFamily, size, weight);
                     return (measured.X, measured.Y);
                 }, Theme.FontWeight);
 
@@ -171,7 +171,7 @@ public sealed class SonnetScene : EffectScene
                     (placement.Role is SonnetSegmentRole.Hero or SonnetSegmentRole.SemiHero || decorSeed % 100 < 28))
                     shotRoot.Add(SonnetMgBuilder.BuildFrame(placement, fontSize, Theme, decorSeed));
                 var glyphLayout = SonnetMotion.BuildGlyphs(segment, placement, fontSize,
-                    text => Device.Textures.MeasureText(text, Theme.FontFamily, fontSize, weight).X,
+                    text => EffectTextureCache.MeasureText(text, Theme.FontFamily, fontSize, weight).X,
                     shot.StartTime, shot.EndTime);
                 foreach (var glyph in glyphLayout)
                 {
