@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Enumeration;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -17,10 +18,11 @@ namespace KugouAvaloniaPlayer.Services;
 public sealed class BoundedDiskCachedWebImageLoader(
     string cacheFolder,
     TimeSpan diskCacheLifetime,
+    HttpClient? httpClient = null,
     int maxMemoryEntries = BoundedDiskCachedWebImageLoader.DefaultMaxMemoryEntries,
     long maxMemoryBytes = BoundedDiskCachedWebImageLoader.DefaultMaxMemoryBytes,
     long maxDiskBytes = BoundedDiskCachedWebImageLoader.DefaultMaxDiskBytes)
-    : BaseWebImageLoader
+    : BaseWebImageLoader(httpClient ?? new HttpClient(), disposeHttpClient: httpClient == null)
 {
     private const int DefaultMaxMemoryEntries = 200;
     private const long DefaultMaxMemoryBytes = 32L * 1024 * 1024;

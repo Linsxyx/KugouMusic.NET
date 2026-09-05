@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net.Http;
 using AsyncImageLoader;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -149,6 +150,7 @@ public partial class App : Application
         _imageLoader = new BoundedDiskCachedWebImageLoader(
             cacheFolder,
             TimeSpan.FromDays(7),
+            httpClient: new HttpClient(KuGou.Net.Infrastructure.Http.KgPrimaryHandler.Create()),
             maxMemoryEntries: 200,
             maxMemoryBytes: 32L * 1024 * 1024,
             maxDiskBytes: 256L * 1024 * 1024);
