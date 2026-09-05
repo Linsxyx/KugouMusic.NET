@@ -33,6 +33,7 @@ public class ScrollingTextBlock : Control
     private readonly DispatcherTimer _timer;
     private DateTime _lastTick;
     private double _offset;
+    private bool _isAttached;
     
     private FormattedText? _cachedFormattedText;
     private double _cachedTextWidth;
@@ -101,6 +102,7 @@ public class ScrollingTextBlock : Control
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _isAttached = true;
         _lastTick = DateTime.UtcNow;
         _timer.Start();
     }
@@ -108,13 +110,21 @@ public class ScrollingTextBlock : Control
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        _isAttached = false;
         _timer.Stop();
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        
+
+        if (change.Property == BoundsProperty)
+        {
+            if (_isAttached)
+                _timer.Start();
+            return;
+        }
+
         if (change.Property == TextProperty ||
             change.Property == FontSizeProperty ||
             change.Property == FontFamilyProperty ||
@@ -124,6 +134,8 @@ public class ScrollingTextBlock : Control
         {
             _cachedFormattedText = null;
             _offset = 0;
+            if (_isAttached)
+                _timer.Start();
         }
     }
     
@@ -194,8 +206,23 @@ public class ScrollingTextBlock : Control
         var now = DateTime.UtcNow;
         var elapsedSeconds = Math.Min(0.1, (now - _lastTick).TotalSeconds);
         _lastTick = now;
-        
-        if (_cachedFormattedText != null && _cachedTextWidth > Bounds.Width && Bounds.Width > 0)
+
+        if (GetOrUpdateFormattedText() == null || Bounds.Width <= 0)
+        {
+            if (_offset != 0)
+            {
+                _offset = 0;
+                InvalidateVisual();
+            }
+            else
+            {
+                _timer.Stop();
+            }
+
+            return;
+        }
+
+        if (_cachedTextWidth > Bounds.Width)
         {
             _offset += elapsedSeconds * DefaultSpeed;
             InvalidateVisual();
@@ -204,6 +231,10 @@ public class ScrollingTextBlock : Control
         {
             _offset = 0;
             InvalidateVisual();
+        }
+        else
+        {
+            _timer.Stop();
         }
     }
 }

@@ -122,13 +122,15 @@ public sealed class SystemMediaSessionService(
         _positionSeconds = NormalizeSeconds(positionSeconds);
         _durationSeconds = NormalizeSeconds(durationSeconds);
 
+        if (Math.Abs(oldDuration - _durationSeconds) < 0.001 && oldCanSeek == CanSeek())
+            return;
+
         var changedProperties = new List<string>(2);
         if (Math.Abs(oldDuration - _durationSeconds) >= 0.001)
             changedProperties.Add("Metadata");
         if (oldCanSeek != CanSeek())
             changedProperties.Add("CanSeek");
-        if (changedProperties.Count > 0)
-            EmitPlayerPropertiesChanged(changedProperties);
+        EmitPlayerPropertiesChanged(changedProperties);
     }
 
     public void Shutdown()
