@@ -44,6 +44,11 @@ public record NativeAddSongItemDto(string Name, string Hash, string AlbumId, str
 [JsonSerializable(typeof(AddSongResponse))]
 [JsonSerializable(typeof(RemoveSongResponse))]
 [JsonSerializable(typeof(NativeAddSongItemDto[]))]
+[JsonSerializable(typeof(NativeRequest))]
+[JsonSerializable(typeof(NativeLoginRequest))]
+[JsonSerializable(typeof(NativeLoginAccountSelection))]
+[JsonSerializable(typeof(NativeAddTracksRequest))]
+[JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(long[]))]
 // Rank
 [JsonSerializable(typeof(RankListResponse))]
@@ -55,8 +60,18 @@ public record NativeAddSongItemDto(string Name, string Hash, string AlbumId, str
 [JsonSerializable(typeof(UserPlaylistResponse))]
 [JsonSerializable(typeof(OneDayVipModel))]
 [JsonSerializable(typeof(UpgradeVipModel))]
+[JsonSerializable(typeof(UserCloudResponse))]
+[JsonSerializable(typeof(UserCloudUrlResponse))]
 // Album
 [JsonSerializable(typeof(List<AlbumSongItem>))]
+[JsonSerializable(typeof(ArtistAlbumResponse))]
+[JsonSerializable(typeof(RecommendPlaylistResponse))]
+[JsonSerializable(typeof(PersonalFmResponse))]
+[JsonSerializable(typeof(TopCardResponse))]
+[JsonSerializable(typeof(FmRecommendResponse))]
+[JsonSerializable(typeof(FmSongResponse))]
+[JsonSerializable(typeof(FmImageResponse))]
+[JsonSerializable(typeof(MusicCommentResponse))]
 internal partial class NativeJsonContext : JsonSerializerContext
 {
 }

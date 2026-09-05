@@ -155,7 +155,7 @@ public record FmTrackerInfo
     public string OpenTime { get; set; } = "";
 }
 
-internal sealed class EmptyStringLongJsonConverter : JsonConverter<long>
+public sealed class EmptyStringLongJsonConverter : JsonConverter<long>
 {
     public override long Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

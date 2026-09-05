@@ -1,0 +1,184 @@
+name: Native Mobile SDK
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/native-mobile.yml'
+      - 'Directory.Packages.props'
+      - 'src/Libraries/KuGou.Net/**'
+      - 'src/Native/KuGou.Net.Native/**'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/native-mobile.yml'
+      - 'Directory.Packages.props'
+      - 'src/Libraries/KuGou.Net/**'
+      - 'src/Native/KuGou.Net.Native/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  NATIVE_PROJECT: src/Native/KuGou.Net.Native/KuGou.Net.Native.csproj
+
+jobs:
+  android-arm64:
+    name: Android arm64-v8a
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Select Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ndk_root="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_ROOT:-${ANDROID_NDK_HOME:-}}}"
+          if [[ -z "$ndk_root" || ! -d "$ndk_root" ]]; then
+            echo "Android NDK was not found on the runner." >&2
+            exit 1
+          fi
+          echo "ANDROID_NDK_ROOT=$ndk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ndk_root" >> "$GITHUB_ENV"
+
+      - name: Publish Android NativeAOT library
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish "$NATIVE_PROJECT" \
+            -c Release \
+            -r android-arm64 \
+            --self-contained true \
+            -p:PublishAot=true \
+            -p:PublishAotUsingRuntimePack=true \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            -o artifacts/android/publish
+
+      - name: Stage and verify Android library
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_library="$(find artifacts/android/publish -maxdepth 1 -type f -name '*.so' -print -quit)"
+          if [[ -z "$source_library" ]]; then
+            echo "NativeAOT did not produce an Android shared library." >&2
+            exit 1
+          fi
+
+          destination='artifacts/android/jniLibs/arm64-v8a/libKuGou.Net.Native.so'
+          mkdir -p "$(dirname "$destination")"
+          cp "$source_library" "$destination"
+
+          nm_tool="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
+          for symbol in KgRequestStart KgRequestPoll KgRequestCancel KgFreeMemory; do
+            "$nm_tool" -D --defined-only "$destination" | grep -q " $symbol$"
+          done
+
+          file "$destination"
+          ls -lh "$destination"
+
+      - name: Upload Android jniLibs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kugou-native-android-arm64
+          path: artifacts/android/jniLibs
+          if-no-files-found: error
+          retention-days: 14
+
+  ios-xcframework:
+    name: iOS XCFramework
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish iOS NativeAOT libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for rid in ios-arm64 iossimulator-arm64 iossimulator-x64; do
+            dotnet publish "$NATIVE_PROJECT" \
+              -c Release \
+              -r "$rid" \
+              --self-contained true \
+              -p:PublishAot=true \
+              -p:PublishAotUsingRuntimePack=true \
+              -p:DebugType=None \
+              -p:DebugSymbols=false \
+              -o "artifacts/ios/publish/$rid"
+          done
+
+      - name: Create XCFramework
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find_dylib() {
+            find "$1" -maxdepth 1 -type f -name '*.dylib' -print -quit
+          }
+
+          device_library="$(find_dylib artifacts/ios/publish/ios-arm64)"
+          simulator_arm64_library="$(find_dylib artifacts/ios/publish/iossimulator-arm64)"
+          simulator_x64_library="$(find_dylib artifacts/ios/publish/iossimulator-x64)"
+          for library in "$device_library" "$simulator_arm64_library" "$simulator_x64_library"; do
+            if [[ -z "$library" ]]; then
+              echo "NativeAOT did not produce every required iOS library." >&2
+              exit 1
+            fi
+          done
+
+          mkdir -p artifacts/ios/staged/device artifacts/ios/staged/simulator
+          device_staged='artifacts/ios/staged/device/KuGou.Net.Native.dylib'
+          simulator_staged='artifacts/ios/staged/simulator/KuGou.Net.Native.dylib'
+          cp "$device_library" "$device_staged"
+          lipo -create "$simulator_arm64_library" "$simulator_x64_library" -output "$simulator_staged"
+          install_name_tool -id '@rpath/KuGou.Net.Native.dylib' "$device_staged"
+          install_name_tool -id '@rpath/KuGou.Net.Native.dylib' "$simulator_staged"
+
+          for symbol in KgRequestStart KgRequestPoll KgRequestCancel KgFreeMemory; do
+            nm -gU "$device_staged" | grep -q "_$symbol$"
+            nm -gU "$simulator_staged" | grep -q "_$symbol$"
+          done
+
+          xcodebuild -create-xcframework \
+            -library "$device_staged" \
+            -headers src/Native/KuGou.Net.Native/include \
+            -library "$simulator_staged" \
+            -headers src/Native/KuGou.Net.Native/include \
+            -output artifacts/ios/KuGou.Net.Native.xcframework
+
+          lipo -info "$device_staged"
+          lipo -info "$simulator_staged"
+          find artifacts/ios/KuGou.Net.Native.xcframework -maxdepth 3 -type f -print
+
+      - name: Upload iOS XCFramework artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kugou-native-ios-xcframework
+          path: artifacts/ios/KuGou.Net.Native.xcframework
+          if-no-files-found: error
+          retention-days: 14

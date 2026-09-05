@@ -9,8 +9,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KuGou.Net.Native;
 
-public static class NativeExports
+public static partial class NativeExports
 {
+    private static readonly object InitializationLock = new();
     private static KgSessionManager? _sessionManager;
     private static LoginClient? _loginClient;
     private static RegisterClient? _registerClient;
@@ -23,6 +24,9 @@ public static class NativeExports
     private static UserClient? _userClient;
     private static LyricClient? _lyricClient;
     private static AlbumClient? _albumClient;
+    private static FmClient? _fmClient;
+    private static CommentClient? _commentClient;
+    private static ReportClient? _reportClient;
 
     #region 工具方法 (处理指针与序列化)
 
@@ -65,10 +69,27 @@ public static class NativeExports
     {
         try
         {
+            EnsureInitialized();
+            return ReturnBool(true);
+        }
+        catch (Exception ex)
+        {
+            return ReturnError(ex.Message);
+        }
+    }
+
+    private static void EnsureInitialized()
+    {
+        if (_sessionManager is not null) return;
+
+        lock (InitializationLock)
+        {
+            if (_sessionManager is not null) return;
+
             var (transport, sessionMgr) = KgHttpClientFactory.CreateWithSession(new NativeSessionPersistence());
             _sessionManager = sessionMgr;
 
-            // 组装所有的 RawApi 和 Client
+            // 组装 Raw API；Native 层与 Web API 共用同一组 SDK Client。
             var rawLogin = new RawLoginApi(transport, _sessionManager, NullLogger<RawLoginApi>.Instance);
             var rawSearch = new RawSearchApi(transport);
             var rawDevice = new RawDeviceApi(transport, _sessionManager, NullLogger<RawDeviceApi>.Instance);
@@ -80,6 +101,9 @@ public static class NativeExports
             var rawAlbum = new RawAlbumApi(transport);
             var rawSong = new RawSongApi(transport, _sessionManager);
             var rawArtist = new RawArtistApi(transport, _sessionManager);
+            var rawFm = new RawFmApi(transport, _sessionManager);
+            var rawComment = new RawCommentApi(transport);
+            var rawReport = new RawReportApi(transport);
 
             _loginClient = new LoginClient(rawLogin, _sessionManager, NullLogger<LoginClient>.Instance);
             _registerClient = new RegisterClient(rawDevice, _sessionManager, NullLogger<RegisterClient>.Instance);
@@ -92,12 +116,9 @@ public static class NativeExports
             _recommendClient = new RecommendClient(rawDiscovery, _sessionManager);
             _rankClient = new RankClient(rawRank);
             _albumClient = new AlbumClient(rawAlbum);
-
-            return ReturnBool(true);
-        }
-        catch (Exception ex)
-        {
-            return ReturnError(ex.Message);
+            _fmClient = new FmClient(rawFm);
+            _commentClient = new CommentClient(rawComment);
+            _reportClient = new ReportClient(rawReport, _sessionManager);
         }
     }
 
