@@ -63,7 +63,13 @@ jobs:
             echo "Android arm64 clang was not found at $android_clang." >&2
             exit 1
           fi
+          android_objcopy="$ndk_root/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objcopy"
+          if [[ ! -x "$android_objcopy" ]]; then
+            echo "Android llvm-objcopy was not found at $android_objcopy." >&2
+            exit 1
+          fi
           echo "ANDROID_ARM64_CLANG=$android_clang" >> "$GITHUB_ENV"
+          echo "ANDROID_LLVM_OBJCOPY=$android_objcopy" >> "$GITHUB_ENV"
 
       - name: Publish Android NativeAOT library
         shell: bash
@@ -76,6 +82,7 @@ jobs:
             -p:PublishAot=true \
             -p:PublishAotUsingRuntimePack=true \
             -p:CppCompilerAndLinker="$ANDROID_ARM64_CLANG" \
+            -p:ObjCopyName="$ANDROID_LLVM_OBJCOPY" \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o artifacts/android/publish
