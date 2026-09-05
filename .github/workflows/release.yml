@@ -84,8 +84,8 @@ jobs:
             ICON_PATH="./src/Apps/KugouAvaloniaPlayer/Assets/Test.ico"
 
             # Generate Windows MSI installer.
-            # Either = installer lets user choose per-user / per-machine.
-            EXTRA_ARGS+=(--msi --instLocation Either)
+            # The MSI is patched below to allow selecting the installation directory.
+            EXTRA_ARGS+=(--msi true --instLocation PerMachine)
           fi
 
           vpk pack \
@@ -101,6 +101,14 @@ jobs:
 
           find ./releases -type f -name '*.nupkg' ! -name "KugouAvaloniaPlayer-${VERSION}-*.nupkg" -delete
           find ./releases -type f -iname '*-delta.nupkg' -delete
+
+      - name: Add install directory selection to MSI
+        if: startsWith(matrix.rid, 'win-')
+        shell: pwsh
+        run: |
+          Get-ChildItem ./releases/*.msi | ForEach-Object {
+            ./.github/scripts/customize-velopack-msi.ps1 -Path $_.FullName
+          }
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -410,8 +418,8 @@ jobs:
           {
             echo "## 下载"
             echo
-            echo "- Windows x64: [KugouAvaloniaPlayer-win-x64.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-x64.msi)"
-            echo "- Windows ARM64: [KugouAvaloniaPlayer-win-arm64.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-arm64.msi)"
+            echo "- Windows x64: [KugouAvaloniaPlayer-win-x64.msi](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-x64.msi)"
+            echo "- Windows ARM64: [KugouAvaloniaPlayer-win-arm64.msi](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-arm64.msi)"
             echo "- Linux x64: [KugouAvaloniaPlayer-linux-x64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-x64.AppImage)"
             echo "- Linux ARM64: [KugouAvaloniaPlayer-linux-arm64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-arm64.AppImage)"
             echo "- macOS Apple Silicon: [KugouAvaloniaPlayer-mac-arm64-Setup.pkg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-arm64-Setup.pkg)"
