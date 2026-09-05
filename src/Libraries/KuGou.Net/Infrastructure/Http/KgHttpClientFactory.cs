@@ -36,12 +36,7 @@ public static class KgHttpClientFactory
                              ?? new KgSessionManager(new CookieContainer(),
                                  sessionPersistence ?? new InMemorySessionPersistence());
 
-        var primaryHandler = new HttpClientHandler
-        {
-            UseCookies = false,
-            // CookieContainer = cookieContainer, 
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-        };
+        var primaryHandler = KgPrimaryHandler.Create();
 
 
         var signatureHandler = new KgSignatureHandler(sessionManager)

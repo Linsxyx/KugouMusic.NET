@@ -35,7 +35,42 @@ public class RawLyricApi(IKgTransport transport)
             SignatureType = SignatureType.Default
         };
 
-        return await transport.SendAsync(request);
+        var result = await transport.SendAsync(request);
+
+        // /v1/search 对部分直连 IP 返回 200 + 空响应（IP 风控），此时回退到老接口 /search。
+        // 两个接口的响应结构一致（candidates[].id/accesskey），老接口无 fmt 字段，调用方默认按 krc 处理。
+        if (!HasCandidates(result))
+            result = await transport.SendAsync(BuildLegacySearchRequest(hash, keyword));
+
+        return result;
+    }
+
+    private static KgRequest BuildLegacySearchRequest(string? hash, string? keyword)
+    {
+        return new KgRequest
+        {
+            Method = HttpMethod.Get,
+            BaseUrl = LyricHost,
+            Path = "/search",
+            Params = new Dictionary<string, string>
+            {
+                { "ver", "1" },
+                { "man", "yes" },
+                { "client", "pc" },
+                { "duration", "0" },
+                { "hash", hash ?? "" },
+                { "keyword", keyword ?? "" }
+            },
+            SignatureType = SignatureType.Default
+        };
+    }
+
+    private static bool HasCandidates(JsonElement json)
+    {
+        return json.ValueKind == JsonValueKind.Object
+               && json.TryGetProperty("candidates", out var candidates)
+               && candidates.ValueKind == JsonValueKind.Array
+               && candidates.GetArrayLength() > 0;
     }
 
     /// <summary>

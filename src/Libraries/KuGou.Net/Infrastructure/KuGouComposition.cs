@@ -29,12 +29,7 @@ public sealed partial class KuGouComposition
 
     private static HttpClient CreateHttpClient(CookieContainer cookieContainer, KgSignatureHandler signatureHandler)
     {
-        var primaryHandler = new HttpClientHandler
-        {
-            UseCookies = true,
-            CookieContainer = cookieContainer,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-        };
+        var primaryHandler = KgPrimaryHandler.Create(cookieContainer);
 
         signatureHandler.InnerHandler = primaryHandler;
 
