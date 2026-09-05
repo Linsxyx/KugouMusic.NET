@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -45,6 +46,14 @@ public partial class SonnetNowPlayingThemeView : UserControl
     private PlayerViewModel? _player;
     private SonnetScene? _scene;
     private bool _sceneBuildQueued;
+    private double _lastSyncedPositionSeconds = double.NegativeInfinity;
+    private long _lastSyncTimestamp;
+    private bool _lastSyncPaused = true;
+
+    // Resync the GL scene clock only when it drifted from the audio position by
+    // more than this amount; between syncs the render clock advances scene time
+    // smoothly instead of being re-anchored on every position tick.
+    private const double ClockResyncThresholdSeconds = 0.08;
 
     public SonnetNowPlayingThemeView()
     {
@@ -192,8 +201,29 @@ public partial class SonnetNowPlayingThemeView : UserControl
         if (player is null)
             return;
 
-        EffectSurface.IsPaused = !player.IsPlayingAudio;
-        EffectSurface.Seek(TimeSpan.FromSeconds(Math.Max(0, player.CurrentPositionSeconds)));
+        var paused = !player.IsPlayingAudio;
+        var position = Math.Max(0, player.CurrentPositionSeconds);
+
+        // While playing, extrapolate where the scene clock should be by now and
+        // compare that against the audio position; while paused the scene clock
+        // is frozen, so compare directly. First call always syncs.
+        var drifted = true;
+        if (_lastSyncPaused == paused && !double.IsNegativeInfinity(_lastSyncedPositionSeconds))
+        {
+            var expected = paused
+                ? _lastSyncedPositionSeconds
+                : _lastSyncedPositionSeconds + Stopwatch.GetElapsedTime(_lastSyncTimestamp).TotalSeconds;
+            drifted = Math.Abs(position - expected) >= ClockResyncThresholdSeconds;
+        }
+
+        if (!drifted)
+            return;
+
+        _lastSyncPaused = paused;
+        _lastSyncedPositionSeconds = position;
+        _lastSyncTimestamp = Stopwatch.GetTimestamp();
+        EffectSurface.IsPaused = paused;
+        EffectSurface.Seek(TimeSpan.FromSeconds(position));
     }
 
     private void OnVisualizerUpdated()

@@ -25,11 +25,13 @@ internal sealed class SonnetFlowerNode : EffectNode
     ];
     private readonly EffectColor _color;
     private readonly string _key;
+    private readonly Action<SKCanvas> _draw;
 
     internal SonnetFlowerNode(float particleSize, EffectColor color)
     {
         _color = color;
         _key = $"lucide/1.31.0/Flower/192/3.5/{color}";
+        _draw = Draw;
         Position = new Vector2(-particleSize * 3.5f);
         Scale = new Vector2(particleSize * 7 / 192);
     }
@@ -37,7 +39,7 @@ internal sealed class SonnetFlowerNode : EffectNode
     public override void Render(EffectRenderContext context)
     {
         if (!IsVisible || WorldAlpha <= 0) return;
-        var texture = context.Device.Textures.GetOrCreateVector(_key, new Vector2(192), 1.5f, Draw);
+        var texture = context.Device.Textures.GetOrCreateVector(_key, new Vector2(192), 1.5f, _draw);
         context.Primitives.DrawTexture(texture, WorldTransform, new Vector2(192), WorldAlpha, BlendMode);
     }
 

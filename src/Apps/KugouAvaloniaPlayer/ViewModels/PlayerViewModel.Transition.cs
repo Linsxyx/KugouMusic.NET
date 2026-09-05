@@ -52,8 +52,10 @@ public partial class PlayerViewModel
         while (_tailTelemetry.Count > TailTelemetryCapacity)
             _tailTelemetry.RemoveAt(0);
 
+        // Points are appended in playback order, so stale entries always form a prefix.
         var minPosition = Math.Max(0, snapshot.PositionSeconds - 15.0);
-        _tailTelemetry.RemoveAll(x => x.PositionSeconds < minPosition);
+        while (_tailTelemetry.Count > 0 && _tailTelemetry[0].PositionSeconds < minPosition)
+            _tailTelemetry.RemoveAt(0);
     }
 
     private TailPlaybackMetrics? BuildTailPlaybackMetrics()

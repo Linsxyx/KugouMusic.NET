@@ -11,6 +11,7 @@ public sealed class SonnetScene : EffectScene
 {
     private readonly EffectContainer _stage = new();
     private readonly Dictionary<int, ParagraphView> _cache = [];
+    private readonly List<int> _pruneBuffer = [];
     private PixelSize _size;
     private PixelSize _physicalSize;
     private double _scaling = 1;
@@ -198,8 +199,10 @@ public sealed class SonnetScene : EffectScene
             var basePosition = new Vector2(
                 _size.Width * (float)(poster ? 0.5 : 0.5 + shot.Camera.X),
                 _size.Height * (float)(poster ? 0.5 : 0.48 + shot.Camera.Y + (shotIndex % 2 == 1 ? 0.025 : -0.025)));
+            var revealDoneTime = glyphs.Count == 0 ? shot.EndTime : glyphs.Max(item => item.Placement.StartTime);
             shots.Add(new ShotView(shot, shotRoot, glyphs, guides, mg,
-                poster ? Vector2.Zero : new Vector2(hero?.X ?? 0, hero?.Y ?? 0), basePosition, tracking));
+                poster ? Vector2.Zero : new Vector2(hero?.X ?? 0, hero?.Y ?? 0), basePosition,
+                new TrackingFocusData(tracking), revealDoneTime));
         }
         _stage.Add(root);
         if (_overlay is not null)
@@ -207,19 +210,20 @@ public sealed class SonnetScene : EffectScene
             _stage.Remove(_overlay);
             _stage.Add(_overlay);
         }
-        _cache[index] = new ParagraphView(paragraph, root, shots);
+        var shotList = paragraph.Shots.ToArray();
+        var transitionSeed = SonnetRandom.Hash($"{Program.Seed}:{paragraph.Id}:transition-frame");
+        _cache[index] = new ParagraphView(paragraph, root, shots, sceneSeed, transitionSeed, shotList);
     }
 
     private void UpdateParagraph(ParagraphView paragraph, double time)
     {
-        Device.PostProcess.SonnetNoiseSeed = SonnetRandom.Hash($"{Program.Seed}:{paragraph.Paragraph.Id}") % 10000 / 10000f;
+        Device.PostProcess.SonnetNoiseSeed = paragraph.NoiseSeed % 10000 / 10000f;
         var shotIndex = 0;
         for (var index = paragraph.Shots.Count - 1; index >= 0; index--)
             if (time >= paragraph.Shots[index].Shot.StartTime) { shotIndex = index; break; }
-        var transitionSeed = SonnetRandom.Hash($"{Program.Seed}:{paragraph.Paragraph.Id}:transition-frame");
-        var shotTransition = SonnetTransitions.ResolveShot(paragraph.Shots.Select(item => item.Shot).ToArray(), shotIndex, time,
-            Tuning.EnableTransitions, transitionSeed);
-        var paragraphTransition = SonnetTransitions.ResolveParagraph(paragraph.Paragraph, time, Tuning.EnableTransitions, transitionSeed);
+        var shotTransition = SonnetTransitions.ResolveShot(paragraph.ShotList, shotIndex, time,
+            Tuning.EnableTransitions, paragraph.TransitionSeed);
+        var paragraphTransition = SonnetTransitions.ResolveParagraph(paragraph.Paragraph, time, Tuning.EnableTransitions, paragraph.TransitionSeed);
         var transition = shotTransition != SonnetMotion.IdleTransition ? shotTransition : paragraphTransition;
         paragraph.Root.Alpha = (float)transition.Alpha;
         Device.PostProcess.Blur = (float)(transition.Blur / 14);
@@ -241,13 +245,13 @@ public sealed class SonnetScene : EffectScene
         var progress = SonnetMotion.ShotProgress(view.Shot, time);
         var camera = SonnetMotion.ShotFrame(view.Shot.Kind, progress);
         var phase = SonnetRandom.Hash(view.Shot.Id) % 1024 / 1024d * Math.PI * 2;
-        var revealDone = view.Glyphs.Count == 0 ? view.Shot.EndTime : view.Glyphs.Max(item => item.Placement.StartTime);
+        var revealDone = view.RevealDoneTime;
         var breathWeight = SonnetMotion.BreathWeight(time, revealDone);
         var breath = SonnetMotion.CameraBreath(time, phase);
         var cameraIntensity = Tuning.CameraIntensity * AnimationScale();
         var scale = view.Shot.Camera.Zoom * (1 + (camera.Scale - 1) * cameraIntensity) *
             (1 + breath.Scale * breathWeight * cameraIntensity);
-        var focus = ResolveTrackingFocus(view.Tracking, time, view.Shot.StartTime, view.Shot.EndTime, view.Focus);
+        var focus = ResolveTrackingFocus(view.TrackingFocus, time, view.Shot.StartTime, view.Shot.EndTime, view.Focus);
         view.Root.Pivot = Vector2.Lerp(view.Focus, focus, (float)cameraIntensity);
         view.Root.Position = view.BasePosition + new Vector2(
             _size.Width * (float)((camera.X + breath.X * breathWeight) * cameraIntensity),
@@ -389,7 +393,11 @@ public sealed class SonnetScene : EffectScene
 
     private void Prune(int active)
     {
-        foreach (var index in _cache.Keys.Where(index => Math.Abs(index - active) > 1).ToArray())
+        _pruneBuffer.Clear();
+        foreach (var index in _cache.Keys)
+            if (Math.Abs(index - active) > 1)
+                _pruneBuffer.Add(index);
+        foreach (var index in _pruneBuffer)
         {
             _stage.Remove(_cache[index].Root);
             _cache.Remove(index);
@@ -409,23 +417,96 @@ public sealed class SonnetScene : EffectScene
         double time, double start, double end, Vector2 fallback)
     {
         if (segments.Count == 0) return fallback;
-        var ranges = segments.Select(segment => (segment[0].StartTime, segment[^1].StartTime)).ToArray();
-        Vector2 Sample(double sampleTime)
+        return ResolveTrackingFocus(new TrackingFocusData(segments), time, start, end, fallback);
+    }
+
+    internal static Vector2 ResolveTrackingFocus(TrackingFocusData data, double time, double start, double end, Vector2 fallback)
+    {
+        if (data.Segments.Count == 0) return fallback;
+        return SmoothedTrackingFocus(data, Math.Clamp(time, start, end), start, end);
+    }
+
+    private static Vector2 SampleTrackingFocus(TrackingFocusData data, double sampleTime)
+    {
+        if (data.Semantic.Length == 0) return Vector2.Zero;
+        SonnetMotion.FillFocusWeights(data.Ranges, data.WeightsBuffer, sampleTime, 0.35);
+        var position = Vector2.Zero;
+        for (var index = 0; index < data.Semantic.Length; index++)
+            position += SonnetMotion.SegmentCameraFocusCore(data.Semantic[index], sampleTime) * (float)data.WeightsBuffer[index];
+        return position;
+    }
+
+    private static Vector2 SmoothedTrackingFocus(
+        TrackingFocusData data, double time, double startTime, double endTime,
+        double smoothingWindow = 0.12, double maxBlendDistance = 96)
+    {
+        var safeStart = Math.Min(startTime, endTime);
+        var safeEnd = Math.Max(startTime, endTime);
+        var radius = Math.Max(0, smoothingWindow);
+        if (radius == 0 || safeStart == safeEnd)
+            return SampleTrackingFocus(data, Math.Clamp(time, safeStart, safeEnd));
+
+        ReadOnlySpan<(double Offset, double Weight)> kernel =
+            [(-1, 1), (-0.5, 4), (0, 6), (0.5, 4), (1, 1)];
+        Span<Vector2> samples = stackalloc Vector2[kernel.Length];
+        for (var index = 0; index < kernel.Length; index++)
+            samples[index] = SampleTrackingFocus(data, Math.Clamp(time + kernel[index].Offset * radius, safeStart, safeEnd));
+        var center = samples[2];
+        var maxDistanceSquared = Math.Max(0, maxBlendDistance) * Math.Max(0, maxBlendDistance);
+        var total = 0d;
+        var result = Vector2.Zero;
+        for (var index = 0; index < samples.Length; index++)
         {
-            var weights = SonnetMotion.FocusWeights(ranges, sampleTime);
-            var position = Vector2.Zero;
-            for (var index = 0; index < segments.Count; index++)
-                position += SonnetMotion.SegmentCameraFocus(segments[index], sampleTime) * (float)weights[index];
-            return position;
+            if (Vector2.DistanceSquared(samples[index], center) > maxDistanceSquared) continue;
+            result += samples[index] * (float)kernel[index].Weight;
+            total += kernel[index].Weight;
         }
-        return SonnetMotion.SmoothedCameraFocus(Math.Clamp(time, start, end), start, end, Sample);
+        return result / (float)total;
+    }
+
+    /// <summary>
+    /// Per-shot tracking camera data precomputed at paragraph build time so the
+    /// per-frame focus path (5 kernel samples, each reweighting all segments)
+    /// runs without heap allocations.
+    /// </summary>
+    internal sealed class TrackingFocusData
+    {
+        public TrackingFocusData(IReadOnlyList<IReadOnlyList<(Vector2 Position, double StartTime, bool IsBackgroundShape)>> segments)
+        {
+            Segments = segments;
+            Ranges = new (double Start, double End)[segments.Count];
+            Semantic = new (Vector2 Position, double StartTime)[segments.Count][];
+            for (var index = 0; index < segments.Count; index++)
+            {
+                var segment = segments[index];
+                Ranges[index] = (segment[0].StartTime, segment[^1].StartTime);
+                var semanticCount = 0;
+                for (var glyphIndex = 0; glyphIndex < segment.Count; glyphIndex++)
+                    if (!segment[glyphIndex].IsBackgroundShape) semanticCount++;
+                var semantic = new (Vector2 Position, double StartTime)[semanticCount];
+                var fill = 0;
+                for (var glyphIndex = 0; glyphIndex < segment.Count; glyphIndex++)
+                {
+                    var glyph = segment[glyphIndex];
+                    if (!glyph.IsBackgroundShape) semantic[fill++] = (glyph.Position, glyph.StartTime);
+                }
+                Semantic[index] = semantic;
+            }
+            WeightsBuffer = new double[segments.Count];
+        }
+
+        public IReadOnlyList<IReadOnlyList<(Vector2 Position, double StartTime, bool IsBackgroundShape)>> Segments { get; }
+        public (double Start, double End)[] Ranges { get; }
+        public (Vector2 Position, double StartTime)[][] Semantic { get; }
+        public double[] WeightsBuffer { get; }
     }
 
     private sealed record GlyphView(EffectContainer Wrapper, TextNode Cyan, TextNode Red, TextNode GhostA,
         TextNode GhostB, SonnetGlyphPlacement Placement, SonnetSegmentRole Role, float FontSize);
     private sealed record ShotView(SonnetShot Shot, EffectContainer Root, List<GlyphView> Glyphs,
         List<SonnetGuideView> Guides, SonnetMgView Mg, Vector2 Focus, Vector2 BasePosition,
-        IReadOnlyList<IReadOnlyList<(Vector2 Position, double StartTime, bool IsBackgroundShape)>> Tracking);
-    private sealed record ParagraphView(SonnetParagraph Paragraph, EffectContainer Root, List<ShotView> Shots);
+        TrackingFocusData TrackingFocus, double RevealDoneTime);
+    private sealed record ParagraphView(SonnetParagraph Paragraph, EffectContainer Root, List<ShotView> Shots,
+        uint NoiseSeed, uint TransitionSeed, SonnetShot[] ShotList);
     private sealed record PendingSongSwap(SonnetSongContext Song, long StartedAt, bool Committed);
 }
