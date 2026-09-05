@@ -129,11 +129,31 @@ jobs:
           file "$destination"
           ls -lh "$destination"
 
+          crypto_jar="$(find "$HOME/.nuget/packages/microsoft.netcore.app.runtime.nativeaot.android-arm64" \
+            -type f -path '*/runtimes/android-arm64/native/libSystem.Security.Cryptography.Native.Android.jar' \
+            -print | sort -V | tail -n 1)"
+          if [[ -z "$crypto_jar" ]]; then
+            echo "The Android crypto JNI helper JAR was not found in the NativeAOT runtime pack." >&2
+            exit 1
+          fi
+          java_destination='artifacts/android/java/libSystem.Security.Cryptography.Native.Android.jar'
+          mkdir -p "$(dirname "$java_destination")"
+          cp "$crypto_jar" "$java_destination"
+          jar tf "$java_destination" | grep -Fq 'net/dot/android/crypto/DotnetProxyTrustManager.class'
+
       - name: Upload Android jniLibs artifact
         uses: actions/upload-artifact@v4
         with:
           name: kugou-native-android-arm64
           path: artifacts/android/jniLibs
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Android crypto JNI helper
+        uses: actions/upload-artifact@v4
+        with:
+          name: kugou-native-android-java
+          path: artifacts/android/java
           if-no-files-found: error
           retention-days: 14
 
