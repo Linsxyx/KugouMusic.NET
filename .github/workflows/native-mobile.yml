@@ -58,6 +58,13 @@ jobs:
           echo "ANDROID_NDK_ROOT=$ndk_root" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ndk_root" >> "$GITHUB_ENV"
 
+          android_clang="$ndk_root/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+          if [[ ! -x "$android_clang" ]]; then
+            echo "Android arm64 clang was not found at $android_clang." >&2
+            exit 1
+          fi
+          echo "ANDROID_ARM64_CLANG=$android_clang" >> "$GITHUB_ENV"
+
       - name: Publish Android NativeAOT library
         shell: bash
         run: |
@@ -68,6 +75,7 @@ jobs:
             --self-contained true \
             -p:PublishAot=true \
             -p:PublishAotUsingRuntimePack=true \
+            -p:CppCompilerAndLinker="$ANDROID_ARM64_CLANG" \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o artifacts/android/publish
