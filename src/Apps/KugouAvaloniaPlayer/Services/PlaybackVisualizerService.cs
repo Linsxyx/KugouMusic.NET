@@ -46,21 +46,21 @@ public sealed class PlaybackVisualizerService
 
         for (var i = 0; i < barCount; i++)
         {
-            var phase = barCount <= 1 ? 0d : i / (barCount - 1d);
+            var phase = barCount <= 1 ? 0f : (float)i / (barCount - 1);
             var band = SampleSpectrumBand(spectrumBands, phase);
-            var shapedBand = Math.Pow(Math.Clamp(band, 0d, 1d), 0.72d);
-            var centerLift = 0.82d + Math.Sin(phase * Math.PI) * 0.12d;
-            var ripple = 1d + Math.Sin(snapshot.PositionSeconds * 4.8d + i * 0.18d) * energyBoost * 0.035d;
+            var shapedBand = MathF.Pow((float)Math.Clamp(band, 0d, 1d), 0.72f);
+            var centerLift = 0.82f + MathF.Sin(phase * MathF.PI) * 0.12f;
+            var ripple = 1f + MathF.Sin((float)snapshot.PositionSeconds * 4.8f + i * 0.18f) * (float)energyBoost * 0.035f;
             var target = Math.Clamp(
-                (shapedBand * 0.58d + energyBoost * 0.14d + brightnessBoost * 0.04d) * centerLift * ripple,
-                0d,
-                1d);
-            var targetHeight = VisualizerMinHeight + target * VisualizerHeightRange;
+                (shapedBand * 0.58f + (float)energyBoost * 0.14f + (float)brightnessBoost * 0.04f) * centerLift * ripple,
+                0f,
+                1f);
+            var targetHeight = (float)(VisualizerMinHeight + target * VisualizerHeightRange);
 
             ref var bar = ref Bars[i];
-            var smoothing = targetHeight >= bar.Height ? 0.46d : 0.16d;
+            var smoothing = targetHeight >= bar.Height ? 0.46f : 0.16f;
             bar.Height += (targetHeight - bar.Height) * smoothing;
-            bar.Opacity = Math.Clamp(0.1d + Math.Pow(target, 0.9d) * 0.5d, 0.1d, 0.6d);
+            bar.Opacity = Math.Clamp(0.1f + MathF.Pow(target, 0.9f) * 0.5f, 0.1f, 0.6f);
         }
 
         Updated?.Invoke();
