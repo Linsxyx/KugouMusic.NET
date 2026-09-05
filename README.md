@@ -174,9 +174,9 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 获取不到 url 重新登录,获取到url但播放不了关掉系统代理
 
-### 5. Windows下只能安装到c盘吗？
+### 5. Windows下自动更新失败了怎么办
 
-KugouAvaloniaPlayer-win-x64.zip不用装c盘
+检查是否移动文件，或者检查是否安装到了Program Files 或 Windows 或 System 这类的高权限目录下。
 
 
 
