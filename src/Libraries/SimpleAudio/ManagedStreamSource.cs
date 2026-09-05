@@ -7,13 +7,15 @@ internal sealed class ManagedStreamSource(
     long contentLength,
     IDisposable? owner = null) : IDisposable
 {
+    // Must remain strongly reachable for the entire native stream lifetime.
+    private FileProcedures? _procedures;
     private int _disposed;
 
     public FileProcedures CreateProcedures()
     {
-        return new FileProcedures
+        return _procedures ??= new FileProcedures
         {
-            Close = _ => Dispose(),
+            Close = _ => { },
             Length = _ => GetLength(),
             Read = Read,
             Seek = Seek
@@ -55,8 +57,6 @@ internal sealed class ManagedStreamSource(
 
         try
         {
-            // BASS owns this memory for the duration of the synchronous callback.
-            // Do not retain the span or use it across an asynchronous operation.
             return inputStream.Read(new Span<byte>(buffer.ToPointer(), length));
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
