@@ -146,7 +146,12 @@ public sealed class SpriteNode : EffectNode
 public sealed class TextNode : EffectNode
 {
     private EffectTexture? _texture;
-    private string? _cacheKey;
+    private string? _cachedText;
+    private string? _cachedFontFamily;
+    private float _cachedFontSize;
+    private int _cachedFontWeight;
+    private EffectColor _cachedColor;
+    private float _cachedRasterScale;
 
     public string Text { get; set; } = string.Empty;
     public string FontFamily { get; set; } = "Inter";
@@ -161,8 +166,12 @@ public sealed class TextNode : EffectNode
         if (!IsVisible || WorldAlpha <= 0 || string.IsNullOrEmpty(Text))
             return;
 
-        var key = $"{Text}\u001f{FontFamily}\u001f{FontSize:R}\u001f{FontWeight}\u001f{Color}\u001f{RasterScale:R}";
-        if (_texture is null || _texture.IsDisposed || _cacheKey != key)
+        // Compare cached inputs instead of rebuilding the cache-key string every frame.
+        if (_texture is null || _texture.IsDisposed ||
+            !ReferenceEquals(_cachedText, Text) && _cachedText != Text ||
+            !ReferenceEquals(_cachedFontFamily, FontFamily) && _cachedFontFamily != FontFamily ||
+            _cachedFontSize != FontSize || _cachedFontWeight != FontWeight ||
+            _cachedColor != Color || _cachedRasterScale != RasterScale)
         {
             _texture = context.Device.Textures.GetOrCreateText(
                 Text,
@@ -171,7 +180,12 @@ public sealed class TextNode : EffectNode
                 FontWeight,
                 Color,
                 RasterScale);
-            _cacheKey = key;
+            _cachedText = Text;
+            _cachedFontFamily = FontFamily;
+            _cachedFontSize = FontSize;
+            _cachedFontWeight = FontWeight;
+            _cachedColor = Color;
+            _cachedRasterScale = RasterScale;
         }
         context.Device.Textures.Touch(_texture);
         var transform = Matrix3x2.CreateTranslation(-_texture.LogicalSize * Anchor) * WorldTransform;

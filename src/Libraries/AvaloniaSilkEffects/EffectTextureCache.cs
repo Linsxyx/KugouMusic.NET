@@ -1,4 +1,6 @@
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using SkiaSharp;
 using Silk.NET.OpenGL;
 using ZLinq;
@@ -7,12 +9,17 @@ namespace AvaloniaSilkEffects;
 
 public sealed class EffectTextureCache : IDisposable
 {
+    private const int CollectIntervalFrames = 32;
+
     private readonly GL _gl;
     private readonly Dictionary<TextTextureKey, EffectTexture> _textTextures = [];
-    private readonly Dictionary<string, EffectTexture> _vectorTextures = [];
+    private readonly Dictionary<VectorTextureKey, EffectTexture> _vectorTextures = [];
     private readonly List<EffectTexture> _ownedTextures = [];
+    private readonly List<EffectTexture> _sweepBuffer = [];
     private readonly Dictionary<EffectTexture, ulong> _lastUsedFrame = [];
     private ulong _frame;
+    private ulong _lastCollectFrame;
+    private long _residentBytes;
 
     public const long DefaultResidentByteLimit = 256L * 1024 * 1024;
     public const int DefaultResidentTextureLimit = 1024;
@@ -34,7 +41,7 @@ public sealed class EffectTextureCache : IDisposable
     internal EffectTextureCache(GL gl) => _gl = gl;
 
     public int Count => _ownedTextures.Count;
-    public long ResidentBytes => _ownedTextures.Sum(EstimatedBytes);
+    public long ResidentBytes => _residentBytes;
     public long ResidentByteLimit { get; set; } = DefaultResidentByteLimit;
     public int ResidentTextureLimit { get; set; } = DefaultResidentTextureLimit;
 
@@ -42,8 +49,11 @@ public sealed class EffectTextureCache : IDisposable
 
     public void Touch(EffectTexture texture)
     {
-        if (!texture.IsDisposed && _lastUsedFrame.ContainsKey(texture))
-            _lastUsedFrame[texture] = _frame;
+        if (texture.IsDisposed)
+            return;
+        ref var lastUsed = ref CollectionsMarshal.GetValueRefOrNullRef(_lastUsedFrame, texture);
+        if (!Unsafe.IsNullRef(ref lastUsed))
+            lastUsed = _frame;
     }
 
     /// <summary>
@@ -135,6 +145,7 @@ public sealed class EffectTextureCache : IDisposable
         var texture = RasterizeText(key);
         _textTextures.Add(key, texture);
         _ownedTextures.Add(texture);
+        _residentBytes += EstimatedBytes(texture);
         _lastUsedFrame[texture] = _frame;
         return texture;
     }
@@ -166,6 +177,7 @@ public sealed class EffectTextureCache : IDisposable
 
         var texture = new EffectTexture(_gl, handle, width, height, logicalSize ?? new Vector2(width, height));
         _ownedTextures.Add(texture);
+        _residentBytes += EstimatedBytes(texture);
         _lastUsedFrame[texture] = _frame;
         return texture;
     }
@@ -179,7 +191,7 @@ public sealed class EffectTextureCache : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(cacheKey);
         ArgumentNullException.ThrowIfNull(draw);
         rasterScale = Math.Clamp(rasterScale, 1, 4);
-        var key = $"{cacheKey}\u001f{logicalSize.X:R}\u001f{logicalSize.Y:R}\u001f{rasterScale:R}";
+        var key = new VectorTextureKey(cacheKey, logicalSize, rasterScale);
         if (_vectorTextures.TryGetValue(key, out var cached))
         {
             Touch(cached);
@@ -257,21 +269,38 @@ public sealed class EffectTextureCache : IDisposable
 
     internal void Collect(int maximumIdleFrames = 120)
     {
+        var pressureExceeded = _ownedTextures.Count > ResidentTextureLimit || _residentBytes > ResidentByteLimit;
+        if (!pressureExceeded && _frame - _lastCollectFrame < CollectIntervalFrames)
+            return;
+        _lastCollectFrame = _frame;
+
         var minimumFrame = _frame > (ulong)Math.Max(0, maximumIdleFrames)
             ? _frame - (ulong)maximumIdleFrames
             : 0;
-        foreach (var texture in _ownedTextures.AsValueEnumerable()
-            .Where(texture => _lastUsedFrame.GetValueOrDefault(texture) < minimumFrame)
-            .ToArray())
+        _sweepBuffer.Clear();
+        foreach (var texture in _ownedTextures)
+            if (_lastUsedFrame.GetValueOrDefault(texture) < minimumFrame)
+                _sweepBuffer.Add(texture);
+        foreach (var texture in _sweepBuffer)
             Remove(texture);
 
-        while ((_ownedTextures.Count > ResidentTextureLimit || ResidentBytes > ResidentByteLimit)
-            && _ownedTextures
-                .AsValueEnumerable()
-                .Where(texture => _lastUsedFrame.GetValueOrDefault(texture) < _frame)
-                .OrderBy(texture => _lastUsedFrame.GetValueOrDefault(texture))
-                .FirstOrDefault() is { } oldest)
+        while (_ownedTextures.Count > ResidentTextureLimit || _residentBytes > ResidentByteLimit)
+        {
+            EffectTexture? oldest = null;
+            var oldestFrame = ulong.MaxValue;
+            foreach (var texture in _ownedTextures)
+            {
+                var used = _lastUsedFrame.GetValueOrDefault(texture);
+                if (used < _frame && used < oldestFrame)
+                {
+                    oldestFrame = used;
+                    oldest = texture;
+                }
+            }
+            if (oldest is null)
+                break;
             Remove(oldest);
+        }
     }
 
     private void Remove(EffectTexture texture)
@@ -281,6 +310,7 @@ public sealed class EffectTextureCache : IDisposable
         foreach (var key in _vectorTextures.AsValueEnumerable().Where(pair => ReferenceEquals(pair.Value, texture)).Select(pair => pair.Key).ToArray())
             _vectorTextures.Remove(key);
         _ownedTextures.Remove(texture);
+        _residentBytes -= EstimatedBytes(texture);
         _lastUsedFrame.Remove(texture);
         texture.Dispose();
     }
@@ -296,6 +326,8 @@ public sealed class EffectTextureCache : IDisposable
         _lastUsedFrame.Clear();
         _textTextures.Clear();
         _vectorTextures.Clear();
+        _sweepBuffer.Clear();
+        _residentBytes = 0;
     }
 
     internal void Abandon()
@@ -306,5 +338,23 @@ public sealed class EffectTextureCache : IDisposable
         _lastUsedFrame.Clear();
         _textTextures.Clear();
         _vectorTextures.Clear();
+        _sweepBuffer.Clear();
+        _residentBytes = 0;
+    }
+
+    private readonly struct VectorTextureKey(string cacheKey, Vector2 logicalSize, float rasterScale) : IEquatable<VectorTextureKey>
+    {
+        public string CacheKey { get; } = cacheKey;
+        public Vector2 LogicalSize { get; } = logicalSize;
+        public float RasterScale { get; } = rasterScale;
+
+        public bool Equals(VectorTextureKey other) =>
+            CacheKey == other.CacheKey &&
+            LogicalSize.X.Equals(other.LogicalSize.X) &&
+            LogicalSize.Y.Equals(other.LogicalSize.Y) &&
+            RasterScale.Equals(other.RasterScale);
+
+        public override bool Equals(object? obj) => obj is VectorTextureKey other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(CacheKey, LogicalSize.X, LogicalSize.Y, RasterScale);
     }
 }

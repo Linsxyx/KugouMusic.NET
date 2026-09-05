@@ -91,18 +91,40 @@ public static class SonnetMotion
     public static IReadOnlyList<double> FocusWeights(IReadOnlyList<(double Start, double End)> ranges, double time, double sigma = 0.35)
     {
         if (ranges.Count == 0) return [];
+        var span = new (double Start, double End)[ranges.Count];
+        for (var index = 0; index < ranges.Count; index++)
+            span[index] = ranges[index];
+        var weights = new double[ranges.Count];
+        FillFocusWeights(span, weights, time, sigma);
+        return weights;
+    }
+
+    internal static void FillFocusWeights(ReadOnlySpan<(double Start, double End)> ranges, Span<double> weights, double time, double sigma)
+    {
         var safeSigma = Math.Max(0.001, sigma);
-        var logs = ranges.Select(range =>
+        var max = double.NegativeInfinity;
+        for (var index = 0; index < ranges.Length; index++)
         {
+            var range = ranges[index];
             var start = Math.Min(range.Start, range.End);
             var end = Math.Max(range.Start, range.End);
             var distance = time < start ? start - time : time > end ? time - end : 0;
-            return -(distance * distance) / (2 * safeSigma * safeSigma);
-        }).ToArray();
-        var max = logs.Max();
-        var weights = logs.Select(value => Math.Exp(value - max)).ToArray();
-        var total = weights.Sum();
-        return weights.Select(value => value / total).ToArray();
+            var log = -(distance * distance) / (2 * safeSigma * safeSigma);
+            weights[index] = log;
+            if (log > max) max = log;
+        }
+
+        var total = 0d;
+        for (var index = 0; index < ranges.Length; index++)
+        {
+            var weight = Math.Exp(weights[index] - max);
+            weights[index] = weight;
+            total += weight;
+        }
+
+        if (total <= 0) return;
+        for (var index = 0; index < ranges.Length; index++)
+            weights[index] /= total;
     }
 
     public static Vector2 SmoothedCameraFocus(
@@ -114,19 +136,21 @@ public static class SonnetMotion
         var radius = Math.Max(0, smoothingWindow);
         if (radius == 0 || safeStart == safeEnd)
             return sampleFocus(Math.Clamp(time, safeStart, safeEnd));
+
         ReadOnlySpan<(double Offset, double Weight)> kernel =
             [(-1, 1), (-0.5, 4), (0, 6), (0.5, 4), (1, 1)];
-        var samples = kernel.ToArray().Select(item =>
-            (Point: sampleFocus(Math.Clamp(time + item.Offset * radius, safeStart, safeEnd)), item.Weight)).ToArray();
-        var center = samples[2].Point;
+        Span<Vector2> samples = stackalloc Vector2[kernel.Length];
+        for (var index = 0; index < kernel.Length; index++)
+            samples[index] = sampleFocus(Math.Clamp(time + kernel[index].Offset * radius, safeStart, safeEnd));
+        var center = samples[2];
         var maxDistanceSquared = Math.Max(0, maxBlendDistance) * Math.Max(0, maxBlendDistance);
         var total = 0d;
         var result = Vector2.Zero;
-        foreach (var sample in samples)
+        for (var index = 0; index < samples.Length; index++)
         {
-            if (Vector2.DistanceSquared(sample.Point, center) > maxDistanceSquared) continue;
-            result += sample.Point * (float)sample.Weight;
-            total += sample.Weight;
+            if (Vector2.DistanceSquared(samples[index], center) > maxDistanceSquared) continue;
+            result += samples[index] * (float)kernel[index].Weight;
+            total += kernel[index].Weight;
         }
         return result / (float)total;
     }
@@ -135,7 +159,25 @@ public static class SonnetMotion
         IReadOnlyList<(Vector2 Position, double StartTime, bool IsBackgroundShape)> glyphs,
         double time, double trackingFactor = 0.5)
     {
-        var semantic = glyphs.Where(item => !item.IsBackgroundShape).ToArray();
+        var semanticCount = 0;
+        for (var index = 0; index < glyphs.Count; index++)
+            if (!glyphs[index].IsBackgroundShape) semanticCount++;
+        if (semanticCount == 0) return Vector2.Zero;
+        Span<(Vector2 Position, double StartTime)> semantic =
+            semanticCount <= 64 ? stackalloc (Vector2, double)[semanticCount] : new (Vector2, double)[semanticCount];
+        var fill = 0;
+        for (var index = 0; index < glyphs.Count; index++)
+        {
+            var glyph = glyphs[index];
+            if (!glyph.IsBackgroundShape) semantic[fill++] = (glyph.Position, glyph.StartTime);
+        }
+        return SegmentCameraFocusCore(semantic, time, trackingFactor);
+    }
+
+    internal static Vector2 SegmentCameraFocusCore(
+        ReadOnlySpan<(Vector2 Position, double StartTime)> semantic,
+        double time, double trackingFactor = 0.5)
+    {
         if (semantic.Length == 0) return Vector2.Zero;
         var first = semantic[0];
         var last = semantic[^1];

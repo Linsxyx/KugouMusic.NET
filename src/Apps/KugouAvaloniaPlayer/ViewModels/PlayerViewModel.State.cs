@@ -22,9 +22,16 @@ public partial class PlayerViewModel
 
         var pos = _player.GetPosition();
         CurrentPositionSeconds = pos.TotalSeconds;
-        var analysisSnapshot = _player.GetActiveAnalysisSnapshot();
+
+        // The FFT snapshot is only consumed by the visualizer and by transition
+        // telemetry inside the analysis window; skip the BASS FFT otherwise.
+        var remainingSec = Math.Max(0, TotalDurationSeconds - pos.TotalSeconds);
+        var analysisSnapshot = IsNowPlayingVisualizerEnabled || remainingSec <= AnalysisWindowSec
+            ? _player.GetActiveAnalysisSnapshot()
+            : AudioAnalysisSnapshot.Empty;
         CaptureTailTelemetry(analysisSnapshot);
-        UpdateNowPlayingVisualizer(analysisSnapshot);
+        if (IsNowPlayingVisualizerEnabled)
+            UpdateNowPlayingVisualizer(analysisSnapshot);
 
         if (!_isDelayingVisualSwitch)
         {
@@ -44,7 +51,6 @@ public partial class PlayerViewModel
         if (!IsSeamlessTransitionEnabled || _player.IsCrossfading || IsSwitchingQuality)
             return;
 
-        var remainingSec = Math.Max(0, TotalDurationSeconds - pos.TotalSeconds);
         var requestVersion = _playRequestVersion;
         var currentLoadCts = _loadCancellation;
         if (currentLoadCts == null || currentLoadCts.IsCancellationRequested)
