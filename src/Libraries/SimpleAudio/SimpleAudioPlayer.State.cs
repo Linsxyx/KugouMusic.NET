@@ -27,6 +27,8 @@ public partial class SimpleAudioPlayer
         public float StereoWidth { get; set; }
         public int StereoDspHandle { get; set; }
         public int Stream { get; set; }
+        public int SourceStream { get; set; }
+        public IDisposable? StreamSourceOwner { get; set; }
         public bool SurroundEnabled { get; set; }
         public float VolumeNormalizationGain { get; set; } = 1.0f;
         public float UserVolume { get; set; } = 1.0f;

@@ -140,6 +140,18 @@ public partial class SimpleAudioPlayer
         set => _state.Stream = value;
     }
 
+    private int SourceStream
+    {
+        get => _state.SourceStream;
+        set => _state.SourceStream = value;
+    }
+
+    private IDisposable? StreamSourceOwner
+    {
+        get => _state.StreamSourceOwner;
+        set => _state.StreamSourceOwner = value;
+    }
+
     private bool SurroundEnabled
     {
         get => _state.SurroundEnabled;

@@ -12,6 +12,28 @@ public partial class SimpleAudioPlayer : IDisposable
 
     public bool Load(string url)
     {
+        return LoadCore(url, sourceFlags => CreateSourceStream(url, sourceFlags));
+    }
+
+    public bool Load(Stream inputStream, long contentLength, string sourceDescription, IDisposable? owner = null)
+    {
+        ArgumentNullException.ThrowIfNull(inputStream);
+
+        var managedSource = new ManagedStreamSource(inputStream, contentLength, owner);
+        var loaded = LoadCore(sourceDescription, sourceFlags =>
+            Bass.CreateStream(StreamSystem.Buffer, sourceFlags, managedSource.CreateProcedures(), IntPtr.Zero),
+            managedSource);
+        if (!loaded)
+            managedSource.Dispose();
+
+        return loaded;
+    }
+
+    private bool LoadCore(
+        string sourceDescription,
+        Func<BassFlags, int> createSourceStream,
+        IDisposable? streamSourceOwner = null)
+    {
         Stop();
         LastErrorDetail = null;
 
@@ -30,34 +52,26 @@ public partial class SimpleAudioPlayer : IDisposable
                 }
             }
 
-            if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                for (var attempt = 1; attempt <= RemoteStreamLoadAttempts; attempt++)
-                {
-                    sourceStream = Bass.CreateStream(url, 0, sourceFlags, null, IntPtr.Zero);
-                    if (sourceStream != 0)
-                        break;
-
-                    if (attempt < RemoteStreamLoadAttempts)
-                        Thread.Sleep(RemoteStreamRetryDelayMilliseconds * attempt);
-                }
-            }
-            else if (File.Exists(url))
-            {
-                sourceStream = Bass.CreateStream(url, 0, 0, sourceFlags);
-            }
+            sourceStream = createSourceStream(sourceFlags);
 
             if (sourceStream != 0)
             {
                 Stream = BassFx.TempoCreate(sourceStream, flags | BassFlags.FxFreeSource);
+                if (Stream == 0)
+                    Bass.StreamFree(sourceStream);
+                else
+                {
+                    SourceStream = sourceStream;
+                    StreamSourceOwner = streamSourceOwner;
+                }
             }
         }
 
         if (Stream == 0)
         {
             LastErrorDetail =
-                $"BASS CreateStream 失败: path={url}, extension={Path.GetExtension(url)}, error={Bass.LastError}";
-            Console.WriteLine($"[BASS CreateStream Error] path={url}, extension={Path.GetExtension(url)}, error={Bass.LastError}");
+                $"BASS CreateStream 失败: path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}";
+            Console.WriteLine($"[BASS CreateStream Error] path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}");
             return false;
         }
 
@@ -84,6 +98,28 @@ public partial class SimpleAudioPlayer : IDisposable
         return true;
     }
 
+    private static int CreateSourceStream(string source, BassFlags sourceFlags)
+    {
+        if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            for (var attempt = 1; attempt <= RemoteStreamLoadAttempts; attempt++)
+            {
+                var stream = Bass.CreateStream(source, 0, sourceFlags, null, IntPtr.Zero);
+                if (stream != 0)
+                    return stream;
+
+                if (attempt < RemoteStreamLoadAttempts)
+                    Thread.Sleep(RemoteStreamRetryDelayMilliseconds * attempt);
+            }
+
+            return 0;
+        }
+
+        return File.Exists(source)
+            ? Bass.CreateStream(source, 0, 0, sourceFlags)
+            : 0;
+    }
+
     public void Play()
     {
         if (Stream != 0)
@@ -106,12 +142,25 @@ public partial class SimpleAudioPlayer : IDisposable
 
     public void Stop()
     {
-        if (Stream != 0)
+        IDisposable? streamSourceOwner;
+        lock (BassDeviceGate)
         {
-            Bass.ChannelStop(Stream);
-            Bass.StreamFree(Stream);
+            var stream = Stream;
+            var sourceStream = SourceStream;
             Stream = 0;
+            SourceStream = 0;
+            streamSourceOwner = StreamSourceOwner;
+            StreamSourceOwner = null;
+
+            if (stream != 0)
+            {
+                Bass.ChannelStop(stream);
+                if (!Bass.StreamFree(stream) && sourceStream != 0)
+                    Bass.StreamFree(sourceStream);
+            }
         }
+
+        streamSourceOwner?.Dispose();
 
         TransitionGain = 1.0f;
         TransitionToneDepth = 0f;

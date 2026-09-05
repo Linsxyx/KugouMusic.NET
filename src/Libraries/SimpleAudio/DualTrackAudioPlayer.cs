@@ -76,6 +76,21 @@ public sealed class DualTrackAudioPlayer : IDisposable
         return SwitchToPrepared();
     }
 
+    public bool Load(
+        Stream inputStream,
+        long contentLength,
+        string sourceDescription,
+        IDisposable? owner = null,
+        float normalizationGain = 1.0f)
+    {
+        AbortCrossfade();
+        if (!PrepareNext(inputStream, contentLength, sourceDescription, owner, normalizationGain))
+            return false;
+
+        _activeDeck.Stop();
+        return SwitchToPrepared();
+    }
+
     public bool PrepareNext(string url, float normalizationGain = 1.0f)
     {
         LastErrorDetail = null;
@@ -92,6 +107,30 @@ public sealed class DualTrackAudioPlayer : IDisposable
         }
 
         _preparedSource = url;
+        return true;
+    }
+
+    public bool PrepareNext(
+        Stream inputStream,
+        long contentLength,
+        string sourceDescription,
+        IDisposable? owner = null,
+        float normalizationGain = 1.0f)
+    {
+        LastErrorDetail = null;
+        _standbyDeck.Stop();
+        SetStoredNormalizationGain(_standbyDeck, normalizationGain);
+        ApplyDeckSettings(_standbyDeck);
+
+        if (!_standbyDeck.Load(inputStream, contentLength, sourceDescription, owner))
+        {
+            SetStoredNormalizationGain(_standbyDeck, 1.0f);
+            _preparedSource = null;
+            LastErrorDetail = _standbyDeck.LastErrorDetail ?? $"预加载音频失败: source={sourceDescription}";
+            return false;
+        }
+
+        _preparedSource = sourceDescription;
         return true;
     }
 

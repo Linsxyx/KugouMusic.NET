@@ -133,7 +133,12 @@ public partial class PlayerViewModel
                 nextSong.DurationSeconds,
                 linkedCts.Token);
 
-            if (!_player.PrepareNext(sourceInfo.Source, normalizationGain))
+            if (!await _playbackCoordinator.PrepareNextAsync(
+                    sourceInfo.Source,
+                    nextSong.Name,
+                    normalizationGain,
+                    GetAudioLoadTimeout(sourceInfo.IsLocal),
+                    linkedCts.Token))
             {
                 _prepareFailureSongKey = nextSongKey;
                 return;
