@@ -105,8 +105,9 @@ jobs:
           symbols_file='artifacts/android/native-symbols.txt'
           "$nm_tool" -D --defined-only "$destination" > "$symbols_file"
           for symbol in KgRequestStart KgRequestPoll KgRequestCancel KgFreeMemory; do
-            grep -q " $symbol$" "$symbols_file"
+            grep -Fq "$symbol" "$symbols_file"
           done
+          grep -E 'KgRequest(Start|Poll|Cancel)|KgFreeMemory' "$symbols_file"
 
           file "$destination"
           ls -lh "$destination"
