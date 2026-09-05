@@ -70,6 +70,22 @@ jobs:
           fi
           echo "ANDROID_ARM64_CLANG=$android_clang" >> "$GITHUB_ENV"
           echo "ANDROID_LLVM_OBJCOPY=$android_objcopy" >> "$GITHUB_ENV"
+          echo "ANDROID_LLVM_AR=$ndk_root/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> "$GITHUB_ENV"
+
+      - name: Build Android JNI bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          bootstrap_dir="$GITHUB_WORKSPACE/artifacts/android/bootstrap"
+          mkdir -p "$bootstrap_dir"
+          "$ANDROID_ARM64_CLANG" \
+            -fPIC \
+            -c src/Native/KuGou.Net.Native/android_jni_bootstrap.c \
+            -o "$bootstrap_dir/android_jni_bootstrap.o"
+          "$ANDROID_LLVM_AR" rcs \
+            "$bootstrap_dir/libKuGou.Android.JniBootstrap.a" \
+            "$bootstrap_dir/android_jni_bootstrap.o"
+          echo "ANDROID_JNI_BOOTSTRAP=$bootstrap_dir/libKuGou.Android.JniBootstrap.a" >> "$GITHUB_ENV"
 
       - name: Publish Android NativeAOT library
         shell: bash
@@ -83,6 +99,7 @@ jobs:
             -p:PublishAotUsingRuntimePack=true \
             -p:CppCompilerAndLinker="$ANDROID_ARM64_CLANG" \
             -p:ObjCopyName="$ANDROID_LLVM_OBJCOPY" \
+            -p:AndroidJniBootstrapLibrary="$ANDROID_JNI_BOOTSTRAP" \
             -p:DebugType=None \
             -p:DebugSymbols=false \
             -o artifacts/android/publish
@@ -104,7 +121,7 @@ jobs:
           nm_tool="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
           symbols_file='artifacts/android/native-symbols.txt'
           "$nm_tool" -D --defined-only "$destination" > "$symbols_file"
-          for symbol in KgRequestStart KgRequestPoll KgRequestCancel KgFreeMemory; do
+          for symbol in JNI_OnLoad KgRequestStart KgRequestPoll KgRequestCancel KgFreeMemory; do
             grep -Fq "$symbol" "$symbols_file"
           done
           grep -E 'KgRequest(Start|Poll|Cancel)|KgFreeMemory' "$symbols_file"

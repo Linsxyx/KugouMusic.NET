@@ -23,4 +23,9 @@
         <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>
 
+    <ItemGroup Condition="'$(AndroidJniBootstrapLibrary)' != ''">
+        <DirectPInvoke Include="KuGou.Android.JniBootstrap" />
+        <NativeLibrary Include="$(AndroidJniBootstrapLibrary)" />
+    </ItemGroup>
+
 </Project>
