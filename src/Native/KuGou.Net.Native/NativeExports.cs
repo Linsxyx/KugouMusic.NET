@@ -86,7 +86,9 @@ public static partial class NativeExports
         {
             if (_sessionManager is not null) return;
 
-            var (transport, sessionMgr) = KgHttpClientFactory.CreateWithSession(new NativeSessionPersistence());
+            // Flutter owns credential persistence. NativeAOT keeps only process-local state and
+            // receives the current userId/token/t1 with every request.
+            var (transport, sessionMgr) = KgHttpClientFactory.CreateWithSession(new InMemorySessionPersistence());
             _sessionManager = sessionMgr;
 
             // 组装 Raw API；Native 层与 Web API 共用同一组 SDK Client。

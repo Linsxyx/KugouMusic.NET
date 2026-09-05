@@ -28,6 +28,7 @@ public static partial class NativeExports
                           ?? throw new JsonException("Request JSON cannot be null.");
 
             EnsureInitialized();
+            ApplySessionCredentials(request.Session);
             PendingRequests[requestId] = ExecuteRequestAsync(request);
             return requestId;
         }
@@ -100,6 +101,19 @@ public static partial class NativeExports
         {
             return Failed(ex);
         }
+    }
+
+    private static void ApplySessionCredentials(NativeSessionCredentials? credentials)
+    {
+        var manager = _sessionManager!;
+        var current = manager.Session;
+        var userId = string.IsNullOrWhiteSpace(credentials?.UserId) ? "0" : credentials.UserId;
+        var token = credentials?.Token ?? string.Empty;
+        var t1 = credentials?.T1 ?? string.Empty;
+
+        if (current.UserId == userId && current.Token == token && current.T1 == t1) return;
+
+        manager.UpdateAuth(userId, token, current.VipType, current.VipToken, t1);
     }
 
     private static async Task<string> DispatchAsync(NativeRequest request)

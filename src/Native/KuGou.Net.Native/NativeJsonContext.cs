@@ -45,6 +45,7 @@ public record NativeAddSongItemDto(string Name, string Hash, string AlbumId, str
 [JsonSerializable(typeof(RemoveSongResponse))]
 [JsonSerializable(typeof(NativeAddSongItemDto[]))]
 [JsonSerializable(typeof(NativeRequest))]
+[JsonSerializable(typeof(NativeSessionCredentials))]
 [JsonSerializable(typeof(NativeLoginRequest))]
 [JsonSerializable(typeof(NativeLoginAccountSelection))]
 [JsonSerializable(typeof(NativeAddTracksRequest))]

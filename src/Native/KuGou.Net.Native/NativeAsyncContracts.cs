@@ -6,7 +6,13 @@ internal sealed record NativeRequest(
     string Method,
     string Path,
     Dictionary<string, JsonElement>? Query = null,
-    JsonElement? Body = null);
+    JsonElement? Body = null,
+    NativeSessionCredentials? Session = null);
+
+internal sealed record NativeSessionCredentials(
+    string? UserId = null,
+    string? Token = null,
+    string? T1 = null);
 
 internal sealed record NativeLoginRequest(string Mobile, string Code, string? UserId = null);
 
