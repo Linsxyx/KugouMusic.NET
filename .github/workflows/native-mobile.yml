@@ -102,8 +102,10 @@ jobs:
           cp "$source_library" "$destination"
 
           nm_tool="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
+          symbols_file='artifacts/android/native-symbols.txt'
+          "$nm_tool" -D --defined-only "$destination" > "$symbols_file"
           for symbol in KgRequestStart KgRequestPoll KgRequestCancel KgFreeMemory; do
-            "$nm_tool" -D --defined-only "$destination" | grep -q " $symbol$"
+            grep -q " $symbol$" "$symbols_file"
           done
 
           file "$destination"
