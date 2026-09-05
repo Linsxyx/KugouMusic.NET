@@ -14,6 +14,11 @@
         <IsAotCompatible>true</IsAotCompatible>
     </PropertyGroup>
 
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' Or $(RuntimeIdentifier.StartsWith('android-'))">
+        <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>
