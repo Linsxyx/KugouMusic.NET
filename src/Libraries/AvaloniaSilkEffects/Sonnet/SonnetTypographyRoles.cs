@@ -1,3 +1,5 @@
+using ZLinq;
+
 namespace AvaloniaSilkEffects.Sonnet;
 
 // Exact port of Folia v0.7.2 sonnetTypographyRoles.ts.
@@ -66,12 +68,12 @@ public static class SonnetTypographyRoles
     {
         if (heroIndex < 0 || heroIndex >= segments.Count) return [];
 
-        var wordLikeCount = segments.Count(segment =>
+        var wordLikeCount = segments.AsValueEnumerable().Count(segment =>
             segment.IsWordLike && VisibleLength(segment) > 0);
         if (wordLikeCount < SemiHeroMinLineWords) return [];
 
         var threshold = HeroScore(segments[heroIndex]) * SemiHeroScoreRatio;
-        var candidates = segments
+        var candidates = segments.AsValueEnumerable()
             .Select((segment, index) => new Candidate(segment, index))
             .Where(item =>
                 item.Index != heroIndex
@@ -105,8 +107,8 @@ public static class SonnetTypographyRoles
         if (primary is not null) picks.Add(primary.Index);
         if (wordLikeCount >= SemiHeroMultiWordCount && primary is not null)
         {
-            var secondary = BestOf(secondarySide.Where(item =>
-                Math.Abs(item.Index - primary.Index) >= SemiHeroMinGap));
+            var secondary = BestOf(secondarySide.AsValueEnumerable().Where(item =>
+                Math.Abs(item.Index - primary.Index) >= SemiHeroMinGap).ToArray());
             if (secondary is not null) picks.Add(secondary.Index);
         }
 
@@ -116,7 +118,7 @@ public static class SonnetTypographyRoles
 
     public static int FindSemiHeroIndex(
         IReadOnlyList<SonnetSemanticSegment> segments,
-        int heroIndex) => FindSemiHeroIndices(segments, heroIndex).FirstOrDefault(-1);
+        int heroIndex) => FindSemiHeroIndices(segments, heroIndex).AsValueEnumerable().FirstOrDefault(-1);
 
     private sealed record Candidate(SonnetSemanticSegment Segment, int Index);
 }

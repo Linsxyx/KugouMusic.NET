@@ -172,7 +172,7 @@ public class SilkEffectControl : OpenGlControlBase
         _lastPresentationTimestamp = presentationTimestamp;
         var fps = presentationDelta > TimeSpan.Zero ? 1d / presentationDelta.TotalSeconds : 0;
         var metrics = _device.FrameMetrics;
-        FrameStatistics = new(
+        FrameStatistics = new EffectFrameStatistics(
             fps, cpuMilliseconds, _submittedFrames, _skippedFrames,
             metrics.DrawCalls, metrics.Flushes, metrics.UploadedBytes, pixelSize,
             metrics.PostProcessingEnabled, _device.OpenGlVersion, _device.Renderer,
@@ -220,7 +220,7 @@ public class SilkEffectControl : OpenGlControlBase
         {
             LastError = message;
             if (message is not null)
-                InitializationFailed?.Invoke(this, new(message, exception));
+                InitializationFailed?.Invoke(this, new EffectInitializationFailedEventArgs(message, exception));
         });
     }
 }

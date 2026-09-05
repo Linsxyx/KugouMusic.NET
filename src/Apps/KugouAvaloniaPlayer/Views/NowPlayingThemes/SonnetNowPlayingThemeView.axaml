@@ -8,7 +8,7 @@
                                    HorizontalAlignment="Stretch"
                                    VerticalAlignment="Stretch"
                                    ClipToBounds="True"
-                                   ClearColor="#FF0D1235"
+                                   ClearColor="#00000000"
                                    RenderMode="Continuous"
                                    TargetFrameRate="60" />
 

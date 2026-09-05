@@ -129,7 +129,7 @@ public sealed class EffectPrimitiveRenderer : IDisposable
                 var delta = positions[index + 1] - positions[index];
                 normals[index] = delta.LengthSquared() <= float.Epsilon
                     ? (index > 0 ? normals[index - 1] : Vector2.UnitY)
-                    : Vector2.Normalize(new(-delta.Y, delta.X));
+                    : Vector2.Normalize(new Vector2(-delta.Y, delta.X));
             }
 
             for (var index = 0; index < pointCount; index++)
@@ -181,12 +181,13 @@ public sealed class EffectPrimitiveRenderer : IDisposable
     {
         Select(_whiteTexture, polygon.BlendMode);
         var color = WithAlpha(polygon.Color, polygon.WorldAlpha).Premultiplied().ToVector4();
-        var origin = Vector2.Transform(polygon.Points[0], polygon.WorldTransform);
-        for (var index = 1; index < polygon.Points.Count - 1; index++)
+        var transform = polygon.WorldTransform;
+        var indices = polygon.TriangleIndices;
+        for (var index = 0; index < indices.Length; index += 3)
             AddTriangle(
-                origin,
-                Vector2.Transform(polygon.Points[index], polygon.WorldTransform),
-                Vector2.Transform(polygon.Points[index + 1], polygon.WorldTransform),
+                Vector2.Transform(polygon.Points[indices[index]], transform),
+                Vector2.Transform(polygon.Points[indices[index + 1]], transform),
+                Vector2.Transform(polygon.Points[indices[index + 2]], transform),
                 color);
     }
 
@@ -312,26 +313,26 @@ public sealed class EffectPrimitiveRenderer : IDisposable
 
     private void AddQuad(Vector2 topLeft, Vector2 topRight, Vector2 bottomRight, Vector2 bottomLeft, Vector4 color)
     {
-        _vertices.Add(new(topLeft, new(0, 0), color));
-        _vertices.Add(new(topRight, new(1, 0), color));
-        _vertices.Add(new(bottomRight, new(1, 1), color));
-        _vertices.Add(new(topLeft, new(0, 0), color));
-        _vertices.Add(new(bottomRight, new(1, 1), color));
-        _vertices.Add(new(bottomLeft, new(0, 1), color));
+        _vertices.Add(new EffectVertex(topLeft, new Vector2(0, 0), color));
+        _vertices.Add(new EffectVertex(topRight, new Vector2(1, 0), color));
+        _vertices.Add(new EffectVertex(bottomRight, new Vector2(1, 1), color));
+        _vertices.Add(new EffectVertex(topLeft, new Vector2(0, 0), color));
+        _vertices.Add(new EffectVertex(bottomRight, new Vector2(1, 1), color));
+        _vertices.Add(new EffectVertex(bottomLeft, new Vector2(0, 1), color));
     }
 
     private void AddTriangle(Vector2 a, Vector2 b, Vector2 c, Vector4 color)
     {
-        _vertices.Add(new(a, Vector2.Zero, color));
-        _vertices.Add(new(b, Vector2.Zero, color));
-        _vertices.Add(new(c, Vector2.Zero, color));
+        _vertices.Add(new EffectVertex(a, Vector2.Zero, color));
+        _vertices.Add(new EffectVertex(b, Vector2.Zero, color));
+        _vertices.Add(new EffectVertex(c, Vector2.Zero, color));
     }
 
     private void AddTriangle(Vector2 a, Vector2 b, Vector2 c, Vector4 colorA, Vector4 colorB, Vector4 colorC)
     {
-        _vertices.Add(new(a, Vector2.Zero, colorA));
-        _vertices.Add(new(b, Vector2.Zero, colorB));
-        _vertices.Add(new(c, Vector2.Zero, colorC));
+        _vertices.Add(new EffectVertex(a, Vector2.Zero, colorA));
+        _vertices.Add(new EffectVertex(b, Vector2.Zero, colorB));
+        _vertices.Add(new EffectVertex(c, Vector2.Zero, colorC));
     }
 
     private static float Lerp(float start, float end, float progress) => start + (end - start) * progress;

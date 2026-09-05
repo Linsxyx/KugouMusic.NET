@@ -39,7 +39,7 @@ public sealed class SonnetDrawList
 
     public SonnetDrawList MoveTo(double x, double y)
     {
-        _path.Add(new(SonnetPathVerb.MoveTo, x, y));
+        _path.Add(new SonnetPathCommand(SonnetPathVerb.MoveTo, x, y));
         _lastX = x; _lastY = y;
         return this;
     }
@@ -47,7 +47,7 @@ public sealed class SonnetDrawList
     public SonnetDrawList LineTo(double x, double y)
     {
         var length = Math.Sqrt((x - _lastX) * (x - _lastX) + (y - _lastY) * (y - _lastY));
-        _path.Add(new(SonnetPathVerb.LineTo, x, y, Length: length, LastX: _lastX, LastY: _lastY));
+        _path.Add(new SonnetPathCommand(SonnetPathVerb.LineTo, x, y, Length: length, LastX: _lastX, LastY: _lastY));
         _length += length; _lastX = x; _lastY = y;
         return this;
     }
@@ -55,7 +55,7 @@ public sealed class SonnetDrawList
     public SonnetDrawList QuadraticCurveTo(double cx, double cy, double tx, double ty)
     {
         var length = Distance(_lastX, _lastY, cx, cy) + Distance(cx, cy, tx, ty);
-        _path.Add(new(SonnetPathVerb.QuadraticCurveTo, cx, cy, tx, ty,
+        _path.Add(new SonnetPathCommand(SonnetPathVerb.QuadraticCurveTo, cx, cy, tx, ty,
             Length: length, LastX: _lastX, LastY: _lastY));
         _length += length; _lastX = tx; _lastY = ty;
         return this;
@@ -65,7 +65,7 @@ public sealed class SonnetDrawList
     {
         var length = Distance(_lastX, _lastY, c1x, c1y)
             + Distance(c1x, c1y, c2x, c2y) + Distance(c2x, c2y, tx, ty);
-        _path.Add(new(SonnetPathVerb.BezierCurveTo, c1x, c1y, c2x, c2y, tx, ty,
+        _path.Add(new SonnetPathCommand(SonnetPathVerb.BezierCurveTo, c1x, c1y, c2x, c2y, tx, ty,
             Length: length, LastX: _lastX, LastY: _lastY));
         _length += length; _lastX = tx; _lastY = ty;
         return this;
@@ -77,7 +77,7 @@ public sealed class SonnetDrawList
         if (anticlockwise && difference > 0) difference -= Math.Tau;
         else if (!anticlockwise && difference < 0) difference += Math.Tau;
         var length = Math.Abs(difference) * radius;
-        _path.Add(new(SonnetPathVerb.Arc, cx, cy, radius, start, end, difference,
+        _path.Add(new SonnetPathCommand(SonnetPathVerb.Arc, cx, cy, radius, start, end, difference,
             anticlockwise, length, _lastX, _lastY));
         _length += length;
         _lastX = cx + Math.Cos(end) * radius;
@@ -88,7 +88,7 @@ public sealed class SonnetDrawList
     public SonnetDrawList Circle(double x, double y, double radius)
     {
         var length = Math.Tau * radius;
-        _path.Add(new(SonnetPathVerb.Circle, x, y, radius, Length: length, LastX: _lastX, LastY: _lastY));
+        _path.Add(new SonnetPathCommand(SonnetPathVerb.Circle, x, y, radius, Length: length, LastX: _lastX, LastY: _lastY));
         _length += length;
         _lastX = x + radius; _lastY = y;
         return this;
@@ -96,7 +96,7 @@ public sealed class SonnetDrawList
 
     public SonnetDrawList Rectangle(double x, double y, double width, double height)
     {
-        _path.Add(new(SonnetPathVerb.Rectangle, x, y, width, height,
+        _path.Add(new SonnetPathCommand(SonnetPathVerb.Rectangle, x, y, width, height,
             Length: 2 * (Math.Abs(width) + Math.Abs(height)), LastX: _lastX, LastY: _lastY));
         _length += 2 * (Math.Abs(width) + Math.Abs(height));
         _lastX = x; _lastY = y;
@@ -136,7 +136,7 @@ public sealed class SonnetDrawList
         var jitter = unchecked((uint)(index * 2654435761L)) / 4294967296d;
         var delay = slot * (kind == SonnetPaintKind.Stroke ? 0.5 : 0.45);
         var span = (kind == SonnetPaintKind.Stroke ? 0.32 + jitter * 0.26 : 0.4 + jitter * 0.25);
-        _commands.Add(new(kind, _path.ToArray(), color, alpha, width, _length, delay, Math.Min(span, 1 - delay)));
+        _commands.Add(new SonnetPaintCommand(kind, _path.ToArray(), color, alpha, width, _length, delay, Math.Min(span, 1 - delay)));
         _path.Clear(); _length = 0;
         return this;
     }
@@ -151,7 +151,7 @@ public sealed class SonnetDrawList
             if (command.Verb == SonnetPathVerb.MoveTo)
             {
                 if (points is { Count: > 0 }) result.Add(points);
-                points = [new((float)command.A, (float)command.B)];
+                points = [new Vector2((float)command.A, (float)command.B)];
                 current = points[0];
                 continue;
             }
@@ -159,18 +159,18 @@ public sealed class SonnetDrawList
             switch (command.Verb)
             {
                 case SonnetPathVerb.LineTo:
-                    current = new((float)command.A, (float)command.B); points.Add(current); break;
+                    current = new Vector2((float)command.A, (float)command.B); points.Add(current); break;
                 case SonnetPathVerb.QuadraticCurveTo:
-                    AddQuadratic(points, current, new((float)command.A, (float)command.B), new((float)command.C, (float)command.D), segments);
+                    AddQuadratic(points, current, new Vector2((float)command.A, (float)command.B), new Vector2((float)command.C, (float)command.D), segments);
                     current = points[^1]; break;
                 case SonnetPathVerb.BezierCurveTo:
-                    AddCubic(points, current, new((float)command.A, (float)command.B), new((float)command.C, (float)command.D), new((float)command.E, (float)command.F), segments);
+                    AddCubic(points, current, new Vector2((float)command.A, (float)command.B), new Vector2((float)command.C, (float)command.D), new Vector2((float)command.E, (float)command.F), segments);
                     current = points[^1]; break;
                 case SonnetPathVerb.Arc:
                     for (var index = 1; index <= segments; index++)
                     {
                         var angle = command.D + command.F * index / segments;
-                        points.Add(new((float)(command.A + Math.Cos(angle) * command.C), (float)(command.B + Math.Sin(angle) * command.C)));
+                        points.Add(new Vector2((float)(command.A + Math.Cos(angle) * command.C), (float)(command.B + Math.Sin(angle) * command.C)));
                     }
                     current = points[^1]; break;
                 case SonnetPathVerb.Circle:
@@ -181,8 +181,8 @@ public sealed class SonnetDrawList
                     current = points[^1]; break;
                 case SonnetPathVerb.Rectangle:
                     if (points.Count > 0) result.Add(points);
-                    points = [new((float)command.A, (float)command.B), new((float)(command.A + command.C), (float)command.B),
-                        new((float)(command.A + command.C), (float)(command.B + command.D)), new((float)command.A, (float)(command.B + command.D))];
+                    points = [new Vector2((float)command.A, (float)command.B), new Vector2((float)(command.A + command.C), (float)command.B),
+                        new Vector2((float)(command.A + command.C), (float)(command.B + command.D)), new Vector2((float)command.A, (float)(command.B + command.D))];
                     current = points[^1]; break;
             }
         }

@@ -9,10 +9,10 @@ public static class SonnetCredits
     public static SonnetCreditsFrame Resolve(double time, double finalLyricEndTime)
     {
         var elapsed = time - finalLyricEndTime;
-        if (elapsed <= 0) return new(false, 1, 0, 0, 0.04, 0.965);
+        if (elapsed <= 0) return new SonnetCreditsFrame(false, 1, 0, 0, 0.04, 0.965);
         var lyricExit = SonnetMotion.EaseInOut(SonnetMotion.Clamp01(elapsed / 1.25));
         var posterEnter = SonnetMotion.EaseInOut(SonnetMotion.Clamp01((elapsed - 0.38) / 1.55));
-        return new(true, 1 - lyricExit, lyricExit * 18, posterEnter,
+        return new SonnetCreditsFrame(true, 1 - lyricExit, lyricExit * 18, posterEnter,
             (1 - posterEnter) * 0.04, 0.965 + posterEnter * 0.035);
     }
 

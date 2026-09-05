@@ -58,21 +58,21 @@ internal static partial class SonnetMgBuilder
             var x = (-0.66f + index * 0.22f) * radius;
             var top = (-0.3f + (seed + (uint)index * 5) % 5 * 0.085f) * radius;
             var bottom = radius * 0.68f;
-            AddPolyline(root, ThemedCubic(new(x, bottom),
-                new(x + radius * 0.04f * direction, radius * 0.28f),
-                new(x - radius * 0.05f * direction, top + radius * 0.12f), new(x, top)),
+            AddPolyline(root, ThemedCubic(new Vector2(x, bottom),
+                new Vector2(x + radius * 0.04f * direction, radius * 0.28f),
+                new Vector2(x - radius * 0.05f * direction, top + radius * 0.12f), new Vector2(x, top)),
                 2, (index % 2 != 0 ? theme.Secondary : theme.Primary) with { A = 0.5f });
-            ThemedLeaf(root, new(x, radius * 0.24f), radius * 0.26f, radius * 0.055f,
+            ThemedLeaf(root, new Vector2(x, radius * 0.24f), radius * 0.26f, radius * 0.055f,
                 index % 2 != 0 ? -2.7f : -0.45f, theme.Primary, 0.1f);
 
             var bloomColor = index % 3 == 0 ? theme.Secondary : theme.Primary;
             var bloom = new List<Vector2> { new(x, top + radius * 0.14f) };
-            ThemedAppendQuadratic(bloom, new(x - radius * 0.18f, top - radius * 0.04f),
-                new(x - radius * 0.11f, top - radius * 0.2f));
-            bloom.Add(new(x, top - radius * 0.1f));
-            bloom.Add(new(x + radius * 0.11f, top - radius * 0.2f));
-            ThemedAppendQuadratic(bloom, new(x + radius * 0.18f, top - radius * 0.04f),
-                new(x, top + radius * 0.14f));
+            ThemedAppendQuadratic(bloom, new Vector2(x - radius * 0.18f, top - radius * 0.04f),
+                new Vector2(x - radius * 0.11f, top - radius * 0.2f));
+            bloom.Add(new Vector2(x, top - radius * 0.1f));
+            bloom.Add(new Vector2(x + radius * 0.11f, top - radius * 0.2f));
+            ThemedAppendQuadratic(bloom, new Vector2(x + radius * 0.18f, top - radius * 0.04f),
+                new Vector2(x, top + radius * 0.14f));
             AddFillPolygon(root, bloom, bloomColor with { A = 0.12f + index % 3 * 0.045f });
             AddPolyline(root, bloom, 2, bloomColor with { A = 0.65f });
         }
@@ -85,25 +85,25 @@ internal static partial class SonnetMgBuilder
             var x = (-0.72f + stem * 0.18f) * radius;
             var lean = ((int)((seed + (uint)stem * 7) % 9) - 4) * radius * 0.018f;
             var flowerY = (-0.45f + (seed + (uint)stem * 3) % 6 * 0.08f) * radius;
-            AddPolyline(root, ThemedQuadratic(new(x, radius * 0.72f),
-                new(x - lean, radius * 0.12f), new(x + lean, flowerY)), 1.5f,
+            AddPolyline(root, ThemedQuadratic(new Vector2(x, radius * 0.72f),
+                new Vector2(x - lean, radius * 0.12f), new Vector2(x + lean, flowerY)), 1.5f,
                 (stem % 2 != 0 ? theme.Secondary : theme.Primary) with { A = 0.42f });
             for (var petal = 0; petal < 5; petal++)
             {
                 var angle = petal / 5f * MathF.Tau - MathF.PI / 2;
-                ThemedLeaf(root, new(x + lean, flowerY), radius * 0.105f, radius * 0.032f,
+                ThemedLeaf(root, new Vector2(x + lean, flowerY), radius * 0.105f, radius * 0.032f,
                     angle, stem % 3 != 0 ? theme.Primary : theme.Secondary, 0.1f);
             }
-            AddCircle(root, new(x + lean, flowerY), radius * 0.025f, theme.Secondary with { A = 0.48f });
+            AddCircle(root, new Vector2(x + lean, flowerY), radius * 0.025f, theme.Secondary with { A = 0.48f });
         }
     }
 
     private static void BuildFern(EffectContainer root, SonnetTheme theme, float radius, uint seed)
     {
         var tilt = (seed % 2 != 0 ? 1 : -1) * 0.18f;
-        AddPolyline(root, ThemedCubic(new(-radius * 0.12f, radius * 0.72f),
-            new(-radius * 0.04f, radius * 0.2f), new(radius * 0.12f, -radius * 0.24f),
-            new(radius * 0.02f, -radius * 0.72f)), 3, theme.Primary with { A = 0.62f });
+        AddPolyline(root, ThemedCubic(new Vector2(-radius * 0.12f, radius * 0.72f),
+            new Vector2(-radius * 0.04f, radius * 0.2f), new Vector2(radius * 0.12f, -radius * 0.24f),
+            new Vector2(radius * 0.02f, -radius * 0.72f)), 3, theme.Primary with { A = 0.62f });
         for (var index = 0; index < 13; index++)
         {
             var ratio = index / 13f;
@@ -120,10 +120,10 @@ internal static partial class SonnetMgBuilder
     private static void BuildGinkgo(EffectContainer root, SonnetTheme theme, float radius, uint seed)
     {
         var direction = seed % 2 == 0 ? 1f : -1f;
-        AddPolyline(root, ThemedCubic(new(-radius * 0.72f * direction, radius * 0.55f),
-            new(-radius * 0.25f * direction, radius * 0.16f),
-            new(radius * 0.08f * direction, -radius * 0.12f),
-            new(radius * 0.65f * direction, -radius * 0.5f)), 5, theme.Primary with { A = 0.38f });
+        AddPolyline(root, ThemedCubic(new Vector2(-radius * 0.72f * direction, radius * 0.55f),
+            new Vector2(-radius * 0.25f * direction, radius * 0.16f),
+            new Vector2(radius * 0.08f * direction, -radius * 0.12f),
+            new Vector2(radius * 0.65f * direction, -radius * 0.5f)), 5, theme.Primary with { A = 0.38f });
         for (var index = 0; index < 8; index++)
         {
             var ratio = index / 7f;
@@ -148,10 +148,10 @@ internal static partial class SonnetMgBuilder
         for (var vine = 0; vine < 3; vine++)
         {
             var offset = (vine - 1) * radius * 0.3f;
-            AddPolyline(root, ThemedCubic(new(offset, radius * 0.76f),
-                new(offset + radius * 0.5f * mirror, radius * 0.38f),
-                new(offset - radius * 0.48f * mirror, -radius * 0.1f),
-                new(offset + radius * 0.22f * mirror, -radius * 0.76f)),
+            AddPolyline(root, ThemedCubic(new Vector2(offset, radius * 0.76f),
+                new Vector2(offset + radius * 0.5f * mirror, radius * 0.38f),
+                new Vector2(offset - radius * 0.48f * mirror, -radius * 0.1f),
+                new Vector2(offset + radius * 0.22f * mirror, -radius * 0.76f)),
                 vine == 1 ? 3 : 1.5f,
                 (vine == 1 ? theme.Secondary : theme.Primary) with { A = 0.46f });
             for (var leaf = 0; leaf < 5; leaf++)
@@ -174,21 +174,21 @@ internal static partial class SonnetMgBuilder
         Vector2[] shell = [new(-radius * 0.7f, radius * 0.58f), new(-radius * 0.7f, -radius * 0.12f),
             new(0, -radius * 0.62f), new(radius * 0.7f, -radius * 0.12f), new(radius * 0.7f, radius * 0.58f)];
         ThemedFillAndStroke(root, shell, theme.Primary, 0.055f, 0.68f, 3);
-        AddLine(root, new(0, -radius * 0.62f), new(0, radius * 0.58f), 2, theme.Secondary with { A = 0.5f });
+        AddLine(root, new Vector2(0, -radius * 0.62f), new Vector2(0, radius * 0.58f), 2, theme.Secondary with { A = 0.5f });
         for (var pane = -3; pane <= 3; pane++)
         {
             var x = pane * radius * 0.18f;
-            AddLine(root, new(x, radius * 0.58f), new(x * 0.38f, -radius * (0.58f - Math.Abs(pane) * 0.04f)),
+            AddLine(root, new Vector2(x, radius * 0.58f), new Vector2(x * 0.38f, -radius * (0.58f - Math.Abs(pane) * 0.04f)),
                 1, (pane % 2 != 0 ? theme.Secondary : theme.Primary) with { A = 0.32f });
         }
         var doorX = radius * 0.2f * direction;
-        AddRect(root, new(doorX - radius * 0.13f, radius * 0.08f), new(radius * 0.26f, radius * 0.5f),
+        AddRect(root, new Vector2(doorX - radius * 0.13f, radius * 0.08f), new Vector2(radius * 0.26f, radius * 0.5f),
             theme.Secondary with { A = 0.1f });
-        AddOutlineRect(root, new(doorX - radius * 0.13f, radius * 0.08f), new(radius * 0.26f, radius * 0.5f),
+        AddOutlineRect(root, new Vector2(doorX - radius * 0.13f, radius * 0.08f), new Vector2(radius * 0.26f, radius * 0.5f),
             2, theme.Secondary with { A = 0.62f });
-        AddLine(root, new(-bleed.X, radius * 0.58f), new(-radius * 0.7f, radius * 0.58f), 1,
+        AddLine(root, new Vector2(-bleed.X, radius * 0.58f), new Vector2(-radius * 0.7f, radius * 0.58f), 1,
             theme.Primary with { A = 0.3f });
-        AddLine(root, new(radius * 0.7f, radius * 0.58f), new(bleed.X, radius * 0.58f), 1,
+        AddLine(root, new Vector2(radius * 0.7f, radius * 0.58f), new Vector2(bleed.X, radius * 0.58f), 1,
             theme.Primary with { A = 0.3f });
     }
 
@@ -210,11 +210,11 @@ internal static partial class SonnetMgBuilder
             AddRect(root, bodyPosition, bodySize, theme.Primary with { A = 0.035f + floor * 0.018f });
             AddOutlineRect(root, bodyPosition, bodySize, 1, theme.Primary with { A = 0.36f });
         }
-        AddLine(root, new(0, -radius * 0.62f), new(radius * 0.035f * lean, -radius * 0.78f), 3,
+        AddLine(root, new Vector2(0, -radius * 0.62f), new Vector2(radius * 0.035f * lean, -radius * 0.78f), 3,
             theme.Secondary with { A = 0.65f });
-        AddLine(root, new(-bleed.X, radius * 0.64f), new(-radius * 0.52f, radius * 0.64f), 1,
+        AddLine(root, new Vector2(-bleed.X, radius * 0.64f), new Vector2(-radius * 0.52f, radius * 0.64f), 1,
             theme.Secondary with { A = 0.22f });
-        AddLine(root, new(radius * 0.52f, radius * 0.64f), new(bleed.X, radius * 0.64f), 1,
+        AddLine(root, new Vector2(radius * 0.52f, radius * 0.64f), new Vector2(bleed.X, radius * 0.64f), 1,
             theme.Secondary with { A = 0.22f });
     }
 
@@ -238,13 +238,13 @@ internal static partial class SonnetMgBuilder
             for (var column = 0; column < 2; column++)
             {
                 if (((long)row + column + index + seed) % 3 != 0) continue;
-                AddRect(root, new(x + radius * (0.035f + column * 0.085f),
+                AddRect(root, new Vector2(x + radius * (0.035f + column * 0.085f),
                         radius * 0.53f - buildingHeight + row * radius * 0.13f),
-                    new(radius * 0.045f, radius * 0.055f),
+                    new Vector2(radius * 0.045f, radius * 0.055f),
                     (column != 0 ? theme.Secondary : theme.Primary) with { A = 0.2f });
             }
         }
-        AddLine(root, new(-bleed.X, radius * 0.63f), new(bleed.X, radius * 0.63f), 4,
+        AddLine(root, new Vector2(-bleed.X, radius * 0.63f), new Vector2(bleed.X, radius * 0.63f), 4,
             theme.Primary with { A = 0.48f });
     }
 
@@ -257,12 +257,12 @@ internal static partial class SonnetMgBuilder
         {
             var y = radius * (-0.5f + band * 0.16f);
             var amplitude = radius * (0.09f + band * 0.012f);
-            var top = ThemedCubic(new(-bleed.X, y), new(-radius * 0.35f, y + amplitude * direction),
-                new(radius * 0.08f, y - amplitude * direction), new(bleed.X, y + amplitude * 0.35f));
+            var top = ThemedCubic(new Vector2(-bleed.X, y), new Vector2(-radius * 0.35f, y + amplitude * direction),
+                new Vector2(radius * 0.08f, y - amplitude * direction), new Vector2(bleed.X, y + amplitude * 0.35f));
             var area = top.ToList();
-            area.Add(new(bleed.X, y + radius * 0.12f));
-            var bottom = ThemedCubic(area[^1], new(radius * 0.12f, y + radius * 0.04f),
-                new(-radius * 0.3f, y + radius * 0.2f), new(-bleed.X, y + radius * 0.12f));
+            area.Add(new Vector2(bleed.X, y + radius * 0.12f));
+            var bottom = ThemedCubic(area[^1], new Vector2(radius * 0.12f, y + radius * 0.04f),
+                new Vector2(-radius * 0.3f, y + radius * 0.2f), new Vector2(-bleed.X, y + radius * 0.12f));
             area.AddRange(bottom.Skip(1));
             var color = band % 2 != 0 ? theme.Secondary : theme.Primary;
             AddFillPolygon(root, area, color with { A = 0.025f + band * 0.018f });
@@ -285,11 +285,11 @@ internal static partial class SonnetMgBuilder
         {
             var y = radius * (0.28f + line * 0.07f);
             var inset = radius * (0.08f + line % 3 * 0.08f);
-            AddLine(root, new(-bleed.X + inset, y), new(bleed.X - inset, y), 1,
+            AddLine(root, new Vector2(-bleed.X + inset, y), new Vector2(bleed.X - inset, y), 1,
                 (line % 2 != 0 ? theme.Secondary : theme.Primary) with { A = 0.2f + line * 0.035f });
         }
-        AddCircle(root, new(-radius * 0.48f), radius * 0.1f, theme.Secondary with { A = 0.14f });
-        AddRing(root, new(-radius * 0.48f), radius * 0.13f, theme.Secondary with { A = 0.5f }, 2);
+        AddCircle(root, new Vector2(-radius * 0.48f), radius * 0.1f, theme.Secondary with { A = 0.14f });
+        AddRing(root, new Vector2(-radius * 0.48f), radius * 0.13f, theme.Secondary with { A = 0.5f }, 2);
     }
 
     private static void BuildCoastalCliff(EffectContainer root, SonnetTheme theme,
@@ -313,8 +313,8 @@ internal static partial class SonnetMgBuilder
         for (var wave = 0; wave < 6; wave++)
         {
             var y = radius * (0.14f + wave * 0.1f);
-            AddPolyline(root, ThemedQuadratic(new(-radius * 0.05f * direction, y),
-                new(radius * 0.35f * direction, y - radius * 0.08f), new(bleed.X * direction, y)),
+            AddPolyline(root, ThemedQuadratic(new Vector2(-radius * 0.05f * direction, y),
+                new Vector2(radius * 0.35f * direction, y - radius * 0.08f), new Vector2(bleed.X * direction, y)),
                 wave % 3 == 0 ? 2 : 1,
                 (wave % 2 != 0 ? theme.Secondary : theme.Primary) with { A = 0.26f + wave * 0.045f });
         }

@@ -4,6 +4,8 @@ namespace AvaloniaSilkEffects;
 
 public sealed class PostProcessSettings
 {
+    internal bool UseSonnetPasses { get; set; }
+    internal float SonnetNoiseSeed { get; set; }
     /// <summary>Resolution used by offscreen effects. Values below one reduce Retina fill cost.</summary>
     public float ResolutionScale { get; set; } = 0.75f;
     public float Blur { get; set; }
@@ -28,6 +30,7 @@ public sealed class PostProcessSettings
 
     public void Reset()
     {
+        UseSonnetPasses = false;
         Blur = Glow = Grain = Contrast = RgbSplit = Halftone = Vignette = 0;
         LensDistortion = LensDispersion = Glitch = 0;
         ColorMatrix = Matrix4x4.Identity;

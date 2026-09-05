@@ -162,6 +162,7 @@ public partial class SonnetNowPlayingThemeView : UserControl
         {
             _scene = new SonnetScene(context, new SonnetSceneOptions
             {
+                TransparentBackground = true,
                 Tuning = new SonnetTuning
                 {
                     TextureResolution = 1.5f,

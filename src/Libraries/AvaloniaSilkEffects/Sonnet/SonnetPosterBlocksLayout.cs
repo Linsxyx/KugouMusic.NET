@@ -37,7 +37,7 @@ public static class SonnetPosterBlocksLayout
         double baseFontSize,
         uint seed = 0)
     {
-        if (boxes.Count == 0) return new([], 0, 0, 0);
+        if (boxes.Count == 0) return new SonnetPosterBlocksPlan([], 0, 0, 0);
         var gap = Math.Clamp(baseFontSize * 0.35, 16, 40);
         var lineGap = gap * 1.15;
         var canvas = new ScreenRect(-width * 0.42, -height * 0.40, width * 0.84, height * 0.80);
@@ -57,7 +57,7 @@ public static class SonnetPosterBlocksLayout
             var fitScale = space.V / attempt.VTotal;
             foreach (var placement in attempt.Placements)
             {
-                placement.Rect = new(
+                placement.Rect = new FlowRect(
                     placement.Rect.U * fitScale,
                     placement.Rect.V * fitScale,
                     placement.Rect.USize * fitScale,
@@ -95,7 +95,7 @@ public static class SonnetPosterBlocksLayout
             }
         }
 
-        return new(boxes, canvas.Width, canvas.Height, gap);
+        return new SonnetPosterBlocksPlan(boxes, canvas.Width, canvas.Height, gap);
     }
 
     private static FlowAttempt AttemptFlowLayout(
@@ -119,7 +119,7 @@ public static class SonnetPosterBlocksLayout
                 && box.VerticalMeasuredHeight.HasValue
                 && box.VerticalFontScale.HasValue;
             var baseScale = useVertical ? box.VerticalFontScale!.Value : box.FontScale;
-            return new(
+            return new Dimensions(
                 useVertical,
                 baseScale,
                 (useVertical ? box.VerticalMeasuredWidth!.Value : box.MeasuredWidth) * globalScale,
@@ -166,9 +166,9 @@ public static class SonnetPosterBlocksLayout
                     var uCursor = uStart;
                     foreach (var chip in line)
                     {
-                        placements.Add(new(
+                        placements.Add(new FlowPlacement(
                             chip.Box,
-                            new(uCursor, vCursor, chip.USize * chip.Shrink, chip.VSize * chip.Shrink),
+                            new FlowRect(uCursor, vCursor, chip.USize * chip.Shrink, chip.VSize * chip.Shrink),
                             chip.Dimensions.BaseScale * globalScale * chip.Shrink,
                             chip.Dimensions.UseVertical));
                         uCursor += chip.USize * chip.Shrink + chipGap + spread;
@@ -213,10 +213,10 @@ public static class SonnetPosterBlocksLayout
                 ? (space.U - uSize) / 2
                 : followedByGroup ? 0
                 : ownBandOnEndSide ? space.U - uSize : 0;
-            placements.Add(new(zone, new(u, vCursor, uSize, vSize),
+            placements.Add(new FlowPlacement(zone, new FlowRect(u, vCursor, uSize, vSize),
                 dims.BaseScale * globalScale * zoneShrink, dims.UseVertical));
             if (followedByGroup)
-                floats.Add(new(uSize + chipGap, vCursor + vSize + lineGap));
+                floats.Add(new ZoneFloat(uSize + chipGap, vCursor + vSize + lineGap));
             else
             {
                 vCursor += vSize + lineGap;
@@ -224,7 +224,7 @@ public static class SonnetPosterBlocksLayout
             }
         }
 
-        return new(placements, placements.Count == 0
+        return new FlowAttempt(placements, placements.Count == 0
             ? 0
             : placements.Max(placement => placement.Rect.V + placement.Rect.VSize));
     }
@@ -237,20 +237,20 @@ public static class SonnetPosterBlocksLayout
         {
             if (box.IsHero || box.IsSemiHero)
             {
-                if (group.Count > 0) items.Add(new(null, [.. group]));
+                if (group.Count > 0) items.Add(new FlowItem(null, [.. group]));
                 group.Clear();
-                items.Add(new(box, null));
+                items.Add(new FlowItem(box, null));
             }
             else group.Add(box);
         }
-        if (group.Count > 0) items.Add(new(null, [.. group]));
+        if (group.Count > 0) items.Add(new FlowItem(null, [.. group]));
         return items;
     }
 
     private static ScreenRect FlowToScreen(FlowSpace space, FlowRect rect, ScreenRect canvas) =>
         space.Orientation == SonnetLayoutDirection.Horizontal
-            ? new(canvas.X + rect.U, canvas.Y + rect.V, rect.USize, rect.VSize)
-            : new(canvas.X + canvas.Width - rect.V - rect.VSize, canvas.Y + rect.U, rect.VSize, rect.USize);
+            ? new ScreenRect(canvas.X + rect.U, canvas.Y + rect.V, rect.USize, rect.VSize)
+            : new ScreenRect(canvas.X + canvas.Width - rect.V - rect.VSize, canvas.Y + rect.U, rect.VSize, rect.USize);
 
     private sealed record FlowItem(SonnetPosterBlockBox? Zone, IReadOnlyList<SonnetPosterBlockBox>? Group);
     private sealed record FlowSpace(SonnetLayoutDirection Orientation, double U, double V);

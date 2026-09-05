@@ -49,7 +49,7 @@ internal sealed class SonnetMgView
 
         ParticleLayer.Position = cameraOffset * 0.4f;
         ParticleLayer.Rotation = (float)((time - shotStartTime) * 0.05);
-        ParticleLayer.Scale = new(1 + (cameraScale - 1) * 0.3f);
+        ParticleLayer.Scale = new Vector2(1 + (cameraScale - 1) * 0.3f);
         if (FixedGeometryLayer is not null)
             FixedGeometryLayer.Rotation = -cameraRotation;
 
@@ -89,7 +89,7 @@ internal sealed class SonnetMgView
             icon.Node.Alpha = Math.Min(1,
                 icon.BaseAlpha * (float)entryEased * (0.72f + _smoothedIconAudio * 0.38f + (float)loopPulse * 0.03f));
             var scale = icon.BaseScale * (0.72f + (float)entryEased * 0.28f) * audioScale * (float)loopScale;
-            icon.Node.Scale = new(scale);
+            icon.Node.Scale = new Vector2(scale);
         }
     }
 
@@ -149,19 +149,7 @@ internal sealed class SonnetMgView
     private static EffectContainer BuildFlowerNode(float size, EffectColor color)
     {
         var root = new EffectContainer();
-        var orbit = size * 1.65f;
-        var petalRadius = size * 1.35f;
-        for (var index = 0; index < 5; index++)
-        {
-            var angle = -MathF.PI / 2 + MathF.Tau * index / 5;
-            var petal = new EffectContainer
-            {
-                Position = new(MathF.Cos(angle) * orbit, MathF.Sin(angle) * orbit),
-            };
-            AddRing(petal, petalRadius, color);
-            root.Add(petal);
-        }
-        AddRing(root, size * 0.85f, color);
+        root.Add(new SonnetFlowerNode(size, color));
         return root;
     }
 
@@ -196,7 +184,7 @@ internal sealed class SonnetMgView
             3 => ResolveCornerClusterPlacement(),
             4 => ResolveConstellationPlacement(),
             5 => ResolveTwinColumnPlacement(),
-            _ => new(new(
+            _ => new ParticlePlacement(new Vector2(
                     -hw + width * Hash(seed, index, 47),
                     -hh + height * Hash(seed, index, 53)),
                 baseRotation),
@@ -207,7 +195,7 @@ internal sealed class SonnetMgView
             var ring = index % 2;
             var ringRadius = radius * (0.36f + ring * 0.26f);
             var angle = index / (float)count * MathF.Tau * 2 + Jitter(13, 0.35f);
-            return new(new(MathF.Cos(angle) * ringRadius, MathF.Sin(angle) * ringRadius * 0.86f),
+            return new ParticlePlacement(new Vector2(MathF.Cos(angle) * ringRadius, MathF.Sin(angle) * ringRadius * 0.86f),
                 angle + MathF.PI / 2);
         }
 
@@ -216,7 +204,7 @@ internal sealed class SonnetMgView
             var side = index % 2 == 0 ? -1 : 1;
             var divisor = Math.Max(1, count / 2);
             var t = (MathF.Floor(index / 2f) + 0.5f) / divisor;
-            return new(new(
+            return new ParticlePlacement(new Vector2(
                     -hw + width * (0.06f + 0.88f * t) + Jitter(17, width * 0.03f),
                     side * hh * 0.78f + Jitter(19, height * 0.05f)),
                 side < 0 ? 0 : MathF.PI);
@@ -227,7 +215,7 @@ internal sealed class SonnetMgView
             var corner = index % 4;
             var sx = corner % 2 == 0 ? -1 : 1;
             var sy = corner < 2 ? -1 : 1;
-            return new(new(
+            return new ParticlePlacement(new Vector2(
                     sx * hw * 0.68f + Jitter(23, width * 0.12f),
                     sy * hh * 0.62f + Jitter(29, height * 0.12f)),
                 baseRotation);
@@ -239,7 +227,7 @@ internal sealed class SonnetMgView
             const int rows = 4;
             var column = index % columns;
             var row = index / columns % rows;
-            return new(new(
+            return new ParticlePlacement(new Vector2(
                     -hw * 0.8f + column / (float)(columns - 1) * hw * 1.6f + Jitter(31, width * 0.06f),
                     -hh * 0.72f + row / (float)(rows - 1) * hh * 1.44f + Jitter(37, height * 0.06f)),
                 baseRotation);
@@ -249,7 +237,7 @@ internal sealed class SonnetMgView
         {
             var side = index % 2 == 0 ? -1 : 1;
             var t = (MathF.Floor(index / 2f) + 0.5f) / Math.Max(1, (int)Math.Ceiling(count / 2f));
-            return new(new(
+            return new ParticlePlacement(new Vector2(
                     side * hw * 0.74f + Jitter(41, width * 0.04f),
                     -hh * 0.8f + t * hh * 1.6f + Jitter(43, height * 0.05f)),
                 side < 0 ? MathF.PI : 0);
@@ -262,14 +250,14 @@ internal sealed class SonnetMgView
         switch (kind)
         {
             case 1: // diamond
-                AddLine(root, new(0, -size), new(size, 0), size * 0.3f, color);
-                AddLine(root, new(size, 0), new(0, size), size * 0.3f, color);
-                AddLine(root, new(0, size), new(-size, 0), size * 0.3f, color);
-                AddLine(root, new(-size, 0), new(0, -size), size * 0.3f, color);
+                AddLine(root, new Vector2(0, -size), new Vector2(size, 0), size * 0.3f, color);
+                AddLine(root, new Vector2(size, 0), new Vector2(0, size), size * 0.3f, color);
+                AddLine(root, new Vector2(0, size), new Vector2(-size, 0), size * 0.3f, color);
+                AddLine(root, new Vector2(-size, 0), new Vector2(0, -size), size * 0.3f, color);
                 break;
             case 2: // sparkle
-                AddLine(root, new(0, -size * 1.5f), new(0, size * 1.5f), Math.Max(1, size * 0.22f), color);
-                AddLine(root, new(-size * 1.5f, 0), new(size * 1.5f, 0), Math.Max(1, size * 0.22f), color);
+                AddLine(root, new Vector2(0, -size * 1.5f), new Vector2(0, size * 1.5f), Math.Max(1, size * 0.22f), color);
+                AddLine(root, new Vector2(-size * 1.5f, 0), new Vector2(size * 1.5f, 0), Math.Max(1, size * 0.22f), color);
                 break;
             case 3: // ring
                 AddRing(root, size, color);
@@ -278,26 +266,26 @@ internal sealed class SonnetMgView
                 AddRegularPolygon(root, size, 6, color);
                 break;
             case 5: // dot
-                root.Add(new ShapeNode { Shape = EffectShapeKind.Ellipse, Position = new(-size * 0.42f), Size = new(size * 0.84f), Color = color });
+                root.Add(new ShapeNode { Shape = EffectShapeKind.Ellipse, Position = new Vector2(-size * 0.42f), Size = new Vector2(size * 0.84f), Color = color });
                 break;
             case 6: // bar
-                root.Add(new ShapeNode { Position = new(-size, -size * 0.18f), Size = new(size * 2, size * 0.36f), Color = color });
+                root.Add(new ShapeNode { Position = new Vector2(-size, -size * 0.18f), Size = new Vector2(size * 2, size * 0.36f), Color = color });
                 break;
             case 7: // plus
-                AddLine(root, new(-size, 0), new(size, 0), Math.Max(1.5f, size * 0.28f), color);
-                AddLine(root, new(0, -size), new(0, size), Math.Max(1.5f, size * 0.28f), color);
+                AddLine(root, new Vector2(-size, 0), new Vector2(size, 0), Math.Max(1.5f, size * 0.28f), color);
+                AddLine(root, new Vector2(0, -size), new Vector2(0, size), Math.Max(1.5f, size * 0.28f), color);
                 break;
             case 8: // triangle
-                AddLine(root, new(0, -size), new(size * 0.9f, size * 0.7f), Math.Max(1, size * 0.18f), color);
-                AddLine(root, new(size * 0.9f, size * 0.7f), new(-size * 0.9f, size * 0.7f), Math.Max(1, size * 0.18f), color);
-                AddLine(root, new(-size * 0.9f, size * 0.7f), new(0, -size), Math.Max(1, size * 0.18f), color);
+                AddLine(root, new Vector2(0, -size), new Vector2(size * 0.9f, size * 0.7f), Math.Max(1, size * 0.18f), color);
+                AddLine(root, new Vector2(size * 0.9f, size * 0.7f), new Vector2(-size * 0.9f, size * 0.7f), Math.Max(1, size * 0.18f), color);
+                AddLine(root, new Vector2(-size * 0.9f, size * 0.7f), new Vector2(0, -size), Math.Max(1, size * 0.18f), color);
                 break;
             case 9: // chevron
-                AddLine(root, new(-size * 0.5f, -size * 0.55f), new(size * 0.35f, 0), Math.Max(1.5f, size * 0.2f), color);
-                AddLine(root, new(size * 0.35f, 0), new(-size * 0.5f, size * 0.55f), Math.Max(1.5f, size * 0.2f), color);
+                AddLine(root, new Vector2(-size * 0.5f, -size * 0.55f), new Vector2(size * 0.35f, 0), Math.Max(1.5f, size * 0.2f), color);
+                AddLine(root, new Vector2(size * 0.35f, 0), new Vector2(-size * 0.5f, size * 0.55f), Math.Max(1.5f, size * 0.2f), color);
                 break;
             default: // square
-                root.Add(new ShapeNode { Position = new(-size / 2), Size = new(size), Color = color });
+                root.Add(new ShapeNode { Position = new Vector2(-size / 2), Size = new Vector2(size), Color = color });
                 break;
         }
         return root;

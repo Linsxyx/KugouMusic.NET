@@ -24,7 +24,7 @@ public static partial class SonnetProgramCompiler
                 index + 1 < source.Count ? source[index + 1].StartTime : double.PositiveInfinity)),
             BuildSemanticSegments(line))).ToArray();
         if (lines.Length == 0)
-            return new(seed, 1.25, []);
+            return new SonnetProgram(seed, 1.25, []);
 
         var threshold = ResolveParagraphGapThreshold(source);
         var drafts = SplitParagraphs(lines, threshold);
@@ -46,15 +46,15 @@ public static partial class SonnetProgramCompiler
                 previousTransition = transitionKind;
                 var gap = nextStart - endTime;
                 var duration = Math.Min(0.3, Math.Max(0.16, gap > 0 ? gap * 0.5 : 0.2));
-                transition = new(transitionKind, Math.Max(draft.Lines[0].Line.StartTime, nextStart - duration), nextStart);
+                transition = new SonnetTransition(transitionKind, Math.Max(draft.Lines[0].Line.StartTime, nextStart - duration), nextStart);
             }
 
-            paragraphs.Add(new(
+            paragraphs.Add(new SonnetParagraph(
                 $"sonnet-p{index}", kind, draft.Boundary,
                 draft.Lines[0].Line.StartTime, endTime, draft.Lines, shots, transition));
         }
 
-        return new(seed, threshold, paragraphs);
+        return new SonnetProgram(seed, threshold, paragraphs);
     }
 
     public static int FindParagraphIndexAtTime(SonnetProgram program, double time)
@@ -128,14 +128,14 @@ public static partial class SonnetProgramCompiler
                     line.Line.StartTime - previous.RenderEndTime >= threshold ? SonnetParagraphBoundary.TimeGap : (SonnetParagraphBoundary?)null;
                 if (nextBoundary.HasValue && current.Count > 0)
                 {
-                    initial.Add(new(current.ToArray(), boundary));
+                    initial.Add(new ParagraphDraft(current.ToArray(), boundary));
                     current.Clear();
                     boundary = nextBoundary.Value;
                 }
             }
             current.Add(line);
         }
-        if (current.Count > 0) initial.Add(new(current.ToArray(), boundary));
+        if (current.Count > 0) initial.Add(new ParagraphDraft(current.ToArray(), boundary));
 
         var output = new List<ParagraphDraft>();
         foreach (var draft in initial)
@@ -149,11 +149,11 @@ public static partial class SonnetProgramCompiler
                     .Select(i => (Index: i, Gap: remaining[i].Line.StartTime - remaining[i - 1].RenderEndTime))
                     .OrderByDescending(item => item.Gap).ToArray();
                 if (candidates.Length > 0) split = candidates[0].Index;
-                output.Add(new(remaining.Take(split).ToArray(), draftBoundary));
+                output.Add(new ParagraphDraft(remaining.Take(split).ToArray(), draftBoundary));
                 remaining = remaining.Skip(split).ToList();
                 draftBoundary = split >= 6 ? SonnetParagraphBoundary.LineCap : SonnetParagraphBoundary.DurationCap;
             }
-            output.Add(new(remaining, draftBoundary));
+            output.Add(new ParagraphDraft(remaining, draftBoundary));
         }
         return output;
     }
@@ -204,10 +204,10 @@ public static partial class SonnetProgramCompiler
             var cues = segments.Select((segment, i) => new SonnetAnimationCue(
                 segment.StartTime, Math.Max(0.08, segment.EndTime - segment.StartTime),
                 i == segments.Length - 1 ? "accent" : "enter", i, i + 1)).ToArray();
-            shots.Add(new(
+            shots.Add(new SonnetShot(
                 $"p{paragraphIndex}-s{shotIndex}", kind, group[0].Line.StartTime, group[^1].RenderEndTime,
                 group.Select(item => item.SourceIndex).ToArray(), cues,
-                new((random & 255) / 255d * 0.18 - 0.09, (random >> 8 & 255) / 255d * 0.14 - 0.07,
+                new SonnetCamera((random & 255) / 255d * 0.18 - 0.09, (random >> 8 & 255) / 255d * 0.14 - 0.07,
                     zoomBase + zoomRandom * zoomSpan, ((random >> 24 & 255) / 255d - 0.5) * 0.08)));
         }
         return shots;
@@ -236,19 +236,19 @@ public static partial class SonnetProgramCompiler
             var match = FindSequence(ranges.Select(item => item.Text).ToArray(), wordGraphemes.Select(item => item.Text).ToArray(), cursor);
             var start = match >= 0 ? match : cursor;
             for (var gap = cursor; gap < start && gap < result.Length; gap++)
-                result[gap] = new(ranges[gap].Start, ranges[gap].End, new(ranges[gap].Text, word.StartTime, word.StartTime));
+                result[gap] = new TimelineItem(ranges[gap].Start, ranges[gap].End, new SonnetGraphemeTiming(ranges[gap].Text, word.StartTime, word.StartTime));
             for (var i = 0; i < wordGraphemes.Count && start + i < result.Length; i++)
             {
                 var duration = Math.Max(0, word.EndTime - word.StartTime) / Math.Max(1, wordGraphemes.Count);
                 var timing = new SonnetGraphemeTiming(ranges[start + i].Text,
                     word.StartTime + duration * i, i == wordGraphemes.Count - 1 ? word.EndTime : word.StartTime + duration * (i + 1), wordIndex);
-                result[start + i] = new(ranges[start + i].Start, ranges[start + i].End, timing);
+                result[start + i] = new TimelineItem(ranges[start + i].Start, ranges[start + i].End, timing);
                 lastTime = Math.Max(lastTime, timing.EndTime);
             }
             cursor = Math.Max(cursor, start + wordGraphemes.Count);
         }
         for (var i = 0; i < result.Length; i++)
-            result[i] ??= new(ranges[i].Start, ranges[i].End, new(ranges[i].Text, lastTime, lastTime));
+            result[i] ??= new TimelineItem(ranges[i].Start, ranges[i].End, new SonnetGraphemeTiming(ranges[i].Text, lastTime, lastTime));
         return result;
     }
 
@@ -264,12 +264,12 @@ public static partial class SonnetProgramCompiler
             var group = whitespace ? false : wordLike;
             if (currentWord.HasValue && group != currentWord.Value)
             {
-                parts.Add(new(start, range.Start, currentWord.Value));
+                parts.Add(new Part(start, range.Start, currentWord.Value));
                 start = range.Start;
             }
             currentWord = group;
         }
-        parts.Add(new(start, text.Length, currentWord ?? false));
+        parts.Add(new Part(start, text.Length, currentWord ?? false));
         return parts;
     }
 
@@ -281,7 +281,7 @@ public static partial class SonnetProgramCompiler
         {
             var start = enumerator.ElementIndex;
             var value = enumerator.GetTextElement();
-            result.Add(new(start, start + value.Length, value));
+            result.Add(new RangeText(start, start + value.Length, value));
         }
         return result;
     }

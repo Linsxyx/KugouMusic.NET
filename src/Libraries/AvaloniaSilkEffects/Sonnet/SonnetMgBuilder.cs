@@ -49,7 +49,7 @@ internal static partial class SonnetMgBuilder
         if (!tuning.ShowOnlyText && tuning.ShowBackgroundMg)
         {
             if (!transparentBackground)
-                AddRect(root, Vector2.Zero, new(width, height), theme.Background with { A = 0.1f });
+                AddRect(root, Vector2.Zero, new Vector2(width, height), theme.Background with { A = 0.1f });
 
             var density = (int)MathF.Round(4 + tuning.MgDensity * 5);
             for (var index = 0; index < density; index++)
@@ -61,7 +61,7 @@ internal static partial class SonnetMgBuilder
                 {
                     A = 0.12f + index % 4 * 0.04f,
                 };
-                AddLine(root, new(x, y), new(Math.Min(width, x + length), y), index % 3 == 0 ? 2 : 1, color);
+                AddLine(root, new Vector2(x, y), new Vector2(Math.Min(width, x + length), y), index % 3 == 0 ? 2 : 1, color);
             }
         }
 
@@ -76,9 +76,9 @@ internal static partial class SonnetMgBuilder
                     FontSize = 14,
                     FontWeight = theme.FontWeight ?? 700,
                     Color = theme.Primary with { A = 0.2f },
-                    Position = new(20, height - 20),
+                    Position = new Vector2(20, height - 20),
                     Rotation = -MathF.PI / 2,
-                    Anchor = new(0, 1),
+                    Anchor = new Vector2(0, 1),
                     RasterScale = tuning.TextureResolution,
                 });
             }
@@ -92,8 +92,8 @@ internal static partial class SonnetMgBuilder
                     FontSize = 12,
                     FontWeight = theme.FontWeight ?? 400,
                     Color = theme.Secondary with { A = 0.3f },
-                    Position = new(width - 20, 20),
-                    Anchor = new(1, 0),
+                    Position = new Vector2(width - 20, 20),
+                    Anchor = new Vector2(1, 0),
                     RasterScale = tuning.TextureResolution,
                 });
             }
@@ -107,21 +107,21 @@ internal static partial class SonnetMgBuilder
         var root = new EffectContainer();
         var px = Math.Max(30, width * 0.05f);
         var py = Math.Max(30, height * 0.05f);
-        AddLine(root, new(px, py + 16), new(px, py + 120), 1, theme.Primary with { A = 0.5f });
-        AddRect(root, new(px, py), new(30, 4), theme.Primary with { A = 0.8f });
-        AddLine(root, new(width - px - 160, height - py), new(width - px - 20, height - py), 1, theme.Primary with { A = 0.5f });
-        AddLine(root, new(width - px, height - py - 180), new(width - px, height - py - 30), 1, theme.Primary with { A = 0.5f });
-        AddRect(root, new(width - px - 4, height - py - 16), new(4, 16), theme.Primary with { A = 0.8f });
-        AddLine(root, new(width - px - 6, py + 20), new(width - px + 6, py + 20), 1, theme.Primary with { A = 0.8f });
-        AddLine(root, new(width - px, py + 14), new(width - px, py + 26), 1, theme.Primary with { A = 0.8f });
-        AddDiamond(root, new(px, height - py), 5, theme.Primary with { A = 0.7f });
+        AddLine(root, new Vector2(px, py + 16), new Vector2(px, py + 120), 1, theme.Primary with { A = 0.5f });
+        AddRect(root, new Vector2(px, py), new Vector2(30, 4), theme.Primary with { A = 0.8f });
+        AddLine(root, new Vector2(width - px - 160, height - py), new Vector2(width - px - 20, height - py), 1, theme.Primary with { A = 0.5f });
+        AddLine(root, new Vector2(width - px, height - py - 180), new Vector2(width - px, height - py - 30), 1, theme.Primary with { A = 0.5f });
+        AddRect(root, new Vector2(width - px - 4, height - py - 16), new Vector2(4, 16), theme.Primary with { A = 0.8f });
+        AddLine(root, new Vector2(width - px - 6, py + 20), new Vector2(width - px + 6, py + 20), 1, theme.Primary with { A = 0.8f });
+        AddLine(root, new Vector2(width - px, py + 14), new Vector2(width - px, py + 26), 1, theme.Primary with { A = 0.8f });
+        AddDiamond(root, new Vector2(px, height - py), 5, theme.Primary with { A = 0.7f });
         return root;
     }
 
     internal static EffectContainer BuildFrame(
         SonnetTypographyPlacement placement, float fontSize, SonnetTheme theme, uint seed)
     {
-        var root = new EffectContainer { Position = new(placement.X, placement.Y), Rotation = placement.Rotation };
+        var root = new EffectContainer { Position = new Vector2(placement.X, placement.Y), Rotation = placement.Rotation };
         var pad = Math.Clamp(fontSize * 0.22f, 8, 20);
         var halfW = placement.MeasuredWidth / 2 + pad;
         var halfH = placement.MeasuredHeight / 2 + pad;
@@ -167,25 +167,25 @@ internal static partial class SonnetMgBuilder
 
         void OutlineRect(float x, float y, float w, float h, float strokeWidth, EffectColor color) =>
             AddPolygon(root,
-                [new(x, y), new(x + w, y), new(x + w, y + h), new(x, y + h)],
+                [new Vector2(x, y), new Vector2(x + w, y), new Vector2(x + w, y + h), new Vector2(x, y + h)],
                 strokeWidth,
                 color);
 
         switch (SonnetVariantResolver.Background(seed))
         {
             case 0: // classic-cross
-                Cross(new(left, top), 4, primary with { A = 0.4f });
-                Cross(new(right, top), 4, primary with { A = 0.4f });
-                Cross(new(left, bottom), 4, primary with { A = 0.4f });
-                Cross(new(right, bottom), 4, primary with { A = 0.4f });
+                Cross(new Vector2(left, top), 4, primary with { A = 0.4f });
+                Cross(new Vector2(right, top), 4, primary with { A = 0.4f });
+                Cross(new Vector2(left, bottom), 4, primary with { A = 0.4f });
+                Cross(new Vector2(right, bottom), 4, primary with { A = 0.4f });
                 for (var index = 0; index < 8; index++)
-                    Cross(new(left, top + index * 20 + 30), 3, primary with { A = 0.3f });
+                    Cross(new Vector2(left, top + index * 20 + 30), 3, primary with { A = 0.3f });
                 var classicBarY = bottom - 10;
-                AddLine(root, new(left + 20, classicBarY), new(right - 20, classicBarY), 1, primary with { A = 0.3f });
-                Cross(new(left + 10, classicBarY), 3, primary with { A = 0.5f });
-                Cross(new(left + 30, classicBarY), 3, primary with { A = 0.5f });
-                Cross(new(right - 10, classicBarY), 3, primary with { A = 0.5f });
-                AddCircle(root, new(0, classicBarY), 2, secondary with { A = 0.8f });
+                AddLine(root, new Vector2(left + 20, classicBarY), new Vector2(right - 20, classicBarY), 1, primary with { A = 0.3f });
+                Cross(new Vector2(left + 10, classicBarY), 3, primary with { A = 0.5f });
+                Cross(new Vector2(left + 30, classicBarY), 3, primary with { A = 0.5f });
+                Cross(new Vector2(right - 10, classicBarY), 3, primary with { A = 0.5f });
+                AddCircle(root, new Vector2(0, classicBarY), 2, secondary with { A = 0.8f });
                 break;
 
             case 1: // corner-brackets
@@ -213,10 +213,10 @@ internal static partial class SonnetMgBuilder
                         primary with { A = 0.25f });
                     if (index % 2 == 0)
                         AddRect(root, corner + new Vector2(sx * arm * 0.4f - 2, sy * arm * 0.4f - 2),
-                            new(4), secondary with { A = 0.6f });
+                            new Vector2(4), secondary with { A = 0.6f });
                 }
                 var rulerY = bottom + inset;
-                AddLine(root, new(left + arm + 12, rulerY), new(right - arm - 12, rulerY), 1,
+                AddLine(root, new Vector2(left + arm + 12, rulerY), new Vector2(right - arm - 12, rulerY), 1,
                     primary with { A = 0.3f });
                 const int bracketTicks = 24;
                 var bracketSpan = (right - arm - 12) - (left + arm + 12);
@@ -224,7 +224,7 @@ internal static partial class SonnetMgBuilder
                 {
                     var x = left + arm + 12 + bracketSpan * index / bracketTicks;
                     var major = index % 6 == 0;
-                    AddLine(root, new(x, rulerY), new(x, rulerY - (major ? 8 : 4)), 1,
+                    AddLine(root, new Vector2(x, rulerY), new Vector2(x, rulerY - (major ? 8 : 4)), 1,
                         (major ? secondary : primary) with { A = major ? 0.55f : 0.3f });
                 }
                 break;
@@ -233,19 +233,19 @@ internal static partial class SonnetMgBuilder
                 foreach (var direction in new[] { -1, 1 })
                 {
                     var y = direction * bottom;
-                    AddLine(root, new(left, y), new(right, y), 2, primary with { A = 0.45f });
-                    AddLine(root, new(left, y + direction * 6), new(right, y + direction * 6), 1,
+                    AddLine(root, new Vector2(left, y), new Vector2(right, y), 2, primary with { A = 0.45f });
+                    AddLine(root, new Vector2(left, y + direction * 6), new Vector2(right, y + direction * 6), 1,
                         primary with { A = 0.2f });
-                    AddRect(root, new(left, y - 3), new(14, 6), secondary with { A = 0.55f });
-                    AddRect(root, new(right - 14, y - 3), new(14, 6), secondary with { A = 0.55f });
+                    AddRect(root, new Vector2(left, y - 3), new Vector2(14, 6), secondary with { A = 0.55f });
+                    AddRect(root, new Vector2(right - 14, y - 3), new Vector2(14, 6), secondary with { A = 0.55f });
                     for (var index = 3; index < 18; index += 3)
                     {
                         var x = left + (right - left) * index / 18;
-                        AddLine(root, new(x, y), new(x, y + direction * 6), 1, primary with { A = 0.35f });
+                        AddLine(root, new Vector2(x, y), new Vector2(x, y + direction * 6), 1, primary with { A = 0.35f });
                     }
                 }
-                Cross(new(0, top), 4, primary with { A = 0.5f });
-                AddPolyline(root, [new(-6, bottom - 14), new(0, bottom - 8), new(6, bottom - 14)], 1,
+                Cross(new Vector2(0, top), 4, primary with { A = 0.5f });
+                AddPolyline(root, [new Vector2(-6, bottom - 14), new Vector2(0, bottom - 8), new Vector2(6, bottom - 14)], 1,
                     secondary with { A = 0.6f });
                 break;
 
@@ -278,29 +278,29 @@ internal static partial class SonnetMgBuilder
                     var y = top + 10 + index * (bottom - top - 20) / (rows - 1);
                     var strong = index % 4 == 0;
                     var dotColor = (strong ? secondary : primary) with { A = strong ? 0.6f : 0.3f };
-                    AddCircle(root, new(left, y), strong ? 2.4f : 1.4f, dotColor);
-                    AddCircle(root, new(right, y), strong ? 2.4f : 1.4f, dotColor);
+                    AddCircle(root, new Vector2(left, y), strong ? 2.4f : 1.4f, dotColor);
+                    AddCircle(root, new Vector2(right, y), strong ? 2.4f : 1.4f, dotColor);
                 }
-                AddLine(root, new(-18, 0), new(18, 0), 1, primary with { A = 0.22f });
-                AddLine(root, new(0, -18), new(0, 18), 1, primary with { A = 0.22f });
+                AddLine(root, new Vector2(-18, 0), new Vector2(18, 0), 1, primary with { A = 0.22f });
+                AddLine(root, new Vector2(0, -18), new Vector2(0, 18), 1, primary with { A = 0.22f });
                 AddRing(root, Vector2.Zero, 6, primary with { A = 0.3f });
                 break;
 
             case 5: // double-frame
                 var gapX = (right - left) * 0.18f;
                 var gapY = (bottom - top) * 0.22f;
-                AddLine(root, new(left, top), new(-gapX / 2, top), 2, primary with { A = 0.45f });
-                AddLine(root, new(gapX / 2, top), new(right, top), 2, primary with { A = 0.45f });
-                AddLine(root, new(left, bottom), new(-gapX / 2, bottom), 2, primary with { A = 0.45f });
-                AddLine(root, new(gapX / 2, bottom), new(right, bottom), 2, primary with { A = 0.45f });
-                AddLine(root, new(left, top), new(left, -gapY / 2), 2, primary with { A = 0.45f });
-                AddLine(root, new(left, gapY / 2), new(left, bottom), 2, primary with { A = 0.45f });
-                AddLine(root, new(right, top), new(right, -gapY / 2), 2, primary with { A = 0.45f });
-                AddLine(root, new(right, gapY / 2), new(right, bottom), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(left, top), new Vector2(-gapX / 2, top), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(gapX / 2, top), new Vector2(right, top), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(left, bottom), new Vector2(-gapX / 2, bottom), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(gapX / 2, bottom), new Vector2(right, bottom), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(left, top), new Vector2(left, -gapY / 2), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(left, gapY / 2), new Vector2(left, bottom), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(right, top), new Vector2(right, -gapY / 2), 2, primary with { A = 0.45f });
+                AddLine(root, new Vector2(right, gapY / 2), new Vector2(right, bottom), 2, primary with { A = 0.45f });
                 OutlineRect(left + 7, top + 7, right - left - 14, bottom - top - 14, 1,
                     primary with { A = 0.18f });
                 foreach (var corner in new[] { new Vector2(left, top), new Vector2(right, top), new Vector2(left, bottom), new Vector2(right, bottom) })
-                    AddRect(root, corner - new Vector2(3), new(6), secondary with { A = 0.6f });
+                    AddRect(root, corner - new Vector2(3), new Vector2(6), secondary with { A = 0.6f });
                 break;
 
             case 6: // ruler-frame
@@ -311,8 +311,8 @@ internal static partial class SonnetMgBuilder
                     var middle = index % 4 == 0;
                     var length = major ? 12 : middle ? 7 : 4;
                     var color = (major ? secondary : primary) with { A = major ? 0.55f : 0.32f };
-                    AddLine(root, new(x, top), new(x, top + length), 1, color);
-                    AddLine(root, new(x, bottom), new(x, bottom - length), 1, color);
+                    AddLine(root, new Vector2(x, top), new Vector2(x, top + length), 1, color);
+                    AddLine(root, new Vector2(x, bottom), new Vector2(x, bottom - length), 1, color);
                 }
                 for (var index = 0; index <= 18; index++)
                 {
@@ -320,8 +320,8 @@ internal static partial class SonnetMgBuilder
                     var major = index % 6 == 0;
                     var length = major ? 12 : index % 3 == 0 ? 7 : 4;
                     var color = (major ? secondary : primary) with { A = major ? 0.55f : 0.32f };
-                    AddLine(root, new(left, y), new(left + length, y), 1, color);
-                    AddLine(root, new(right, y), new(right - length, y), 1, color);
+                    AddLine(root, new Vector2(left, y), new Vector2(left + length, y), 1, color);
+                    AddLine(root, new Vector2(right, y), new Vector2(right - length, y), 1, color);
                 }
                 AddRing(root, Vector2.Zero, 10, primary with { A = 0.25f });
                 AddCircle(root, Vector2.Zero, 3, secondary with { A = 0.4f });
@@ -343,11 +343,11 @@ internal static partial class SonnetMgBuilder
                 }
                 var gaugeY = bottom + arcRadius * 0.4f;
                 var gaugeRadius = Math.Min(hw, hh) * 0.16f;
-                AddArc(root, new(0, gaugeY), gaugeRadius, MathF.PI, MathF.Tau, 1.5f,
+                AddArc(root, new Vector2(0, gaugeY), gaugeRadius, MathF.PI, MathF.Tau, 1.5f,
                     primary with { A = 0.4f });
                 var needle = MathF.PI + seed % 100 / 100f * MathF.PI;
-                AddLine(root, new(0, gaugeY),
-                    new(MathF.Cos(needle) * (gaugeRadius - 8), gaugeY + MathF.Sin(needle) * (gaugeRadius - 8)),
+                AddLine(root, new Vector2(0, gaugeY),
+                    new Vector2(MathF.Cos(needle) * (gaugeRadius - 8), gaugeY + MathF.Sin(needle) * (gaugeRadius - 8)),
                     2,
                     secondary with { A = 0.6f });
                 break;
@@ -408,7 +408,7 @@ internal static partial class SonnetMgBuilder
                 break;
             case 1:
                 for (var scale = 1f; scale >= 0.42f; scale -= 0.28f) AddPolygon(root,
-                    [new(0, -radius * 0.68f * scale), new(radius * 0.68f * scale, 0), new(0, radius * 0.68f * scale), new(-radius * 0.68f * scale, 0)],
+                    [new Vector2(0, -radius * 0.68f * scale), new Vector2(radius * 0.68f * scale, 0), new Vector2(0, radius * 0.68f * scale), new Vector2(-radius * 0.68f * scale, 0)],
                     scale > 0.9f ? 5 : 2, theme.Primary with { A = 0.55f * scale });
                 break;
             case 2:
@@ -451,26 +451,26 @@ internal static partial class SonnetMgBuilder
         switch (SonnetVariantResolver.FixedGeometry(seed))
         {
             case 1: // twin-pillars
-                AddRect(root, new(-radius * 0.34f, -radius * 0.28f),
-                    new(radius * 0.12f, radius * 0.56f), accent with { A = 0.65f });
-                AddRect(root, new(-radius * 0.305f, -radius * 0.245f),
-                    new(radius * 0.05f, radius * 0.49f), primary with { A = 0.35f });
-                AddOutlineRect(root, new(radius * 0.06f, -radius * 0.34f),
-                    new(radius * 0.28f, radius * 0.68f), 2, primary with { A = 0.6f });
-                AddOutlineRect(root, new(radius * 0.1f, -radius * 0.3f),
-                    new(radius * 0.2f, radius * 0.6f), 1, primary with { A = 0.3f });
+                AddRect(root, new Vector2(-radius * 0.34f, -radius * 0.28f),
+                    new Vector2(radius * 0.12f, radius * 0.56f), accent with { A = 0.65f });
+                AddRect(root, new Vector2(-radius * 0.305f, -radius * 0.245f),
+                    new Vector2(radius * 0.05f, radius * 0.49f), primary with { A = 0.35f });
+                AddOutlineRect(root, new Vector2(radius * 0.06f, -radius * 0.34f),
+                    new Vector2(radius * 0.28f, radius * 0.68f), 2, primary with { A = 0.6f });
+                AddOutlineRect(root, new Vector2(radius * 0.1f, -radius * 0.3f),
+                    new Vector2(radius * 0.2f, radius * 0.6f), 1, primary with { A = 0.3f });
                 AddHatching(root, -radius * 0.14f, -radius * 0.2f,
                     radius * 0.12f, radius * 0.4f, 5, primary);
                 break;
 
             case 2: // disc-ring
-                AddCircle(root, new(-radius * 0.2f, radius * 0.12f), radius * 0.15f,
+                AddCircle(root, new Vector2(-radius * 0.2f, radius * 0.12f), radius * 0.15f,
                     accent with { A = 0.7f });
-                AddCircle(root, new(-radius * 0.2f, radius * 0.12f), radius * 0.06f,
+                AddCircle(root, new Vector2(-radius * 0.2f, radius * 0.12f), radius * 0.06f,
                     primary with { A = 0.5f });
-                AddRing(root, new(radius * 0.14f, -radius * 0.06f), radius * 0.3f,
+                AddRing(root, new Vector2(radius * 0.14f, -radius * 0.06f), radius * 0.3f,
                     primary with { A = 0.6f }, 2);
-                AddRing(root, new(radius * 0.14f, -radius * 0.06f), radius * 0.22f,
+                AddRing(root, new Vector2(radius * 0.14f, -radius * 0.06f), radius * 0.22f,
                     primary with { A = 0.3f });
                 AddHatching(root, radius * 0.02f, -radius * 0.14f,
                     radius * 0.24f, radius * 0.16f, 5, primary);
@@ -480,12 +480,12 @@ internal static partial class SonnetMgBuilder
                 var diamondCenter = -radius * 0.08f * direction;
                 var diamondRadius = radius * 0.3f;
                 AddPolygon(root,
-                    [new(diamondCenter, -diamondRadius), new(diamondCenter + diamondRadius, 0),
-                        new(diamondCenter, diamondRadius), new(diamondCenter - diamondRadius, 0)],
+                    [new Vector2(diamondCenter, -diamondRadius), new Vector2(diamondCenter + diamondRadius, 0),
+                        new Vector2(diamondCenter, diamondRadius), new Vector2(diamondCenter - diamondRadius, 0)],
                     2, primary with { A = 0.6f });
                 AddPolygon(root,
-                    [new(diamondCenter, -diamondRadius * 0.7f), new(diamondCenter + diamondRadius * 0.7f, 0),
-                        new(diamondCenter, diamondRadius * 0.7f), new(diamondCenter - diamondRadius * 0.7f, 0)],
+                    [new Vector2(diamondCenter, -diamondRadius * 0.7f), new Vector2(diamondCenter + diamondRadius * 0.7f, 0),
+                        new Vector2(diamondCenter, diamondRadius * 0.7f), new Vector2(diamondCenter - diamondRadius * 0.7f, 0)],
                     1, primary with { A = 0.3f });
                 var smallRadius = radius * 0.11f;
                 var smallCenter = new Vector2(radius * 0.3f * direction, -radius * 0.2f);
@@ -498,12 +498,12 @@ internal static partial class SonnetMgBuilder
                 break;
 
             case 4: // stripe-stack
-                AddRect(root, new(-radius * 0.36f * direction - radius * 0.2f, -radius * 0.26f),
-                    new(radius * 0.56f, radius * 0.09f), accent with { A = 0.7f });
-                AddOutlineRect(root, new(-radius * 0.28f, -radius * 0.06f),
-                    new(radius * 0.56f, radius * 0.16f), 2, primary with { A = 0.6f });
-                AddRect(root, new(-radius * 0.2f * direction, radius * 0.2f),
-                    new(radius * 0.4f, radius * 0.045f), primary with { A = 0.5f });
+                AddRect(root, new Vector2(-radius * 0.36f * direction - radius * 0.2f, -radius * 0.26f),
+                    new Vector2(radius * 0.56f, radius * 0.09f), accent with { A = 0.7f });
+                AddOutlineRect(root, new Vector2(-radius * 0.28f, -radius * 0.06f),
+                    new Vector2(radius * 0.56f, radius * 0.16f), 2, primary with { A = 0.6f });
+                AddRect(root, new Vector2(-radius * 0.2f * direction, radius * 0.2f),
+                    new Vector2(radius * 0.4f, radius * 0.045f), primary with { A = 0.5f });
                 AddHatching(root, radius * 0.26f * direction, -radius * 0.3f,
                     radius * 0.12f, radius * 0.6f, 5, primary);
                 break;
@@ -513,17 +513,17 @@ internal static partial class SonnetMgBuilder
                 var thick = radius * 0.07f;
                 var x1 = -radius * 0.3f * direction;
                 var y1 = -radius * 0.24f;
-                AddRect(root, new(x1 - (direction < 0 ? arm : 0), y1), new(arm, thick),
+                AddRect(root, new Vector2(x1 - (direction < 0 ? arm : 0), y1), new Vector2(arm, thick),
                     accent with { A = 0.7f });
-                AddRect(root, new(direction < 0 ? x1 - arm : x1, y1), new(thick, arm),
+                AddRect(root, new Vector2(direction < 0 ? x1 - arm : x1, y1), new Vector2(thick, arm),
                     accent with { A = 0.7f });
                 var x2 = radius * 0.3f * direction;
                 var y2 = radius * 0.24f;
-                AddRect(root, new(direction < 0 ? x2 : x2 - arm, y2 - thick), new(arm, thick),
+                AddRect(root, new Vector2(direction < 0 ? x2 : x2 - arm, y2 - thick), new Vector2(arm, thick),
                     primary with { A = 0.55f });
-                AddRect(root, new(direction < 0 ? x2 + arm - thick : x2 - thick, y2 - arm), new(thick, arm),
+                AddRect(root, new Vector2(direction < 0 ? x2 + arm - thick : x2 - thick, y2 - arm), new Vector2(thick, arm),
                     primary with { A = 0.55f });
-                AddOutlineRect(root, new(-radius * 0.13f), new(radius * 0.26f), 2,
+                AddOutlineRect(root, new Vector2(-radius * 0.13f), new Vector2(radius * 0.26f), 2,
                     primary with { A = 0.6f });
                 AddHatching(root, -radius * 0.09f * direction, radius * 0.02f,
                     radius * 0.16f, radius * 0.1f, 4, primary);
@@ -532,15 +532,15 @@ internal static partial class SonnetMgBuilder
             case 6: // twin-wedges
                 var wedgeX = -radius * 0.14f * direction;
                 AddFillPolygon(root,
-                    [new(wedgeX, -radius * 0.3f), new(wedgeX + radius * 0.24f, radius * 0.02f),
-                        new(wedgeX - radius * 0.24f, radius * 0.02f)], accent with { A = 0.6f });
+                    [new Vector2(wedgeX, -radius * 0.3f), new Vector2(wedgeX + radius * 0.24f, radius * 0.02f),
+                        new Vector2(wedgeX - radius * 0.24f, radius * 0.02f)], accent with { A = 0.6f });
                 var hollowX = radius * 0.16f * direction;
                 AddPolygon(root,
-                    [new(hollowX, radius * 0.3f), new(hollowX + radius * 0.24f, -radius * 0.02f),
-                        new(hollowX - radius * 0.24f, -radius * 0.02f)], 2, primary with { A = 0.6f });
+                    [new Vector2(hollowX, radius * 0.3f), new Vector2(hollowX + radius * 0.24f, -radius * 0.02f),
+                        new Vector2(hollowX - radius * 0.24f, -radius * 0.02f)], 2, primary with { A = 0.6f });
                 AddPolygon(root,
-                    [new(hollowX, radius * 0.2f), new(hollowX + radius * 0.15f, 0),
-                        new(hollowX - radius * 0.15f, 0)], 1, primary with { A = 0.3f });
+                    [new Vector2(hollowX, radius * 0.2f), new Vector2(hollowX + radius * 0.15f, 0),
+                        new Vector2(hollowX - radius * 0.15f, 0)], 1, primary with { A = 0.3f });
                 AddHatching(root, -radius * 0.3f * direction - radius * 0.05f, radius * 0.1f,
                     radius * 0.2f, radius * 0.18f, 5, primary);
                 break;
@@ -549,21 +549,21 @@ internal static partial class SonnetMgBuilder
                 var crossCenter = ((int)(seed % 3) - 1) * radius * 0.08f;
                 var crossArm = radius * 0.17f;
                 var crossThick = radius * 0.075f;
-                AddRect(root, new(crossCenter - crossArm, -crossThick / 2),
-                    new(crossArm * 2, crossThick), accent with { A = 0.7f });
-                AddRect(root, new(crossCenter - crossThick / 2, -crossArm),
-                    new(crossThick, crossArm * 2), accent with { A = 0.7f });
-                AddRing(root, new(crossCenter, 0), radius * 0.3f, primary with { A = 0.6f }, 2);
-                AddRing(root, new(crossCenter, 0), radius * 0.36f, primary with { A = 0.25f });
+                AddRect(root, new Vector2(crossCenter - crossArm, -crossThick / 2),
+                    new Vector2(crossArm * 2, crossThick), accent with { A = 0.7f });
+                AddRect(root, new Vector2(crossCenter - crossThick / 2, -crossArm),
+                    new Vector2(crossThick, crossArm * 2), accent with { A = 0.7f });
+                AddRing(root, new Vector2(crossCenter, 0), radius * 0.3f, primary with { A = 0.6f }, 2);
+                AddRing(root, new Vector2(crossCenter, 0), radius * 0.36f, primary with { A = 0.25f });
                 AddHatching(root, crossCenter + radius * 0.18f, radius * 0.14f,
                     radius * 0.16f, radius * 0.16f, 4, primary);
                 break;
 
             default: // classic-blocks
-                AddRect(root, new(-radius * 0.4f, -radius * 0.2f),
-                    new(radius * 0.6f, radius * 0.15f), primary with { A = 0.7f });
-                AddOutlineRect(root, new(-radius * 0.1f, radius * 0.1f),
-                    new(radius * 0.5f, radius * 0.3f), 2, primary with { A = 0.6f });
+                AddRect(root, new Vector2(-radius * 0.4f, -radius * 0.2f),
+                    new Vector2(radius * 0.6f, radius * 0.15f), primary with { A = 0.7f });
+                AddOutlineRect(root, new Vector2(-radius * 0.1f, radius * 0.1f),
+                    new Vector2(radius * 0.5f, radius * 0.3f), 2, primary with { A = 0.6f });
                 AddHatching(root, -radius * 0.3f, -radius * 0.4f,
                     radius * 0.4f, radius * 0.25f, 6, primary);
                 break;
@@ -587,8 +587,8 @@ internal static partial class SonnetMgBuilder
             var endT = Math.Min(1, (width - offset) / height);
             if (endT <= startT) continue;
             AddLine(root,
-                new(x + offset + startT * height, y + startT * height),
-                new(x + offset + endT * height, y + endT * height),
+                new Vector2(x + offset + startT * height, y + startT * height),
+                new Vector2(x + offset + endT * height, y + endT * height),
                 1, primary with { A = 0.15f });
         }
     }
@@ -599,7 +599,7 @@ internal static partial class SonnetMgBuilder
             | Math.Clamp((int)MathF.Round(color.B * 255), 0, 255));
 
     private static void AddRect(EffectContainer root, Vector2 position, Vector2 size, EffectColor color) => root.Add(new ShapeNode { Position = position, Size = size, Color = color });
-    private static void AddCircle(EffectContainer root, Vector2 center, float radius, EffectColor color) => root.Add(new ShapeNode { Shape = EffectShapeKind.Ellipse, Position = center - new Vector2(radius), Size = new(radius * 2), Color = color });
+    private static void AddCircle(EffectContainer root, Vector2 center, float radius, EffectColor color) => root.Add(new ShapeNode { Shape = EffectShapeKind.Ellipse, Position = center - new Vector2(radius), Size = new Vector2(radius * 2), Color = color });
     private static void AddRing(EffectContainer root, Vector2 center, float radius, EffectColor color, float width = 1) => AddEllipseRing(root, center, radius, radius, 0, color, width);
     private static void AddEllipseRing(EffectContainer root, Vector2 center, float rx, float ry, float rotation, EffectColor color, float width = 1)
     {

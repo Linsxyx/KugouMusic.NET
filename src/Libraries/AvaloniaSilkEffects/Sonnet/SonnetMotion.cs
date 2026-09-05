@@ -65,20 +65,20 @@ public static class SonnetMotion
         var eased = ShotPathProgress(kind, linear);
         return kind switch
         {
-            SonnetShotKind.EditorialColumn => new(-0.055 + eased * 0.095, 0.025 - eased * 0.04, 0.98 + eased * 0.07, -0.006 + eased * 0.01),
-            SonnetShotKind.TypeImpact => new(-0.035 + eased * 0.07, 0.018 - eased * 0.028, 1 + (1 - ExpoOut(Math.Min(linear / 0.18, 1))) * 0.22 + eased * 0.08, -0.01 + eased * 0.016),
-            SonnetShotKind.FragmentCollage => new(-0.045 + eased * 0.085, 0.028 - Math.Sin(eased * Math.PI) * 0.055, 0.97 + eased * 0.09, -0.014 + eased * 0.028),
-            SonnetShotKind.TrackingRibbon => new(-0.16 + eased * 0.28, 0.05 - eased * 0.085, 0.98 + eased * 0.07, 0.008 - eased * 0.014),
-            SonnetShotKind.MaskReveal => new(0.035 - eased * 0.065, 0.1 - eased * 0.135, 0.96 + eased * 0.12, -0.006 + eased * 0.009),
-            SonnetShotKind.PosterBlocks => new(-0.012 + eased * 0.024, 0.008 - eased * 0.016, 0.99 + eased * 0.025, -0.0015 + eased * 0.003),
-            _ => new(-0.022 + eased * 0.04, 0.014 - eased * 0.025, 1 + eased * 0.028, -0.002 + eased * 0.003),
+            SonnetShotKind.EditorialColumn => new SonnetMotionFrame(-0.055 + eased * 0.095, 0.025 - eased * 0.04, 0.98 + eased * 0.07, -0.006 + eased * 0.01),
+            SonnetShotKind.TypeImpact => new SonnetMotionFrame(-0.035 + eased * 0.07, 0.018 - eased * 0.028, 1 + (1 - ExpoOut(Math.Min(linear / 0.18, 1))) * 0.22 + eased * 0.08, -0.01 + eased * 0.016),
+            SonnetShotKind.FragmentCollage => new SonnetMotionFrame(-0.045 + eased * 0.085, 0.028 - Math.Sin(eased * Math.PI) * 0.055, 0.97 + eased * 0.09, -0.014 + eased * 0.028),
+            SonnetShotKind.TrackingRibbon => new SonnetMotionFrame(-0.16 + eased * 0.28, 0.05 - eased * 0.085, 0.98 + eased * 0.07, 0.008 - eased * 0.014),
+            SonnetShotKind.MaskReveal => new SonnetMotionFrame(0.035 - eased * 0.065, 0.1 - eased * 0.135, 0.96 + eased * 0.12, -0.006 + eased * 0.009),
+            SonnetShotKind.PosterBlocks => new SonnetMotionFrame(-0.012 + eased * 0.024, 0.008 - eased * 0.016, 0.99 + eased * 0.025, -0.0015 + eased * 0.003),
+            _ => new SonnetMotionFrame(-0.022 + eased * 0.04, 0.014 - eased * 0.025, 1 + eased * 0.028, -0.002 + eased * 0.003),
         };
     }
 
     public static SonnetMotionFrame CameraBreath(double time, double phase = 0)
     {
         var tau = time * Math.PI * 2;
-        return new(
+        return new SonnetMotionFrame(
             (Math.Sin(tau * 0.13 + phase) * 0.65 + Math.Sin(tau * 0.31 + phase * 1.7) * 0.35) * 0.006,
             (Math.Cos(tau * 0.11 + phase * 2.3) * 0.65 + Math.Sin(tau * 0.29 + phase * 0.9) * 0.35) * 0.006,
             Math.Sin(tau * 0.09 + phase * 1.3) * 0.002,
@@ -167,7 +167,7 @@ public static class SonnetMotion
         if (role != SonnetSegmentRole.Support) return Vector2.Zero;
         var distance = (Math.Clamp(randomValue, 0, 1) * 2 - 1) * fontSize * 0.3;
         var angle = rotation + (vertical ? 0 : Math.PI / 2);
-        return new((float)(Math.Cos(angle) * distance), (float)(Math.Sin(angle) * distance));
+        return new Vector2((float)(Math.Cos(angle) * distance), (float)(Math.Sin(angle) * distance));
     }
 
     public static (double X, double Y, double Rotation) TimelineShake(double time, double intensity)

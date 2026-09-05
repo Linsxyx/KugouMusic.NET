@@ -96,6 +96,28 @@ public sealed class SonnetProgramTests
         Assert.Equal(firstSnapshot, secondSnapshot);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Camera_FollowsTimedRowsAndColumnsRatherThanStayingOnFirstHero(bool vertical)
+    {
+        Vector2 Point(float value) => vertical ? new(value, 0) : new(0, value);
+        IReadOnlyList<(Vector2 Position, double StartTime, bool IsBackgroundShape)>[] segments =
+        [
+            [(Point(-600), 1, false), (Point(-600), 2, false)],
+            [(Point(0), 4, false), (Point(0), 5, false)],
+            [(Point(600), 7, false), (Point(600), 8, false)],
+        ];
+        foreach (var (time, expected) in new[] { (1.5, -600f), (4.5, 0f), (7.5, 600f) })
+        {
+            var focus = SonnetScene.ResolveTrackingFocus(segments, time, 1, 8, Point(-600));
+            Assert.InRange(Vector2.Distance(focus, Point(expected)), 0, 0.001f);
+        }
+        var first = SonnetScene.ResolveTrackingFocus(segments, 4.5, 1, 8, Point(-600));
+        _ = SonnetScene.ResolveTrackingFocus(segments, 7.5, 1, 8, Point(-600));
+        Assert.Equal(first, SonnetScene.ResolveTrackingFocus(segments, 4.5, 1, 8, Point(-600)));
+    }
+
     [Fact]
     public void MotionGraphics_ShowFiniteCometTailsInsteadOfWholePaths()
     {

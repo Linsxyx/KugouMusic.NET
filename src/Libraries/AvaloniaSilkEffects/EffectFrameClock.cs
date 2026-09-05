@@ -32,13 +32,13 @@ public sealed class EffectFrameClock
         {
             _offset += _stopwatch.Elapsed;
             _stopwatch.Reset();
-            _last = _offset;
         }
         else
         {
             _stopwatch.Restart();
-            _last = _offset;
         }
+
+        _last = _offset;
     }
 
     public (TimeSpan Elapsed, TimeSpan Delta, ulong FrameNumber) Step()

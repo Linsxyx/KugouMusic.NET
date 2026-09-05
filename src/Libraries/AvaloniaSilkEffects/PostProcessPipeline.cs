@@ -98,6 +98,9 @@ internal sealed class PostProcessPipeline : IDisposable
     private readonly EffectShaderProgram _blurShader;
     private readonly EffectShaderProgram _compositeShader;
     private readonly uint _vao;
+    private EffectFramebuffer? _sonnetPing;
+    private EffectFramebuffer? _sonnetPong;
+    private EffectShaderProgram? _sonnetShader;
     private int _targetWidth;
     private int _targetHeight;
 
@@ -106,10 +109,10 @@ internal sealed class PostProcessPipeline : IDisposable
     public PostProcessPipeline(GL gl)
     {
         _gl = gl;
-        _source = new(gl);
-        _blurred = new(gl);
-        _blurShader = new(gl, FullscreenVertex, BlurFragment, "effects-blur");
-        _compositeShader = new(gl, FullscreenVertex, CompositeFragment, "effects-composite");
+        _source = new EffectFramebuffer(gl);
+        _blurred = new EffectFramebuffer(gl);
+        _blurShader = new EffectShaderProgram(gl, FullscreenVertex, BlurFragment, "effects-blur");
+        _compositeShader = new EffectShaderProgram(gl, FullscreenVertex, CompositeFragment, "effects-composite");
         _vao = gl.GenVertexArray();
     }
 
@@ -150,6 +153,35 @@ internal sealed class PostProcessPipeline : IDisposable
         _gl.Disable(EnableCap.ScissorTest);
         _gl.BindVertexArray(_vao);
 
+        var sourceTexture = _source.Texture;
+        if (settings.UseSonnetPasses)
+        {
+            _sonnetShader ??= new EffectShaderProgram(_gl, FullscreenVertex, Sonnet.SonnetFilterShader.Fragment, "sonnet-material");
+            _sonnetPing ??= new EffectFramebuffer(_gl);
+            _sonnetPong ??= new EffectFramebuffer(_gl);
+            ReadOnlySpan<float> amounts = [settings.LensDistortion, settings.Grain, settings.Contrast,
+                settings.RgbSplit, settings.Halftone, settings.Vignette];
+            var count = 0;
+            for (var pass = 0; pass < amounts.Length; pass++)
+            {
+                if (amounts[pass] <= 0 && !(pass == 0 && settings.LensDispersion > 0)) continue;
+                var destination = count++ % 2 == 0 ? _sonnetPing : _sonnetPong;
+                destination.EnsureSize(_source.Width, _source.Height);
+                _gl.BindFramebuffer(FramebufferTarget.Framebuffer, destination.Framebuffer);
+                _gl.Viewport(0, 0, (uint)_source.Width, (uint)_source.Height);
+                _sonnetShader.Use();
+                BindTexture(_sonnetShader, "uTexture", sourceTexture, TextureUnit.Texture0, 0);
+                _gl.Uniform2(_sonnetShader.Uniform("uResolution"), (float)_source.Width, (float)_source.Height);
+                _gl.Uniform1(_sonnetShader.Uniform("uPass"), pass);
+                _gl.Uniform1(_sonnetShader.Uniform("uAmount"), amounts[pass]);
+                _gl.Uniform1(_sonnetShader.Uniform("uDispersion"), settings.LensDispersion);
+                _gl.Uniform1(_sonnetShader.Uniform("uSeed"), settings.SonnetNoiseSeed);
+                _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
+                FrameDrawCalls++;
+                sourceTexture = destination.Texture;
+            }
+        }
+
         var blurEnabled = settings.Blur > 0.001f || settings.Glow > 0.001f;
         if (blurEnabled)
         {
@@ -157,7 +189,7 @@ internal sealed class PostProcessPipeline : IDisposable
             _gl.BindFramebuffer(FramebufferTarget.Framebuffer, _blurred.Framebuffer);
             _gl.Viewport(0, 0, (uint)_source.Width, (uint)_source.Height);
             _blurShader.Use();
-            BindTexture(_blurShader, "uTexture", _source.Texture, TextureUnit.Texture0, 0);
+            BindTexture(_blurShader, "uTexture", sourceTexture, TextureUnit.Texture0, 0);
             _gl.Uniform2(_blurShader.Uniform("uTexel"), 1f / _source.Width, 1f / _source.Height);
             _gl.Uniform1(_blurShader.Uniform("uRadius"), MathF.Max(1, settings.Blur * 5 + settings.Glow * 4));
             _gl.DrawArrays(PrimitiveType.Triangles, 0, 3);
@@ -167,19 +199,19 @@ internal sealed class PostProcessPipeline : IDisposable
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)targetFramebuffer);
         _gl.Viewport(0, 0, (uint)_targetWidth, (uint)_targetHeight);
         _compositeShader.Use();
-        BindTexture(_compositeShader, "uSource", _source.Texture, TextureUnit.Texture0, 0);
+        BindTexture(_compositeShader, "uSource", sourceTexture, TextureUnit.Texture0, 0);
         BindTexture(_compositeShader, "uBlurred",
-            blurEnabled ? _blurred.Texture : _source.Texture, TextureUnit.Texture1, 1);
+            blurEnabled ? _blurred.Texture : sourceTexture, TextureUnit.Texture1, 1);
         _gl.Uniform2(_compositeShader.Uniform("uResolution"), (float)_source.Width, (float)_source.Height);
         Set("uBlur", settings.Blur);
         Set("uGlow", settings.Glow);
-        Set("uGrain", settings.Grain);
-        Set("uContrast", settings.Contrast);
-        Set("uRgbSplit", settings.RgbSplit);
-        Set("uHalftone", settings.Halftone);
-        Set("uVignette", settings.Vignette);
-        Set("uLensDistortion", settings.LensDistortion);
-        Set("uLensDispersion", settings.LensDispersion);
+        Set("uGrain", settings.UseSonnetPasses ? 0 : settings.Grain);
+        Set("uContrast", settings.UseSonnetPasses ? 0 : settings.Contrast);
+        Set("uRgbSplit", settings.UseSonnetPasses ? 0 : settings.RgbSplit);
+        Set("uHalftone", settings.UseSonnetPasses ? 0 : settings.Halftone);
+        Set("uVignette", settings.UseSonnetPasses ? 0 : settings.Vignette);
+        Set("uLensDistortion", settings.UseSonnetPasses ? 0 : settings.LensDistortion);
+        Set("uLensDispersion", settings.UseSonnetPasses ? 0 : settings.LensDispersion);
         Set("uGlitch", settings.Glitch);
         Set("uTime", settings.Time);
         Set("uSeed", settings.Seed);
@@ -201,6 +233,9 @@ internal sealed class PostProcessPipeline : IDisposable
 
     public void Dispose()
     {
+        _sonnetShader?.Dispose();
+        _sonnetPing?.Dispose();
+        _sonnetPong?.Dispose();
         _gl.DeleteVertexArray(_vao);
         _blurShader.Dispose();
         _compositeShader.Dispose();

@@ -20,11 +20,11 @@ public sealed class EffectDevice : IDisposable
         if ((!isGles && (major < 3 || major == 3 && minor < 3)) ||
             (isGles && (major < 3)))
             throw new NotSupportedException($"AvaloniaSilkEffects requires OpenGL 3.3+ or OpenGL ES 3.0+; current context is {OpenGlVersion}.");
-        Primitives = new(gl);
-        Textures = new(gl);
-        PostProcess = new();
-        _postProcessPipeline = new(gl);
-        _renderContext = new(this, Primitives);
+        Primitives = new EffectPrimitiveRenderer(gl);
+        Textures = new EffectTextureCache(gl);
+        PostProcess = new PostProcessSettings();
+        _postProcessPipeline = new PostProcessPipeline(gl);
+        _renderContext = new EffectRenderContext(this, Primitives);
     }
 
     internal GL Gl { get; }
@@ -58,7 +58,7 @@ public sealed class EffectDevice : IDisposable
         Primitives.Flush();
         _postProcessPipeline.End(targetFramebuffer, PostProcess, postProcessingEnabled);
         Textures.Collect();
-        FrameMetrics = new(
+        FrameMetrics = new EffectDeviceFrameMetrics(
             Primitives.FrameDrawCalls + _postProcessPipeline.FrameDrawCalls,
             Primitives.FrameFlushes,
             Primitives.FrameUploadedBytes,

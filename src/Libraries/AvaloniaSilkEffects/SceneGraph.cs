@@ -104,7 +104,20 @@ public sealed class PolylineNode : EffectNode
 
 public sealed class PolygonNode : EffectNode
 {
-    public IReadOnlyList<Vector2> Points { get; set; } = [];
+    private IReadOnlyList<Vector2> _points = Array.Empty<Vector2>();
+    public IReadOnlyList<Vector2> Points
+    {
+        get => _points;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            var snapshot = value.ToArray();
+            var indices = PolygonTriangulator.Triangulate(snapshot);
+            _points = Array.AsReadOnly(snapshot);
+            TriangleIndices = indices;
+        }
+    }
+    internal int[] TriangleIndices { get; private set; } = [];
     public EffectColor Color { get; set; } = EffectColor.White;
 
     public override void Render(EffectRenderContext context)

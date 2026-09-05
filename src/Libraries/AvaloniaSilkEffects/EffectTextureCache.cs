@@ -260,7 +260,7 @@ public sealed class EffectTextureCache : IDisposable
         var minimumFrame = _frame > (ulong)Math.Max(0, maximumIdleFrames)
             ? _frame - (ulong)maximumIdleFrames
             : 0;
-        foreach (var texture in _ownedTextures
+        foreach (var texture in _ownedTextures.AsValueEnumerable()
             .Where(texture => _lastUsedFrame.GetValueOrDefault(texture) < minimumFrame)
             .ToArray())
             Remove(texture);
@@ -276,9 +276,9 @@ public sealed class EffectTextureCache : IDisposable
 
     private void Remove(EffectTexture texture)
     {
-        foreach (var key in _textTextures.Where(pair => ReferenceEquals(pair.Value, texture)).Select(pair => pair.Key).ToArray())
+        foreach (var key in _textTextures.AsValueEnumerable().Where(pair => ReferenceEquals(pair.Value, texture)).Select(pair => pair.Key).ToArray())
             _textTextures.Remove(key);
-        foreach (var key in _vectorTextures.Where(pair => ReferenceEquals(pair.Value, texture)).Select(pair => pair.Key).ToArray())
+        foreach (var key in _vectorTextures.AsValueEnumerable().Where(pair => ReferenceEquals(pair.Value, texture)).Select(pair => pair.Key).ToArray())
             _vectorTextures.Remove(key);
         _ownedTextures.Remove(texture);
         _lastUsedFrame.Remove(texture);

@@ -15,7 +15,7 @@ internal sealed class SonnetGuideView
     internal SonnetGuideView(SonnetSemanticSegment segment, SonnetTypographyPlacement placement,
         float fontSize, SonnetTheme theme, uint seed)
     {
-        Root = new EffectContainer { Position = new(placement.X, placement.Y), Alpha = 0 };
+        Root = new EffectContainer { Position = new Vector2(placement.X, placement.Y), Alpha = 0 };
         var hero = SonnetTypographyLayout.IsEmphasis(placement.Role);
         var direction = placement.TimingPhase < 0.5f ? -1 : 1;
         var start = new Vector2(placement.EnterX != 0 ? placement.EnterX : direction * fontSize * 1.8f,
@@ -36,19 +36,19 @@ internal sealed class SonnetGuideView
         {
             var d = Hash(seed, 0, 0x7102) > 0.5f ? 1f : -1f;
             var y = (Hash(seed, 0, 0x7103) - 0.5f) * fontSize * 0.8f;
-            AddTrail(new(-d * fontSize * 2.5f, y + fontSize * 1.5f),
-                new(-d * fontSize * 0.8f, y - fontSize * 2),
-                new(d * fontSize * 0.8f, y + fontSize * 2),
-                new(d * fontSize * 2.5f, y - fontSize * 1.5f),
+            AddTrail(new Vector2(-d * fontSize * 2.5f, y + fontSize * 1.5f),
+                new Vector2(-d * fontSize * 0.8f, y - fontSize * 2),
+                new Vector2(d * fontSize * 0.8f, y + fontSize * 2),
+                new Vector2(d * fontSize * 2.5f, y - fontSize * 1.5f),
                 Hash(seed, 0, 0x7104) * 0.15f, color, hero);
         }
         if (hero || Hash(seed, 1, 0x7111) > 0.6f)
         {
             var d = Hash(seed, 1, 0x7112) > 0.5f ? 1f : -1f;
-            AddTrail(new(-fontSize * 2, -d * fontSize * 1.8f),
-                new(fontSize * 2, d * fontSize * 1.8f),
-                new(-fontSize * 2, d * fontSize * 1.8f),
-                new(fontSize * 2, -d * fontSize * 1.8f),
+            AddTrail(new Vector2(-fontSize * 2, -d * fontSize * 1.8f),
+                new Vector2(fontSize * 2, d * fontSize * 1.8f),
+                new Vector2(-fontSize * 2, d * fontSize * 1.8f),
+                new Vector2(fontSize * 2, -d * fontSize * 1.8f),
                 Hash(seed, 1, 0x7113) * 0.1f, color, hero);
         }
 
@@ -58,7 +58,7 @@ internal sealed class SonnetGuideView
             var size = (hero ? 3 : 1.5f) + Hash(seed, index, 0x7121) * 3.5f;
             var node = BurstShape(index % 4, size, color);
             Root.Add(node);
-            _bursts.Add(new(node, Hash(seed, index, 0x7122) * MathF.Tau,
+            _bursts.Add(new BurstView(node, Hash(seed, index, 0x7122) * MathF.Tau,
                 (15 + Hash(seed, index, 0x7123) * 45) * (hero ? 1 : 0.7f),
                 (Hash(seed, index, 0x7124) - 0.5f) * 8));
         }
@@ -101,11 +101,11 @@ internal sealed class SonnetGuideView
         var ease = 1 - Math.Pow(1 - burstProgress, 3);
         foreach (var burst in _bursts)
         {
-            burst.Node.Position = new(MathF.Cos(burst.Angle) * burst.Speed * (float)ease,
+            burst.Node.Position = new Vector2(MathF.Cos(burst.Angle) * burst.Speed * (float)ease,
                 MathF.Sin(burst.Angle) * burst.Speed * (float)ease);
             burst.Node.Rotation = burst.RotationSpeed * (float)burstProgress;
             burst.Node.Alpha = (float)(1 - burstProgress);
-            burst.Node.Scale = new(1 - (float)burstProgress * 0.4f);
+            burst.Node.Scale = new Vector2(1 - (float)burstProgress * 0.4f);
         }
     }
 
@@ -116,7 +116,7 @@ internal sealed class SonnetGuideView
         var head = Circle(hero ? 7 : 4, color with { A = 0.9f });
         var ring = Ring(hero ? 20 : 12, color, hero ? 2 : 1);
         Root.Add(line).Add(ring).Add(head);
-        _trails.Add(new(line, head, ring, delay));
+        _trails.Add(new TrailView(line, head, ring, delay));
     }
 
     private static PolylineNode Curve(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3,
@@ -157,7 +157,7 @@ internal sealed class SonnetGuideView
     private static ShapeNode Circle(float radius, EffectColor color) => new()
     {
         Shape = EffectShapeKind.Ellipse,
-        Size = new(radius * 2),
+        Size = new Vector2(radius * 2),
         Color = color,
         BlendMode = EffectBlendMode.Screen,
         IsVisible = false,
@@ -182,13 +182,13 @@ internal sealed class SonnetGuideView
     {
         var root = new EffectContainer();
         if (kind == 0)
-            root.Add(new ShapeNode { Shape = EffectShapeKind.Ellipse, Position = new(-size), Size = new(size * 2), Color = color });
+            root.Add(new ShapeNode { Shape = EffectShapeKind.Ellipse, Position = new Vector2(-size), Size = new Vector2(size * 2), Color = color });
         else if (kind == 1)
-            root.Add(new ShapeNode { Position = new(-size), Size = new(size * 2), Color = color });
+            root.Add(new ShapeNode { Position = new Vector2(-size), Size = new Vector2(size * 2), Color = color });
         else
         {
-            root.Add(new ShapeNode { Shape = EffectShapeKind.Line, Position = new(-size, 0), Size = new(size * 2, 0), StrokeWidth = 2, Color = color });
-            root.Add(new ShapeNode { Shape = EffectShapeKind.Line, Position = new(0, -size), Size = new(0, size * 2), StrokeWidth = 2, Color = color });
+            root.Add(new ShapeNode { Shape = EffectShapeKind.Line, Position = new Vector2(-size, 0), Size = new Vector2(size * 2, 0), StrokeWidth = 2, Color = color });
+            root.Add(new ShapeNode { Shape = EffectShapeKind.Line, Position = new Vector2(0, -size), Size = new Vector2(0, size * 2), StrokeWidth = 2, Color = color });
         }
         return root;
     }

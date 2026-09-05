@@ -33,11 +33,11 @@ public static class SonnetTransitions
         var amount = entering ? 1 - eased : eased;
         return kind switch
         {
-            SonnetTransitionKind.FastBlur => new(0, 0, 1, 0, entering ? 1 - amount * 0.82 : 1 - amount, amount * 14, 0, 0),
-            SonnetTransitionKind.MonoGlitch => new(0, 0, 1, 0,
+            SonnetTransitionKind.FastBlur => new SonnetTransitionFrame(0, 0, 1, 0, entering ? 1 - amount * 0.82 : 1 - amount, amount * 14, 0, 0),
+            SonnetTransitionKind.MonoGlitch => new SonnetTransitionFrame(0, 0, 1, 0,
                 !entering && linear > 0.86 ? 1 - (linear - 0.86) / 0.14 : 1,
                 0, amount, seed * 0.0001 + Math.Floor(linear * 14) * 0.173),
-            _ => new(0, 0, 1, 0, entering ? 1 - amount * 0.72 : 1 - amount, 0, 0, 0),
+            _ => new SonnetTransitionFrame(0, 0, 1, 0, entering ? 1 - amount * 0.72 : 1 - amount, 0, 0, 0),
         };
     }
 
