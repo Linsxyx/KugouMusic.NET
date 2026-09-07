@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using ManagedBass;
 using ManagedBass.Fx;
 
@@ -71,7 +72,7 @@ public partial class SimpleAudioPlayer : IDisposable
         {
             LastErrorDetail =
                 $"BASS CreateStream 失败: path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}";
-            Console.WriteLine($"[BASS CreateStream Error] path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}");
+            WriteDiagnostic($"[BASS CreateStream Error] path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}");
             return false;
         }
 
@@ -102,11 +103,31 @@ public partial class SimpleAudioPlayer : IDisposable
     {
         if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
+            var sourceUri = Uri.TryCreate(source, UriKind.Absolute, out var uri) ? uri : null;
+            var sourceScheme = sourceUri?.Scheme ?? "<unknown>";
+            var sourceHost = sourceUri?.Host ?? "<unknown>";
+
             for (var attempt = 1; attempt <= RemoteStreamLoadAttempts; attempt++)
             {
-                var stream = Bass.CreateStream(source, 0, sourceFlags, null, IntPtr.Zero);
+                WriteDiagnostic(
+                    $"[BASS HTTP] Loading attempt {attempt}/{RemoteStreamLoadAttempts}: scheme={sourceScheme}, host={sourceHost}, url={source}");
+                var stream = Bass.CreateStream(
+                    source,
+                    0,
+                    sourceFlags | BassFlags.StreamStatus,
+                    DownloadProc,
+                    IntPtr.Zero);
+
                 if (stream != 0)
+                {
+                    WriteDiagnostic(
+                        $"[BASS HTTP] Stream created successfully: scheme={sourceScheme}, host={sourceHost}, handle={stream}");
+
                     return stream;
+                }
+
+                WriteDiagnostic(
+                    $"[BASS HTTP] Stream creation failed: scheme={sourceScheme}, host={sourceHost}, error={Bass.LastError}");
 
                 if (attempt < RemoteStreamLoadAttempts)
                     Thread.Sleep(RemoteStreamRetryDelayMilliseconds * attempt);
@@ -119,6 +140,20 @@ public partial class SimpleAudioPlayer : IDisposable
             ? Bass.CreateStream(source, 0, 0, sourceFlags)
             : 0;
     }
+    
+    private static readonly DownloadProcedure DownloadProc =
+        (buffer, length, user) =>
+        {
+            // With BASS_STREAM_STATUS, status lines are passed as null-terminated text.
+            if (buffer != IntPtr.Zero && length == 0)
+            {
+                var status = Marshal.PtrToStringAnsi(buffer);
+
+                if (!string.IsNullOrWhiteSpace(status))
+                    WriteDiagnostic($"[BASS HTTP] {status}");
+            }
+
+        };
 
     public void Play()
     {
@@ -127,7 +162,7 @@ public partial class SimpleAudioPlayer : IDisposable
             if (!Bass.ChannelPlay(Stream))
             {
                 LastErrorDetail = $"BASS ChannelPlay 失败: error={Bass.LastError}";
-                Console.WriteLine($"[Play Error] {Bass.LastError}");
+                WriteDiagnostic($"[Play Error] {Bass.LastError}");
             }
         }
     }
@@ -217,7 +252,7 @@ public partial class SimpleAudioPlayer : IDisposable
                 return true;
             }
 
-            Console.WriteLine($"[BASS ChannelSetDevice Error] device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}");
+            WriteDiagnostic($"[BASS ChannelSetDevice Error] device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}");
             LastErrorDetail =
                 $"BASS ChannelSetDevice 失败: device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}";
             return false;

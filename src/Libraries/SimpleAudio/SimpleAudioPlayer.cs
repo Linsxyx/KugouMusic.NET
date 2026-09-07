@@ -177,6 +177,8 @@ public partial class SimpleAudioPlayer
 
     public event Action? PlaybackEnded;
 
+    public static Action<string>? DiagnosticLogger { get; set; }
+
     public static void Initialize(int preferredDeviceId = Bass.DefaultDevice)
     {
         lock (BassDeviceGate)
@@ -209,7 +211,7 @@ public partial class SimpleAudioPlayer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BASS_FX Load Error] {ex.Message}");
+                WriteDiagnostic($"[BASS_FX Load Error] {ex.Message}");
             }
 
             try
@@ -218,7 +220,7 @@ public partial class SimpleAudioPlayer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[BASS_LOUD Load Error] {ex.Message}");
+                WriteDiagnostic($"[BASS_LOUD Load Error] {ex.Message}");
             }
 
             Bass.Configure(Configuration.NetBufferLength, NetworkBufferLengthMilliseconds);
@@ -285,7 +287,7 @@ public partial class SimpleAudioPlayer
         if (deviceId != Bass.DefaultDevice &&
             (!Bass.GetDeviceInfo(deviceId, out var info) || !info.IsEnabled || info.IsLoopback))
         {
-            Console.WriteLine($"[BASS Device Error] output device {requestedDeviceId} is not available");
+            WriteDiagnostic($"[BASS Device Error] output device {requestedDeviceId} is not available");
             return false;
         }
 
@@ -296,7 +298,7 @@ public partial class SimpleAudioPlayer
         {
             if (!Bass.Init(deviceId, 44100, DeviceInitFlags.Default, IntPtr.Zero))
             {
-                Console.WriteLine($"[BASS Init Error] device={requestedDeviceId}, error={Bass.LastError}");
+                WriteDiagnostic($"[BASS Init Error] device={requestedDeviceId}, error={Bass.LastError}");
                 return false;
             }
         }
@@ -372,7 +374,19 @@ public partial class SimpleAudioPlayer
         var handle = Bass.PluginLoad(pluginName);
         if (handle == 0)
         {
-            Console.WriteLine($"[BASS PluginLoad Error] plugin={pluginName}, error={Bass.LastError}");
+            WriteDiagnostic($"[BASS PluginLoad Error] plugin={pluginName}, error={Bass.LastError}");
         }
+    }
+
+    private static void WriteDiagnostic(string message)
+    {
+        var logger = DiagnosticLogger;
+        if (logger is not null)
+        {
+            logger(message);
+            return;
+        }
+
+        Console.WriteLine(message);
     }
 }

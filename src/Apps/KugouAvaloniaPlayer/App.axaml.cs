@@ -41,6 +41,14 @@ public partial class App : Application
         CrashReporting.RegisterUiThreadHandler();
         try
         {
+            SimpleAudioPlayer.DiagnosticLogger = message =>
+            {
+#if DEBUG
+                Console.WriteLine(message);
+#endif
+                Log.ForContext("SourceContext", "SimpleAudio.Bass").Information("{Message}", message);
+            };
+
             ConfigureImageLoader();
             SettingsManager.Load();
             SimpleAudioPlayer.Initialize(SettingsManager.Settings.AudioOutputDeviceId);

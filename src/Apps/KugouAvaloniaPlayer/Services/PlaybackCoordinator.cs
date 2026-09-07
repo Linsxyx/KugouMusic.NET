@@ -147,6 +147,14 @@ public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : I
                 ? Player.PrepareNext(source, normalizationGain)
                 : Player.Load(source, normalizationGain);
 
+        var sourceUri = Uri.TryCreate(source, UriKind.Absolute, out var uri) ? uri : null;
+        logger.LogInformation(
+            ".NET 音频流请求: scheme={Scheme}, host={Host}, prepareOnly={PrepareOnly}, url={Source}",
+            sourceUri?.Scheme ?? "<unknown>",
+            sourceUri?.Host ?? "<unknown>",
+            prepareOnly,
+            source);
+
         HttpResponseMessage? response = null;
         try
         {
@@ -154,6 +162,13 @@ public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : I
                 source,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken).ConfigureAwait(false);
+            logger.LogInformation(
+                ".NET 音频流响应: requestScheme={RequestScheme}, finalScheme={FinalScheme}, status={StatusCode}, contentLength={ContentLength}, url={FinalUrl}",
+                sourceUri?.Scheme ?? "<unknown>",
+                response.RequestMessage?.RequestUri?.Scheme ?? "<unknown>",
+                (int)response.StatusCode,
+                response.Content.Headers.ContentLength,
+                response.RequestMessage?.RequestUri?.ToString() ?? source);
             response.EnsureSuccessStatusCode();
 
             var inputStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
