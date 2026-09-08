@@ -309,6 +309,8 @@
                                     AddToNextCommand="{Binding #Root.AddToNextCommand}"
                                     ShowPlaylistDialogCommand="{Binding #Root.ShowPlaylistDialogCommand}"
                                     ViewSingerCommand="{Binding #Root.ViewSingerCommand}"
+                                    ShowSimilarSongsCommand="{Binding #Root.ShowSimilarSongsCommand}"
+                                    SearchSongCommand="{Binding #Root.SearchSongCommand}"
                                     RemoveFromPlaylistCommand="{Binding #Root.RemoveSongCommand}"
                                     SetLocalCoverCommand="{Binding #Root.SetLocalSongCoverCommand}"
                                     MatchLocalLyricsCommand="{Binding #Root.MatchLocalLyricsCommand}"

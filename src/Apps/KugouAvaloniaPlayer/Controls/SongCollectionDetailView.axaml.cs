@@ -186,6 +186,8 @@ public partial class SongCollectionDetailView : UserControl
         ShowPlaylistDialogCommand = new AsyncRelayCommand<SongItem?>(ShowPlaylistDialogAsync);
         MatchLocalLyricsCommand = new AsyncRelayCommand<SongItem?>(MatchLocalLyricsAsync);
         ViewSingerCommand = new RelayCommand<SingerLite?>(ViewSinger);
+        ShowSimilarSongsCommand = new RelayCommand<SongItem?>(ShowSimilarSongs);
+        SearchSongCommand = new RelayCommand<SongItem?>(SearchSong);
         InitializeComponent();
         UpdateCurrentHeroBackground();
     }
@@ -198,6 +200,8 @@ public partial class SongCollectionDetailView : UserControl
     public ICommand ShowPlaylistDialogCommand { get; }
     public ICommand MatchLocalLyricsCommand { get; }
     public ICommand ViewSingerCommand { get; }
+    public ICommand ShowSimilarSongsCommand { get; }
+    public ICommand SearchSongCommand { get; }
 
     public string? Cover
     {
@@ -595,6 +599,18 @@ public partial class SongCollectionDetailView : UserControl
     {
         if (singer != null)
             SongInteractions?.NavigateToSinger(singer);
+    }
+
+    private void ShowSimilarSongs(SongItem? song)
+    {
+        if (song != null)
+            SongInteractions?.NavigateToSimilarSongs(song);
+    }
+
+    private void SearchSong(SongItem? song)
+    {
+        if (song != null)
+            SongInteractions?.SearchSong(song, KugouAvaloniaPlayer.Models.SearchType.Playlist);
     }
 
     private void ScrollToPlayingSong()

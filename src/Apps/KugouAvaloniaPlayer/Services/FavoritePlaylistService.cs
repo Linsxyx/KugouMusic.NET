@@ -628,6 +628,7 @@ public partial class FavoritePlaylistService(
                 existing.Name = string.IsNullOrWhiteSpace(song.Name) ? existing.Name : song.Name;
                 existing.Singer = string.IsNullOrWhiteSpace(song.Singer) ? existing.Singer : song.Singer;
                 existing.AlbumId = string.IsNullOrWhiteSpace(song.AlbumId) ? existing.AlbumId : song.AlbumId;
+                existing.AlbumAudioId = song.AlbumAudioId > 0 ? song.AlbumAudioId : existing.AlbumAudioId;
                 existing.Cover = string.IsNullOrWhiteSpace(song.Cover) ? existing.Cover : song.Cover;
                 existing.DurationSeconds = song.DurationSeconds > 0 ? song.DurationSeconds : existing.DurationSeconds;
                 existing.Singers = song.Singers?.AsValueEnumerable().ToList() ?? existing.Singers;
@@ -641,6 +642,7 @@ public partial class FavoritePlaylistService(
                 Name = song.Name,
                 Singer = song.Singer,
                 AlbumId = song.AlbumId,
+                AlbumAudioId = song.AlbumAudioId,
                 Cover = song.Cover,
                 DurationSeconds = song.DurationSeconds,
                 Singers = song.Singers.AsValueEnumerable().ToList()
@@ -796,6 +798,7 @@ public partial class FavoritePlaylistService(
                     Singer = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知",
                     Singers = s.Singers,
                     AlbumId = s.AlbumId,
+                    AlbumAudioId = s.MixSongId,
                     Cover = s.Cover,
                     DurationSeconds = s.DurationMs / 1000.0,
                     Privilege = s.Privilege
@@ -880,6 +883,7 @@ public partial class FavoritePlaylistService(
             Singer = string.IsNullOrWhiteSpace(x.Singer) ? "未知" : x.Singer,
             Hash = x.Hash,
             AlbumId = x.AlbumId ?? "",
+            AlbumAudioId = x.AlbumAudioId,
             FileId = x.FileId,
             Singers = x.Singers ?? new List<SingerLite>(),
             Cover = string.IsNullOrWhiteSpace(x.Cover)
@@ -1170,6 +1174,7 @@ public sealed class LikeSongCacheItem
     public string Singer { get; set; } = "";
     public List<SingerLite> Singers { get; set; } = new();
     public string AlbumId { get; set; } = "";
+    public long AlbumAudioId { get; set; }
     public string? Cover { get; set; }
     public double DurationSeconds { get; set; }
     public int Privilege { get; set; }
@@ -1263,12 +1268,6 @@ partial class FavoritePlaylistService
 
     private void ShowToast(NotificationType type, string title, string content)
     {
-        toastManager.CreateToast()
-            .OfType(type)
-            .WithTitle(title)
-            .WithContent(content)
-            .Dismiss().ByClicking()
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Queue();
+        toastManager.ShowDismissibleToast(type, title, content);
     }
 }

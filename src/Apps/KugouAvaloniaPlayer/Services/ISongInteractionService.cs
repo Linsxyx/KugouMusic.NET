@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls.Notifications;
+using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using SukiUI.Toasts;
 
@@ -14,6 +16,10 @@ namespace KugouAvaloniaPlayer.Services;
 public interface ISongInteractionService
 {
     void NavigateToSinger(SingerLite singer);
+
+    void NavigateToSimilarSongs(SongItem song);
+
+    void SearchSong(SongItem song, SearchType type);
 
     Task ShowAddToPlaylistDialogAsync(SongItem song);
 
@@ -28,13 +34,15 @@ public sealed class SongInteractionService(
     FavoritePlaylistService favoritePlaylistService,
     IPlaybackCommands playbackCommands,
     ISingerViewModelFactory singerViewModelFactory,
+    ISimilarSongsViewModelFactory similarSongsViewModelFactory,
     INavigationService navigationService,
     SearchClient searchClient,
     ILocalSingerMatchService localSingerMatchService,
     ILocalLyricMatchService localLyricMatchService,
     LyricsService lyricsService,
-    ISukiToastManager toastManager) : ISongInteractionService {
-    
+    ISukiToastManager toastManager,
+    IMessenger messenger) : ISongInteractionService {
+
     public void NavigateToSinger(SingerLite singer) {
         if (singer.Id == -1 && !string.IsNullOrWhiteSpace(singer.Name))
             MatchLocalSingersAsync(singer)
@@ -46,6 +54,32 @@ public sealed class SongInteractionService(
                 });
         else
             navigationService.NavigateTransient(singerViewModelFactory.Create(singer.Id.ToString(), singer.Name));
+    }
+
+    public void NavigateToSimilarSongs(SongItem song) {
+        if (song.AlbumAudioId == 0) {
+            toastManager.CreateToast()
+                .OfType(NotificationType.Warning)
+                .WithTitle("相似歌曲")
+                .WithContent("当前歌曲缺少在线信息，无法推荐")
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Queue();
+            return;
+        }
+
+        navigationService.NavigateTransient(similarSongsViewModelFactory.Create(song));
+    }
+
+    public void SearchSong(SongItem song, SearchType type)
+    {
+        var keyword = string.IsNullOrWhiteSpace(song.Name) ? song.DisplayTitle : song.Name;
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            toastManager.ShowDismissibleToast(NotificationType.Warning, "搜索", "无法获取歌曲名称");
+            return;
+        }
+
+        messenger.Send(new SearchRequestedEvent(keyword, type));
     }
 
     public Task ShowAddToPlaylistDialogAsync(SongItem song) =>
@@ -206,14 +240,6 @@ public sealed class SongInteractionService(
 
     private void ShowToast(NotificationType type, string title, string content)
     {
-        toastManager.CreateToast()
-            .OfType(type)
-            .WithTitle(title)
-            .WithContent(content)
-            .Dismiss()
-            .ByClicking()
-            .Dismiss()
-            .After(TimeSpan.FromSeconds(3))
-            .Queue();
+        toastManager.ShowDismissibleToast(type, title, content);
     }
 }

@@ -49,11 +49,7 @@ public partial class PlayerViewModel
     {
         if (songs.Count == 0)
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Warning)
-                .WithTitle("没有可添加的歌曲")
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Queue();
+            ShowToast(NotificationType.Warning, "没有可添加的歌曲");
             return;
         }
 
@@ -61,12 +57,7 @@ public partial class PlayerViewModel
             ClearPersonalFmSession();
 
         _queueManager.AddToEnd(songs);
-        _toastManager.CreateToast()
-            .OfType(NotificationType.Success)
-            .WithTitle("已添加到播放列表")
-            .WithContent($"已添加 {songs.Count} 首歌曲")
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Queue();
+        ShowToast(NotificationType.Success, "已添加到播放列表", $"已添加 {songs.Count} 首歌曲");
     }
 
     void IPlaybackCommands.AddToQueue(IReadOnlyList<SongItem> songs)
@@ -87,11 +78,7 @@ public partial class PlayerViewModel
     {
         if (songs.Count == 0)
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Warning)
-                .WithTitle("没有可播放的歌曲")
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Queue();
+            ShowToast(NotificationType.Warning, "没有可播放的歌曲");
             return;
         }
 
@@ -447,5 +434,10 @@ public partial class PlayerViewModel
         }
 
         Dispatcher.UIThread.Post(() => _ = PlayNext());
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        _toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 }

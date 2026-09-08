@@ -43,6 +43,12 @@ public record RankSongItem : KgBaseModel
     public List<RankSongAuthor> Authors { get; set; } = new();
 
     /// <summary>
+    ///     混合 ID (album_audio_id)，用于相似推荐。榜单接口将其放在顶层。
+    /// </summary>
+    [property: JsonPropertyName("album_audio_id")]
+    public long AlbumAudioId { get; set; }
+
+    /// <summary>
     ///     歌曲名称。
     /// </summary>
     [property: JsonPropertyName("songname")]

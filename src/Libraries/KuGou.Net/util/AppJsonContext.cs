@@ -134,6 +134,8 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(List<PrivilegeLiteData>))]
 [JsonSerializable(typeof(RankListSongPreview))]
 [JsonSerializable(typeof(List<RankListSongPreview>))]
+[JsonSerializable(typeof(AiRecommendSong))]
+[JsonSerializable(typeof(List<AiRecommendSong>))]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }

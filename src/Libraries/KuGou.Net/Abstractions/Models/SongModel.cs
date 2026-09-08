@@ -66,6 +66,12 @@ public record SongInfo : KgBaseModel
     public int Duration { get; set; }
 
     /// <summary>
+    ///     混合 ID (album_audio_id)，用于相似推荐等场景。
+    /// </summary>
+    [property: JsonPropertyName("MixSongID")]
+    public long AlbumAudioId { get; set; }
+
+    /// <summary>
     ///     封面图地址。
     /// </summary>
     [property: JsonPropertyName("Image")]

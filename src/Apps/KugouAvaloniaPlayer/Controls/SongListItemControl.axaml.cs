@@ -24,6 +24,12 @@ public partial class SongListItemControl : UserControl
     public static readonly StyledProperty<ICommand?> ViewSingerCommandProperty =
         AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(ViewSingerCommand));
 
+    public static readonly StyledProperty<ICommand?> ShowSimilarSongsCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(ShowSimilarSongsCommand));
+
+    public static readonly StyledProperty<ICommand?> SearchSongCommandProperty =
+        AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(SearchSongCommand));
+
     public static readonly StyledProperty<ICommand?> RemoveFromPlaylistCommandProperty =
         AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(RemoveFromPlaylistCommand));
 
@@ -67,6 +73,18 @@ public partial class SongListItemControl : UserControl
     {
         get => GetValue(ViewSingerCommandProperty);
         set => SetValue(ViewSingerCommandProperty, value);
+    }
+
+    public ICommand? ShowSimilarSongsCommand
+    {
+        get => GetValue(ShowSimilarSongsCommandProperty);
+        set => SetValue(ShowSimilarSongsCommandProperty, value);
+    }
+
+    public ICommand? SearchSongCommand
+    {
+        get => GetValue(SearchSongCommandProperty);
+        set => SetValue(SearchSongCommandProperty, value);
     }
 
     public ICommand? RemoveFromPlaylistCommand
@@ -152,6 +170,23 @@ public partial class SongListItemControl : UserControl
             Command = AddToNextCommand,
             CommandParameter = song
         });
+
+        if (song.LocalFilePath is null)
+        {
+            flyout.Items.Add(new MenuItem
+            {
+                Header = "相似歌曲推荐",
+                Command = ShowSimilarSongsCommand,
+                CommandParameter = song
+            });
+
+            flyout.Items.Add(new MenuItem
+            {
+                Header = "搜索相关歌单",
+                Command = SearchSongCommand,
+                CommandParameter = song
+            });
+        }
 
         if (song.LocalFilePath is null)
         {

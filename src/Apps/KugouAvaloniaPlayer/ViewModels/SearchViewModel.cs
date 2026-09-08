@@ -104,6 +104,20 @@ public partial class SearchViewModel(
             songInteractions.NavigateToSinger(singer);
     }
 
+    [RelayCommand]
+    private void ShowSimilarSongs(SongItem? song)
+    {
+        if (song != null)
+            songInteractions.NavigateToSimilarSongs(song);
+    }
+
+    [RelayCommand]
+    private void SearchSong(SongItem? song)
+    {
+        if (song != null)
+            songInteractions.SearchSong(song, SearchType.Playlist);
+    }
+
     // 当前是否显示歌单详情（用于控制收藏按钮可见性）
     public bool IsPlaylistDetail => _currentDetailType == DetailType.Playlist;
     public bool IsAlbumDetail => _currentDetailType == DetailType.Album;
@@ -376,6 +390,7 @@ public partial class SearchViewModel(
                         Hash = s.Hash,
                         AlbumId = s.AlbumId,
                         AlbumName = s.Album?.Name ?? "",
+                        AlbumAudioId = s.MixSongId,
                         Singers = s.Singers,
                         Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
                         DurationSeconds = s.DurationMs / 1000.0
@@ -462,6 +477,7 @@ public partial class SearchViewModel(
             Hash = item.Hash,
             AlbumId = item.AlbumId,
             AlbumName = item.AlbumName,
+            AlbumAudioId = item.AlbumAudioId,
             Singers = item.Singers,
             Cover = string.IsNullOrWhiteSpace(item.Cover) ? DefaultSongCover : item.Cover,
             DurationSeconds = item.Duration
@@ -492,25 +508,13 @@ public partial class SearchViewModel(
             if (result != null)
             {
                 messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
-                toastManager.CreateToast()
-                    .OfType(NotificationType.Success)
-                    .WithTitle("收藏成功")
-                    .WithContent($"已将「{_currentPlaylistName}」收藏到我的歌单")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Success, "收藏成功", $"已将「{_currentPlaylistName}」收藏到我的歌单");
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "收藏歌单失败");
-            toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("收藏失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "收藏失败", ex.Message);
         }
     }
 
@@ -529,25 +533,18 @@ public partial class SearchViewModel(
             if (result != null)
             {
                 messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
-                toastManager.CreateToast()
-                    .OfType(NotificationType.Success)
-                    .WithTitle("收藏成功")
-                    .WithContent($"已将专辑「{DetailTitle}」收藏到我的歌单")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Success, "收藏成功", $"已将专辑「{DetailTitle}」收藏到我的歌单");
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "收藏专辑失败");
-            toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("收藏失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "收藏失败", ex.Message);
         }
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 }

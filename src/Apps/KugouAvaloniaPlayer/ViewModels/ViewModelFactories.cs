@@ -35,6 +35,23 @@ public sealed class SingerViewModelFactory(
     }
 }
 
+public interface ISimilarSongsViewModelFactory
+{
+    SimilarSongsViewModel Create(SongItem sourceSong);
+}
+
+public sealed class SimilarSongsViewModelFactory(
+    RecommendClient recommendClient,
+    ISukiToastManager toastManager,
+    ILogger<SimilarSongsViewModel> logger)
+    : ISimilarSongsViewModelFactory
+{
+    public SimilarSongsViewModel Create(SongItem sourceSong)
+    {
+        return new SimilarSongsViewModel(recommendClient, toastManager, logger, sourceSong);
+    }
+}
+
 public interface IDiscoverTagViewModelFactory
 {
     DiscoverTagViewModel Create();

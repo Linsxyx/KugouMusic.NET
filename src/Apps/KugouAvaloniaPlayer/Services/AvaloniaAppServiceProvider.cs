@@ -80,6 +80,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<IGitHubReleaseService>().As(Singleton).To<GitHubReleaseService>()
         .Bind<IAppUpdateService>().As(Singleton).To<AppUpdateService>()
         .Bind<ISingerViewModelFactory>().To<SingerViewModelFactory>()
+        .Bind<ISimilarSongsViewModelFactory>().To<SimilarSongsViewModelFactory>()
         .Bind<IDiscoverTagViewModelFactory>().To<DiscoverTagViewModelFactory>()
         .Bind<IDesktopLyricViewModelFactory>().As(Singleton).To<DesktopLyricViewModelFactory>()
         .Bind<UserCreatedPlaylistCacheService>().As(Singleton).To<UserCreatedPlaylistCacheService>()
