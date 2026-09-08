@@ -70,6 +70,16 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public MouseParallaxTuningViewModel PendoloParallaxTuning { get; }
     public MouseParallaxTuningViewModel FumeParallaxTuning { get; }
 
+    [RelayCommand]
+    private void ShowSimilarSongs()
+    {
+        var song = Player.DisplayedPlayingSong;
+        if (song is null)
+            return;
+
+        _songInteractionService.NavigateToSimilarSongs(song);
+    }
+
     public IReadOnlyList<NowPlayingThemePresetOption> ThemePresets =>
         NowPlayingThemePresetRegistry.Presets;
 

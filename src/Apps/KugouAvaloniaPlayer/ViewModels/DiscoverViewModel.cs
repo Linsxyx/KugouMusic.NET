@@ -302,24 +302,12 @@ public partial class DiscoverViewModel : PageViewModelBase
             if (result != null)
             {
                 _messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Success)
-                    .WithTitle("收藏成功")
-                    .WithContent($"已将「{SelectedPlaylist.Name}」收藏到我的歌单")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Success, "收藏成功", $"已将「{SelectedPlaylist.Name}」收藏到我的歌单");
             }
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("收藏失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "收藏失败", ex.Message);
         }
     }
 
@@ -495,6 +483,7 @@ public partial class DiscoverViewModel : PageViewModelBase
                 Hash = s.Hash,
                 AlbumId = s.AlbumId,
                 AlbumName = s.Album?.Name ?? "",
+                AlbumAudioId = s.MixSongId,
                 FileId = s.FileId,
                 Singers = s.Singers,
                 Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
@@ -618,13 +607,12 @@ public partial class DiscoverViewModel : PageViewModelBase
 
     private void ShowWarning(string title, string content)
     {
-        _toastManager.CreateToast()
-            .OfType(NotificationType.Warning)
-            .WithTitle(title)
-            .WithContent(content)
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Dismiss().ByClicking()
-            .Queue();
+        ShowToast(NotificationType.Warning, title, content);
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        _toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 
     private readonly record struct DiscoverTopCardDefinition(int CardId, string Title);

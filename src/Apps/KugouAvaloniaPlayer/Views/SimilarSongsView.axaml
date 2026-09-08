@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
+             x:Class="KugouAvaloniaPlayer.Views.SimilarSongsView"
+             x:Name="SimilarSongsRoot"
+             x:DataType="vm:SimilarSongsViewModel">
+
+    <Grid Margin="15">
+        <localControls:SongCollectionDetailView
+            PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"
+            SongInteractions="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).SongInteractions}"
+            Cover="{Binding SourceCover}"
+            Title="{Binding Title}"
+            Songs="{Binding Songs}"
+            BackCommand="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}"
+            IsLoading="{Binding IsLoading}"
+            LoadingText="正在加载相似歌曲..."
+            ListPadding="0,0,0,90"
+            TitleFontSize="24" />
+    </Grid>
+</UserControl>

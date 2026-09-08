@@ -242,6 +242,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
                     Hash = item.Hash,
                     AlbumId = item.AlbumId.ToString(),
                     AlbumName = item.AlbumName,
+                    AlbumAudioId = item.AlbumAudioId,
                     DurationSeconds = item.Duration / 1000.0,
                     Cover = item.TransParam?.UnionCover
                 })
@@ -498,13 +499,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
                 return;
 
             _messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("收藏成功")
-                .WithContent($"已将专辑「{AlbumDetailTitle}」收藏到我的歌单")
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "收藏成功", $"已将专辑「{AlbumDetailTitle}」收藏到我的歌单");
         }
         catch (Exception ex)
         {
@@ -512,13 +507,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
                 return;
 
             _logger.LogError(ex, "收藏歌手专辑失败，albumId={AlbumId}", _currentAlbumId);
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("收藏失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "收藏失败", ex.Message);
         }
     }
 
@@ -580,6 +569,11 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
         Songs.Clear();
         Albums.Clear();
         AlbumSongs.Clear();
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        _toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 }
 

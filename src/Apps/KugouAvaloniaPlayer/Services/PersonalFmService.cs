@@ -324,6 +324,7 @@ public sealed class PersonalFmService(
             Hash = song.Hash,
             AlbumId = song.AlbumId,
             AudioId = song.AudioId,
+            AlbumAudioId = long.TryParse(song.MixSongId, out var mixId) ? mixId : 0,
             Singers = song.Singers,
             Cover = ResolvePersonalFmCover(song),
             DurationSeconds = song.DurationSeconds,

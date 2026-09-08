@@ -155,6 +155,24 @@
             </Border>
         </Button>
 
+        <Button Cursor="Hand"
+                Command="{Binding ShowSimilarSongsCommand}"
+                Classes="Basic"
+                ToolTip.Tip="相似歌曲推荐"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="40,140,0,0">
+            <Border Classes="PortraitModeButton"
+                    CornerRadius="20"
+                    Padding="12,8">
+                <Svg Path="/Assets/music-party-svgrepo-com.svg"
+                     Css="path { fill: white; }"
+                     Width="22"
+                     Height="22"
+                     Opacity="0.9" />
+            </Border>
+        </Button>
+
         <Grid ColumnDefinitions="4*, 6*"
               Margin="40,120,40,68">
             <StackPanel Grid.Column="0"

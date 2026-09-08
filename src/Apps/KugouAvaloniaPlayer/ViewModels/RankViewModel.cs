@@ -160,12 +160,7 @@ public partial class RankViewModel : PageViewModelBase
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Warning)
-                .WithTitle("获取排行榜失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Queue();
+            ShowToast(NotificationType.Warning, "获取排行榜失败", ex.Message);
         }
     }
 
@@ -250,6 +245,7 @@ public partial class RankViewModel : PageViewModelBase
                     Hash = s.Hash,
                     AlbumId = s.AlbumId.ToString(),
                     AlbumName = s.Album?.Name ?? "",
+                    AlbumAudioId = s.AlbumAudioId,
                     Singers = s.Singers,
                     Cover =
                         string.IsNullOrWhiteSpace(s.TransParam?.UnionCover) ? DefaultCover : s.TransParam.UnionCover,
@@ -300,5 +296,10 @@ public partial class RankViewModel : PageViewModelBase
             5 => "曲风榜",
             _ => "其他榜单"
         };
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        _toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 }

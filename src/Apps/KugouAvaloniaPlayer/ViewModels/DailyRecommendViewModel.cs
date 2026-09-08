@@ -101,10 +101,25 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
             _songInteractions.NavigateToSinger(singer);
     }
 
+    [RelayCommand]
+    private void ShowSimilarSongs(SongItem? song)
+    {
+        if (song != null)
+            _songInteractions.NavigateToSimilarSongs(song);
+    }
+
+    [RelayCommand]
+    private void SearchSong(SongItem? song)
+    {
+        if (song != null)
+            _songInteractions.SearchSong(song, KugouAvaloniaPlayer.Models.SearchType.Playlist);
+    }
+
     public PersonalFmSongPoolOption[] FmSongPoolOptions { get; } =
     [
         new(PersonalFmSongPoolId.Taste, "根据口味"),
-        new(PersonalFmSongPoolId.Style, "根据风格")
+        new(PersonalFmSongPoolId.Style, "根据风格"),
+        new(PersonalFmSongPoolId.Special, "特殊推荐池")
     ];
 
     public bool CanUsePersonalFm => !string.IsNullOrWhiteSpace(_sessionManager.Session.Token) &&
@@ -120,7 +135,12 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
     public bool IsFmPlaying => IsFmActive && _player.IsPlayingAudio;
     public string FmCardTitle => PersonalFmPresentation.GetTitle(SelectedFmMode);
     public string FmModeShortLabel => PersonalFmPresentation.GetModeLabel(SelectedFmMode);
-    public string FmSongPoolButtonText => SelectedFmSongPoolId == PersonalFmSongPoolId.Style ? "风格" : "口味";
+    public string FmSongPoolButtonText => SelectedFmSongPoolId switch
+    {
+        PersonalFmSongPoolId.Style => "风格",
+        PersonalFmSongPoolId.Special => "特殊",
+        _ => "口味"
+    };
     public string FmCardTagline => $"{PersonalFmPresentation.GetModeLabel(SelectedFmMode)} · {PersonalFmPresentation.GetSongPoolLabel(SelectedFmSongPoolId)}";
 
     public string FmCardSubtitle
@@ -268,9 +288,12 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
         if (IsFmLoading)
             return;
 
-        SelectedFmSongPoolId = SelectedFmSongPoolId == PersonalFmSongPoolId.Taste
-            ? PersonalFmSongPoolId.Style
-            : PersonalFmSongPoolId.Taste;
+        SelectedFmSongPoolId = SelectedFmSongPoolId switch
+        {
+            PersonalFmSongPoolId.Taste => PersonalFmSongPoolId.Style,
+            PersonalFmSongPoolId.Style => PersonalFmSongPoolId.Special,
+            _ => PersonalFmSongPoolId.Taste
+        };
 
         await LoadPersonalFmPreviewAsync(IsFmActive, true);
     }
@@ -335,6 +358,22 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
         await LoadPersonalFmPreviewAsync(IsFmActive, true);
     }
 
+    [RelayCommand(CanExecute = nameof(CanRefreshDailyRecommendations))]
+    private async Task RefreshDailyRecommendations()
+    {
+        if (IsDailyRecommendationsLoading)
+            return;
+
+        await LoadDailyRecommendationsAsync();
+    }
+
+    private bool CanRefreshDailyRecommendations() => !IsDailyRecommendationsLoading;
+
+    partial void OnIsDailyRecommendationsLoadingChanged(bool value)
+    {
+        RefreshDailyRecommendationsCommand.NotifyCanExecuteChanged();
+    }
+
     private async Task LoadDailyRecommendationsAsync()
     {
         _logger.LogInformation("正在获取每日推荐...");
@@ -354,6 +393,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
                     AlbumId = item.AlbumId,
                     AlbumName = item.AlbumName,
                     AudioId = item.AudioId,
+                    AlbumAudioId = item.MixSongId,
                     Singers = item.Singers,
                     Cover = string.IsNullOrWhiteSpace(item.SizableCover) ? DefaultCover : item.SizableCover,
                     DurationSeconds = item.Duration
@@ -560,12 +600,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
     {
         Dispatcher.UIThread.Post(() =>
         {
-            _toastManager.CreateToast()
-                .OfType(type)
-                .WithTitle(title)
-                .WithContent(content)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Queue();
+            _toastManager.ShowDismissibleToast(type, title, content);
         });
     }
 

@@ -331,7 +331,25 @@
                         <TextBlock Classes="daily-table-heading" Text="歌曲" />
                         <TextBlock Grid.Column="1" Classes="daily-table-heading" Text="专辑" />
                         <TextBlock Grid.Column="2" Classes="daily-table-heading" Text="时长" />
-                        <TextBlock Grid.Column="3" Classes="daily-table-heading" Text="操作" HorizontalAlignment="Right" Margin="0,0,50,0" />
+                        <StackPanel Grid.Column="3"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Spacing="8">
+                            <TextBlock Classes="daily-table-heading"
+                                       Text="操作"
+                                       Margin="0,0,50,0" />
+                            <Button Classes="fm-inline-icon"
+                                    Width="30"
+                                    Height="30"
+                                    ToolTip.Tip="刷新每日推荐"
+                                    IsEnabled="{Binding !IsDailyRecommendationsLoading}"
+                                    Command="{Binding RefreshDailyRecommendationsCommand}">
+                                <PathIcon Data="{x:Static suki:Icons.Refresh}"
+                                          Width="15"
+                                          Height="15" />
+                            </Button>
+                        </StackPanel>
                     </Grid>
 
                     <Grid Grid.Row="1">
@@ -351,7 +369,9 @@
                                         PlayCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).PlaySongCommand}"
                                         AddToNextCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).AddSongToNextCommand}"
                                         ShowPlaylistDialogCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ShowSongPlaylistDialogCommand}"
-                                        ViewSingerCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ViewSongSingerCommand}" />
+                                        ViewSingerCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ViewSongSingerCommand}"
+                                        ShowSimilarSongsCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ShowSimilarSongsCommand}"
+                                        SearchSongCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).SearchSongCommand}" />
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>

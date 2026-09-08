@@ -408,6 +408,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             Hash = s.Hash,
             AlbumId = s.AlbumId,
             AlbumName = s.Album?.Name ?? "",
+            AlbumAudioId = s.MixSongId,
             FileId = s.FileId,
             Singers = s.Singers,
             Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
@@ -550,13 +551,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             var parseResult = await _externalPlaylistImportService.ParseAndLoadAsync(link);
             if (!parseResult.Success)
             {
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Error)
-                    .WithTitle("解析失败")
-                    .WithContent(parseResult.ErrorMessage)
-                    .Dismiss().After(TimeSpan.FromSeconds(4))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Error, "解析失败", parseResult.ErrorMessage);
                 return;
             }
 
@@ -604,13 +599,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
 
             if (!importResult.Success)
             {
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Error)
-                    .WithTitle("导入失败")
-                    .WithContent(importResult.ErrorMessage)
-                    .Dismiss().After(TimeSpan.FromSeconds(4))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Error, "导入失败", importResult.ErrorMessage);
                 return;
             }
 
@@ -624,24 +613,12 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             else if (importResult.Matched == 0)
                 summary += "\n未匹配到可导入歌曲。";
 
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("导入完成")
-                .WithContent(summary)
-                .Dismiss().After(TimeSpan.FromSeconds(6))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "导入完成", summary);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "导入其他平台歌单时发生异常");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("导入失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "导入失败", ex.Message);
         }
         finally
         {
@@ -660,24 +637,12 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             if (result != null)
             {
                 _messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Success)
-                    .WithTitle("创建成功")
-                    .WithContent($"已创建歌单「{name}」")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Success, "创建成功", $"已创建歌单「{name}」");
             }
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("创建失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "创建失败", ex.Message);
         }
     }
 
@@ -709,25 +674,13 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                     ? $"已取消收藏专辑「{item.Name}」"
                     : $"已删除歌单「{item.Name}」";
 
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Success)
-                    .WithTitle(successTitle)
-                    .WithContent(successContent)
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Success, successTitle, successContent);
             }
         }
         catch (Exception ex)
         {
             var failTitle = item.Type == PlaylistType.Album ? "取消收藏失败" : "删除失败";
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle(failTitle)
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, failTitle, ex.Message);
         }
     }
 
@@ -794,24 +747,12 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
                 if (SelectedPlaylist.Count > 0)
                     SelectedPlaylist.Count--;
 
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Success)
-                    .WithTitle("移除成功")
-                    .WithContent($"已从歌单移除「{song.Name}」")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Success, "移除成功", $"已从歌单移除「{song.Name}」");
             }
         }
         catch (Exception ex)
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("移除失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "移除失败", ex.Message);
         }
     }
 
@@ -910,6 +851,11 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
             PlaylistSongSortMode.Album => AlbumSortText,
             _ => DefaultSortText
         };
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        _toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 
     public void Dispose()
