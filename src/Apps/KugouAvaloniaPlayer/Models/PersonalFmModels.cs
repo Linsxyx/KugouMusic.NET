@@ -21,7 +21,8 @@ public enum PersonalFmMode
 public enum PersonalFmSongPoolId
 {
     Taste = 0,
-    Style = 1
+    Style = 1,
+    Special = 2
 }
 
 public sealed record PersonalFmSongPoolOption(PersonalFmSongPoolId Value, string Label);
@@ -80,7 +81,12 @@ public static class PersonalFmPresentation
 
     public static string GetSongPoolLabel(PersonalFmSongPoolId songPoolId)
     {
-        return songPoolId == PersonalFmSongPoolId.Style ? "根据风格" : "根据口味";
+        return songPoolId switch
+        {
+            PersonalFmSongPoolId.Style => "根据风格",
+            PersonalFmSongPoolId.Special => "特殊推荐池",
+            _ => "根据口味"
+        };
     }
 }
 

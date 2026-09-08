@@ -61,7 +61,7 @@
             Background="{DynamicResource SukiBackground}"
             CornerRadius="18">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
-            <Grid ColumnDefinitions="Auto,*"
+            <Grid ColumnDefinitions="Auto,*,Auto"
                   Margin="0,0,0,18">
                 <Border Width="72"
                         Height="72"
@@ -89,6 +89,17 @@
                                Foreground="{DynamicResource SukiLowText}"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
+
+                <Button Grid.Column="2"
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Right"
+                        Padding="8,4"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        FontSize="18"
+                        Command="{Binding CancelCommand}"
+                        Content="✕" />
             </Grid>
 
             <Grid Row="1"
@@ -203,20 +214,13 @@
             </Grid>
 
             <Grid Row="3"
-                  ColumnDefinitions="*,Auto,Auto"
+                  ColumnDefinitions="*,Auto"
                   Margin="0,18,0,0">
                 <TextBlock Text="{Binding SelectedPlaylist.Name, StringFormat='已选择：{0}', FallbackValue='已选择：'}"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource SukiLowText}" />
 
                 <Button Grid.Column="1"
-                        Command="{Binding CancelCommand}"
-                        Classes="Basic"
-                        Margin="0,0,10,0">
-                    <TextBlock Text="取消" />
-                </Button>
-
-                <Button Grid.Column="2"
                         Command="{Binding ConfirmCommand}"
                         Classes="Standard"
                         IsEnabled="{Binding CanConfirm}"

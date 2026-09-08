@@ -49,14 +49,27 @@
             Background="{DynamicResource SukiBackground}"
             CornerRadius="18">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
-            <StackPanel Spacing="4"
-                        Margin="0,0,0,18">
-                <TextBlock Text="添加到歌单"
-                           FontSize="24"
-                           FontWeight="Bold" />
-                <TextBlock Text="{Binding SongCount, StringFormat='将 {0} 首歌曲添加到一个或多个在线歌单'}"
-                           Foreground="{DynamicResource SukiLowText}" />
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto"
+                  Margin="0,0,0,18">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="添加到歌单"
+                               FontSize="24"
+                               FontWeight="Bold" />
+                    <TextBlock Text="{Binding SongCount, StringFormat='将 {0} 首歌曲添加到一个或多个在线歌单'}"
+                               Foreground="{DynamicResource SukiLowText}" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Right"
+                        Padding="8,4"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        FontSize="18"
+                        Command="{Binding CancelCommand}"
+                        Content="✕" />
+            </Grid>
 
             <Grid Row="1"
                   ColumnDefinitions="*,Auto,Auto,Auto"
@@ -183,7 +196,7 @@
             </Grid>
 
             <Grid Row="3"
-                  ColumnDefinitions="*,Auto,Auto"
+                  ColumnDefinitions="*,Auto"
                   ColumnSpacing="10"
                   Margin="0,18,0,0">
                 <TextBlock Text="{Binding SelectedCount, StringFormat='已选择 {0} 个歌单'}"
@@ -191,12 +204,6 @@
                            Foreground="{DynamicResource SukiLowText}" />
 
                 <Button Grid.Column="1"
-                        Command="{Binding CancelCommand}"
-                        Classes="Basic">
-                    <TextBlock Text="取消" />
-                </Button>
-
-                <Button Grid.Column="2"
                         Command="{Binding ConfirmCommand}"
                         Classes="Standard"
                         IsEnabled="{Binding CanConfirm}"

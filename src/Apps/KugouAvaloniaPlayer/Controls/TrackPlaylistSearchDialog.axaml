@@ -38,13 +38,26 @@
             Padding="22"
             Background="{DynamicResource SukiBackground}"
             CornerRadius="18">
-        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
-            <StackPanel Spacing="6"
-                        Margin="0,0,0,16">
-                <TextBlock Text="精确歌单检索"
-                           FontSize="24"
-                           FontWeight="Bold" />
-            </StackPanel>
+        <Grid RowDefinitions="Auto,Auto,Auto,*">
+            <Grid ColumnDefinitions="*,Auto"
+                  Margin="0,0,0,16">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="精确歌单检索"
+                               FontSize="24"
+                               FontWeight="Bold" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Right"
+                        Padding="8,4"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        FontSize="18"
+                        Command="{Binding CancelCommand}"
+                        Content="✕" />
+            </Grid>
 
             <suki:GlassCard Grid.Row="1"
                             Padding="12"
@@ -141,15 +154,6 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-
-            <Button Grid.Row="4"
-                    Classes="Basic"
-                    Command="{Binding CancelCommand}"
-                    Cursor="Hand"
-                    HorizontalAlignment="Right"
-                    Margin="0,14,0,0">
-                <TextBlock Text="关闭" />
-            </Button>
         </Grid>
     </Border>
 </UserControl>

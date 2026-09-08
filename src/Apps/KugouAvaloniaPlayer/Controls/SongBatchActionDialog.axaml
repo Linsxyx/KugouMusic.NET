@@ -43,14 +43,27 @@
             Background="{DynamicResource SukiBackground}"
             CornerRadius="18">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
-            <StackPanel Spacing="6"
-                        Margin="0,0,0,16">
-                <TextBlock Text="批量操作"
-                           FontSize="26"
-                           FontWeight="Bold" />
-                <TextBlock Text="{Binding TotalSongCount, StringFormat='当前详情页已加载 {0} 首歌曲，可搜索并多选后执行操作'}"
-                           Foreground="{DynamicResource SukiLowText}" />
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto"
+                  Margin="0,0,0,16">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="批量操作"
+                               FontSize="26"
+                               FontWeight="Bold" />
+                    <TextBlock Text="{Binding TotalSongCount, StringFormat='当前详情页已加载 {0} 首歌曲，可搜索并多选后执行操作'}"
+                               Foreground="{DynamicResource SukiLowText}" />
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Right"
+                        Padding="8,4"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        FontSize="18"
+                        Command="{Binding CancelCommand}"
+                        Content="✕" />
+            </Grid>
 
             <Grid Row="1"
                   ColumnDefinitions="*,Auto,Auto,Auto"
@@ -162,7 +175,7 @@
             </Grid>
 
             <Grid Row="3"
-                  ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                  ColumnDefinitions="*,Auto,Auto,Auto"
                   ColumnSpacing="10"
                   Margin="0,18,0,0">
                 <TextBlock Text="{Binding SelectedCount, StringFormat='已选择 {0} 首歌曲'}"
@@ -170,13 +183,6 @@
                            Foreground="{DynamicResource SukiLowText}" />
 
                 <Button Grid.Column="1"
-                        Command="{Binding CancelCommand}"
-                        Classes="Basic"
-                        Cursor="Hand">
-                    <TextBlock Text="取消" />
-                </Button>
-
-                <Button Grid.Column="2"
                         Command="{Binding AddToQueueCommand}"
                         Classes="Basic"
                         Cursor="Hand"
@@ -184,7 +190,7 @@
                     <TextBlock Text="添加到播放列表" />
                 </Button>
 
-                <Button Grid.Column="3"
+                <Button Grid.Column="2"
                         Command="{Binding AddToPlaylistCommand}"
                         Classes="Standard"
                         Cursor="Hand"
@@ -204,7 +210,7 @@
                     </Grid>
                 </Button>
 
-                <Button Grid.Column="4"
+                <Button Grid.Column="3"
                         Command="{Binding PlaySelectedCommand}"
                         Classes="Standard"
                         Cursor="Hand"

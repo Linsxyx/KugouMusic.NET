@@ -8,7 +8,19 @@
              x:DataType="vm:LyricMatchDialogViewModel">
     <Border Padding="20" Background="{DynamicResource SukiBackground}" CornerRadius="18">
         <Grid RowDefinitions="Auto,*,Auto" MinWidth="440" MaxWidth="600">
-            <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" Margin="0,0,0,14" />
+            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+                <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" />
+                <Button Grid.Column="1"
+                        VerticalAlignment="Top"
+                        HorizontalAlignment="Right"
+                        Padding="8,4"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        FontSize="18"
+                        Command="{Binding CancelCommand}"
+                        Content="✕" />
+            </Grid>
 
             <ListBox Grid.Row="1"
                      ItemsSource="{Binding Results}"
@@ -46,9 +58,6 @@
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
                         Spacing="8" Margin="0,14,0,0">
-                <Button Classes="Basic" Command="{Binding CancelCommand}" Cursor="Hand">
-                    <TextBlock Text="关闭" />
-                </Button>
                 <Button Command="{Binding UseTemporaryCommand}" Cursor="Hand">
                     <TextBlock Text="临时匹配" />
                 </Button>
