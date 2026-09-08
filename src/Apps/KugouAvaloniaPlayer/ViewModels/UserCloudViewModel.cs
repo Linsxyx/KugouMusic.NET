@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SukiUI.Toasts;
 using ZLinq;
@@ -83,13 +84,7 @@ public partial class UserCloudViewModel(
         catch (Exception ex)
         {
             logger.LogError(ex, "加载云盘歌曲失败");
-            toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("加载云盘失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "加载云盘失败", ex.Message);
         }
         finally
         {
@@ -293,5 +288,10 @@ public partial class UserCloudViewModel(
 
         var format = unitIndex == 0 ? "0" : "0.##";
         return value.ToString(format, CultureInfo.InvariantCulture) + " " + units[unitIndex];
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 }

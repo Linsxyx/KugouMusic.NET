@@ -188,13 +188,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
 
     private void ShowSearchNavigationError(string message)
     {
-        _toastManager.CreateToast()
-            .OfType(NotificationType.Warning)
-            .WithTitle("无法打开搜索结果")
-            .WithContent(message)
-            .Dismiss().After(TimeSpan.FromSeconds(4))
-            .Dismiss().ByClicking()
-            .Queue();
+        ShowToast(NotificationType.Warning, "无法打开搜索结果", message);
     }
 
     [RelayCommand]
@@ -210,13 +204,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "加载本地音乐库失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("本地音乐库加载失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "本地音乐库加载失败", ex.Message);
         }
     }
 
@@ -252,13 +240,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "加载本地歌单歌曲失败 playlistId={PlaylistId}", item.Id);
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("加载失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "加载失败", ex.Message);
         }
         finally
         {
@@ -288,24 +270,12 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
                 IsShowingSongs = false;
             }
 
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("已删除")
-                .WithContent($"已删除本地歌单「{item.Name}」")
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "已删除", $"已删除本地歌单「{item.Name}」");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "删除本地歌单失败 playlistId={PlaylistId}", item.Id);
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("删除失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "删除失败", ex.Message);
         }
     }
 
@@ -326,13 +296,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         item.Cover = GetImageSourceOrDefault(result.CoverPath, DefaultCover);
         item.Subtitle = $"{item.Count} 首歌曲";
 
-        _toastManager.CreateToast()
-            .OfType(NotificationType.Success)
-            .WithTitle("已保存")
-            .WithContent($"已更新本地歌单「{item.Name}」")
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Dismiss().ByClicking()
-            .Queue();
+        ShowToast(NotificationType.Success, "已保存", $"已更新本地歌单「{item.Name}」");
     }
 
     [RelayCommand]
@@ -349,13 +313,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         if (!string.IsNullOrWhiteSpace(song.LocalFilePath))
             song.Cover = LocalImageSourceHelper.BuildEmbeddedCoverSource(song.LocalFilePath);
 
-        _toastManager.CreateToast()
-            .OfType(NotificationType.Success)
-            .WithTitle("已设置封面")
-            .WithContent($"已将封面写入「{song.Name}」的音频标签")
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Dismiss().ByClicking()
-                .Queue();
+        ShowToast(NotificationType.Success, "已设置封面", $"已将封面写入「{song.Name}」的音频标签");
     }
 
     [RelayCommand]
@@ -382,13 +340,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             sidebarItem.Subtitle = SelectedPlaylist.Subtitle;
         }
 
-        _toastManager.CreateToast()
-            .OfType(NotificationType.Success)
-            .WithTitle("移除成功")
-            .WithContent($"已从歌单移除「{song.Name}」")
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Dismiss().ByClicking()
-            .Queue();
+        ShowToast(NotificationType.Success, "移除成功", $"已从歌单移除「{song.Name}」");
     }
 
     [RelayCommand]
@@ -406,24 +358,12 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             if (item != null)
                 await OpenPlaylist(item);
 
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("创建成功")
-                .WithContent($"已创建本地歌单「{playlist.Name}」")
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "创建成功", $"已创建本地歌单「{playlist.Name}」");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "创建本地歌单失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("创建失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "创建失败", ex.Message);
         }
     }
 
@@ -455,24 +395,12 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             if (target != null)
                 await OpenPlaylist(target);
 
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("已添加")
-                .WithContent($"已添加 {files.Count} 首本地歌曲。")
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "已添加", $"已添加 {files.Count} 首本地歌曲。");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "添加本地歌曲失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("添加失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "添加失败", ex.Message);
         }
     }
 
@@ -501,24 +429,12 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             if (item != null)
                 await OpenPlaylist(item);
 
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("导入完成")
-                .WithContent($"已导入本地歌单「{imported.Name}」，共 {imported.TrackCount} 首。")
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "导入完成", $"已导入本地歌单「{imported.Name}」，共 {imported.TrackCount} 首。");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "导入本地文件夹失败 path={Path}", path);
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("导入失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "导入失败", ex.Message);
         }
         finally
         {
@@ -550,26 +466,14 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             }
 
             var songCount = refreshed.AsValueEnumerable().Sum(x => x.TrackCount);
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("刷新完成")
-                .WithContent(refreshed.Count == 0
-                    ? "没有可刷新的导入音乐库。"
-                    : $"已刷新 {refreshed.Count} 个歌单，共 {songCount} 首。")
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "刷新完成", refreshed.Count == 0
+                ? "没有可刷新的导入音乐库。"
+                : $"已刷新 {refreshed.Count} 个歌单，共 {songCount} 首。");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "刷新本地音乐库失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("刷新失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "刷新失败", ex.Message);
         }
         finally
         {
@@ -595,13 +499,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             var libraries = await _jellyfinClient.GetMusicLibrariesAsync(options);
             if (libraries.Count == 0)
             {
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Warning)
-                    .WithTitle("未找到音乐库")
-                    .WithContent("当前 Jellyfin 用户没有可导入的音乐媒体库。")
-                    .Dismiss().After(TimeSpan.FromSeconds(4))
-                    .Dismiss().ByClicking()
-                    .Queue();
+                ShowToast(NotificationType.Warning, "未找到音乐库", "当前 Jellyfin 用户没有可导入的音乐媒体库。");
                 return;
             }
 
@@ -658,24 +556,12 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
                 await OpenPlaylist(item);
 
             var importedSongCount = imported.AsValueEnumerable().Sum(x => x.TrackCount);
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Success)
-                .WithTitle("导入完成")
-                .WithContent($"已按专辑同步 Jellyfin 媒体库「{library.Name}」，生成 {imported.Count} 个本地歌单，共 {importedSongCount} 首。")
-                .Dismiss().After(TimeSpan.FromSeconds(5))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Success, "导入完成", $"已按专辑同步 Jellyfin 媒体库「{library.Name}」，生成 {imported.Count} 个本地歌单，共 {importedSongCount} 首。");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "导入 Jellyfin 媒体库失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("导入失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(5))
-                .Dismiss().ByClicking()
-                .Queue();
+            ShowToast(NotificationType.Error, "导入失败", ex.Message);
         }
         finally
         {
@@ -819,5 +705,10 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
             return null;
 
         return uri.LocalPath;
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        _toastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 }

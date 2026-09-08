@@ -283,12 +283,7 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
         {
             if (_consecutiveFailures >= MaxConsecutiveFailures)
             {
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Error)
-                    .WithTitle("熔断保护")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .WithContent("连续多次失败，停止播放，建议重新登录")
-                    .Queue();
+                ShowToast(NotificationType.Error, "熔断保护", "连续多次失败，停止播放，建议重新登录");
                 _consecutiveFailures = 0;
                 return;
             }
@@ -442,12 +437,7 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
             MaxConsecutiveFailures,
             song.Name,
             detail);
-        _toastManager.CreateToast()
-            .OfType(NotificationType.Warning)
-            .WithTitle(failureStage)
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .WithContent($"{song.Name}")
-            .Queue();
+        ShowToast(NotificationType.Warning, failureStage, $"{song.Name}");
         Dispatcher.UIThread.Post(() =>
         {
             var currentIndex = PlaybackQueue.IndexOf(song);
@@ -463,12 +453,7 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
             else
             {
                 StopAndReset();
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Warning)
-                    .WithTitle("播放失败")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .WithContent("队列中没有可播放的歌曲")
-                    .Queue();
+                ShowToast(NotificationType.Warning, "播放失败", "队列中没有可播放的歌曲");
             }
         });
     }

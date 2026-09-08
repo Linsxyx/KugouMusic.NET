@@ -45,12 +45,7 @@ internal sealed class LoginInitializationService(
         {
             logger.LogError(ex, "登录初始化失败");
             await Dispatcher.UIThread.InvokeAsync(() =>
-                toastManager.CreateToast()
-                    .OfType(NotificationType.Error)
-                    .WithTitle("登录初始化失败")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .WithContent("登录初始化失败，请重新登录或检查网络连接")
-                    .Queue());
+                toastManager.ShowDismissibleToast(NotificationType.Error, "登录初始化失败", "登录初始化失败，请重新登录或检查网络连接"));
             loginClient.LogOutAsync();
             return LoginInitializationResult.FailedResult;
         }

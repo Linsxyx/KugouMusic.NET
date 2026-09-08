@@ -152,12 +152,7 @@ public partial class PlayerViewModel
     {
         Dispatcher.UIThread.Post(() =>
         {
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Warning)
-                .WithTitle("私人 FM")
-                .WithContent(content)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Queue();
+            ShowToast(NotificationType.Warning, "私人 FM", content);
         });
     }
 }
