@@ -80,9 +80,8 @@
     <Grid Margin="15">
         <Grid IsVisible="{Binding !IsShowingSongs}">
             <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                          VerticalScrollBarVisibility="Auto"
-                          Padding="0,0,0,-90">
-                <StackPanel Spacing="26">
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="26" Margin="0,0,0,90">
                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,-4">
                         <TextBlock Text="探索发现"
                                    FontSize="30"
