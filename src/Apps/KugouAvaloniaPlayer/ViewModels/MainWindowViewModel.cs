@@ -170,6 +170,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
                 OnLogoutRequested();
         });
 
+        _messenger.Register<SearchRequestedEvent>(this, (_, m) =>
+        {
+            _ = OnSearchRequestedAsync(m.Keyword, m.Type);
+        });
+
         _ = InitializeStartupAsync();
 
         _ = ApplyDeferredStartupPreferencesAsync();
@@ -512,12 +517,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             return;
 
         await Dispatcher.UIThread.InvokeAsync(() =>
-            ToastManager.CreateToast()
-                .OfType(NotificationType.Warning)
-                .WithTitle(toastContent.Item1)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .WithContent(toastContent.Item2)
-                .Queue());
+            ShowToast(NotificationType.Warning, toastContent.Item1, toastContent.Item2));
     }
 
     private void ApplyUserProfile(UserProfileSnapshot? profile)
@@ -534,12 +534,7 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void ShowLoadUserInfoFailedToast()
     {
-        ToastManager.CreateToast()
-            .OfType(NotificationType.Warning)
-            .WithTitle("加载用户失败")
-            .Dismiss().After(TimeSpan.FromSeconds(3))
-            .Dismiss().ByClicking()
-            .Queue();
+        ShowToast(NotificationType.Warning, "加载用户失败");
     }
 
     private void OnLogoutRequested()
@@ -633,6 +628,19 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
         _navigationService.NavigateTransient(_searchViewModel);
         await _searchViewModel.SearchAsync(SearchKeyword);
+    }
+
+    private async Task OnSearchRequestedAsync(string keyword, SearchType? type)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+            return;
+
+        if (type.HasValue)
+            _searchViewModel.CurrentSearchType = type.Value;
+
+        SearchKeyword = keyword;
+        _navigationService.NavigateTransient(_searchViewModel);
+        await _searchViewModel.SearchAsync(keyword);
     }
 
     private bool CanSearch()
@@ -748,6 +756,11 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
             preferences.UseCustomImage,
             preferences.CustomImagePath,
             preferences.CustomImageOpacity);
+    }
+
+    private void ShowToast(NotificationType type, string title, string? content = null)
+    {
+        ToastManager.ShowDismissibleToast(type, title, content ?? string.Empty);
     }
 
     public void Dispose()

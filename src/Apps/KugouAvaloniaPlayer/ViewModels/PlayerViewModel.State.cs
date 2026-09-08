@@ -325,12 +325,7 @@ public partial class PlayerViewModel
             {
                 currentLoadCts.Dispose();
                 RevertQualitySelectionToCurrentQuality();
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Warning)
-                    .WithTitle("切换音质失败")
-                    .WithContent(GetQualitySwitchFailureMessage(sourceInfo.FailureReason))
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
+                ShowToast(NotificationType.Warning, "切换音质失败", GetQualitySwitchFailureMessage(sourceInfo.FailureReason));
                 return false;
             }
 
@@ -358,12 +353,7 @@ public partial class PlayerViewModel
             if (!loadSuccess)
             {
                 RevertQualitySelectionToCurrentQuality();
-                _toastManager.CreateToast()
-                    .OfType(NotificationType.Warning)
-                    .WithTitle("切换音质失败")
-                    .WithContent("新的音频流加载失败。")
-                    .Dismiss().After(TimeSpan.FromSeconds(3))
-                    .Queue();
+                ShowToast(NotificationType.Warning, "切换音质失败", "新的音频流加载失败。");
                 return false;
             }
 
@@ -395,12 +385,7 @@ public partial class PlayerViewModel
         {
             RevertQualitySelectionToCurrentQuality();
             _logger.LogError(ex, "切换音质失败");
-            _toastManager.CreateToast()
-                .OfType(NotificationType.Error)
-                .WithTitle("切换音质失败")
-                .WithContent(ex.Message)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Queue();
+            ShowToast(NotificationType.Error, "切换音质失败", ex.Message);
             return false;
         }
         finally

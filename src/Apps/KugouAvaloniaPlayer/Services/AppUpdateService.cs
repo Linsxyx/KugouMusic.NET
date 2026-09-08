@@ -49,12 +49,7 @@ public sealed class AppUpdateService(
                 if (showNoUpdateToast)
                     Dispatcher.UIThread.Post(() =>
                     {
-                        toastManager.CreateToast()
-                            .OfType(NotificationType.Information)
-                            .WithTitle("检查更新")
-                            .WithContent("应用未通过安装包安装，无法自动更新。")
-                            .Dismiss().After(TimeSpan.FromSeconds(3))
-                            .Queue();
+                        ShowSimpleToast(NotificationType.Information, "检查更新", "应用未通过安装包安装，无法自动更新。");
                     });
                 return;
             }
@@ -73,12 +68,7 @@ public sealed class AppUpdateService(
                 if (showNoUpdateToast)
                     Dispatcher.UIThread.Post(() =>
                     {
-                        toastManager.CreateToast()
-                            .OfType(NotificationType.Success)
-                            .WithTitle("检查更新")
-                            .WithContent("当前已是最新版本。")
-                            .Dismiss().After(TimeSpan.FromSeconds(3))
-                            .Queue();
+                        ShowSimpleToast(NotificationType.Success, "检查更新", "当前已是最新版本。");
                     });
                 return;
             }
@@ -91,12 +81,7 @@ public sealed class AppUpdateService(
             if (showNoUpdateToast)
                 Dispatcher.UIThread.Post(() =>
                 {
-                    toastManager.CreateToast()
-                        .OfType(NotificationType.Error)
-                        .WithTitle("检查更新失败")
-                        .WithContent(ex.Message)
-                        .Dismiss().After(TimeSpan.FromSeconds(4))
-                        .Queue();
+                    ShowSimpleToast(NotificationType.Error, "检查更新失败", ex.Message);
                 });
         }
     }
@@ -304,12 +289,7 @@ public sealed class AppUpdateService(
             Dispatcher.UIThread.Post(() =>
             {
                 toastManager.Dismiss(toast);
-                toastManager.CreateToast()
-                    .OfType(NotificationType.Error)
-                    .WithTitle("更新下载失败")
-                    .WithContent(ex.Message)
-                    .Dismiss().After(TimeSpan.FromSeconds(4))
-                    .Queue();
+                ShowSimpleToast(NotificationType.Error, "更新下载失败", ex.Message);
             });
         }
     }
@@ -365,6 +345,11 @@ public sealed class AppUpdateService(
             .WithActionButton(CreateStandardToastActionButton("稍后"), _ => { }, true)
             .WithActionButton(CreateStandardToastActionButton("立即重启"), _ => { updateManager.ApplyUpdatesAndRestart(newVersion); }, true)
             .Queue();
+    }
+
+    private void ShowSimpleToast(NotificationType type, string title, string content)
+    {
+        toastManager.ShowDismissibleToast(type, title, content);
     }
 
     private static Button CreateStandardToastActionButton(object content)
