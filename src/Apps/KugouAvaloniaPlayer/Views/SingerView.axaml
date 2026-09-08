@@ -51,11 +51,10 @@
                             Padding="22,16,22,0"
                             CornerRadius="18">
                 <Grid>
-                    <ScrollViewer Padding="0,0,0,-50"
-                                  VerticalScrollBarVisibility="Auto"
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled"
                                   behaviors:InteractionBehaviors.ScrollNearBottomCommand="{Binding LoadMoreAlbumsCommand}">
-                        <ItemsRepeater ItemsSource="{Binding Albums}">
+                        <ItemsRepeater ItemsSource="{Binding Albums}" Margin="0,0,0,50">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout MinItemWidth="184"
                                                    MinItemHeight="236"

@@ -89,8 +89,8 @@
 
                 </Grid>
 
-                <ScrollViewer Grid.Row="1" Padding="0,0,0,-50">
-                    <ItemsRepeater ItemsSource="{Binding LocalLibraryPlaylists}">
+                <ScrollViewer Grid.Row="1">
+                    <ItemsRepeater ItemsSource="{Binding LocalLibraryPlaylists}" Margin="0,0,0,50">
                         <ItemsRepeater.Layout>
                             <UniformGridLayout MinItemWidth="184"
                                                MinItemHeight="236"

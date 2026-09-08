@@ -113,12 +113,14 @@
                                     PlayCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).PlaySongCommand}"
                                     AddToNextCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).AddSongToNextCommand}"
                                     ShowPlaylistDialogCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ShowSongPlaylistDialogCommand}"
-                                    ViewSingerCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ViewSongSingerCommand}" />
+                                    ViewSingerCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ViewSongSingerCommand}"
+                                    ShowSimilarSongsCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ShowSimilarSongsCommand}"
+                                    SearchSongCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).SearchSongCommand}" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <ScrollViewer Padding="0,0,0,-50">
+                    <ScrollViewer>
                         <ScrollViewer.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                 <Binding Path="HasSearched" />
@@ -129,7 +131,7 @@
                                 <Binding Path="!IsShowingDetail" />
                             </MultiBinding>
                         </ScrollViewer.IsVisible>
-                        <ItemsRepeater ItemsSource="{Binding Playlists}">
+                        <ItemsRepeater ItemsSource="{Binding Playlists}" Margin="0,0,0,50">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout MinItemWidth="184"
                                                    MinItemHeight="236"
@@ -148,7 +150,7 @@
                         </ItemsRepeater>
                     </ScrollViewer>
 
-                    <ScrollViewer Padding="0,0,0,-50">
+                    <ScrollViewer>
                         <ScrollViewer.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                 <Binding Path="HasSearched" />
@@ -159,7 +161,7 @@
                                 <Binding Path="!IsShowingDetail" />
                             </MultiBinding>
                         </ScrollViewer.IsVisible>
-                        <ItemsRepeater ItemsSource="{Binding Albums}">
+                        <ItemsRepeater ItemsSource="{Binding Albums}" Margin="0,0,0,50">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout MinItemWidth="184"
                                                    MinItemHeight="236"
@@ -178,7 +180,7 @@
                         </ItemsRepeater>
                     </ScrollViewer>
 
-                    <ScrollViewer Padding="0,0,0,-50">
+                    <ScrollViewer>
                         <ScrollViewer.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                 <Binding Path="HasSearched" />
@@ -189,7 +191,7 @@
                                 <Binding Path="!IsShowingDetail" />
                             </MultiBinding>
                         </ScrollViewer.IsVisible>
-                        <ItemsRepeater ItemsSource="{Binding Singers}">
+                        <ItemsRepeater ItemsSource="{Binding Singers}" Margin="0,0,0,50">
                             <ItemsRepeater.Layout>
                                 <UniformGridLayout MinItemWidth="184"
                                                    MinItemHeight="236"
