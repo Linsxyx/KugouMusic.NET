@@ -23,6 +23,7 @@ public partial class SimpleAudioPlayer
     private static int _actualSystemDefaultDeviceId = Bass.DefaultDevice;
     private static int _preferredOutputDeviceId = Bass.DefaultDevice;
 
+    private readonly DSPProcedure _outputLimiterProc;
     private readonly DSPProcedure _stereoDspProc;
     private readonly PlayerRuntimeState _state = new();
 
@@ -78,6 +79,12 @@ public partial class SimpleAudioPlayer
     {
         get => _state.LowPassHandle;
         set => _state.LowPassHandle = value;
+    }
+
+    private int LimiterDspHandle
+    {
+        get => _state.LimiterDspHandle;
+        set => _state.LimiterDspHandle = value;
     }
 
     private int PeakEqHandle
@@ -172,6 +179,7 @@ public partial class SimpleAudioPlayer
 
     public SimpleAudioPlayer()
     {
+        _outputLimiterProc = OutputLimiterDSP;
         _stereoDspProc = StereoEnhancerDSP;
     }
 

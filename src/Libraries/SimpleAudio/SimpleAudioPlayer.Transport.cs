@@ -86,6 +86,7 @@ public partial class SimpleAudioPlayer : IDisposable
         EchoHandle = 0;
         HighShelfHandle = 0;
         LowPassHandle = 0;
+        LimiterDspHandle = 0;
         TransitionGain = 1.0f;
         TransitionToneDepth = 0f;
 
@@ -326,9 +327,10 @@ public partial class SimpleAudioPlayer : IDisposable
             var headroom = hasSpatialFx || CurrentEq.Any(g => g > 3f) ? 0.8f : 1.0f;
             var actualVolume = (float)Math.Pow(UserVolume, 2) * VolumeNormalizationGain * headroom * toneHeadroom *
                                Math.Clamp(TransitionGain, 0f, 1.25f);
-            // BASS_ATTRIB_VOL explicitly supports values above 1.0 for amplification.
-            // The per-track true-peak measurement has already limited unsafe positive gain.
-            Bass.ChannelSetAttribute(Stream, ChannelAttribute.Volume, Math.Max(actualVolume, 0f));
+            // The composite gain can exceed 1.0 (normalization x transition x user volume). Digital
+            // amplification past full scale clips at the DAC, and the volume attribute applies after
+            // the output limiter, so clamp it to 1.0 to keep the limiter effective.
+            Bass.ChannelSetAttribute(Stream, ChannelAttribute.Volume, Math.Clamp(actualVolume, 0f, 1f));
         }
     }
 

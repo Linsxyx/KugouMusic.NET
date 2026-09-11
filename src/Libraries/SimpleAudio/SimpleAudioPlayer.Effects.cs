@@ -8,6 +8,7 @@ namespace SimpleAudio;
 public partial class SimpleAudioPlayer
 {
     private const int RealtimeSpectrumBandCount = 28;
+    private const float OutputLimiterSlope = 64f;
 
     public void SetEQ(float[]? gains)
     {
@@ -217,6 +218,9 @@ public partial class SimpleAudioPlayer
                 Bass.FXSetParameters(PeakEqHandle, eq);
             }
         }
+
+        // PeakEQ may be (re-)attached at runtime after the limiter; re-arm the limiter to the end of the chain.
+        RearmOutputLimiter();
     }
 
     private void ApplySpatialEffects()
@@ -325,6 +329,9 @@ public partial class SimpleAudioPlayer
                 bStereo = info.Channels == 2 ? 1 : 0
             });
         }
+
+        // Spatial DSPs re-attached at runtime land after the limiter, so re-arm it to stay at the end of the chain.
+        RearmOutputLimiter();
     }
 
     private void ApplyTransitionTone()
@@ -424,5 +431,62 @@ public partial class SimpleAudioPlayer
     {
         return sample * (1f + LiveHouseSaturation) /
                (1f + LiveHouseSaturation * MathF.Abs(sample));
+    }
+
+    private void RearmOutputLimiter()
+    {
+        if (Stream == 0)
+        {
+            return;
+        }
+
+        // New same-priority DSP/FX land after the limiter; re-append it so it always stays the last stage.
+        if (LimiterDspHandle != 0)
+        {
+            Bass.ChannelRemoveDSP(Stream, LimiterDspHandle);
+            LimiterDspHandle = 0;
+        }
+
+        LimiterDspHandle = Bass.ChannelSetDSP(Stream, _outputLimiterProc, IntPtr.Zero);
+        if (LimiterDspHandle == 0)
+        {
+            Console.WriteLine($"[BASS ChannelSetDSP Error] output limiter attach failed, error={Bass.LastError}");
+        }
+    }
+
+    private void OutputLimiterDSP(int handle, int channel, IntPtr buffer, int length, IntPtr user)
+    {
+        if (length == 0 || buffer == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var floatCount = length / 4;
+        if (DspBuffer.Length < floatCount)
+        {
+            DspBuffer = new float[floatCount];
+        }
+
+        Marshal.Copy(buffer, DspBuffer, 0, floatCount);
+
+        for (var i = 0; i < floatCount; i++)
+        {
+            DspBuffer[i] = ApplyOutputLimiter(DspBuffer[i]);
+        }
+
+        Marshal.Copy(DspBuffer, 0, buffer, floatCount);
+    }
+
+    private static float ApplyOutputLimiter(float sample)
+    {
+        // Softly pull samples past full scale (EQ/spatial stacking) back to ~1.0 (asymptote ~1.016);
+        // below full scale it passes through untouched, the small overshoot is absorbed by the DAC clamp.
+        if (MathF.Abs(sample) <= 1f)
+        {
+            return sample;
+        }
+
+        return sample * (1f + OutputLimiterSlope) /
+               (1f + OutputLimiterSlope * MathF.Abs(sample));
     }
 }

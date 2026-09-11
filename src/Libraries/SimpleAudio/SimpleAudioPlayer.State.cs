@@ -15,6 +15,7 @@ public partial class SimpleAudioPlayer
         public SyncProcedure? EndSyncProc { get; set; }
         public int HighShelfHandle { get; set; }
         public int LowPassHandle { get; set; }
+        public int LimiterDspHandle { get; set; }
         public int PeakEqHandle { get; set; }
         public float PlaybackSpeed { get; set; } = 1.0f;
         public float[] RealtimeFftBuffer { get; } = new float[1024];
