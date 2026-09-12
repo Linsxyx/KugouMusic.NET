@@ -376,7 +376,7 @@ public sealed class FumeVisualizerControl : SilkEffectControl
             font,
             1,
             heroScale);
-        _backgroundShapes = BuildBackgroundShapes(_article, viewport, signature);
+        _backgroundShapes = FumeBackgroundScene.Build(_article, viewport.Width, viewport.Height);
         ResetCamera();
     }
 
@@ -809,77 +809,6 @@ public sealed class FumeVisualizerControl : SilkEffectControl
             Average(bars, length * 2 / 5, length * 3 / 5),
             Average(bars, length * 3 / 5, length * 4 / 5),
             Average(bars, length * 4 / 5, length));
-    }
-
-    private static IReadOnlyList<FumeBackgroundShape> BuildBackgroundShapes(
-        FumeArticleLayout? article,
-        Size viewport,
-        int seed)
-    {
-        var worldWidth = Math.Max(article?.Width ?? viewport.Width * 1.8, viewport.Width * 1.2);
-        var worldHeight = Math.Max(article?.Height ?? viewport.Height * 1.8, viewport.Height * 1.2);
-        var paper = article?.PaperBounds ??
-                    new FumePaperBounds(
-                        worldWidth * 0.24,
-                        worldHeight * 0.18,
-                        worldWidth * 0.76,
-                        worldHeight * 0.82);
-        var baseUnit = Math.Clamp(Math.Min(viewport.Width, viewport.Height) * 0.72, 320, 760);
-        var result = new List<FumeBackgroundShape>();
-        for (var index = 0; index < 8; index++)
-        {
-            var localSeed = HashCode.Combine(seed, index, 113);
-            var side = Math.Abs(localSeed) % 4;
-            var size = baseUnit * StableMix(localSeed, 0.82, 1.36);
-            var x = side switch
-            {
-                0 => paper.Left - size * 0.2,
-                1 => paper.Right + size * 0.2,
-                _ => StableMix(localSeed + 11, paper.Left, paper.Right)
-            };
-            var y = side switch
-            {
-                2 => paper.Top - size * 0.2,
-                3 => paper.Bottom + size * 0.2,
-                _ => StableMix(localSeed + 23, paper.Top, paper.Bottom)
-            };
-            result.Add(new FumeBackgroundShape(
-                (FumeShapeKind)(index % 3),
-                x,
-                y,
-                size,
-                StableMix(localSeed + 31, -0.6, 0.6),
-                StableMix(localSeed + 47, -0.045, 0.045),
-                StableMix(localSeed + 59, 0.035, 0.16),
-                StableMix(localSeed + 71, 0, 1),
-                index % 5));
-        }
-
-        for (var index = 0; index < 12; index++)
-        {
-            var localSeed = HashCode.Combine(seed, index, 877);
-            result.Add(new FumeBackgroundShape(
-                FumeShapeKind.Spark,
-                StableMix(localSeed + 5, worldWidth * 0.2, worldWidth * 0.8),
-                StableMix(localSeed + 7, worldHeight * 0.18, worldHeight * 0.82),
-                baseUnit * StableMix(localSeed + 13, 0.1, 0.24),
-                StableMix(localSeed + 17, -Math.PI, Math.PI),
-                StableMix(localSeed + 19, -0.18, 0.18),
-                StableMix(localSeed + 29, 0.08, 0.22),
-                StableMix(localSeed + 37, 0, 1),
-                index % 5));
-        }
-
-        return result.AsValueEnumerable().OrderBy(shape => shape.Depth).ToArray();
-    }
-
-    private static double StableMix(int seed, double min, double max)
-    {
-        var value = (uint)seed;
-        value ^= value << 13;
-        value ^= value >> 17;
-        value ^= value << 5;
-        return min + (max - min) * (value % 10000 / 10000d);
     }
 
     private static double Mix(double from, double to, double amount) =>

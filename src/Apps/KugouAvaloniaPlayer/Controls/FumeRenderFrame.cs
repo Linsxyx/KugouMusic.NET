@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace KugouAvaloniaPlayer.Controls;
@@ -36,7 +37,11 @@ internal readonly record struct FumeBackgroundShape(
     double RotationSpeed,
     double Opacity,
     double Depth,
-    int AudioBand);
+    int AudioBand,
+    double StrokeWidth = 1,
+    bool IsAccent = false,
+    double RingGapStart = -Math.PI * 0.18,
+    double RingGapSize = Math.PI * 0.2);
 
 internal readonly record struct FumeFrame(
     FumeArticleLayout Article,

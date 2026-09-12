@@ -83,6 +83,26 @@ internal static class FumeArticleLayoutEngine
         double lyricsFontScale,
         double heroScale)
     {
+        var article = BuildCore(lines, viewportWidth, viewportHeight, fontFamily,
+            lyricsFontScale, heroScale, false, out var needsExactSearch);
+        // Dispose the approximation's native resources before retrying a non-linear font.
+        return needsExactSearch
+            ? BuildCore(lines, viewportWidth, viewportHeight, fontFamily,
+                lyricsFontScale, heroScale, true, out _)
+            : article;
+    }
+
+    private static FumeArticleLayout? BuildCore(
+        IReadOnlyList<LyricLine> lines,
+        double viewportWidth,
+        double viewportHeight,
+        string fontFamily,
+        double lyricsFontScale,
+        double heroScale,
+        bool exactSearch,
+        out bool needsExactSearch)
+    {
+        needsExactSearch = false;
         if (lines.Count == 0 || viewportWidth <= 1 || viewportHeight <= 1)
             return null;
 
@@ -98,7 +118,6 @@ internal static class FumeArticleLayoutEngine
         var safeViewportHeight = Math.Max(viewportHeight, 240);
         var maxColumns = paperWidth >= 1120 ? 4 : paperWidth >= 760 ? 3 : paperWidth >= 500 ? 2 : 1;
         var targetHeight = safeViewportHeight * TargetHeightRatio;
-        var structuralHeroes = FindStructuralHeroSources(entries);
         var layoutSeed = BuildLayoutSeed(entries);
 
         using var requestedBodyTypeface = SKTypeface.FromFamilyName(
@@ -114,6 +133,7 @@ internal static class FumeArticleLayoutEngine
         var bodyTypeface = requestedBodyTypeface ?? SKTypeface.Default;
         var heroTypeface = requestedHeroTypeface ?? bodyTypeface;
         using var paint = new SKPaint { IsAntialias = true };
+        using var measurements = new BuildMeasurements(paint, exactSearch);
 
         AttemptOptions? best = null;
         var bestScore = double.PositiveInfinity;
@@ -143,10 +163,10 @@ internal static class FumeArticleLayoutEngine
                     fontFamily,
                     lyricsFontScale,
                     heroScale,
-                    structuralHeroes,
                     bodyTypeface,
                     heroTypeface,
                     paint,
+                    measurements,
                     options,
                     false);
                 if (metrics == null)
@@ -168,7 +188,7 @@ internal static class FumeArticleLayoutEngine
             }
         }
 
-        return best == null
+        var result = best == null
             ? null
             : BuildAttempt(
                 entries,
@@ -177,12 +197,14 @@ internal static class FumeArticleLayoutEngine
                 fontFamily,
                 lyricsFontScale,
                 heroScale,
-                structuralHeroes,
                 bodyTypeface,
                 heroTypeface,
                 paint,
+                measurements,
                 best.Value,
                 true);
+        needsExactSearch = !exactSearch && measurements.NeedsExactSearch;
+        return result;
     }
 
     private static FumeArticleLayout? BuildAttempt(
@@ -192,17 +214,14 @@ internal static class FumeArticleLayoutEngine
         string fontFamily,
         double lyricsFontScale,
         double heroScale,
-        IReadOnlySet<int> structuralHeroes,
         SKTypeface bodyTypeface,
         SKTypeface heroTypeface,
         SKPaint paint,
+        BuildMeasurements measurements,
         AttemptOptions options,
         bool includeDetails)
     {
-        var arrangedEntries = entries.AsValueEnumerable()
-            .OrderBy(entry => StableUnit($"{options.SeedKey}:{entry.Index}:{entry.Line.Text}"))
-            .ToArray();
-        var forcedHeroIndex = ChooseFallbackHero(arrangedEntries, structuralHeroes);
+        var (arrangedEntries, forcedHeroIndex) = measurements.Arrange(entries, options);
         var horizontalMargin = Math.Max(viewportWidth * 0.86, 280);
         var verticalMargin = Math.Max(viewportHeight * 0.82, 220);
         var columnWidth = (options.PaperWidth - options.Gap * (options.Columns - 1)) / options.Columns;
@@ -214,8 +233,7 @@ internal static class FumeArticleLayoutEngine
         for (var blockIndex = 0; blockIndex < arrangedEntries.Length; blockIndex++)
         {
             var entry = arrangedEntries[blockIndex];
-            var isHero = structuralHeroes.Contains(entry.Index) ||
-                         blockIndex == forcedHeroIndex ||
+            var isHero = blockIndex == forcedHeroIndex ||
                          ChooseNaturalHero(entry.Line, blockIndex, arrangedEntries.Length);
             var spanColumns = isHero ? Math.Min(options.Columns, options.Columns <= 1 ? 1 : 2) : 1;
             var spanWidth = columnWidth * spanColumns + options.Gap * (spanColumns - 1);
@@ -240,9 +258,11 @@ internal static class FumeArticleLayoutEngine
                 options.DensityScale,
                 heroScale,
                 typeface,
-                paint);
+                paint,
+                measurements,
+                includeDetails);
             var lineHeight = prepared.FontSize * (isHero ? 1.02 : 1.06);
-            var blockHeight = prepared.RenderLines.Count * lineHeight;
+            var blockHeight = prepared.LineCount * lineHeight;
             var gapNoise = StableUnit($"{options.SeedKey}:gap:{entry.Index}:{entry.Line.Text}");
             var blockGap = isHero
                 ? Math.Max(Math.Round(lineHeight * Mix(0.28, 0.68, gapNoise)), 7)
@@ -370,18 +390,13 @@ internal static class FumeArticleLayoutEngine
         double densityScale,
         double heroScale,
         SKTypeface typeface,
-        SKPaint paint)
+        SKPaint paint,
+        BuildMeasurements measurements,
+        bool includeDetails)
     {
-        var graphemes = SplitGraphemes(line.Text);
-        SKTypeface? fallbackTypeface = null;
-        foreach (var rune in line.Text.EnumerateRunes())
-        {
-            if (typeface.ContainsGlyph(rune.Value))
-                continue;
-            fallbackTypeface = SKFontManager.Default.MatchCharacter(rune.Value);
-            break;
-        }
-        var effectiveTypeface = fallbackTypeface ?? typeface;
+        var measurement = measurements.Get(line, typeface);
+        var graphemes = measurement.Graphemes;
+        var effectiveTypeface = measurement.Typeface;
         var low = isHero ? 18d : 10d;
         var high = isHero ? 58d : 30d;
         var bestSize = low * lyricsFontScale * densityScale * (isHero ? heroScale : 1);
@@ -390,8 +405,13 @@ internal static class FumeArticleLayoutEngine
         {
             var rawCandidate = (low + high) * 0.5;
             var candidate = rawCandidate * lyricsFontScale * densityScale * (isHero ? heroScale : 1);
-            using var font = new SKFont(effectiveTypeface, (float)candidate);
-            var measured = font.MeasureText(line.Text, paint);
+            // Keep the original discrete size search, but measure only the winning layout.
+            var measured = measurement.Width * (float)candidate / TextMeasurement.ReferenceSize;
+            if (includeDetails || measurements.ExactSearch || measurement.RequiresExactMeasurement)
+            {
+                using var font = new SKFont(effectiveTypeface, (float)candidate);
+                measured = font.MeasureText(line.Text, paint);
+            }
             if (measured <= width)
             {
                 bestSize = candidate;
@@ -403,11 +423,37 @@ internal static class FumeArticleLayoutEngine
             }
         }
 
-        using var finalFont = new SKFont(effectiveTypeface, (float)bestSize);
-        var advances = graphemes.AsValueEnumerable().Select(value => (double)finalFont.MeasureText(value, paint)).ToArray();
         var glyphOffsets = new double[graphemes.Count + 1];
-        for (var index = 0; index < advances.Length; index++)
-            glyphOffsets[index + 1] = glyphOffsets[index] + advances[index];
+        if (includeDetails || measurements.ExactSearch || measurement.RequiresExactMeasurement)
+        {
+            using var finalFont = new SKFont(effectiveTypeface, (float)bestSize);
+            for (var index = 0; index < graphemes.Count; index++)
+                glyphOffsets[index + 1] = glyphOffsets[index] + finalFont.MeasureText(graphemes[index], paint);
+        }
+        else
+        {
+            var scale = (float)bestSize / TextMeasurement.ReferenceSize;
+            for (var index = 1; index < glyphOffsets.Length; index++)
+                glyphOffsets[index] = measurement.Offsets[index] * scale;
+        }
+
+        if (!includeDetails)
+            return new PreparedBlock(bestSize, effectiveTypeface.FamilyName, [], [], [], [], [],
+                CountRenderLines(glyphOffsets, width));
+
+        // Detect scale/rounding errors at the selected size and retry with exact metrics.
+        if (!measurements.ExactSearch && !measurement.RequiresExactMeasurement)
+        {
+            var scale = (float)bestSize / TextMeasurement.ReferenceSize;
+            using var checkFont = new SKFont(effectiveTypeface, (float)bestSize);
+            var actualWidth = checkFont.MeasureText(line.Text, paint);
+            if (Math.Abs(actualWidth - measurement.Width * scale) > 0.01 ||
+                Enumerable.Range(1, glyphOffsets.Length - 1).Any(index =>
+                    Math.Abs(glyphOffsets[index] - measurement.Offsets[index] * scale) > 0.01))
+            {
+                measurements.NeedsExactSearch = true;
+            }
+        }
 
         var renderLines = BuildRenderLines(graphemes, glyphOffsets, width);
         var wordRanges = BuildWordRanges(line, graphemes);
@@ -426,9 +472,109 @@ internal static class FumeArticleLayoutEngine
             glyphOffsets,
             renderLines,
             wordRanges,
-            rangeByGlyph);
-        fallbackTypeface?.Dispose();
+            rangeByGlyph,
+            renderLines.Count);
         return prepared;
+    }
+
+    // Measure passes need only row counts, not strings, timing maps or render objects.
+    private static int CountRenderLines(IReadOnlyList<double> offsets, double width)
+    {
+        var count = 0;
+        var start = 0;
+        while (start < offsets.Count - 1)
+        {
+            var end = start + 1;
+            while (end < offsets.Count && offsets[end] - offsets[start] <= width)
+                end++;
+            start = Math.Max(start + 1, end - 1);
+            count++;
+        }
+        return Math.Max(count, 1);
+    }
+
+    // Native typefaces and measurements live only for this Build; no cross-song cache.
+    private sealed class BuildMeasurements(SKPaint paint, bool exactSearch) : IDisposable
+    {
+        private readonly Dictionary<(string, SKTypeface), TextMeasurement> _items = new();
+        private readonly Dictionary<int, (SourceEntry[] Entries, int Hero)> _arrangements = new();
+        public bool ExactSearch { get; } = exactSearch;
+
+        public (SourceEntry[] Entries, int Hero) Arrange(
+            IReadOnlyList<SourceEntry> entries, AttemptOptions options)
+        {
+            // Density changes only sizes; order and hero selection are fixed per column count.
+            if (!_arrangements.TryGetValue(options.Columns, out var arrangement))
+            {
+                var ordered = entries.AsValueEnumerable()
+                    .OrderBy(entry => StableUnit($"{options.SeedKey}:{entry.Index}:{entry.Line.Text}"))
+                    .ToArray();
+                arrangement = (ordered, ChooseFallbackHero(ordered));
+                _arrangements.Add(options.Columns, arrangement);
+            }
+            return arrangement;
+        }
+
+        public bool NeedsExactSearch { get; set; }
+
+        public TextMeasurement Get(LyricLine line, SKTypeface typeface)
+        {
+            var key = (line.Text, typeface);
+            if (!_items.TryGetValue(key, out var value))
+            {
+                value = new TextMeasurement(line.Text, typeface, paint);
+                _items.Add(key, value);
+            }
+            return value;
+        }
+
+        public void Dispose()
+        {
+            foreach (var value in _items.Values)
+                value.Dispose();
+        }
+    }
+
+    private sealed class TextMeasurement : IDisposable
+    {
+        public const float ReferenceSize = 64;
+        private readonly SKTypeface? _fallback;
+        public SKTypeface Typeface { get; }
+        public IReadOnlyList<string> Graphemes { get; }
+        public double Width { get; }
+        public double[] Offsets { get; }
+        public bool RequiresExactMeasurement { get; }
+
+        public TextMeasurement(string text, SKTypeface typeface, SKPaint paint)
+        {
+            Graphemes = SplitGraphemes(text);
+            foreach (var rune in text.EnumerateRunes())
+            {
+                if (typeface.ContainsGlyph(rune.Value))
+                    continue;
+                _fallback = SKFontManager.Default.MatchCharacter(rune.Value);
+                break;
+            }
+            Typeface = _fallback ?? typeface;
+            using var font = new SKFont(Typeface, ReferenceSize);
+            Width = font.MeasureText(text, paint);
+            Offsets = new double[Graphemes.Count + 1];
+            for (var index = 0; index < Graphemes.Count; index++)
+                Offsets[index + 1] = Offsets[index] + font.MeasureText(Graphemes[index], paint);
+
+            // Bitmap/color fonts may choose discrete strikes instead of scaling linearly.
+            using var probe = new SKFont(Typeface, 23.5f);
+            var scale = 23.5 / ReferenceSize;
+            RequiresExactMeasurement = Math.Abs(probe.MeasureText(text, paint) - Width * scale) > 0.01;
+            var offset = 0d;
+            for (var index = 0; index < Graphemes.Count && !RequiresExactMeasurement; index++)
+            {
+                offset += probe.MeasureText(Graphemes[index], paint);
+                RequiresExactMeasurement = Math.Abs(offset - Offsets[index + 1] * scale) > 0.01;
+            }
+        }
+
+        public void Dispose() => _fallback?.Dispose();
     }
 
     private static IReadOnlyList<FumeRenderLine> BuildRenderLines(
@@ -513,7 +659,7 @@ internal static class FumeArticleLayoutEngine
                ((index + 1) % 6 == 0 || StableUnit($"{line.Text}:{index}") > 0.965);
     }
 
-    private static HashSet<int> FindStructuralHeroSources(IReadOnlyList<SourceEntry> entries)
+    private static HashSet<int> FindStructuralHeroSources_UNUSED(IReadOnlyList<SourceEntry> entries)
     {
         var repeatedGroups = entries
             .AsValueEnumerable().Select(entry => new
@@ -591,12 +737,9 @@ internal static class FumeArticleLayoutEngine
     }
 
     private static int ChooseFallbackHero(
-        IReadOnlyList<SourceEntry> entries,
-        IReadOnlySet<int> structuralHeroes)
+        IReadOnlyList<SourceEntry> entries)
     {
         if (entries.Count == 0)
-            return -1;
-        if (structuralHeroes.Count > 0)
             return -1;
         for (var index = 0; index < entries.Count; index++)
         {
@@ -670,5 +813,6 @@ internal static class FumeArticleLayoutEngine
         IReadOnlyList<double> GlyphOffsets,
         IReadOnlyList<FumeRenderLine> RenderLines,
         IReadOnlyList<FumeWordRange> WordRanges,
-        IReadOnlyList<int> WordRangeByGlyph);
+        IReadOnlyList<int> WordRangeByGlyph,
+        int LineCount);
 }

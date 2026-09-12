@@ -86,6 +86,8 @@ public sealed class ShapeNode : EffectNode
 public sealed class PolylineNode : EffectNode
 {
     public IReadOnlyList<Vector2> Points { get; set; } = [];
+    /// <summary>Optional colors per point; missing entries use Color.</summary>
+    public IReadOnlyList<EffectColor>? PointColors { get; set; }
     public int StartPointIndex { get; set; }
     public int EndPointIndex { get; set; } = int.MaxValue;
     internal Vector2? StartPositionOverride { get; set; }

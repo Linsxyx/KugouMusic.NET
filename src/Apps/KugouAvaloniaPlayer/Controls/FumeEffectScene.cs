@@ -127,7 +127,7 @@ internal sealed class FumeEffectScene : EffectScene
         return row;
     }
 
-    private static PolylineNode BuildGeometry(FumeBackgroundShape shape)
+    internal static PolylineNode BuildGeometry(FumeBackgroundShape shape)
     {
         var h = (float)(shape.Size * 0.5);
         Vector2[] points;
@@ -136,7 +136,8 @@ internal sealed class FumeEffectScene : EffectScene
             points = new Vector2[129];
             for (var i = 0; i < points.Length; i++)
             {
-                var angle = (18 + 318f * i / (points.Length - 1)) * MathF.PI / 180;
+                var gap = Math.Clamp(shape.RingGapSize, 0.18, Math.PI * 0.6);
+                var angle = (float)(shape.RingGapStart + gap + (Math.PI * 2 - gap) * i / (points.Length - 1));
                 points[i] = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * h;
             }
         }
@@ -153,7 +154,48 @@ internal sealed class FumeEffectScene : EffectScene
             points = [new(-a,-h),new(a,-h),new(a,-a),new(h,-a),new(h,a),new(a,a),new(a,h),
                 new(-a,h),new(-a,a),new(-h,a),new(-h,-a),new(-a,-a),new(-a,-h)];
         }
-        return new PolylineNode { Points = points, TailAlpha = 1, HeadAlpha = 1 };
+        if (shape.Kind == FumeShapeKind.Spark)
+            return new PolylineNode { Points = points, TailAlpha = 1, HeadAlpha = 1 };
+
+        // Subdivide straight edges too, so the four spatial gradient stops survive rotation.
+        var gradientPoints = new List<Vector2>();
+        for (var i = 0; i < points.Length - 1; i++)
+        {
+            var steps = Math.Max(1, (int)Math.Ceiling(Vector2.Distance(points[i], points[i + 1]) / (shape.Size / 48)));
+            for (var step = 0; step < steps; step++)
+                gradientPoints.Add(Vector2.Lerp(points[i], points[i + 1], (float)step / steps));
+        }
+        gradientPoints.Add(points[^1]);
+        var colors = new EffectColor[gradientPoints.Count];
+        for (var i = 0; i < colors.Length; i++)
+            colors[i] = GeometryColor(gradientPoints[i] / (float)shape.Size);
+        return new PolylineNode { Points = gradientPoints, PointColors = colors, TailAlpha = 1, HeadAlpha = 1 };
+    }
+
+    private static EffectColor GeometryColor(Vector2 point)
+    {
+        var t = Math.Clamp(Vector2.Dot(point + new Vector2(0.55f, 0.28f), new Vector2(1.1f, 0.56f)) / 1.5236f, 0, 1);
+        float colorMix, alpha;
+        if (t < 0.28f)
+        {
+            var progress = t / 0.28f;
+            colorMix = 0.24f * progress;
+            alpha = 0.18f + (0.58f - 0.18f) * progress;
+        }
+        else if (t < 0.54f)
+        {
+            var progress = (t - 0.28f) / 0.26f;
+            colorMix = 0.24f + (0.62f - 0.24f) * progress;
+            alpha = 0.58f + (0.92f - 0.58f) * progress;
+        }
+        else
+        {
+            var progress = (t - 0.54f) / 0.46f;
+            colorMix = 0.62f + (1 - 0.62f) * progress;
+            alpha = 0.92f + (0.7f - 0.92f) * progress;
+        }
+        return new EffectColor((98 + (214 - 98) * colorMix) / 255,
+            (126 + (169 - 126) * colorMix) / 255, (145 + (31 - 145) * colorMix) / 255, alpha);
     }
 
     private sealed class FumeGpuRenderer(
@@ -193,25 +235,36 @@ internal sealed class FumeEffectScene : EffectScene
                 var shape = frame.BackgroundShapes[i];
                 var node = scene._geometry[i];
                 var band = Math.Clamp(frame.Energy.At(shape.AudioBand),0,1);
-                var audioScale = Mix(0.95,1.45,band);
+                var audioScale = shape.AudioBand < 0 ? 1 : Mix(0.95,1.45,band);
+                var audioOpacity = shape.AudioBand < 0 ? 1 : Mix(0.85,1.55,band);
                 var response = Mix(0.58,1.16,shape.Depth);
-                var x = shape.X + (cx-frame.Article.Width*0.5)*(1-response)*0.72;
-                var y = shape.Y + (cy-frame.Article.Height*0.5)*(1-response)*0.72;
+                var vibration = shape.AudioBand < 0 ? 0 : band * (shape.Kind == FumeShapeKind.Spark ? 10 : 5);
+                var phase = shape.Rotation * 1.7 + shape.Depth * 12.0;
+                var vibrationX = Math.Sin(frame.PlaybackSeconds * (2.4 + shape.Depth * 1.8) + phase) * vibration;
+                var vibrationY = Math.Cos(frame.PlaybackSeconds * (2.0 + shape.Depth * 1.4) + phase * 1.31) * vibration * 0.72;
+                var x = shape.X + (cx-frame.Article.Width*0.5)*(1-response)*0.72 + vibrationX;
+                var y = shape.Y + (cy-frame.Article.Height*0.5)*(1-response)*0.72 + vibrationY;
                 node.Position = new Vector2(
                     (float)((bounds.Width*0.5+(x-cx)*scale)*scene._scaling),
                     (float)((bounds.Height*0.5+(y-cy)*scale)*scene._scaling));
                 node.Scale = new Vector2((float)(audioScale*scale*scene._scaling));
-                node.Rotation = (float)(shape.Rotation+frame.ClockSeconds*shape.RotationSpeed);
-                node.TailWidth = node.HeadWidth = (float)((shape.Kind == FumeShapeKind.Spark ? 1.15 : 1.05)*scale*scene._scaling);
-                node.Color = shape.Kind is FumeShapeKind.Square or FumeShapeKind.Spark ? Accent : Secondary;
-                node.Alpha = (float)Math.Clamp(shape.Opacity*Mix(0.85,1.55,band)*frame.BackgroundObjectOpacity*2,0,0.42);
+                node.Rotation = (float)(shape.Rotation+frame.PlaybackSeconds*shape.RotationSpeed);
+                node.TailWidth = node.HeadWidth = (float)((shape.Kind == FumeShapeKind.Spark ? shape.StrokeWidth * 1.15 : shape.StrokeWidth) * scale * scene._scaling);
+                node.Color = shape.IsAccent ? Accent : Secondary;
+                var opacityBoost = shape.Kind == FumeShapeKind.Spark ? 2.35 : 2.15;
+                node.Alpha = (float)Math.Clamp(shape.Opacity*audioOpacity*frame.BackgroundObjectOpacity*opacityBoost,0,0.56);
+                if (node.Alpha <= 0) continue;
+                var extent = shape.Size * audioScale * scale * scene._scaling;
+                if (node.Position.X + extent < 0 || node.Position.Y + extent < 0 ||
+                    node.Position.X - extent > bounds.Width * scene._scaling ||
+                    node.Position.Y - extent > bounds.Height * scene._scaling) continue;
                 if (shape.Kind == FumeShapeKind.Spark && node.Alpha > 0)
                 {
-                    const float padding = 12;
+                    const float padding = 18;
                     if (!scene._sparkGlows.TryGetValue(i, out var glow) || glow.IsDisposed)
                     {
                         var size = (float)shape.Size;
-                        var key = FormattableString.Invariant($"fume-spark:{size:R}");
+                        var key = FormattableString.Invariant($"fume-spark-v2:{size:R}:{shape.StrokeWidth:R}");
                         glow = scene.Device.Textures.GetOrCreateVector(key,
                             new Vector2(size+padding*2), scene._rasterScale, canvas =>
                             {
@@ -220,11 +273,11 @@ internal sealed class FumeEffectScene : EffectScene
                                 path.MoveTo(points[0].X, points[0].Y);
                                 for (var p=1; p<points.Count; p++) path.LineTo(points[p].X,points[p].Y);
                                 path.Close();
-                                using var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal,3.5f);
+                                using var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal,5f);
                                 using var paint = new SKPaint
                                 {
                                     IsAntialias = true, Color = SKColors.White, Style = SKPaintStyle.Stroke,
-                                    StrokeWidth = 1.15f, StrokeCap = SKStrokeCap.Round, MaskFilter = blur
+                                    StrokeWidth = (float)shape.StrokeWidth, StrokeCap = SKStrokeCap.Round, MaskFilter = blur
                                 };
                                 canvas.Translate(size*0.5f+padding,size*0.5f+padding);
                                 canvas.DrawPath(path,paint);
@@ -233,10 +286,17 @@ internal sealed class FumeEffectScene : EffectScene
                     }
                     scene.Device.Textures.Touch(glow);
                     var transform = Matrix3x2.CreateTranslation(-glow.LogicalSize*0.5f)*node.WorldTransform;
-                    context.Primitives.DrawTexture(glow,transform,glow.LogicalSize,node.Alpha,
+                    context.Primitives.DrawTexture(glow,transform,glow.LogicalSize,node.Alpha * 0.75f,
                         EffectBlendMode.Alpha,node.Color);
+                    node.Render(context);
                     continue;
                 }
+                var alpha = node.Alpha;
+                node.Alpha = alpha * 0.56f;
+                node.TailWidth = node.HeadWidth = (float)(Math.Max(shape.StrokeWidth * 0.28, 0.14) * scale * scene._scaling);
+                node.Render(context);
+                node.Alpha = alpha;
+                node.TailWidth = node.HeadWidth = (float)(Math.Max(shape.StrokeWidth * 0.92, 0.78) * scale * scene._scaling);
                 node.Render(context);
             }
         }

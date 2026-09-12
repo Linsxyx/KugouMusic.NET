@@ -11,6 +11,7 @@
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Fonts.Inter" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Tmds.DBus.Protocol" />
     <ProjectReference Include="../../Libraries/AvaloniaSilkEffects/AvaloniaSilkEffects.csproj" />
   </ItemGroup>
 </Project>

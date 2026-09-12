@@ -163,8 +163,11 @@ public sealed class EffectPrimitiveRenderer : IDisposable
                 }
                 left[index] = positions[index] - join * miterLength;
                 right[index] = positions[index] + join * miterLength;
-                var alpha = polyline.Color.A * polyline.WorldAlpha * Lerp(polyline.TailAlpha, polyline.HeadAlpha, progress);
-                colors[index] = (polyline.Color with { A = Math.Clamp(alpha, 0, 1) }).Premultiplied().ToVector4();
+                var color = polyline.PointColors is { } pointColors && start + index < pointColors.Count
+                    ? pointColors[start + index]
+                    : polyline.Color;
+                var alpha = color.A * polyline.WorldAlpha * Lerp(polyline.TailAlpha, polyline.HeadAlpha, progress);
+                colors[index] = (color with { A = Math.Clamp(alpha, 0, 1) }).Premultiplied().ToVector4();
             }
 
             for (var index = 0; index < pointCount - 1; index++)
