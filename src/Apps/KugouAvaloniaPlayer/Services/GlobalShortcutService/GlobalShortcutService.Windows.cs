@@ -118,6 +118,8 @@ public sealed partial class GlobalShortcutService
             Avalonia.Input.Key.Up => 0x26,
             Avalonia.Input.Key.Right => 0x27,
             Avalonia.Input.Key.Down => 0x28,
+            >= Avalonia.Input.Key.F1 and <= Avalonia.Input.Key.F12 =>
+                0x70u + (uint)(key - Avalonia.Input.Key.F1),
             >= Avalonia.Input.Key.A and <= Avalonia.Input.Key.Z => (uint)('A' + (key - Avalonia.Input.Key.A)),
             >= Avalonia.Input.Key.D0 and <= Avalonia.Input.Key.D9 => (uint)('0' + (key - Avalonia.Input.Key.D0)),
             >= Avalonia.Input.Key.NumPad0 and <= Avalonia.Input.Key.NumPad9 =>
