@@ -60,6 +60,7 @@ public sealed class SonnetTuning
     public bool EnableGlitchTransitions { get; set; } = true;
     public SonnetOuterFrameMode OuterFrameMode { get; set; } = SonnetOuterFrameMode.Full;
     public float TextureResolution { get; set; } = 1.5f;
+    public int MultisampleCount { get; set; } = 4;
     public bool PostProcessEnabled { get; set; }
     public float PostProcessGrain { get; set; } = 0.2f;
     public float PostProcessContrast { get; set; }

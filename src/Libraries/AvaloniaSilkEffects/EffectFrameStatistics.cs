@@ -15,4 +15,7 @@ public readonly record struct EffectFrameStatistics(
     string OpenGlVersion,
     string Renderer,
     int ResidentTextures = 0,
-    long ResidentTextureBytes = 0);
+    long ResidentTextureBytes = 0)
+{
+    public int MultisampleCount { get; init; } = 1;
+}

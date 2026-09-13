@@ -8,6 +8,8 @@ public sealed class PostProcessSettings
     internal float SonnetNoiseSeed { get; set; }
     /// <summary>Resolution used by offscreen effects. Values below one reduce Retina fill cost.</summary>
     public float ResolutionScale { get; set; } = 0.75f;
+    /// <summary>Scene MSAA sample count; one disables it. Limited by GL_MAX_SAMPLES.</summary>
+    public int MultisampleCount { get; set; } = 1;
     public float Blur { get; set; }
     public float Glow { get; set; }
     public float Grain { get; set; }
@@ -31,6 +33,7 @@ public sealed class PostProcessSettings
     public void Reset()
     {
         UseSonnetPasses = false;
+        MultisampleCount = 1;
         Blur = Glow = Grain = Contrast = RgbSplit = Halftone = Vignette = 0;
         LensDistortion = LensDispersion = Glitch = 0;
         ColorMatrix = Matrix4x4.Identity;

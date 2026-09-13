@@ -94,6 +94,9 @@ internal sealed class PostProcessPipeline : IDisposable
 
     private readonly GL _gl;
     private readonly EffectFramebuffer _source;
+    private readonly EffectFramebuffer _multisampleSource;
+    private readonly int _maxSamples;
+    private readonly bool _isGles;
     private readonly EffectFramebuffer _blurred;
     private readonly EffectShaderProgram _blurShader;
     private readonly EffectShaderProgram _compositeShader;
@@ -103,13 +106,18 @@ internal sealed class PostProcessPipeline : IDisposable
     private EffectShaderProgram? _sonnetShader;
     private int _targetWidth;
     private int _targetHeight;
+    private bool _usesOffscreen;
 
     public int FrameDrawCalls { get; private set; }
+    public int MultisampleCount { get; private set; } = 1;
 
     public PostProcessPipeline(GL gl)
     {
         _gl = gl;
         _source = new EffectFramebuffer(gl);
+        _multisampleSource = new EffectFramebuffer(gl);
+        gl.GetInteger(GLEnum.MaxSamples, out _maxSamples);
+        _isGles = gl.GetStringS(StringName.Version).Contains("OpenGL ES", StringComparison.OrdinalIgnoreCase);
         _blurred = new EffectFramebuffer(gl);
         _blurShader = new EffectShaderProgram(gl, FullscreenVertex, BlurFragment, "effects-blur");
         _compositeShader = new EffectShaderProgram(gl, FullscreenVertex, CompositeFragment, "effects-composite");
@@ -122,35 +130,54 @@ internal sealed class PostProcessPipeline : IDisposable
         int targetFramebuffer,
         EffectColor clearColor,
         bool enabled,
-        float resolutionScale)
+        float resolutionScale,
+        int multisampleCount = 1)
     {
         FrameDrawCalls = 0;
         _targetWidth = width;
         _targetHeight = height;
+        var samples = Math.Clamp(multisampleCount, 1, Math.Max(1, _maxSamples));
+        _usesOffscreen = enabled || samples > 1;
+        MultisampleCount = 1;
         var renderWidth = width;
         var renderHeight = height;
-        if (enabled)
+        if (_usesOffscreen)
         {
-            var scale = Math.Clamp(resolutionScale, 0.25f, 1f);
+            var scale = enabled ? Math.Clamp(resolutionScale, 0.25f, 1f) : 1;
             renderWidth = Math.Max(1, (int)MathF.Ceiling(width * scale));
             renderHeight = Math.Max(1, (int)MathF.Ceiling(height * scale));
             _source.EnsureSize(renderWidth, renderHeight);
         }
+        if (samples > 1)
+        {
+            _multisampleSource.EnsureSize(renderWidth, renderHeight, samples);
+            MultisampleCount = _multisampleSource.Samples;
+            // GLES always rasterizes multisampled attachments with MSAA; it has
+            // no GL_MULTISAMPLE capability. Desktop GL needs this per-frame state.
+            if (!_isGles) _gl.Enable(EnableCap.Multisample);
+        }
+        else
+            _multisampleSource.Dispose();
         _gl.BindFramebuffer(FramebufferTarget.Framebuffer,
-            enabled ? _source.Framebuffer : (uint)targetFramebuffer);
+            samples > 1 ? _multisampleSource.Framebuffer : _usesOffscreen ? _source.Framebuffer : (uint)targetFramebuffer);
         _gl.Viewport(0, 0, (uint)renderWidth, (uint)renderHeight);
         var clear = clearColor.Premultiplied();
         _gl.ClearColor(clear.R, clear.G, clear.B, clear.A);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.StencilBufferBit);
     }
 
-    public unsafe void End(int targetFramebuffer, PostProcessSettings settings, bool enabled)
+    public unsafe void End(int targetFramebuffer, PostProcessSettings settings)
     {
-        if (!enabled)
+        if (!_usesOffscreen)
             return;
 
         _gl.Disable(EnableCap.Blend);
         _gl.Disable(EnableCap.ScissorTest);
+        _gl.Disable(EnableCap.StencilTest);
+        // Resolve geometry before any filter samples it. Fullscreen filters
+        // then preserve coverage, including premultiplied RGB and alpha.
+        if (MultisampleCount > 1)
+            _multisampleSource.ResolveTo(_source);
         _gl.BindVertexArray(_vao);
 
         var sourceTexture = _source.Texture;
@@ -240,6 +267,7 @@ internal sealed class PostProcessPipeline : IDisposable
         _blurShader.Dispose();
         _compositeShader.Dispose();
         _source.Dispose();
+        _multisampleSource.Dispose();
         _blurred.Dispose();
     }
 }

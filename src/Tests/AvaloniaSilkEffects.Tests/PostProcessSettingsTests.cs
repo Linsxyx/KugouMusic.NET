@@ -10,10 +10,12 @@ public sealed class PostProcessSettingsTests
             Glow = 1,
             Grain = 0.5f,
             Glitch = 0.2f,
+            MultisampleCount = 4,
         };
 
         settings.Reset();
 
         Assert.False(settings.IsEnabled);
+        Assert.Equal(1, settings.MultisampleCount);
     }
 }

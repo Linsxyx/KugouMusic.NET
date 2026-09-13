@@ -155,7 +155,7 @@ internal sealed class ShowcaseWindow : Window
             $"{stats.FramebufferSize.Width}×{stats.FramebufferSize.Height} px   " +
             $"draw {stats.DrawCalls} / flush {stats.Flushes}\n" +
             $"upload {stats.UploadedBytes / 1024d:F1} KiB   " +
-            $"post {(stats.PostProcessingEnabled ? "on" : "bypass")}   skipped {stats.SkippedFrames}\n" +
+            $"post {(stats.PostProcessingEnabled ? "on" : "bypass")}   MSAA {stats.MultisampleCount}x\n" +
             $"textures {stats.ResidentTextures} / {stats.ResidentTextureBytes / 1048576d:F1} MiB\n" +
             $"{stats.OpenGlVersion}\n{stats.Renderer}";
         if (_scene is SonnetShowcaseScene)

@@ -347,6 +347,7 @@ public sealed class SonnetScene : EffectScene
         Device.PostProcess.Reset();
         Device.PostProcess.Time = time;
         Device.PostProcess.ResolutionScale = 1;
+        Device.PostProcess.MultisampleCount = Tuning.MultisampleCount;
         Device.PostProcess.UseSonnetPasses = true;
         if (!Tuning.PostProcessEnabled || Options.StaticMode) return;
         Device.PostProcess.Grain = Tuning.PostProcessGrain * 0.35f;

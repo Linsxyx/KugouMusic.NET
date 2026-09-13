@@ -31,7 +31,7 @@ internal sealed class SonnetFrameDecorView
         var pad = Math.Clamp(fontSize * 0.22f, 8, 20);
         var half = LocalDimensions(placement) / 2 + new Vector2(pad);
         var gap = Math.Clamp(Math.Min(half.X, half.Y) * (variant == 1 ? 0.42f : 0.3f), 6, 30);
-        var color = theme.Primary with { R = theme.Primary.R * 0.55f, G = theme.Primary.G * 0.55f, B = theme.Primary.B * 0.55f, A = 0.85f };
+        var color = theme.Primary with { A = 0.96f };
         var stroke = Math.Clamp(fontSize * 0.03f, 1.2f, 2.2f);
         Vector2[] signs = [new(-1, -1), new(1, -1), new(1, 1), new(-1, 1)];
         for (var side = 0; side < 4; side++)

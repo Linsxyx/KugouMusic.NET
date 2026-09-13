@@ -45,18 +45,18 @@ public sealed class EffectDevice : IDisposable
         Textures.BeginFrame();
         scene.Update(frame);
         var postProcessingEnabled = PostProcess.IsEnabled;
-        _postProcessPipeline.Begin(
-            frame.PixelSize.Width, frame.PixelSize.Height, targetFramebuffer,
-            clearColor, postProcessingEnabled, PostProcess.ResolutionScale);
         Gl.Disable(EnableCap.DepthTest);
         Gl.Disable(EnableCap.CullFace);
         Gl.Disable(EnableCap.ScissorTest);
         Gl.Disable(EnableCap.StencilTest);
+        _postProcessPipeline.Begin(
+            frame.PixelSize.Width, frame.PixelSize.Height, targetFramebuffer,
+            clearColor, postProcessingEnabled, PostProcess.ResolutionScale, PostProcess.MultisampleCount);
         Primitives.Begin(frame.PixelSize.Width, frame.PixelSize.Height);
         _renderContext.PixelSize = frame.PixelSize;
         scene.Render(_renderContext);
         Primitives.Flush();
-        _postProcessPipeline.End(targetFramebuffer, PostProcess, postProcessingEnabled);
+        _postProcessPipeline.End(targetFramebuffer, PostProcess);
         Textures.Collect();
         FrameMetrics = new EffectDeviceFrameMetrics(
             Primitives.FrameDrawCalls + _postProcessPipeline.FrameDrawCalls,
@@ -64,7 +64,10 @@ public sealed class EffectDevice : IDisposable
             Primitives.FrameUploadedBytes,
             postProcessingEnabled,
             Textures.Count,
-            Textures.ResidentBytes);
+            Textures.ResidentBytes)
+        {
+            MultisampleCount = _postProcessPipeline.MultisampleCount,
+        };
     }
 
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
@@ -94,4 +97,7 @@ public readonly record struct EffectDeviceFrameMetrics(
     long UploadedBytes,
     bool PostProcessingEnabled,
     int ResidentTextures,
-    long ResidentTextureBytes);
+    long ResidentTextureBytes)
+{
+    public int MultisampleCount { get; init; } = 1;
+}

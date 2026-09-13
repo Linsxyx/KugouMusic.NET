@@ -180,7 +180,10 @@ public class SilkEffectControl : OpenGlControlBase
             fps, cpuMilliseconds, _submittedFrames, 0,
             metrics.DrawCalls, metrics.Flushes, metrics.UploadedBytes, pixelSize,
             metrics.PostProcessingEnabled, _device.OpenGlVersion, _device.Renderer,
-            metrics.ResidentTextures, metrics.ResidentTextureBytes);
+            metrics.ResidentTextures, metrics.ResidentTextureBytes)
+        {
+            MultisampleCount = metrics.MultisampleCount,
+        };
 
         if (!IsPaused && RenderMode == EffectRenderMode.Continuous)
             ScheduleNextFrameRequest();
