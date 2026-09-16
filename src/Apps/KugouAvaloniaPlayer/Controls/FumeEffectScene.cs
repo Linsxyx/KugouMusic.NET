@@ -201,7 +201,6 @@ internal sealed class FumeEffectScene : EffectScene
     private sealed class FumeGpuRenderer(
         Rect bounds, FumeFrame frame, FumeEffectScene scene, EffectRenderContext context)
     {
-        private static readonly EffectColor Primary = new(242/255f,235/255f,221/255f);
         private static readonly EffectColor Accent = new(214/255f,169/255f,31/255f);
         private static readonly EffectColor Secondary = new(98/255f,126/255f,145/255f);
         private Matrix3x2 Camera(double x, double y, double scale) =>
@@ -337,7 +336,7 @@ internal sealed class FumeEffectScene : EffectScene
                         (float)glowAlpha,EffectBlendMode.Alpha,Accent);
                 }
                 context.Primitives.DrawTexture(row.Sharp!,transform,row.Sharp!.LogicalSize,
-                    (float)alpha,EffectBlendMode.Alpha,Primary);
+                    (float)alpha,EffectBlendMode.Alpha,frame.LyricColor);
                 if (frame.PlaybackSeconds < start || isPassed) continue;
                 for (var glyph=line.Start; glyph<line.End; glyph++)
                 {
@@ -348,9 +347,10 @@ internal sealed class FumeEffectScene : EffectScene
                     var trailStart = glyphStart+Math.Max(glyphEnd-glyphStart,0.001)*0.18;
                     var trail = Math.Pow(Math.Clamp((frame.PlaybackSeconds-trailStart)/trailDuration,0,1),1.35);
                     var t = (float)(0.18+trail*0.82);
+                    var primary = frame.LyricColor;
                     var color = new EffectColor(
-                        Accent.R+(Primary.R-Accent.R)*t, Accent.G+(Primary.G-Accent.G)*t,
-                        Accent.B+(Primary.B-Accent.B)*t,(float)active);
+                        Accent.R+(primary.R-Accent.R)*t, Accent.G+(primary.G-Accent.G)*t,
+                        Accent.B+(primary.B-Accent.B)*t,primary.A*(float)active);
                     var x = (float)(block.GlyphOffsets[glyph]-block.GlyphOffsets[line.Start])+row.Padding;
                     var width = (float)(block.GlyphOffsets[glyph+1]-block.GlyphOffsets[glyph]);
                     context.Primitives.DrawTextureSlice(row.Sharp!,transform,x,x+width*(float)fraction,color);

@@ -28,13 +28,12 @@ internal static class FumeBackgroundScene
             shapes.Add(new FumeBackgroundShape(kind, x, y, size,
                 Sample(key, "rotation", -Math.PI * 0.2, Math.PI * 0.2),
                 Sample(key, "rotation-speed", -0.045, 0.045),
-                Sample(key, "opacity", 0.01, 0.16), Sample(key, "depth"), -1,
+                Sample(key, "opacity", 0.01, 0.16), Sample(key, "depth"), i % 5,
                 Sample(key, "stroke-width", 0.25, 2.1), Sample(key, "color") > 0.5,
                 Sample(key, "gap-start", -Math.PI, Math.PI),
                 Sample(key, "gap-size", Math.PI * 0.12, Math.PI * 0.24)));
         }
 
-        int[] bands = [4, 3, 2, 4, 1];
         var columns = (int)Math.Ceiling(Math.Sqrt(sparkCount * width / Math.Max(height, 1)));
         var rows = (int)Math.Ceiling((double)sparkCount / columns);
         var cellWidth = width * 0.6 / columns;
@@ -48,7 +47,7 @@ internal static class FumeBackgroundScene
                 Math.Clamp(x, width * 0.2, width * 0.8), Math.Clamp(y, height * 0.18, height * 0.82),
                 unit * Sample(key, "size", 0.1, 0.24),
                 Sample(key, "rotation", -Math.PI, Math.PI), Sample(key, "rotation-speed", -0.18, 0.18),
-                Sample(key, "opacity", 0.08, 0.22), Sample(key, "depth"), bands[i % bands.Length],
+                Sample(key, "opacity", 0.08, 0.22), Sample(key, "depth"), i % 5,
                 Sample(key, "stroke-width", 0.75, 1.7), Sample(key, "color") > 0.5));
         }
         return shapes.OrderBy(shape => shape.Depth).ToArray();

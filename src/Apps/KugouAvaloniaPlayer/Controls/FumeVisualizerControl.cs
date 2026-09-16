@@ -19,6 +19,15 @@ public sealed class FumeVisualizerControl : SilkEffectControl
     private const double CameraScaleMax = 2.24;
     private static readonly TimeSpan LayoutRebuildDelay = TimeSpan.FromMilliseconds(96);
 
+    public static readonly StyledProperty<Color> LyricColorProperty =
+        AvaloniaProperty.Register<FumeVisualizerControl, Color>(nameof(LyricColor), Colors.White);
+
+    public Color LyricColor
+    {
+        get => GetValue(LyricColorProperty);
+        set => SetValue(LyricColorProperty, value);
+    }
+
     public static readonly StyledProperty<PlayerViewModel?> PlayerProperty =
         AvaloniaProperty.Register<FumeVisualizerControl, PlayerViewModel?>(nameof(Player));
 
@@ -120,6 +129,7 @@ public sealed class FumeVisualizerControl : SilkEffectControl
     static FumeVisualizerControl()
     {
         AffectsRender<FumeVisualizerControl>(
+            LyricColorProperty,
             PlayerProperty,
             IsActiveProperty,
             LyricFontFamilyProperty,
@@ -279,7 +289,7 @@ public sealed class FumeVisualizerControl : SilkEffectControl
             MarkLayoutDirty(_article != null);
         }
 
-        if (change.Property == BackgroundObjectOpacityProperty ||
+        if (change.Property == LyricColorProperty || change.Property == BackgroundObjectOpacityProperty ||
             change.Property == TextHoldRatioProperty || change.Property == GlowIntensityProperty ||
             change.Property == CameraSpeedProperty || change.Property == CameraTrackingModeProperty)
         {
@@ -329,7 +339,11 @@ public sealed class FumeVisualizerControl : SilkEffectControl
             _lastFrameTimestamp.TotalSeconds, _cameraX, _cameraY, _cameraScale,
             ResolveEnergy(player), Math.Clamp(BackgroundObjectOpacity, 0, 1),
             Math.Clamp(TextHoldRatio, 0, 1), Math.Clamp(GlowIntensity, 0, 1.8),
-            LyricFontFamily.ToString(), overview));
+            LyricFontFamily.ToString(), overview)
+        {
+            LyricColor = new EffectColor(LyricColor.R / 255f, LyricColor.G / 255f,
+                LyricColor.B / 255f, LyricColor.A / 255f)
+        });
         RenderOnce();
     }
 

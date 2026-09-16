@@ -40,6 +40,8 @@
             ShowTranslation="{Binding IsTranslationVisible}"
             ShowRomanization="{Binding IsRomanizationVisible}"
             LyricFontFamily="{Binding LyricFontFamily}"
+            LyricColor="{Binding LyricColor}"
+            TranslationColor="{Binding TranslationColor}"
             ParallaxEnabled="{Binding PendoloParallaxTuning.Enabled}"
             ParallaxMaxTilt="{Binding PendoloParallaxTuning.MaxTilt}"
             ParallaxResponse="{Binding PendoloParallaxTuning.Response}"

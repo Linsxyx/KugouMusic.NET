@@ -7,7 +7,7 @@ public sealed class FumeBackgroundTests
     [Theory]
     [InlineData(1280, 720, 8, 12)]
     [InlineData(390, 844, 7, 9)]
-    public void SceneIsStableLayeredAndSeparatesHaloFromAudioSparks(
+    public void SceneIsStableLayeredAndBothLayersCoverAllAudioBands(
         int width, int height, int haloCount, int sparkCount)
     {
         var shapes = FumeBackgroundScene.Build(null, width, height);
@@ -15,19 +15,21 @@ public sealed class FumeBackgroundTests
         Assert.Equal(haloCount, shapes.Count(s => s.Kind != FumeShapeKind.Spark));
         Assert.Equal(sparkCount, shapes.Count(s => s.Kind == FumeShapeKind.Spark));
         Assert.Equal(shapes.OrderBy(s => s.Depth), shapes);
+        Assert.Equal(Enumerable.Range(0, 5), shapes.Where(s => s.Kind != FumeShapeKind.Spark)
+            .Select(s => s.AudioBand).Distinct().Order());
+        Assert.Equal(Enumerable.Range(0, 5), shapes.Where(s => s.Kind == FumeShapeKind.Spark)
+            .Select(s => s.AudioBand).Distinct().Order());
         foreach (var shape in shapes)
         {
             Assert.InRange(shape.X, 0, width * 1.8);
             Assert.InRange(shape.Y, 0, height * 1.8);
             Assert.True(shape.StrokeWidth > 0);
+            Assert.InRange(shape.AudioBand, 0, 4);
             if (shape.Kind == FumeShapeKind.Spark)
             {
-                Assert.InRange(shape.AudioBand, 1, 4);
                 Assert.InRange(shape.X, width * 1.8 * 0.2, width * 1.8 * 0.8);
                 Assert.InRange(shape.Y, height * 1.8 * 0.18, height * 1.8 * 0.82);
             }
-            else
-                Assert.Equal(-1, shape.AudioBand);
         }
     }
 

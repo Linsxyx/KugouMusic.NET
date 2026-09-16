@@ -19,7 +19,7 @@ public partial class SonnetNowPlayingThemeView : UserControl
 {
     private static readonly SonnetTheme PlayerTheme = new(
         Background: new(0.051f, 0.071f, 0.208f, 1),
-        Primary: new(0.9f, 0.91f, 0.95f, 1),
+        Primary: new(1, 1, 1, 1),
         Accent: new(0.55f, 0.59f, 0.72f, 1),
         Secondary: new(0.42f, 0.45f, 0.57f, 1),
         FontFamily: ResolveSonnetFontFamily(),
@@ -97,6 +97,8 @@ public partial class SonnetNowPlayingThemeView : UserControl
             return;
 
         _viewModel = viewModel;
+        if (_viewModel is not null)
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _player = viewModel?.Player;
         if (_player is null)
             return;
@@ -116,8 +118,17 @@ public partial class SonnetNowPlayingThemeView : UserControl
             _player.VisualizerUpdated -= OnVisualizerUpdated;
         }
 
+        if (_viewModel is not null)
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+
         _player = null;
         _viewModel = null;
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(NowPlayingViewModel.LyricColor))
+            QueueSceneBuild();
     }
 
     private void OnPlayerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -160,11 +171,16 @@ public partial class SonnetNowPlayingThemeView : UserControl
         var identity = ResolveTrackIdentity(song);
         var lines = BuildLines(player.RenderLyricLines, song, player.TotalDurationSeconds);
         var program = SonnetProgramCompiler.Compile(lines, identity);
+        var color = _viewModel!.LyricColor;
+        var theme = PlayerTheme with
+        {
+            Primary = new EffectColor(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f)
+        };
         var context = new SonnetSongContext(
             identity,
             identity,
             program,
-            PlayerTheme,
+            theme,
             new(song?.DisplayTitle, song?.Singer, song?.AlbumName));
 
         if (_scene is null)
@@ -176,6 +192,8 @@ public partial class SonnetNowPlayingThemeView : UserControl
                 {
                     TextureResolution = 1.5f,
                     PostProcessEnabled = true,
+                    PostProcessGrain = 0,
+                    PostProcessVignette = 0,
                     ShowChromaticSplit = false,
                     EnableGlitchTransitions = false,
                     PostProcessRgbShift = 0,
@@ -194,6 +212,7 @@ public partial class SonnetNowPlayingThemeView : UserControl
 
         SynchronizePlaybackClock();
         OnVisualizerUpdated();
+        EffectSurface.RenderOnce();
     }
 
     private void SynchronizePlaybackClock()

@@ -57,4 +57,7 @@ internal readonly record struct FumeFrame(
     double TextHoldRatio,
     double GlowIntensity,
     string FontFamilyName,
-    bool IsOverview);
+    bool IsOverview)
+{
+    public AvaloniaSilkEffects.EffectColor LyricColor { get; init; } = new(1, 1, 1, 1);
+}

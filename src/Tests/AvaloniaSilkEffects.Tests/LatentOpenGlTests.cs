@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Avalonia;
+using KugouAvaloniaPlayer.Controls;
 using AvaloniaSilkEffects.Backgrounds;
 using Silk.NET.OpenGL;
 
@@ -22,6 +23,71 @@ public sealed class LatentOpenGlTests
     [DllImport(Framework)] private static extern nint CGLGetCurrentContext();
     [DllImport(Framework)] private static extern int CGLDestroyContext(nint context);
     [DllImport(Framework)] private static extern int CGLDestroyPixelFormat(nint format);
+
+    [MacOpenGlFact]
+    public unsafe void FumeBackgroundRespondsToAudioWithFrozenTimeAndCamera()
+    {
+        var previous = CGLGetCurrentContext();
+        Assert.Equal(0, CGLChoosePixelFormat([99, 0x4100, 73, 0], out var format, out _));
+        nint native = 0;
+        try
+        {
+            Assert.Equal(0, CGLCreateContext(format, 0, out native));
+            Assert.Equal(0, CGLSetCurrentContext(native));
+            var library = NativeLibrary.Load(Framework);
+            try
+            {
+                using var gl = GL.GetApi(name => NativeLibrary.TryGetExport(library, name, out var address) ? address : 0);
+                using var device = new EffectDevice(gl);
+                using var target = new EffectFramebuffer(gl);
+                var size = new PixelSize(480, 320);
+                target.EnsureSize(size.Width, size.Height);
+                var shapes = FumeBackgroundScene.Build(null, 480, 320);
+                foreach (var kind in Enum.GetValues<FumeShapeKind>())
+                {
+                    var article = new FumeArticleLayout
+                    {
+                        Width = 480, Height = 320, ViewportHeight = 320,
+                        PaperBounds = new(0, 0, 480, 320), Blocks = [], ChronologicalBlocks = [],
+                        BlocksBySourceIndex = new Dictionary<int, FumeArticleBlock>()
+                    };
+                    var shape = shapes.First(s => s.Kind == kind) with { X = 240, Y = 90, Size = 120, Opacity = 0.16 };
+                    var scene = new FumeEffectScene();
+                    scene.Initialize(device);
+                    scene.Resize(size, 1);
+                    try
+                    {
+                        byte[] Capture(double energy)
+                        {
+                            scene.Publish(new Rect(0, 0, 480, 320), new FumeFrame(
+                                article, [shape], 2, -1, 2, 240, 160, 1,
+                                new(energy, energy, energy, energy, energy), 1, 1, 0, "Arial", true));
+                            device.Render(scene, new EffectFrame(TimeSpan.FromSeconds(2), TimeSpan.Zero, size, 1, 0),
+                                (int)target.Framebuffer, EffectColor.Transparent);
+                            var pixels = new byte[size.Width * size.Height * 4];
+                            fixed (byte* p = pixels)
+                                gl.ReadPixels(0, 0, (uint)size.Width, (uint)size.Height, PixelFormat.Rgba, PixelType.UnsignedByte, p);
+                            Assert.Equal(GLEnum.NoError, gl.GetError());
+                            return pixels;
+                        }
+                        var silent = Capture(0);
+                        Assert.Contains(silent, value => value != 0);
+                        var loud = Capture(1);
+                        Assert.False(silent.SequenceEqual(loud), $"{kind} must react to audio without camera or time changes.");
+                        Assert.True(silent.SequenceEqual(Capture(0)), $"{kind} must return to its silent state.");
+                    }
+                    finally { scene.DisposeGpuResources(); }
+                }
+            }
+            finally { NativeLibrary.Free(library); }
+        }
+        finally
+        {
+            CGLSetCurrentContext(previous);
+            if (native != 0) CGLDestroyContext(native);
+            CGLDestroyPixelFormat(format);
+        }
+    }
 
     [MacOpenGlFact]
     public unsafe void SonnetRecreatesEvictedGlyphTextures()

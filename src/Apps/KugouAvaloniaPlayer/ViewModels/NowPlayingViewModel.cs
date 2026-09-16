@@ -161,6 +161,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public partial double LyricFontSize { get; set; } = 26;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LyricColor))]
     public partial IBrush LyricForeground { get; set; } = DefaultLyricBrush;
 
     [ObservableProperty]
@@ -173,10 +174,15 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public partial double TranslationFontSize { get; set; } = 16;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TranslationColor))]
     public partial IBrush TranslationLineForeground { get; set; } = DefaultTranslationLineBrush;
 
     [ObservableProperty]
     public partial IBrush TranslationWordForeground { get; set; } = DefaultTranslationWordBrush;
+
+    public Color LyricColor => (LyricForeground as ISolidColorBrush)?.Color ?? Colors.White;
+
+    public Color TranslationColor => (TranslationLineForeground as ISolidColorBrush)?.Color ?? Colors.White;
 
     public bool IsPrimaryLyricVisible => true;
 

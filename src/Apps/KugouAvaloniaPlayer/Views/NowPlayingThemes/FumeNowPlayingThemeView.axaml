@@ -42,6 +42,7 @@
             Player="{Binding Player}"
             IsActive="{Binding IsOpen}"
             LyricFontFamily="{Binding LyricFontFamily}"
+            LyricColor="{Binding LyricColor}"
             BackgroundObjectOpacity="{Binding FumeTuning.BackgroundObjectOpacity}"
             TextHoldRatio="{Binding FumeTuning.TextHoldRatio}"
             CameraTrackingMode="{Binding FumeTuning.CameraTrackingMode}"

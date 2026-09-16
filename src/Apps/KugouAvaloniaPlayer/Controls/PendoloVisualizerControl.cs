@@ -17,6 +17,24 @@ public sealed class PendoloVisualizerControl : Control
     private static readonly TimeSpan ManualAnchorTimeout = TimeSpan.FromSeconds(3);
     private static readonly Cursor LyricHandCursor = new(StandardCursorType.Hand);
 
+    public static readonly StyledProperty<Color> LyricColorProperty =
+        AvaloniaProperty.Register<PendoloVisualizerControl, Color>(nameof(LyricColor), Colors.White);
+
+    public Color LyricColor
+    {
+        get => GetValue(LyricColorProperty);
+        set => SetValue(LyricColorProperty, value);
+    }
+
+    public static readonly StyledProperty<Color> TranslationColorProperty =
+        AvaloniaProperty.Register<PendoloVisualizerControl, Color>(nameof(TranslationColor), Colors.White);
+
+    public Color TranslationColor
+    {
+        get => GetValue(TranslationColorProperty);
+        set => SetValue(TranslationColorProperty, value);
+    }
+
     public static readonly StyledProperty<PlayerViewModel?> PlayerProperty =
         AvaloniaProperty.Register<PendoloVisualizerControl, PlayerViewModel?>(nameof(Player));
 
@@ -97,6 +115,8 @@ public sealed class PendoloVisualizerControl : Control
     static PendoloVisualizerControl()
     {
         AffectsRender<PendoloVisualizerControl>(
+            LyricColorProperty,
+            TranslationColorProperty,
             PlayerProperty,
             ShowTranslationProperty,
             ShowRomanizationProperty,
@@ -653,8 +673,8 @@ public sealed class PendoloVisualizerControl : Control
                 FontStyle.Normal,
                 index == focusIndex ? FontWeight.SemiBold : FontWeight.Normal);
             var lineColor = index == focusIndex
-                ? WithAlpha(PrimaryColor, 133)
-                : WithAlpha(PrimaryColor, (byte)Math.Round(opacity * 255));
+                ? WithAlpha(LyricColor, (byte)(LyricColor.A * 133 / 255))
+                : WithAlpha(LyricColor, (byte)Math.Round(opacity * LyricColor.A));
             var text = new FormattedText(
                 line.Text,
                 CultureInfo.CurrentUICulture,
@@ -762,7 +782,7 @@ public sealed class PendoloVisualizerControl : Control
         if (sweepWidth <= 0)
             return;
 
-        var sungColor = Mix(PrimaryColor, AccentColor, 0.58, 255);
+        var sungColor = LyricColor;
         text.SetForegroundBrush(new SolidColorBrush(sungColor));
         using (context.PushClip(new Rect(origin.X, origin.Y, sweepWidth, text.Height + 2)))
         {
@@ -858,7 +878,7 @@ public sealed class PendoloVisualizerControl : Control
             FlowDirection.LeftToRight,
             new Typeface(LyricFontFamily, FontStyle.Normal, FontWeight.Normal),
             13,
-            new SolidColorBrush(WithAlpha(SecondaryColor, 205)))
+            new SolidColorBrush(TranslationColor))
         {
             MaxTextWidth = maxTextWidth,
             TextAlignment = TextAlignment.Left
