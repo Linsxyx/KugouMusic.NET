@@ -94,6 +94,7 @@ jobs:
           set -euo pipefail
           dotnet publish "$NATIVE_PROJECT" \
             -c Release \
+            -f net10.0 \
             -r android-arm64 \
             --self-contained true \
             -p:PublishAot=true \
@@ -180,6 +181,7 @@ jobs:
           for rid in ios-arm64 iossimulator-arm64 iossimulator-x64; do
             dotnet publish "$NATIVE_PROJECT" \
               -c Release \
+              -f net10.0 \
               -r "$rid" \
               --self-contained true \
               -p:PublishAot=true \

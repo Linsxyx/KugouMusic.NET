@@ -5,7 +5,7 @@
 
 
   <p>
-    <a href="https://dotnet.microsoft.com"><img src="https://img.shields.io/badge/.NET-11.0-blue.svg" alt=".NET 11.0" /></a>
+    <a href="https://dotnet.microsoft.com"><img src="https://img.shields.io/badge/.NET-10.0-blue.svg" alt=".NET 10.0" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT" /></a>
     <a href="https://github.com/Linsxyx/KugouMusic.NET/releases"><img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-brightgreen.svg" alt="Platform" /></a>
     <a href="https://github.com/Linsxyx/KugouMusic.NET/releases"><img src="https://img.shields.io/github/v/release/Linsxyx/KugouMusic.NET" alt="Release" /></a>
@@ -26,7 +26,7 @@
 
 最好用、最轻量的酷狗音乐概念版播放器。
 
-项目基于 **.NET 11 + Avalonia** 打造，尽量提供一致的全平台桌面体验，而不是浏览器套壳式客户端。因为作者长期使用 Arch Linux 和 Windows 双系统，而 Linux 上又缺少一款体验完整的酷狗音乐播放器，这个项目就这样诞生了。
+项目基于 **.NET 10 / 11 + Avalonia** 打造，尽量提供一致的全平台桌面体验，而不是浏览器套壳式客户端。因为作者长期使用 Arch Linux 和 Windows 双系统，而 Linux 上又缺少一款体验完整的酷狗音乐播放器，这个项目就这样诞生了。
 
 > 注：“最好用、最轻量”是项目目标与设计方向。
 
@@ -221,6 +221,8 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 ## 本地开发
 
+项目同时支持 `net10.0` 和 `net11.0`，仅 .NET 11 启用运行时异步；CI 使用 .NET 11 SDK，发布产物以 .NET 10 为目标。构建全部目标需要 .NET 11 SDK，运行时使用 `-f` 选择框架。Windows 播放器对应使用 `net10.0-windows10.0.19041.0` 或 `net11.0-windows10.0.19041.0`。
+
 ```bash
 git clone https://github.com/Linsxyx/KugouMusic.NET.git
 cd KugouMusic.NET
@@ -228,19 +230,19 @@ cd KugouMusic.NET
 dotnet restore KugouMusic.NET.slnx
 dotnet build KugouMusic.NET.slnx
 
-dotnet run --project src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj
+dotnet run -f net11.0 --project src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj
 ```
 
 如需运行终端播放器：
 
 ```bash
-dotnet run --project src/Apps/KgTest/KgTest.csproj
+dotnet run -f net11.0 --project src/Apps/KgTest/KgTest.csproj
 ```
 
 如需运行 Web API：
 
 ```bash
-dotnet run --project src/Apps/KgWebApi.Net/KgWebApi.Net.csproj
+dotnet run -f net11.0 --project src/Apps/KgWebApi.Net/KgWebApi.Net.csproj
 ```
 
 Web API 文档（开发环境）：`http://localhost:5058/scalar/v1`

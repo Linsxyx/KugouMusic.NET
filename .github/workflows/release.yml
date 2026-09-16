@@ -15,15 +15,19 @@ jobs:
         include:
           - os: windows-latest
             rid: win-x64
+            framework: net10.0-windows10.0.19041.0
             name: win-x64
           - os: windows-latest
             rid: win-arm64
+            framework: net10.0-windows10.0.19041.0
             name: win-arm64
           - os: ubuntu-latest
             rid: linux-x64
+            framework: net10.0
             name: linux-x64
           - os: ubuntu-24.04-arm
             rid: linux-arm64
+            framework: net10.0
             name: linux-arm64
 
     runs-on: ${{ matrix.os }}
@@ -48,6 +52,7 @@ jobs:
           CLEAN_VERSION=${GITHUB_REF_NAME#v}
           dotnet publish ./src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
             -c Release \
+            -f ${{ matrix.framework }} \
             "-p:BUILD_VERSION=$CLEAN_VERSION" \
             -r ${{ matrix.rid }} \
             --self-contained true \
@@ -181,6 +186,7 @@ jobs:
         run: |
           dotnet publish ./src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
             -c Release \
+            -f net10.0 \
             "-p:BUILD_VERSION=$VERSION" \
             -r "$RID" \
             --self-contained true \
