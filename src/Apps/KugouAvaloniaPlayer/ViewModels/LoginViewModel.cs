@@ -21,40 +21,30 @@ public partial class LoginViewModel(
     ILogger<LoginViewModel> logger)
     : ObservableObject
 {
-    [ObservableProperty]
-    public partial string Code { get; set; } = "";
+    [ObservableProperty] public partial string Code { get; set; } = "";
 
-    [ObservableProperty]
-    public partial int Countdown { get; set; }
+    [ObservableProperty] public partial int Countdown { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsLoggingIn { get; set; }
+    [ObservableProperty] public partial bool IsLoggingIn { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsQrExpired { get; set; }
+    [ObservableProperty] public partial bool IsQrExpired { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsQrLoginSelected { get; set; }
+    [ObservableProperty] public partial bool IsQrLoginSelected { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsSendingCode { get; set; }
+    [ObservableProperty] public partial bool IsSendingCode { get; set; }
 
-    [ObservableProperty]
-    public partial bool HasLoginAccountChoices { get; set; }
+    [ObservableProperty] public partial bool HasLoginAccountChoices { get; set; }
 
-    [ObservableProperty]
-    public partial string Mobile { get; set; } = "";
+    [ObservableProperty] public partial string Mobile { get; set; } = "";
 
-    [ObservableProperty]
-    public partial string? QrCodeImageUrl { get; set; }
+    [ObservableProperty] public partial string? QrCodeImageUrl { get; set; }
 
     private string? _qrCodeKey;
     private CancellationTokenSource? _qrPollingCts;
-    [ObservableProperty]
-    public partial string QrStatusMessage { get; set; } = "请使用酷狗音乐概念版App扫码";
+    private int _qrRequestVersion;
+    [ObservableProperty] public partial string QrStatusMessage { get; set; } = "请使用酷狗音乐概念版App扫码";
 
-    [ObservableProperty]
-    public partial string StatusMessage { get; set; } = "";
+    [ObservableProperty] public partial string StatusMessage { get; set; } = "";
 
     public ObservableCollection<LoginAccountOptionViewModel> LoginAccountChoices { get; } = [];
 
@@ -80,6 +70,7 @@ public partial class LoginViewModel(
     private async Task RefreshQrCode()
     {
         StopQrPolling();
+        var requestVersion = _qrRequestVersion;
         QrStatusMessage = "正在获取二维码...";
         QrCodeImageUrl = null;
         IsQrExpired = false;
@@ -87,6 +78,9 @@ public partial class LoginViewModel(
         try
         {
             var qr = await authClient.GetQrCodeAsync();
+            if (requestVersion != _qrRequestVersion)
+                return;
+
             if (qr != null && !string.IsNullOrEmpty(qr.Qrcode))
             {
                 _qrCodeKey = qr.Qrcode;
@@ -102,6 +96,9 @@ public partial class LoginViewModel(
         }
         catch (Exception ex)
         {
+            if (requestVersion != _qrRequestVersion)
+                return;
+
             logger.LogWarning(ex, "获取二维码失败");
             QrStatusMessage = $"获取二维码出错: {ex.Message}";
             IsQrExpired = true;
@@ -192,6 +189,7 @@ public partial class LoginViewModel(
 
     public void StopQrPolling()
     {
+        _qrRequestVersion++;
         if (_qrPollingCts != null)
         {
             _qrPollingCts.Cancel();
@@ -204,6 +202,11 @@ public partial class LoginViewModel(
     private void StopQrPollingOnUnload()
     {
         StopQrPolling();
+        if (IsQrLoginSelected)
+        {
+            IsQrExpired = true;
+            QrStatusMessage = "请刷新二维码后重新扫码";
+        }
     }
 
     [RelayCommand]

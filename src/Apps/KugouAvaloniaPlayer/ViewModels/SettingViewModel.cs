@@ -66,61 +66,47 @@ public partial class SettingViewModel : PageViewModelBase
     private bool _isApplyingSettingsSnapshot;
     private int _lastAppliedOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
 
-    [ObservableProperty]
-    public partial bool AutoCheckUpdate { get; set; }
+    [ObservableProperty] public partial bool AutoCheckUpdate { get; set; }
 
-    [ObservableProperty]
-    public partial string SelectedAppFontFamily { get; set; } = AppFontService.SystemDefaultOption;
+    [ObservableProperty] public partial string SelectedAppFontFamily { get; set; } = AppFontService.SystemDefaultOption;
 
-    [ObservableProperty]
-    public partial bool LinuxUseFullWindowDecorations { get; set; }
+    [ObservableProperty] public partial bool LinuxUseFullWindowDecorations { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CustomBackgroundImageStatus))]
     public partial bool UseCustomBackgroundImage { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CustomBackgroundImageStatus))]
     public partial string? CustomBackgroundImagePath { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CustomBackgroundImageOpacityDisplay))]
     public partial double CustomBackgroundImageOpacity { get; set; } = 0.35;
-    [ObservableProperty]
-    public partial string DesktopLyricColorHexInput { get; set; } = "#FFFFFFFF";
-    [ObservableProperty]
-    public partial string DesktopSelectedLyricColorMode { get; set; } = LyricColorModeDefault;
-    [ObservableProperty]
-    public partial string DesktopSelectedLyricColorTarget { get; set; } = LyricTargetMain;
-    [ObservableProperty] 
-    public partial string? DesktopSelectedLyricFontFamily{ get; set; }
-    [ObservableProperty]
-    public partial string DesktopSelectedLyricFontMode { get; set; } = LyricColorModeDefault;
 
-    [ObservableProperty]
-    public partial bool DesktopLyricDoubleLineEnabled { get; set; }
+    [ObservableProperty] public partial string DesktopLyricColorHexInput { get; set; } = "#FFFFFFFF";
+    [ObservableProperty] public partial string DesktopSelectedLyricColorMode { get; set; } = LyricColorModeDefault;
+    [ObservableProperty] public partial string DesktopSelectedLyricColorTarget { get; set; } = LyricTargetMain;
+    [ObservableProperty] public partial string? DesktopSelectedLyricFontFamily { get; set; }
+    [ObservableProperty] public partial string DesktopSelectedLyricFontMode { get; set; } = LyricColorModeDefault;
 
-    [ObservableProperty]
-    public partial string DesktopSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
+    [ObservableProperty] public partial bool DesktopLyricDoubleLineEnabled { get; set; }
 
-    [ObservableProperty]
-    public partial string DesktopSelectedLyricLayout { get; set; } = DesktopLyricLayoutHorizontal;
+    [ObservableProperty] public partial string DesktopSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
 
-    [ObservableProperty]
-    public partial bool EnableTaskbarLyrics { get; set; }
+    [ObservableProperty] public partial string DesktopSelectedLyricLayout { get; set; } = DesktopLyricLayoutHorizontal;
 
-    [ObservableProperty]
-    public partial bool TaskbarLyricsShowTranslation { get; set; } = true;
+    [ObservableProperty] public partial bool EnableTaskbarLyrics { get; set; }
 
-    [ObservableProperty]
-    public partial string TaskbarSelectedLyricAlignment { get; set; } = LyricAlignmentLeft;
+    [ObservableProperty] public partial bool TaskbarLyricsShowTranslation { get; set; } = true;
 
-    [ObservableProperty]
-    public partial int TaskbarLyricsHorizontalOffset { get; set; }
+    [ObservableProperty] public partial string TaskbarSelectedLyricAlignment { get; set; } = LyricAlignmentLeft;
 
-    [ObservableProperty]
-    public partial string? TaskbarSelectedLyricFontFamily { get; set; }
+    [ObservableProperty] public partial int TaskbarLyricsHorizontalOffset { get; set; }
 
-    [ObservableProperty]
-    public partial int TaskbarLyricsFontSize { get; set; } = 17;
+    [ObservableProperty] public partial string? TaskbarSelectedLyricFontFamily { get; set; }
+
+    [ObservableProperty] public partial int TaskbarLyricsFontSize { get; set; } = 17;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TaskbarUnplayedColorPreviewBrush))]
@@ -130,44 +116,33 @@ public partial class SettingViewModel : PageViewModelBase
     [NotifyPropertyChangedFor(nameof(TaskbarPlayedColorPreviewBrush))]
     public partial string TaskbarPlayedColorHexInput { get; set; } = DefaultTaskbarPlayedColor;
 
-    [ObservableProperty]
-    public partial bool EnableGlobalShortcuts { get; set; }
+    [ObservableProperty] public partial bool EnableGlobalShortcuts { get; set; }
 
-    [ObservableProperty]
-    public partial bool EnableNowPlayingVisualizer { get; set; }
+    [ObservableProperty] public partial bool EnableNowPlayingVisualizer { get; set; }
 
-    [ObservableProperty]
-    public partial bool UseLightweightNowPlayingLyricScroll { get; set; }
+    [ObservableProperty] public partial bool UseLightweightNowPlayingLyricScroll { get; set; }
 
-    [ObservableProperty] 
-    public partial bool EnableSeamlessTransition { get; set; } = true;
+    [ObservableProperty] public partial bool EnableSeamlessTransition { get; set; } = true;
 
-    [ObservableProperty]
-    public partial bool EnableSurround { get; set; }
+    [ObservableProperty] public partial bool EnableSurround { get; set; }
 
-    [ObservableProperty]
-    public partial bool EnableVolumeNormalization { get; set; }
+    [ObservableProperty] public partial bool EnableVolumeNormalization { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsOutputDeviceStatusVisible))]
     public partial string OutputDeviceStatus { get; set; } = string.Empty;
 
-    [ObservableProperty]
-    public partial bool IsCheckingUpdate { get; set; }
+    [ObservableProperty] public partial bool IsCheckingUpdate { get; set; }
 
-    [ObservableProperty]
-    public partial bool IsLoadingReleaseNotes { get; set; }
+    [ObservableProperty] public partial bool IsLoadingReleaseNotes { get; set; }
 
     private bool _isInitializingLyricColorEditor;
     private bool _isInitializingLyricFontEditor;
-    [ObservableProperty]
-    public partial bool IsLoading { get; set; } = true;
+    [ObservableProperty] public partial bool IsLoading { get; set; } = true;
 
-    [ObservableProperty]
-    public partial string PlayPageLyricColorHexInput { get; set; } = "#FFFFFFFF";
+    [ObservableProperty] public partial string PlayPageLyricColorHexInput { get; set; } = "#FFFFFFFF";
 
-    [ObservableProperty]
-    public partial double PlayPageLyricFontSize { get; set; } = 26;
+    [ObservableProperty] public partial double PlayPageLyricFontSize { get; set; } = 26;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NowPlayingBackgroundBlurRadiusDisplay))]
@@ -177,54 +152,40 @@ public partial class SettingViewModel : PageViewModelBase
     public partial NowPlayingBackgroundSource SelectedNowPlayingBackgroundSource { get; set; } =
         NowPlayingBackgroundSource.Cover;
 
-    [ObservableProperty]
-    public partial AudioOutputDevice? SelectedOutputDevice { get; set; }
+    [ObservableProperty] public partial AudioOutputDevice? SelectedOutputDevice { get; set; }
 
-    [ObservableProperty]
-    public partial string PlayPageSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
+    [ObservableProperty] public partial string PlayPageSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
 
-    [ObservableProperty]
-    public partial string PlayPageSelectedLyricColorMode { get; set; } = LyricColorModeDefault;
+    [ObservableProperty] public partial string PlayPageSelectedLyricColorMode { get; set; } = LyricColorModeDefault;
 
-    [ObservableProperty]
-    public partial string PlayPageSelectedLyricColorTarget { get; set; } = LyricTargetMain;
+    [ObservableProperty] public partial string PlayPageSelectedLyricColorTarget { get; set; } = LyricTargetMain;
 
-    [ObservableProperty]
-    public partial string? PlayPageSelectedLyricFontFamily { get; set; }
+    [ObservableProperty] public partial string? PlayPageSelectedLyricFontFamily { get; set; }
 
-    [ObservableProperty]
-    public partial string PlayPageSelectedLyricFontMode { get; set; } = LyricColorModeDefault;
+    [ObservableProperty] public partial string PlayPageSelectedLyricFontMode { get; set; } = LyricColorModeDefault;
 
-    [ObservableProperty]
-    public partial string ReleaseNotesStatus { get; set; } = "正在加载最近版本发布说明...";
+    [ObservableProperty] public partial string ReleaseNotesStatus { get; set; } = "正在加载最近版本发布说明...";
 
-    [ObservableProperty]
-    public partial CloseBehavior SelectedCloseBehavior { get; set; }
+    [ObservableProperty] public partial CloseBehavior SelectedCloseBehavior { get; set; }
 
-    [ObservableProperty]
-    public partial string SelectedEQPreset { get; set; }
+    [ObservableProperty] public partial string SelectedEQPreset { get; set; }
 
-    [ObservableProperty]
-    public partial string SelectedSettingsSection { get; set; } = SettingsSectionGeneral;
+    [ObservableProperty] public partial string SelectedSettingsSection { get; set; } = SettingsSectionGeneral;
 
-    [ObservableProperty]
-    public partial string? UserAvatar { get; set; }
+    [ObservableProperty] public partial string? UserAvatar { get; set; }
 
-    [ObservableProperty]
-    public partial string UserId { get; set; }
+    [ObservableProperty] public partial string UserId { get; set; }
 
-    [ObservableProperty]
-    public partial string UserName { get; set; } = "加载中...";
+    [ObservableProperty] public partial string UserName { get; set; } = "加载中...";
 
-    [ObservableProperty]
-    public partial string VipStatus { get; set; } = "未开通";
+    [ObservableProperty] public partial string VipStatus { get; set; } = "未开通";
 
     public SettingViewModel(PlayerViewModel player, UserClient userClient, LoginClient authClient,
         ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
         IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService,
         IFolderPickerService folderPickerService, IUiPreferencesState uiPreferencesState,
         IMainWindowService mainWindowService, IMessenger messenger, ITaskbarLyricsService taskbarLyricsService,
-        IDesktopLyricWindowService desktopLyricWindowService)
+        IDesktopLyricWindowService desktopLyricWindowService, LoginViewModel compatibilityLogin)
     {
         _userClient = userClient;
         _authClient = authClient;
@@ -239,6 +200,7 @@ public partial class SettingViewModel : PageViewModelBase
         _desktopLyricWindowService = desktopLyricWindowService;
         _messenger = messenger;
         _taskbarLyricsService = taskbarLyricsService;
+        CompatibilityLogin = compatibilityLogin;
 
         Player = player;
         EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
@@ -270,34 +232,39 @@ public partial class SettingViewModel : PageViewModelBase
             RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
             DesktopSelectedLyricAlignment = FormatAlignment(SettingsManager.Settings.DesktopLyricAlignment);
-            DesktopSelectedLyricLayout = SettingsManager.Settings.DesktopLyricLayoutMode == DesktopLyricLayoutMode.Vertical
-                ? DesktopLyricLayoutVertical
-                : DesktopLyricLayoutHorizontal;
+            DesktopSelectedLyricLayout =
+                SettingsManager.Settings.DesktopLyricLayoutMode == DesktopLyricLayoutMode.Vertical
+                    ? DesktopLyricLayoutVertical
+                    : DesktopLyricLayoutHorizontal;
             EnableTaskbarLyrics = IsTaskbarLyricsSupported && SettingsManager.Settings.EnableTaskbarLyrics;
             TaskbarLyricsShowTranslation = SettingsManager.Settings.TaskbarLyricsShowTranslation;
-            TaskbarLyricsHorizontalOffset = Math.Clamp(SettingsManager.Settings.TaskbarLyricsHorizontalOffset, -200, 200);
-            TaskbarSelectedLyricAlignment = SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right
-                ? LyricAlignmentRight
-                : LyricAlignmentLeft;
+            TaskbarLyricsHorizontalOffset =
+                Math.Clamp(SettingsManager.Settings.TaskbarLyricsHorizontalOffset, -200, 200);
+            TaskbarSelectedLyricAlignment =
+                SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right
+                    ? LyricAlignmentRight
+                    : LyricAlignmentLeft;
             TaskbarSelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.TaskbarLyricsFontFamily)
-                ?? GetDefaultTaskbarFontFamily();
+                                             ?? GetDefaultTaskbarFontFamily();
             TaskbarLyricsFontSize = Math.Clamp(SettingsManager.Settings.TaskbarLyricsFontSize, 12, 24);
             TaskbarUnplayedColorHexInput = NormalizeColorHex(SettingsManager.Settings.TaskbarLyricsUnplayedColor)
-                ?? DefaultTaskbarUnplayedColor;
+                                           ?? DefaultTaskbarUnplayedColor;
             TaskbarPlayedColorHexInput = NormalizeColorHex(SettingsManager.Settings.TaskbarLyricsPlayedColor)
-                ?? DefaultTaskbarPlayedColor;
+                                         ?? DefaultTaskbarPlayedColor;
             LoadDesktopLyricColorEditorFromSettings();
             LoadDesktopLyricFontEditorFromSettings();
             LoadPlayPageLyricColorEditorFromSettings();
             LoadPlayPageLyricFontEditorFromSettings();
             LoadPlayPageLyricAlignmentFromSettings();
-            NowPlayingBackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
+            NowPlayingBackgroundBlurRadius =
+                Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
             SelectedNowPlayingBackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
         }
         finally
         {
             _isApplyingSettingsSnapshot = false;
         }
+
         ShortcutItems =
         [
             new GlobalShortcutItemViewModel(GlobalShortcutAction.PlayPause, "播放/暂停"),
@@ -335,6 +302,7 @@ public partial class SettingViewModel : PageViewModelBase
 
     public string[] LyricColorModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
     public string[] LyricFontModeOptions { get; } = [LyricColorModeDefault, LyricColorModeCustom];
+
     public NowPlayingBackgroundSource[] NowPlayingBackgroundSourceOptions { get; } =
     [
         NowPlayingBackgroundSource.Cover,
@@ -382,9 +350,12 @@ public partial class SettingViewModel : PageViewModelBase
     public bool IsLyricsSection => SelectedSettingsSection == SettingsSectionLyrics;
     public bool IsUpdateSection => SelectedSettingsSection == SettingsSectionUpdate;
     public bool IsAccountSection => SelectedSettingsSection == SettingsSectionAccount;
+    private LoginViewModel CompatibilityLogin { get; }
+    public LoginViewModel? AccountLogin => IsAccountSection ? CompatibilityLogin : null;
     public bool HasReleaseNotes => RecentReleaseNotes.Count > 0;
     public bool IsReleaseNotesStatusVisible => IsLoadingReleaseNotes || !HasReleaseNotes;
     public bool IsOutputDeviceStatusVisible => !string.IsNullOrWhiteSpace(OutputDeviceStatus);
+
     public FontFamily AppFontPreviewFamily =>
         SelectedAppFontFamily == AppFontService.SystemDefaultOption
             ? FontFamily.Default
@@ -405,6 +376,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string PlayPageLyricFontSizeDisplay => $"{Math.Round(PlayPageLyricFontSize):0}pt";
     public string NowPlayingBackgroundBlurRadiusDisplay => $"{Math.Round(NowPlayingBackgroundBlurRadius):0}px";
     public string CustomBackgroundImageOpacityDisplay => $"{Math.Round(CustomBackgroundImageOpacity * 100):0}%";
+
     public string CustomBackgroundImageStatus =>
         string.IsNullOrWhiteSpace(CustomBackgroundImagePath)
             ? "未选择图片"
@@ -1150,7 +1122,8 @@ public partial class SettingViewModel : PageViewModelBase
             LoadPlayPageLyricColorEditorFromSettings();
             LoadPlayPageLyricFontEditorFromSettings();
             LoadPlayPageLyricAlignmentFromSettings();
-            NowPlayingBackgroundBlurRadius = Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
+            NowPlayingBackgroundBlurRadius =
+                Math.Clamp(SettingsManager.Settings.NowPlayingBackgroundBlurRadius, 0.0, 80.0);
             SelectedNowPlayingBackgroundSource = SettingsManager.Settings.NowPlayingBackgroundSource;
         }
         finally
@@ -1189,7 +1162,8 @@ public partial class SettingViewModel : PageViewModelBase
         }
 
         var selected = OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == preferredDeviceId) ??
-                       OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
+                       OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x =>
+                           x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
                        AudioOutputDevice.SystemDefault;
         SelectOutputDeviceSilently(selected.DeviceId);
     }
@@ -1197,7 +1171,8 @@ public partial class SettingViewModel : PageViewModelBase
     private void SelectOutputDeviceSilently(int deviceId)
     {
         var selected = OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == deviceId) ??
-                       OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x => x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
+                       OutputDeviceOptions.AsValueEnumerable().FirstOrDefault(x =>
+                           x.DeviceId == AppSettings.SystemDefaultAudioOutputDeviceId) ??
                        AudioOutputDevice.SystemDefault;
 
         var wasApplyingSettingsSnapshot = _isApplyingSettingsSnapshot;
@@ -1397,7 +1372,7 @@ public partial class SettingViewModel : PageViewModelBase
     private string GetDefaultTaskbarFontFamily()
     {
         return NormalizeFontName(DefaultTaskbarFontFamily)
-            ?? (LyricFontFamilyOptions.Length > 0 ? LyricFontFamilyOptions[0] : DefaultTaskbarFontFamily);
+               ?? (LyricFontFamilyOptions.Length > 0 ? LyricFontFamilyOptions[0] : DefaultTaskbarFontFamily);
     }
 
     partial void OnSelectedSettingsSectionChanged(string value)
@@ -1408,6 +1383,7 @@ public partial class SettingViewModel : PageViewModelBase
         OnPropertyChanged(nameof(IsLyricsSection));
         OnPropertyChanged(nameof(IsUpdateSection));
         OnPropertyChanged(nameof(IsAccountSection));
+        OnPropertyChanged(nameof(AccountLogin));
 
         if (value == SettingsSectionUpdate)
             _ = LoadReleaseNotesAsync();

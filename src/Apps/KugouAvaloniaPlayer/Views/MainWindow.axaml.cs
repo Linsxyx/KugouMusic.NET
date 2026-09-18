@@ -43,7 +43,7 @@ public partial class MainWindow : KugouWindow
     }
 
     public bool CanClose { get; set; }
-    
+
     private void ApplyLinuxSystemWindowDecorationsFallback()
     {
 #if KUGOU_LINUX
@@ -123,21 +123,20 @@ public partial class MainWindow : KugouWindow
         var settings = SettingsManager.Settings.MainWindowState;
         var state = WindowState;
 
-        settings.HasValue = true;
         settings.State = state == WindowState.Maximized
             ? SavedMainWindowState.Maximized
             : SavedMainWindowState.Normal;
 
         if (state == WindowState.Normal)
         {
-            StoreBounds(settings, Position, new Size(Width, Height));
+            StoreBounds(settings, Position, ClientSize);
         }
         else
         {
             StoreBounds(
                 settings,
                 _lastNormalPosition ?? Position,
-                _lastNormalSize ?? new Size(Width, Height));
+                _lastNormalSize ?? ClientSize);
         }
 
         SettingsManager.Save();
@@ -179,19 +178,25 @@ public partial class MainWindow : KugouWindow
 
     private void CaptureNormalBounds()
     {
-        if (WindowState != WindowState.Normal || !IsValidSize(Width, Height))
+        var size = ClientSize;
+        if (WindowState != WindowState.Normal || !IsValidSize(size.Width, size.Height))
             return;
 
         _lastNormalPosition = Position;
-        _lastNormalSize = new Size(Width, Height);
+        _lastNormalSize = size;
     }
 
     private void StoreBounds(MainWindowStateSettings settings, PixelPoint position, Size size)
     {
+        // Width/Height can be NaN for automatic layout; never persist invalid dimensions.
+        if (!IsValidSize(size.Width, size.Height))
+            return;
+
         settings.Width = Math.Max(size.Width, MinWidth);
         settings.Height = Math.Max(size.Height, MinHeight);
         settings.X = position.X;
         settings.Y = position.Y;
+        settings.HasValue = true;
     }
 
     private static bool IsValidSize(double width, double height)

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:views="using:KugouAvaloniaPlayer.Views"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -383,7 +384,8 @@
                                             Cursor="Hand"
                                             Command="{Binding OpenEqSettingsCommand}"
                                             ToolTip.Tip="自定义EQ曲线">
-                                        <Svg Classes="ThemeSvgIcon" Path="/Assets/gear-svgrepo-com.svg" Width="18" Height="14" />
+                                        <Svg Classes="ThemeSvgIcon" Path="/Assets/gear-svgrepo-com.svg" Width="18"
+                                             Height="14" />
                                     </Button>
                                 </Grid>
                             </Grid>
@@ -784,7 +786,7 @@
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
                                         <StackPanel>
                                             <TextBlock Text="关闭上升动效" FontWeight="DemiBold" />
-                                            
+
                                         </StackPanel>
                                         <ToggleSwitch Grid.Column="1"
                                                       IsChecked="{Binding UseLightweightNowPlayingLyricScroll, Mode=TwoWay}" />
@@ -847,8 +849,8 @@
                                     </Grid>
                                 </StackPanel>
                             </suki:GlassCard>
-                            
-                             <suki:GlassCard IsOpaque="True"
+
+                            <suki:GlassCard IsOpaque="True"
                                             Padding="14"
                                             IsVisible="{Binding IsTaskbarLyricsSupported}">
                                 <StackPanel Spacing="10">
@@ -1043,14 +1045,14 @@
                                                Foreground="{DynamicResource SukiLowText}" />
                                 </StackPanel>
 
-                                
+
                                 <Button Classes="Basic" Grid.Column="2"
-                                    Command="{Binding OpenRepositoryCommand}"
-                                    Cursor="Hand"
-                                    ToolTip.Tip="项目主页">
-                                    <Svg Classes="ThemeSvgIcon" Path="/Assets/github.svg" Width="25" Height="25"/>
+                                        Command="{Binding OpenRepositoryCommand}"
+                                        Cursor="Hand"
+                                        ToolTip.Tip="项目主页">
+                                    <Svg Classes="ThemeSvgIcon" Path="/Assets/github.svg" Width="25" Height="25" />
                                 </Button>
-                                
+
                             </Grid>
 
                             <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,2" />
@@ -1097,7 +1099,8 @@
                                         Command="{Binding OpenLogFolderCommand}"
                                         MinWidth="120">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Svg Classes="ThemeSvgIcon" Path="/Assets/open-log-folder.svg" Width="16" Height="16" />
+                                        <Svg Classes="ThemeSvgIcon" Path="/Assets/open-log-folder.svg" Width="16"
+                                             Height="16" />
                                         <TextBlock Text="打开日志" />
                                     </StackPanel>
                                 </Button>
@@ -1106,9 +1109,9 @@
                             <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,2" />
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,4">
-                                
+
                                 <TextBlock Text="最近更新日志" FontWeight="DemiBold" />
-                                
+
                                 <Button Grid.Column="1"
                                         Classes="Basic"
                                         Command="{Binding RefreshReleaseNotesCommand}"
@@ -1146,7 +1149,7 @@
                                                                FontSize="12"
                                                                Foreground="{DynamicResource SukiLowText}" />
                                                 </Grid>
-                                                
+
                                                 <TextBlock Text="{Binding Summary}"
                                                            TextWrapping="Wrap"
                                                            FontSize="12"
@@ -1175,7 +1178,7 @@
                                         ClipToBounds="True"
                                         Background="#E0E0E0">
                                     <Image asyncImageLoader:ImageLoader.Source="{Binding UserAvatar}"
-                                                         Stretch="UniformToFill" />
+                                           Stretch="UniformToFill" />
                                 </Border>
 
                                 <StackPanel Grid.Column="1"
@@ -1207,6 +1210,26 @@
                             </Grid>
                         </StackPanel>
                     </suki:GlassCard>
+
+                    <Border IsVisible="{Binding IsAccountSection}"
+                            Padding="14"
+                            CornerRadius="12"
+                            Background="{DynamicResource SukiBackground}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="兼容登录" FontSize="16" FontWeight="SemiBold" />
+                            <TextBlock Text="登录窗口无法打开时，可在这里直接使用手机号或扫码登录。"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource SukiLowText}" />
+                            <ContentControl Content="{Binding AccountLogin}"
+                                            HorizontalContentAlignment="Left">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:LoginViewModel">
+                                        <views:LoginView />
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+                        </StackPanel>
+                    </Border>
 
                     <Border Height="64"
                             IsHitTestVisible="False" />
