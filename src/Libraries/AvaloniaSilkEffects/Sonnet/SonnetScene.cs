@@ -49,6 +49,10 @@ public sealed class SonnetScene : EffectScene
     public int ActiveParagraphIndex => _activeParagraph;
     public SonnetShotKind? ActiveShotKind { get; private set; }
     public int CachedParagraphCount => _cache.Count;
+#if DEBUG
+    public string? ActivePresetDebugLabel { get; private set; }
+    private SonnetShot? _debugShot;
+#endif
 
     public void SetProgram(SonnetProgram program)
     {
@@ -248,6 +252,25 @@ public sealed class SonnetScene : EffectScene
             view.Root.IsVisible = index == shotIndex;
             if (index != shotIndex) continue;
             ActiveShotKind = view.Shot.Kind;
+#if DEBUG
+            if (!ReferenceEquals(_debugShot, view.Shot))
+            {
+                _debugShot = view.Shot;
+                var seed = unchecked(paragraph.NoiseSeed + (uint)(shotIndex * 97));
+                var hasGeometry = view.Shot.Kind is SonnetShotKind.TypeImpact or SonnetShotKind.FragmentCollage;
+                var geometry = !Tuning.ShowOnlyText && Tuning.ShowBackgroundMg && hasGeometry
+                    ? $"G{seed % SonnetVariantResolver.GeometryVariantCount:D2}" : "G—";
+                var background = !Tuning.ShowOnlyText && Tuning.ShowBackgroundMg
+                    ? $"B{SonnetVariantResolver.Background(seed):D2}" : "B—";
+                var fixedGeometry = !Tuning.ShowOnlyText && Tuning.ShowFixedGeo && hasGeometry
+                    ? $"F{SonnetVariantResolver.FixedGeometry(seed):D2}" : "F—";
+                var decor = !Tuning.ShowOnlyText && Tuning.ShowBackgroundDecor
+                    ? $"D{SonnetVariantResolver.BackgroundDecor(seed):D2}" : "D—";
+                ActivePresetDebugLabel = $"DEBUG  L{(int)view.Shot.Kind:D2}  {geometry}\n"
+                    + $"{view.Shot.Kind}  |  {background}  {fixedGeometry}  {decor}\n"
+                    + $"段落 {_activeParagraph + 1} / 镜头 {shotIndex + 1}  ·  预设编号从 0 开始";
+            }
+#endif
             UpdateShot(view, time);
         }
     }
@@ -448,6 +471,10 @@ public sealed class SonnetScene : EffectScene
         _cache.Clear();
         _activeParagraph = -1;
         ActiveShotKind = null;
+#if DEBUG
+        _debugShot = null;
+        ActivePresetDebugLabel = null;
+#endif
     }
 
     internal static Vector2 ResolveTrackingFocus(

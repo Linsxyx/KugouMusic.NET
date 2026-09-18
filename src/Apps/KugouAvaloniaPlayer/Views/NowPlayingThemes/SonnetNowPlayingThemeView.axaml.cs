@@ -42,6 +42,15 @@ public partial class SonnetNowPlayingThemeView : UserControl
     }
 
     private readonly DispatcherTimer _diagnosticTimer;
+#if DEBUG
+    private readonly TextBlock _presetDebugText = new()
+    {
+        FontSize = 18,
+        FontWeight = Avalonia.Media.FontWeight.Bold,
+        Foreground = Avalonia.Media.Brushes.Yellow,
+    };
+    private readonly Border _presetDebugOverlay;
+#endif
     private NowPlayingViewModel? _viewModel;
     private PlayerViewModel? _player;
     private SonnetScene? _scene;
@@ -58,6 +67,23 @@ public partial class SonnetNowPlayingThemeView : UserControl
     public SonnetNowPlayingThemeView()
     {
         InitializeComponent();
+#if DEBUG
+        _presetDebugOverlay = new Border
+        {
+            Child = _presetDebugText,
+            Background = Avalonia.Media.Brushes.Black,
+            BorderBrush = Avalonia.Media.Brushes.Yellow,
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14, 10),
+            Margin = new Thickness(20, 64, 20, 20),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+            IsHitTestVisible = false,
+            IsVisible = false,
+        };
+        EffectViewport.Children.Add(_presetDebugOverlay);
+#endif
         DataContextChanged += OnDataContextChanged;
         EffectSurface.InitializationFailed += OnInitializationFailed;
         _diagnosticTimer = new DispatcherTimer(
@@ -288,6 +314,12 @@ public partial class SonnetNowPlayingThemeView : UserControl
 
     private void RefreshDiagnostic()
     {
+#if DEBUG
+        var presetLabel = _scene?.ActivePresetDebugLabel;
+        _presetDebugOverlay.IsVisible = presetLabel is not null && string.IsNullOrWhiteSpace(EffectSurface.LastError);
+        if (_presetDebugText.Text != presetLabel)
+            _presetDebugText.Text = presetLabel;
+#endif
         if (!string.IsNullOrWhiteSpace(EffectSurface.LastError))
         {
             DiagnosticOverlay.IsVisible = true;

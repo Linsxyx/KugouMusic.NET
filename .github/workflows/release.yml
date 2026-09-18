@@ -48,6 +48,8 @@ jobs:
 
       - name: Publish App
         shell: bash
+        # Avoid linking the ARM64 executable against the runner's newer glibc.
+        # Use the portable self-contained .NET runtime for older Linux systems.
         run: |
           CLEAN_VERSION=${GITHUB_REF_NAME#v}
           dotnet publish ./src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
@@ -57,7 +59,7 @@ jobs:
             -r ${{ matrix.rid }} \
             --self-contained true \
             -p:DebugType=None \
-            -p:PublishAot=true \
+            -p:PublishAot=${{ matrix.rid != 'linux-arm64' }} \
             -p:DebugSymbols=false \
             -o ./publish
 
