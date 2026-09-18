@@ -9,6 +9,19 @@ namespace KugouAvaloniaPlayer.Services;
 
 public static class AppDatabase
 {
+#if KUGOU_SYSTEM_SQLITE
+    static AppDatabase()
+    {
+        // Runtime packages provide libsqlite3.so.0; libsqlite3.so usually needs a development package.
+        System.Runtime.InteropServices.NativeLibrary.SetDllImportResolver(
+            typeof(SQLitePCL.SQLite3Provider_sqlite3).Assembly,
+            (name, assembly, searchPath) => name == "sqlite3"
+                ? System.Runtime.InteropServices.NativeLibrary.Load("libsqlite3.so.0", assembly, searchPath)
+                : IntPtr.Zero);
+        SQLitePCL.Batteries_V2.Init();
+    }
+#endif
+
     public static readonly string DatabasePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "kugou",

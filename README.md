@@ -78,6 +78,16 @@ Apple Music风味的滚动歌词，支持在线歌词和本地歌词，歌词浮
 - macOS arm64（手动更新包）：`KugouAvaloniaPlayer-mac-arm64.app.zip`
 - macOS x64（手动更新包）：`KugouAvaloniaPlayer-mac-x64.app.zip`
 
+### Linux SQLite 依赖
+
+Linux x64 / arm64 使用系统 SQLite（`libsqlite3.so.0`），不随播放器打包 SQLite 原生库。UOS / Debian / Ubuntu 如缺少该库，可安装运行时包：
+
+```bash
+sudo apt install libsqlite3-0
+```
+
+Windows 和 macOS 继续使用随程序附带的 SQLite。
+
 ### 自动更新
 
 项目通过 **Velopack + GitHub Releases** 提供更新能力。

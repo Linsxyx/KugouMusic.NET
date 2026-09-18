@@ -18,6 +18,12 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
+    <!-- Prefer the target RID; use the host OS only for RID-less local builds. -->
+    <PropertyGroup Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux-')) Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Linux')))">
+        <UseSystemSqlite>true</UseSystemSqlite>
+        <DefineConstants>$(DefineConstants);KUGOU_SYSTEM_SQLITE</DefineConstants>
+    </PropertyGroup>
+
     <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-windows'))">
         <DefineConstants>$(DefineConstants);KUGOU_WINDOWS</DefineConstants>
     </PropertyGroup>
@@ -49,7 +55,11 @@
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="MemoryPack" />
-        <PackageReference Include="Microsoft.Data.Sqlite" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Condition="'$(UseSystemSqlite)' != 'true'" />
+        <PackageReference Include="Microsoft.Data.Sqlite.Core" Condition="'$(UseSystemSqlite)' == 'true'" />
+        <PackageReference Include="SQLitePCLRaw.bundle_sqlite3" Condition="'$(UseSystemSqlite)' == 'true'" />
+        <!-- bundle_sqlite3 ends at 2.1.11; match the provider to Sqlite.Core's SQLitePCLRaw 3.x. -->
+        <PackageReference Include="SQLitePCLRaw.provider.sqlite3" Condition="'$(UseSystemSqlite)' == 'true'" />
         <PackageReference Include="Pure.DI">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

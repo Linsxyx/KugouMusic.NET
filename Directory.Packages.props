@@ -17,6 +17,7 @@
     <PackageVersion Include="MemoryPack" Version="1.21.4" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="11.0.0-preview.5.26302.115" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="11.0.0-preview.5.26302.115" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.3" />
     <PackageVersion Include="Microsoft.OpenApi" Version="2.10.0" />
@@ -38,6 +39,8 @@
     <PackageVersion Include="SkiaSharp.HarfBuzz" Version="3.119.1" />
     <PackageVersion Include="Spectre.Console" Version="0.55.0" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
+    <PackageVersion Include="SQLitePCLRaw.bundle_sqlite3" Version="2.1.11" />
+    <PackageVersion Include="SQLitePCLRaw.provider.sqlite3" Version="3.0.3" />
     <PackageVersion Include="SukiUI" Version="7.0.2-nightly20260625" />
     <PackageVersion Include="Svg.Controls.Skia.Avalonia" Version="12.0.0.11" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
