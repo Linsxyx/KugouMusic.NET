@@ -28,6 +28,38 @@ public sealed class LatentBackgroundTests
         using var transparent = bitmap.Encode(SKEncodedImageFormat.Png,100);
         Assert.Empty(LatentCoverPalette.ExtractEncoded(transparent.ToArray()));
     }
+
+    [Fact]
+    public void CoverOnlyUsesAllSixCoverColorsAndCoverColoredDithering()
+    {
+        EffectColor[] cover = [new(.1f,0,0),new(.2f,0,0),new(.3f,0,0),
+            new(.4f,0,0),new(.5f,0,0),new(.6f,0,0)];
+        var palette = LatentPalette.Midnight with { Cover = cover, UseCoverColorsOnly = true };
+        Assert.Equal(cover, palette.MeshColors());
+        Assert.Equal(cover[2], palette.DitheringBackground);
+        Assert.Equal(LatentPalette.Midnight.Background, palette.Background);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void SparseCoverOnlyPaletteRepeatsCoverColorsInsteadOfAddingThemeAccent(int count)
+    {
+        EffectColor[] cover = [new(0,0,1),new(0,.3f,.8f),new(.1f,.2f,.7f)];
+        var palette = LatentPalette.Midnight with
+        {
+            Cover = cover.Take(count).ToArray(), UseCoverColorsOnly = true,
+            Accent = new(214/255f,169/255f,31/255f)
+        };
+        var a = count > 0 ? cover[0] : palette.Secondary;
+        var b = count > 1 ? cover[1] : a;
+        var c = count > 2 ? cover[2] : b;
+        Assert.Equal(new[] { a,b,c,a,b,c }, palette.MeshColors());
+        Assert.Equal(c, palette.DitheringBackground);
+        Assert.DoesNotContain(palette.Accent, palette.MeshColors());
+    }
     [Fact]
     public void PausedBackgroundRunsAtOriginalReducedSpeed()
     {

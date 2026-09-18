@@ -111,7 +111,7 @@ public sealed class LatentBackgroundScene : EffectScene
             Set(_dither,"u_scale",1); Set(_dither,"u_fit",0);
             Set(_dither,"u_pxSize",Math.Max(.5f,2.5f-_motion.Bass*2.5f*.34f));
             Set(_dither,"u_shape",2); Set(_dither,"u_type",3);
-            Color(_dither,"u_colorBack",palette.Background);
+            Color(_dither,"u_colorBack",palette.DitheringBackground);
             Color(_dither,"u_colorFront",_colors[0]);
             _gl.DrawArrays(PrimitiveType.Triangles,0,3);
 

@@ -6,16 +6,30 @@ public sealed record LatentAudio(float Power = 0, float Bass = 0, float LowMid =
 public sealed record LatentPalette(EffectColor Background, EffectColor Primary,
     EffectColor Secondary, EffectColor Accent, IReadOnlyList<EffectColor> Cover)
 {
+    public bool UseCoverColorsOnly { get; init; }
+
     public static LatentPalette Midnight => new(new EffectColor(.051f,.071f,.208f), new EffectColor(.9f,.91f,.95f),
         new EffectColor(.42f,.45f,.57f), new EffectColor(.55f,.59f,.72f), []);
 
     public EffectColor[] MeshColors()
     {
         var a = Cover.Count > 0 ? Cover[0] : Secondary;
+        if (UseCoverColorsOnly)
+        {
+            // Folia's cover-only preset repeats available cover colors for sparse palettes.
+            var second = Cover.Count > 1 ? Cover[1] : a;
+            var third = Cover.Count > 2 ? Cover[2] : second;
+            return [a, second, third, Cover.Count > 3 ? Cover[3] : a,
+                Cover.Count > 4 ? Cover[4] : second, Cover.Count > 5 ? Cover[5] : third];
+        }
         var b = Cover.Count > 1 ? Cover[1] : Primary;
         return [a, b, Cover.Count > 2 ? Cover[2] : a,
             Cover.Count > 3 ? Cover[3] : b, Background, Accent];
     }
+
+    public EffectColor DitheringBackground => !UseCoverColorsOnly ? Background :
+        Cover.Count > 2 ? Cover[2] : Cover.Count > 1 ? Cover[1] :
+        Cover.Count > 0 ? Cover[0] : Secondary;
 }
 
 internal sealed class LatentModulation

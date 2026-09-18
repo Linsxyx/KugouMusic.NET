@@ -104,7 +104,7 @@ public sealed class LatentBackgroundControl : SilkEffectControl
         var theme = IsSonnet ? LatentPalette.Midnight :
             new LatentPalette(new(.031f,.047f,.086f),new(242/255f,235/255f,221/255f),
                 new(98/255f,126/255f,145/255f),new(214/255f,169/255f,31/255f),[]);
-        _background.Palette = theme with { Cover = _coverColors };
+        _background.Palette = theme with { Cover = _coverColors, UseCoverColorsOnly = true };
     }
     private async void ExtractCover()
     {

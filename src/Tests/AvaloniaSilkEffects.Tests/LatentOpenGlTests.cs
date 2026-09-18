@@ -151,6 +151,71 @@ public sealed class LatentOpenGlTests
     }
 
     [MacOpenGlFact]
+    public unsafe void CoverOnlyMaterialIgnoresGoldAccentAndRendersFifthAndSixthCoverColors()
+    {
+        var previous = CGLGetCurrentContext();
+        Assert.Equal(0,CGLChoosePixelFormat([99,0x4100,73,0],out var format,out _));
+        nint native = 0;
+        try
+        {
+            Assert.Equal(0,CGLCreateContext(format,0,out native));
+            Assert.Equal(0,CGLSetCurrentContext(native));
+            var library = NativeLibrary.Load(Framework);
+            try
+            {
+                using var gl = GL.GetApi(name => NativeLibrary.TryGetExport(library,name,out var address) ? address : 0);
+                using var device = new EffectDevice(gl);
+                using var target = new EffectFramebuffer(gl);
+                var size = new PixelSize(320,180);
+                target.EnsureSize(size.Width,size.Height);
+                var scene = new LatentBackgroundScene();
+                scene.Initialize(device);
+                scene.Resize(size,1);
+                try
+                {
+                    byte[] Capture(LatentPalette palette)
+                    {
+                        scene.Palette = palette;
+                        device.Render(scene,new EffectFrame(TimeSpan.Zero,TimeSpan.Zero,size,1,0),
+                            (int)target.Framebuffer,EffectColor.Transparent);
+                        var pixels = new byte[size.Width*size.Height*4];
+                        fixed (byte* p = pixels)
+                            gl.ReadPixels(0,0,(uint)size.Width,(uint)size.Height,PixelFormat.Rgba,PixelType.UnsignedByte,p);
+                        Assert.Equal(GLEnum.NoError,gl.GetError());
+                        return pixels;
+                    }
+                    var blue = new EffectColor(.08f,.2f,.8f);
+                    var palette = new LatentPalette(new(.031f,.047f,.086f),EffectColor.White,
+                        new(.38f,.49f,.57f),new(214/255f,169/255f,31/255f),
+                        Enumerable.Repeat(blue,6).ToArray()) { UseCoverColorsOnly = true };
+                    var coverOnly = Capture(palette);
+                    for (var i=0;i<coverOnly.Length;i+=4)
+                        Assert.True(coverOnly[i+2] > coverOnly[i] && coverOnly[i+2] > coverOnly[i+1],
+                            "A blue cover must stay blue across the material without a gold region.");
+                    Assert.Equal(coverOnly,Capture(palette with { Accent = new(1,0,0) }));
+                    Assert.False(coverOnly.SequenceEqual(Capture(palette with { UseCoverColorsOnly = false })),
+                        "The cover-only preset must differ from the old theme-tinted material.");
+                    foreach (var index in new[] { 4,5 })
+                    {
+                        var cover = palette.Cover.ToArray();
+                        cover[index] = new(.8f,.1f,.1f);
+                        Assert.False(coverOnly.SequenceEqual(Capture(palette with { Cover = cover })),
+                            $"Cover color {index+1} must participate in the rendered material.");
+                    }
+                }
+                finally { scene.DisposeGpuResources(); }
+            }
+            finally { NativeLibrary.Free(library); }
+        }
+        finally
+        {
+            CGLSetCurrentContext(previous);
+            if (native != 0) CGLDestroyContext(native);
+            CGLDestroyPixelFormat(format);
+        }
+    }
+
+    [MacOpenGlFact]
     public unsafe void FrozenShadersRenderResizeAndRecreateOnRealGl()
     {
         var previous = CGLGetCurrentContext();
