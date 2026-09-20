@@ -312,6 +312,8 @@ public sealed class FumeVisualizerControl : SilkEffectControl
 
     private void PublishFrame()
     {
+        if (!IsRenderingActive)
+            return;
         if (Bounds.Width <= 1 || Bounds.Height <= 1 || Player == null || !IsActive)
         {
             _fumeScene.Clear();
@@ -472,7 +474,7 @@ public sealed class FumeVisualizerControl : SilkEffectControl
     private bool ShouldAnimate()
     {
         return IsActive &&
-               IsVisible &&
+               IsRenderingActive &&
                Bounds is { Width: > 1, Height: > 1 } &&
                TopLevel.GetTopLevel(this) != null &&
                (Player?.IsPlayingAudio == true || _settleFrames > 0 || _layoutDirty);
@@ -481,7 +483,7 @@ public sealed class FumeVisualizerControl : SilkEffectControl
     private void OnAnimationFrame(TimeSpan timestamp)
     {
         _frameQueued = false;
-        if (!IsActive || Player == null)
+        if (!IsRenderingActive || !IsActive || Player == null)
         {
             _hasFrameTimestamp = false;
             return;
@@ -509,6 +511,17 @@ public sealed class FumeVisualizerControl : SilkEffectControl
             _settleFrames--;
         PublishFrame();
         RequestNextFrame();
+    }
+
+    protected override void OnRenderingActivityChanged()
+    {
+        base.OnRenderingActivityChanged();
+        _hasFrameTimestamp = false;
+        if (IsRenderingActive)
+        {
+            PublishFrame();
+            RequestNextFrame();
+        }
     }
 
     private CameraTarget ResolveCameraTarget(

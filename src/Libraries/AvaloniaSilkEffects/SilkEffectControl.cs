@@ -4,8 +4,10 @@ using Avalonia.Media;
 using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Silk.NET.OpenGL;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace AvaloniaSilkEffects;
 
@@ -47,6 +49,12 @@ public class SilkEffectControl : OpenGlControlBase
     private TimeSpan _lastPresentationTimestamp;
     private ulong _submittedFrames;
     private string? _lastError;
+    private readonly List<Visual> _visibilityAncestors = [];
+    private bool _isAttached;
+
+    // Includes ancestor visibility and the native window state. IsVisible alone
+    // stays true on children when a window is hidden to the tray.
+    protected bool IsRenderingActive { get; private set; }
 
     public IEffectScene? Scene
     {
@@ -98,14 +106,20 @@ public class SilkEffectControl : OpenGlControlBase
     public void Seek(TimeSpan elapsed)
     {
         _clock.Seek(elapsed);
-        RequestNextFrameRendering();
+        RenderOnce();
     }
 
-    public void RenderOnce() => RequestNextFrameRendering();
+    public void RenderOnce()
+    {
+        if (IsRenderingActive)
+            RequestNextFrameRendering();
+    }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+        if (change.Property == IsVisibleProperty)
+            UpdateRenderingActivity();
         if (change.Property == IsPausedProperty)
             _clock.SetPaused(IsPaused);
         if (change.Property == TargetFrameRateProperty || change.Property == IsPausedProperty ||
@@ -117,10 +131,17 @@ public class SilkEffectControl : OpenGlControlBase
         if (change.Property == SceneProperty || change.Property == IsPausedProperty ||
             change.Property == RenderModeProperty || change.Property == ClearColorProperty ||
             change.Property == TargetFrameRateProperty)
-            RequestNextFrameRendering();
+            RenderOnce();
     }
 
     protected override void OnOpenGlInit(GlInterface avaloniaGl)
+    {
+        if (IsRenderingActive)
+            InitializeDevice(avaloniaGl);
+    }
+
+    [MemberNotNull(nameof(_device), nameof(_gl))]
+    private void InitializeDevice(GlInterface avaloniaGl)
     {
         try
         {
@@ -142,8 +163,15 @@ public class SilkEffectControl : OpenGlControlBase
     protected override void OnOpenGlRender(GlInterface avaloniaGl, int framebuffer)
     {
         CancelNextFrameRequest();
-        if (_device is null)
+        if (!IsRenderingActive)
+        {
+            // Visibility notifications do not make the GL context current.
+            // Use one final callback for cleanup, without updating the scene.
+            ReleaseDevice();
             return;
+        }
+        if (_device is null)
+            InitializeDevice(avaloniaGl);
 
         SwapSceneIfNeeded();
         if (_activeScene is null)
@@ -185,7 +213,7 @@ public class SilkEffectControl : OpenGlControlBase
             MultisampleCount = metrics.MultisampleCount,
         };
 
-        if (!IsPaused && RenderMode == EffectRenderMode.Continuous)
+        if (IsRenderingActive && !IsPaused && RenderMode == EffectRenderMode.Continuous)
             ScheduleNextFrameRequest();
     }
 
@@ -202,7 +230,7 @@ public class SilkEffectControl : OpenGlControlBase
         {
             _nextFrameRequest = null;
             if (_device is not null && !IsPaused && RenderMode == EffectRenderMode.Continuous)
-                RequestNextFrameRendering();
+                RenderOnce();
         }, delay, DispatcherPriority.Render);
     }
 
@@ -212,8 +240,51 @@ public class SilkEffectControl : OpenGlControlBase
         _nextFrameRequest = null;
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        _isAttached = true;
+        foreach (var ancestor in this.GetVisualAncestors())
+        {
+            _visibilityAncestors.Add(ancestor);
+            ancestor.PropertyChanged += OnAncestorPropertyChanged;
+        }
+        UpdateRenderingActivity();
+        base.OnAttachedToVisualTree(e);
+    }
+
+    private void OnAncestorPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == IsVisibleProperty || e.Property == Window.WindowStateProperty)
+            UpdateRenderingActivity();
+    }
+
+    private void UpdateRenderingActivity()
+    {
+        var active = _isAttached && IsVisible;
+        foreach (var ancestor in _visibilityAncestors)
+            active &= ancestor.IsVisible && ancestor is not Window { WindowState: WindowState.Minimized };
+        if (active == IsRenderingActive)
+            return;
+
+        IsRenderingActive = active;
+        CancelNextFrameRequest();
+        _pacer.Reset();
+        // Keep the playback clock advancing while hidden. IsPaused remains
+        // caller-owned, so showing a paused scene does not resume playback.
+        OnRenderingActivityChanged();
+        if (active || _device is not null)
+            RequestNextFrameRendering();
+    }
+
+    protected virtual void OnRenderingActivityChanged() { }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _isAttached = false;
+        foreach (var ancestor in _visibilityAncestors)
+            ancestor.PropertyChanged -= OnAncestorPropertyChanged;
+        _visibilityAncestors.Clear();
+        UpdateRenderingActivity();
         CancelNextFrameRequest();
         _pacer.Reset();
         base.OnDetachedFromVisualTree(e);
@@ -222,13 +293,26 @@ public class SilkEffectControl : OpenGlControlBase
     protected override void OnOpenGlDeinit(GlInterface avaloniaGl)
     {
         CancelNextFrameRequest();
-        _activeScene?.DisposeGpuResources();
-        _activeScene = null;
-        _device?.Dispose();
-        _device = null;
-        _gl?.Dispose();
-        _gl = null;
+        ReleaseDevice();
         _pacer.Reset();
+    }
+
+    private void ReleaseDevice()
+    {
+        var scene = _activeScene;
+        var device = _device;
+        var gl = _gl;
+        _activeScene = null;
+        _device = null;
+        _gl = null;
+        _lastPixelSize = default;
+        _lastRenderScaling = 0;
+        try { scene?.DisposeGpuResources(); }
+        finally
+        {
+            try { device?.Dispose(); }
+            finally { gl?.Dispose(); }
+        }
     }
 
     protected override void OnOpenGlLost()
