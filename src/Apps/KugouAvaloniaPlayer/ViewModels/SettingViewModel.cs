@@ -185,7 +185,7 @@ public partial class SettingViewModel : PageViewModelBase
         IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService,
         IFolderPickerService folderPickerService, IUiPreferencesState uiPreferencesState,
         IMainWindowService mainWindowService, IMessenger messenger, ITaskbarLyricsService taskbarLyricsService,
-        IDesktopLyricWindowService desktopLyricWindowService, LoginViewModel compatibilityLogin)
+        IDesktopLyricWindowService desktopLyricWindowService)
     {
         _userClient = userClient;
         _authClient = authClient;
@@ -200,7 +200,6 @@ public partial class SettingViewModel : PageViewModelBase
         _desktopLyricWindowService = desktopLyricWindowService;
         _messenger = messenger;
         _taskbarLyricsService = taskbarLyricsService;
-        CompatibilityLogin = compatibilityLogin;
 
         Player = player;
         EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
@@ -350,8 +349,6 @@ public partial class SettingViewModel : PageViewModelBase
     public bool IsLyricsSection => SelectedSettingsSection == SettingsSectionLyrics;
     public bool IsUpdateSection => SelectedSettingsSection == SettingsSectionUpdate;
     public bool IsAccountSection => SelectedSettingsSection == SettingsSectionAccount;
-    private LoginViewModel CompatibilityLogin { get; }
-    public LoginViewModel? AccountLogin => IsAccountSection ? CompatibilityLogin : null;
     public bool HasReleaseNotes => RecentReleaseNotes.Count > 0;
     public bool IsReleaseNotesStatusVisible => IsLoadingReleaseNotes || !HasReleaseNotes;
     public bool IsOutputDeviceStatusVisible => !string.IsNullOrWhiteSpace(OutputDeviceStatus);
@@ -1383,7 +1380,6 @@ public partial class SettingViewModel : PageViewModelBase
         OnPropertyChanged(nameof(IsLyricsSection));
         OnPropertyChanged(nameof(IsUpdateSection));
         OnPropertyChanged(nameof(IsAccountSection));
-        OnPropertyChanged(nameof(AccountLogin));
 
         if (value == SettingsSectionUpdate)
             _ = LoadReleaseNotesAsync();

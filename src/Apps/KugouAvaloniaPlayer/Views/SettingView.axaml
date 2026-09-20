@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:views="using:KugouAvaloniaPlayer.Views"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -1210,26 +1209,6 @@
                             </Grid>
                         </StackPanel>
                     </suki:GlassCard>
-
-                    <Border IsVisible="{Binding IsAccountSection}"
-                            Padding="14"
-                            CornerRadius="12"
-                            Background="{DynamicResource SukiBackground}">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="兼容登录" FontSize="16" FontWeight="SemiBold" />
-                            <TextBlock Text="登录窗口无法打开时，可在这里直接使用手机号或扫码登录。"
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource SukiLowText}" />
-                            <ContentControl Content="{Binding AccountLogin}"
-                                            HorizontalContentAlignment="Left">
-                                <ContentControl.ContentTemplate>
-                                    <DataTemplate x:DataType="vm:LoginViewModel">
-                                        <views:LoginView />
-                                    </DataTemplate>
-                                </ContentControl.ContentTemplate>
-                            </ContentControl>
-                        </StackPanel>
-                    </Border>
 
                     <Border Height="64"
                             IsHitTestVisible="False" />
