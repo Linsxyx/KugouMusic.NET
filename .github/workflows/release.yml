@@ -118,6 +118,29 @@ jobs:
             ./.github/scripts/customize-velopack-msi.ps1 -Path $_.FullName
           }
 
+      - name: Publish Linux single-file test app (without Velopack)
+        if: startsWith(matrix.rid, 'linux-')
+        shell: bash
+        run: |
+          CLEAN_VERSION=${GITHUB_REF_NAME#v}
+          dotnet publish ./src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+            -c Release \
+            -f ${{ matrix.framework }} \
+            "-p:BUILD_VERSION=$CLEAN_VERSION" \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishAot=false \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:IncludeAllContentForSelfExtract=true \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            -o ./publish-singlefile
+
+          mkdir -p ./releases
+          cp ./publish-singlefile/KugouAvaloniaPlayer \
+            ./releases/KugouAvaloniaPlayer-${{ matrix.rid }}-singlefile-test
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -339,6 +362,8 @@ jobs:
           cp ./all_artifacts/releases-win-arm64/*.msi ./release_files/KugouAvaloniaPlayer-win-arm64.msi 2>/dev/null || true
           cp ./all_artifacts/releases-linux-x64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage 2>/dev/null || true
           cp ./all_artifacts/releases-linux-arm64/*.AppImage ./release_files/KugouAvaloniaPlayer-linux-arm64.AppImage 2>/dev/null || true
+          cp ./all_artifacts/releases-linux-x64/KugouAvaloniaPlayer-linux-x64-singlefile-test ./release_files/
+          cp ./all_artifacts/releases-linux-arm64/KugouAvaloniaPlayer-linux-arm64-singlefile-test ./release_files/
 
           cp ./all_artifacts/releases-osx-arm64/*osx-arm64.app.zip ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip 2>/dev/null || true
           cp ./all_artifacts/releases-osx-x64/*osx-x64.app.zip ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip 2>/dev/null || true
@@ -432,6 +457,8 @@ jobs:
             echo "- Windows ARM64: [KugouAvaloniaPlayer-win-arm64.msi](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-win-arm64.msi)"
             echo "- Linux x64: [KugouAvaloniaPlayer-linux-x64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-x64.AppImage)"
             echo "- Linux ARM64: [KugouAvaloniaPlayer-linux-arm64.AppImage](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-arm64.AppImage)"
+            echo "- Linux x64 单文件测试版（无需安装，下载后 chmod +x）: [KugouAvaloniaPlayer-linux-x64-singlefile-test](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-x64-singlefile-test)"
+            echo "- Linux ARM64 单文件测试版（无需安装，下载后 chmod +x）: [KugouAvaloniaPlayer-linux-arm64-singlefile-test](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-linux-arm64-singlefile-test)"
             echo "- macOS Apple Silicon: [KugouAvaloniaPlayer-mac-arm64-Setup.pkg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-arm64-Setup.pkg)"
             echo "- macOS Intel: [KugouAvaloniaPlayer-mac-x64-Setup.pkg](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KugouAvaloniaPlayer-mac-x64-Setup.pkg)"
             echo
@@ -456,6 +483,8 @@ jobs:
             ./release_files/KugouAvaloniaPlayer-win-arm64.zip
             ./release_files/KugouAvaloniaPlayer-linux-x64.AppImage
             ./release_files/KugouAvaloniaPlayer-linux-arm64.AppImage
+            ./release_files/KugouAvaloniaPlayer-linux-x64-singlefile-test
+            ./release_files/KugouAvaloniaPlayer-linux-arm64-singlefile-test
             ./release_files/KugouAvaloniaPlayer-mac-arm64.app.zip
             ./release_files/KugouAvaloniaPlayer-mac-x64.app.zip
             ./release_files/KugouAvaloniaPlayer-mac-arm64-Setup.pkg
