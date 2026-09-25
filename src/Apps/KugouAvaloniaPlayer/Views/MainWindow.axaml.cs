@@ -178,18 +178,21 @@ public partial class MainWindow : KugouWindow
 
     private void CaptureNormalBounds()
     {
+        var position = Position;
         var size = ClientSize;
-        if (WindowState != WindowState.Normal || !IsValidSize(size.Width, size.Height))
+        if (WindowState != WindowState.Normal
+            || position is { X: 0, Y: 0 }
+            || !IsValidSize(size.Width, size.Height))
             return;
 
-        _lastNormalPosition = Position;
+        _lastNormalPosition = position;
         _lastNormalSize = size;
     }
 
     private void StoreBounds(MainWindowStateSettings settings, PixelPoint position, Size size)
     {
-        // Width/Height can be NaN for automatic layout; never persist invalid dimensions.
-        if (!IsValidSize(size.Width, size.Height))
+        // Ignore transient origin coordinates and invalid layout sizes, preserving the saved bounds.
+        if (position is { X: 0, Y: 0 } || !IsValidSize(size.Width, size.Height))
             return;
 
         settings.Width = Math.Max(size.Width, MinWidth);
