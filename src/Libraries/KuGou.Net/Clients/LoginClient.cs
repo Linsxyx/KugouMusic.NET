@@ -32,7 +32,7 @@ public class LoginClient(
     {
         var json = await rawApi.LoginByMobileAsync(mobile, code, userid);
         var data = KgApiResponseParser.Parse<LoginResponse>(json, AppJsonContext.Default.LoginResponse);
-        if (data is not null && data.Status == 1)
+        if (data is not null && data.Status == 1 && !data.RequiresVerification)
         {
             var newToken = data.Token;
             var newUserId = data.UserId.ToString() ?? "";
@@ -83,7 +83,7 @@ public class LoginClient(
 
         var res = KgApiResponseParser.Parse<QrLoginStatusResponse>(json, AppJsonContext.Default.QrLoginStatusResponse);
 
-        if (res != null && res.IsSuccess)
+        if (res != null && res.IsSuccess && !res.RequiresVerification)
         {
             var newUserId = res.UserId.ToString();
             var newToken = res.Token;
@@ -121,7 +121,7 @@ public class LoginClient(
 
         var res = KgApiResponseParser.Parse<RefreshTokenResponse>(json, AppJsonContext.Default.RefreshTokenResponse);
 
-        if (res?.Status == 1)
+        if (res?.Status == 1 && !res.RequiresVerification)
         {
             var newToken = res.Token;
             var newUserId = res.UserId.ToString();

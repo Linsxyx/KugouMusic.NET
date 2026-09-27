@@ -59,6 +59,7 @@ public sealed partial class AvaloniaAppServiceProvider
         .Bind<ILoginInitializationService>().As(Singleton).To<LoginInitializationService>()
         .Bind<IVipEntitlementService>().As(Singleton).To<VipEntitlementService>()
         .Bind<ILoginDialogService>().As(Singleton).To<LoginDialogService>()
+        .Bind<ISecurityVerificationService>().To<SecurityVerificationService>()
         .Bind<INavigationService>().As(Singleton).To<NavigationService>()
         .Bind<IMainWindowService>().As(Singleton).To<MainWindowService>()
         .Bind<IStartupActivationService>().As(Singleton).To<StartupActivationService>()

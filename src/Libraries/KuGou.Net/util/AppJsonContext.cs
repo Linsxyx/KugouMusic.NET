@@ -24,6 +24,8 @@ namespace KuGou.Net.util;
 [JsonSerializable(typeof(KgSession))]
 [JsonSerializable(typeof(LoginResponse))]
 [JsonSerializable(typeof(SendCodeResponse))]
+[JsonSerializable(typeof(VerificationInfo))]
+[JsonSerializable(typeof(VerificationResult))]
 [JsonSerializable(typeof(RefreshTokenResponse))]
 [JsonSerializable(typeof(SearchResultData))]
 [JsonSerializable(typeof(PlayUrlData))]

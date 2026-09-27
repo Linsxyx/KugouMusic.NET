@@ -26,6 +26,7 @@ public static class WebApiKuGouServiceCollectionExtensions
         services.AddScoped<RawDiscoveryApi>();
         services.AddScoped<RawFmApi>();
         services.AddScoped<RawLoginApi>();
+        services.AddScoped<RawVerificationApi>();
         services.AddScoped<RawLyricApi>();
         services.AddScoped<RawMediaCatalogApi>();
         services.AddScoped<RawPlaylistApi>();
@@ -42,6 +43,7 @@ public static class WebApiKuGouServiceCollectionExtensions
         services.AddScoped<IpClient>();
         services.AddScoped<LongAudioClient>();
         services.AddScoped<LoginClient>();
+        services.AddScoped<VerificationClient>();
         services.AddScoped<LyricClient>();
         services.AddScoped<PlaylistClient>();
         services.AddScoped<RankClient>();

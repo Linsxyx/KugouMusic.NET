@@ -9,4 +9,5 @@
     <Project Path="src/Apps/KugouAvaloniaPlayer\KugouAvaloniaPlayer.csproj"/>
     <Project Path="src/Libraries/SimpleAudio\SimpleAudio.csproj"/>
     <Project Path="src/Tests/AvaloniaSilkEffects.Tests/AvaloniaSilkEffects.Tests.csproj"/>
+    <Project Path="src/Tests/KuGou.Net.Tests/KuGou.Net.Tests.csproj"/>
 </Solution>

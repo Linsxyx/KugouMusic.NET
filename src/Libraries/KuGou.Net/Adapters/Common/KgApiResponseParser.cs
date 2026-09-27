@@ -45,6 +45,9 @@ public static class KgApiResponseParser
 
             if (baseModel.ErrorCode == null && rootErrCode.HasValue)
                 baseModel.ErrorCode = rootErrCode;
+
+            if (root.TryGetProperty("ssaCode", out var ssaCode) && ssaCode.ValueKind == JsonValueKind.String)
+                baseModel.SsaCode = ssaCode.GetString();
         }
 
         return result;

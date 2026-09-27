@@ -57,4 +57,5 @@ public readonly record struct KuGouApi(
     IpClient Ip,
     SceneClient Scene,
     ThemeClient Theme,
-    ReportClient Report);
+    ReportClient Report,
+    VerificationClient Verification);

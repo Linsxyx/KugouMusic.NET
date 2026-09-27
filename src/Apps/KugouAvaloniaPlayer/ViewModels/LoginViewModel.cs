@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -17,6 +18,7 @@ namespace KugouAvaloniaPlayer.ViewModels;
 public partial class LoginViewModel(
     LoginClient authClient,
     RegisterClient deviceClient,
+    ISecurityVerificationService securityVerification,
     IMessenger messenger,
     ILogger<LoginViewModel> logger)
     : ObservableObject
@@ -32,6 +34,10 @@ public partial class LoginViewModel(
     [ObservableProperty] public partial bool IsQrLoginSelected { get; set; }
 
     [ObservableProperty] public partial bool IsSendingCode { get; set; }
+
+    [ObservableProperty] public partial bool IsVerifying { get; set; }
+
+    private CancellationTokenSource? _authenticationCts;
 
     [ObservableProperty] public partial bool HasLoginAccountChoices { get; set; }
 
@@ -50,11 +56,13 @@ public partial class LoginViewModel(
 
     partial void OnCodeChanged(string value)
     {
+        _authenticationCts?.Cancel();
         ClearLoginAccountChoices();
     }
 
     partial void OnIsQrLoginSelectedChanged(bool value)
     {
+        _authenticationCts?.Cancel();
         if (value)
             _ = RefreshQrCode();
         else
@@ -63,6 +71,7 @@ public partial class LoginViewModel(
 
     partial void OnMobileChanged(string value)
     {
+        _authenticationCts?.Cancel();
         ClearLoginAccountChoices();
     }
 
@@ -201,6 +210,7 @@ public partial class LoginViewModel(
     [RelayCommand]
     private void StopQrPollingOnUnload()
     {
+        _authenticationCts?.Cancel();
         StopQrPolling();
         if (IsQrLoginSelected)
         {
@@ -212,6 +222,7 @@ public partial class LoginViewModel(
     [RelayCommand]
     private async Task SendCode()
     {
+        if (IsLoggingIn || IsSendingCode) return;
         if (string.IsNullOrWhiteSpace(Mobile) || Mobile.Length != 11)
         {
             StatusMessage = "请输入正确的手机号";
@@ -223,7 +234,8 @@ public partial class LoginViewModel(
 
         try
         {
-            var result = await authClient.SendCodeAsync(Mobile);
+            var mobile = Mobile;
+            var result = await ExecuteWithVerificationAsync(() => authClient.SendCodeAsync(mobile));
             if (result is not null && result.Status == 1)
             {
                 StatusMessage = "验证码已发送";
@@ -234,6 +246,10 @@ public partial class LoginViewModel(
                 var msg = result?.ErrorCode;
                 StatusMessage = $"发送失败: {msg}";
             }
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "已取消发送验证码。";
         }
         catch (Exception ex)
         {
@@ -259,6 +275,7 @@ public partial class LoginViewModel(
 
     private async Task SubmitMobileLoginAsync(string? userid)
     {
+        if (IsLoggingIn || IsSendingCode) return;
         if (string.IsNullOrWhiteSpace(Mobile) || Mobile.Length != 11)
         {
             StatusMessage = "请输入正确的手机号";
@@ -278,7 +295,9 @@ public partial class LoginViewModel(
 
         try
         {
-            var result = await authClient.LoginByMobileAsync(Mobile, Code, userid);
+            var mobile = Mobile;
+            var code = Code;
+            var result = await ExecuteWithVerificationAsync(() => authClient.LoginByMobileAsync(mobile, code, userid));
             if (result is not null && result.Status == 1)
             {
                 await CompleteLoginAsync();
@@ -296,6 +315,10 @@ public partial class LoginViewModel(
                     : $"登录失败: {errorMessage}";
             }
         }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "已取消登录。";
+        }
         catch (Exception ex)
         {
             StatusMessage = $"登录出错: {ex.Message}";
@@ -303,6 +326,33 @@ public partial class LoginViewModel(
         finally
         {
             IsLoggingIn = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelVerification() => _authenticationCts?.Cancel();
+
+    private async Task<T?> ExecuteWithVerificationAsync<T>(Func<Task<T?>> operation) where T : KgBaseModel
+    {
+        using var cancellation = new CancellationTokenSource();
+        _authenticationCts = cancellation;
+        var token = cancellation.Token;
+        try
+        {
+            return await SecurityVerifiedRequest.ExecuteAsync(operation, async (eventId, ct) =>
+            {
+                IsVerifying = true;
+                StatusMessage = "请在安全验证窗口中完成验证，完成后会自动继续。";
+                var verified = await securityVerification.VerifyAsync(eventId, ct);
+                IsVerifying = false;
+                if (verified) StatusMessage = "验证成功，正在继续原操作…";
+                return verified;
+            }, token);
+        }
+        finally
+        {
+            IsVerifying = false;
+            _authenticationCts = null;
         }
     }
 

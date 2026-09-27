@@ -123,6 +123,11 @@
             </StackPanel>
 
             <!-- 状态信息 -->
+            <Button Content="取消安全验证"
+                    Classes="Basic"
+                    IsVisible="{Binding IsVerifying}"
+                    Command="{Binding CancelVerificationCommand}"
+                    HorizontalAlignment="Center" />
             <TextBlock Text="{Binding StatusMessage}"
                        FontSize="12"
                        Foreground="{DynamicResource SukiLiquid2}"

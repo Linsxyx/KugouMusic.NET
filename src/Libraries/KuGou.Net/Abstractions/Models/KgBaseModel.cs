@@ -12,6 +12,14 @@ public abstract record KgBaseModel
 
     [JsonPropertyName("error_code")] public int? ErrorCode { get; set; }
 
+    [JsonPropertyName("ssaCode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SsaCode { get; set; }
+
+    /// <summary>The response carries a verification event, including challenges on HTTP success.</summary>
+    [JsonIgnore]
+    public bool RequiresVerification => !string.IsNullOrWhiteSpace(SsaCode);
+
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extras { get; set; }
 
     /// <summary>

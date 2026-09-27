@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using KuGou.Net.Protocol.Transport;
 using KuGou.Net.util;
 
@@ -68,15 +69,40 @@ public class KgHttpTransport(HttpClient client) : IKgTransport
     {
         using var msg = CreateRequestMessage(request, requestUrl);
         using var response = await client.SendAsync(msg, HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
+        var ssaCode = response.Headers.TryGetValues("ssa-code", out var values)
+            ? values.FirstOrDefault()
+            : null;
+        // Read challenges before enforcing HTTP status: gateways can return them with 4xx/5xx.
+        if (string.IsNullOrWhiteSpace(ssaCode))
+            response.EnsureSuccessStatusCode();
 
         if (response.Content.Headers.ContentLength == 0)
         {
+            if (!string.IsNullOrWhiteSpace(ssaCode))
+                throw new KgVerificationRequiredException(ssaCode, response.StatusCode);
             return JsonElement.Parse("{}");
         }
 
         await using var responseStream = await response.Content.ReadAsStreamAsync();
-        return await JsonSerializer.DeserializeAsync(responseStream, AppJsonContext.Default.JsonElement);
+        JsonElement body;
+        try
+        {
+            body = await JsonSerializer.DeserializeAsync(responseStream, AppJsonContext.Default.JsonElement);
+        }
+        catch (JsonException) when (!string.IsNullOrWhiteSpace(ssaCode))
+        {
+            throw new KgVerificationRequiredException(ssaCode, response.StatusCode);
+        }
+
+        if (string.IsNullOrWhiteSpace(ssaCode))
+            return body;
+
+        if (body.ValueKind != JsonValueKind.Object)
+            throw new KgVerificationRequiredException(ssaCode, response.StatusCode);
+
+        var enriched = JsonNode.Parse(body.GetRawText())!.AsObject();
+        enriched["ssaCode"] = ssaCode;
+        return JsonSerializer.SerializeToElement(enriched, AppJsonContext.Default.JsonObject);
     }
 
     private async Task<byte[]> SendBytesOnceAsync(KgRequest request, string requestUrl)

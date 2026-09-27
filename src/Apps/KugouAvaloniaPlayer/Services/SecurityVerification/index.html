@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KA Music 安全验证</title>
+<style>
+  body { font: 16px/1.7 system-ui, sans-serif; background: #f3f6fa; color: #172536; margin: 0; }
+  main { max-width: 440px; margin: 12vh auto; padding: 32px; background: white; border-radius: 18px; }
+  h1 { font-size: 24px; margin-top: 0; } p { color: #526176; }
+  input, button { box-sizing: border-box; font: inherit; padding: 10px 16px; border-radius: 8px; }
+  input { border: 1px solid #aebccb; width: 100%; margin-bottom: 16px; }
+  button { border: 0; background: #1c65d8; color: white; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; } #cancel { background: #e9edf3; color: #26374a; }
+  #status { min-height: 3em; } [hidden] { display: none !important; }
+  @media(max-width: 520px) { main { margin: 24px 16px; padding: 24px; } }
+</style>
+<main>
+  <h1>完成安全验证</h1>
+  <p>酷狗需要确认本次操作。验证成功后，播放器会继续刚才的请求。</p>
+  <p id="status" role="status" aria-live="polite">正在准备验证…</p>
+  <label id="sms" hidden>安全验证短信验证码<input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12"></label>
+  <button id="verify" disabled>开始验证</button>
+  <button id="cancel">取消</button>
+</main>
+<script src="verifycode.js"></script>
+<script src="verification.js"></script>
+</html>
