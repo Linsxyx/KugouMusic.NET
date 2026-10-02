@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.DesktopLyricsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+    <StackPanel Spacing="16">
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="桌面歌词锁定" FontWeight="Normal" TextWrapping="Wrap"/>
+                <Button Grid.Column="1" Classes="Basic" Cursor="Hand" Content="解除锁定" Command="{Binding UnlockDesktopLyricCommand}"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="排版方向" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding DesktopLyricLayoutOptions}" SelectedItem="{Binding DesktopSelectedLyricLayout}" MaxWidth="300"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="双行歌词" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="歌词上下交替显示，开启后隐藏翻译。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding DesktopLyricDoubleLineEnabled, Mode=TwoWay}"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="对齐方式" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding LyricAlignmentOptions}" SelectedItem="{Binding DesktopSelectedLyricAlignment}" MaxWidth="300"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6"/>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="调整颜色" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding LyricColorTargetOptions}" SelectedItem="{Binding DesktopSelectedLyricColorTarget}" MaxWidth="300"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="颜色模式" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding LyricColorModeOptions}" SelectedItem="{Binding DesktopSelectedLyricColorMode}" MaxWidth="300"/>
+            </localControls:SettingsRow>
+        </Border>
+        <StackPanel IsVisible="{Binding IsDesktopLyricColorCustomMode}" Spacing="8" Margin="0,4,0,0">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14" BorderThickness="1" BorderBrush="{DynamicResource SukiBorder}" Background="{Binding DesktopLyricColorPreviewBrush}"/>
+                <TextBox Grid.Column="1" PlaceholderText="#FFFFFFFF" Text="{Binding DesktopLyricColorHexInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <Button Grid.Column="2" Command="{Binding ApplyDesktopLyricColorHexCommand}" Content="应用" MinWidth="72"/>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding LyricColorPalette}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="8"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="x:String">
+                        <Button Width="24" Height="24" Margin="3" Padding="0" CornerRadius="12" Background="{Binding .}" BorderThickness="1" BorderBrush="{DynamicResource SukiBorder}" Command="{Binding #UserRoot.((vm:SettingViewModel)DataContext).PickDesktopLyricPaletteColorCommand}" CommandParameter="{Binding .}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+        <TextBlock Text="{Binding DesktopColorError}" IsVisible="{Binding HasDesktopColorError}" Foreground="{DynamicResource SukiRed}" FontSize="12" TextWrapping="Wrap"/>
+        <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,6"/>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="字体模式" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="歌词与翻译共用字体。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding LyricFontModeOptions}" SelectedItem="{Binding DesktopSelectedLyricFontMode}" MaxWidth="300"/>
+            </localControls:SettingsRow>
+        </Border>
+        <StackPanel IsVisible="{Binding IsDesktopLyricFontCustomMode}" Spacing="8" Margin="0,4,0,0">
+            <TextBlock Text="字体" FontWeight="Normal" TextWrapping="Wrap"/>
+            <ComboBox ItemsSource="{Binding LyricFontFamilyOptions}" SelectedItem="{Binding DesktopSelectedLyricFontFamily}" MaxWidth="300">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate DataType="x:String">
+                        <TextBlock Text="{Binding .}" FontFamily="{Binding .}" TextWrapping="Wrap"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

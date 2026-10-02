@@ -31,7 +31,7 @@ public sealed class PlaybackAudioEffectsService(
         if (preset == "自定义")
             _player.SetEQ(SettingsManager.Settings.CustomEqGains);
         else
-            _player.SetEQ(GetEqPreset(preset));
+            _player.SetEQ(KugouAvaloniaPlayer.Models.EqualizerPresets.GetGains(preset));
 
         _player.SetSurround(surround);
     }
@@ -95,19 +95,4 @@ public sealed class PlaybackAudioEffectsService(
         }
     }
 
-    private static float[] GetEqPreset(string preset)
-    {
-        return preset switch
-        {
-            "流行" => [-2f, 0f, -5.0f, -1.0f, 0f, 0.0f, 0f, -3.0f, 0f, 0f],
-            "摇滚" => [4.0f, 1.0f, -2.0f, 0f, 0f, -2.0f, 0f, -2.0f, 1.0f, 4.0f],
-            "爵士" => [0f, 0f, 0f, -1.0f, -1.0f, -3.0f, 0f, 0f, 0f, 0f],
-            "古典" => [0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 3.0f, 1.0f, 6.0f, 2.0f, 6.0f],
-            "嘻哈" => [3.0f, 0f, -3.0f, 0f, 0f, -3.0f, 0f, 0.0f, 0f, 2.0f],
-            "布鲁斯" => [2.0f, 2.0f, -6.0f, -2.0f, 3.0f, 1.0f, 0f, 1.0f, 0.0f, 2.0f],
-            "电子音乐" => [3.0f, 1.0f, -1.0f, 0f, 0f, -3.0f, 0f, 0f, 0f, 0f],
-            "金属" => [2.0f, 0f, 0f, -1.0f, -1.0f, -4.0f, 0f, 0f, 0f, 0f],
-            _ => [0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f]
-        };
-    }
 }

@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.AboutSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+    <StackPanel Spacing="16">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14" Margin="0,4,0,2">
+            <Border Width="90" Height="90" CornerRadius="14" ClipToBounds="True" Background="{DynamicResource SukiPrimaryColorLow}">
+                <Image Source="/Assets/ka-logo.png" Width="90" Height="90" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                <TextBlock Text="{Binding AppDisplayName}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding AppVersion}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                <TextBlock Text="反馈群：1081635731" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Button Classes="Basic" Grid.Column="2" Command="{Binding OpenRepositoryCommand}" Cursor="Hand" ToolTip.Tip="项目主页">
+                <Svg Classes="ThemeSvgIcon" Path="/Assets/github.svg" Width="25" Height="25"/>
+            </Button>
+        </Grid>
+        <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,2"/>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="启动时检查更新" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="{Binding UpdateStatus}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                <Button Grid.Column="1" Classes="Basic" Command="{Binding CheckForUpdateCommand}" IsEnabled="{Binding !IsCheckingUpdate}" MinWidth="120">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="16" Height="16"/>
+                        <TextBlock Text="检查更新" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+            </localControls:SettingsRow>
+        </Border>
+        <Border Height="1" Background="{DynamicResource SukiBorder}" Margin="0,2"/>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,4">
+                <TextBlock Text="更新日志" FontWeight="Normal" TextWrapping="Wrap"/>
+                <Button Grid.Column="1" Classes="Basic" Command="{Binding RefreshReleaseNotesCommand}" IsEnabled="{Binding !IsLoadingReleaseNotes}" MinWidth="108">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="16" Height="16"/>
+                        <TextBlock Text="刷新" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+            </localControls:SettingsRow>
+        </Border>
+        <TextBlock Text="{Binding ReleaseNotesStatus}" IsVisible="{Binding IsReleaseNotesStatusVisible}" FontSize="12" Foreground="{DynamicResource SukiLowText}" Margin="0,0,0,2" TextWrapping="Wrap"/>
+        <ItemsControl ItemsSource="{Binding RecentReleaseNotes}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ReleaseNoteItemViewModel">
+                    <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8" Background="{DynamicResource SukiBackground}">
+                        <StackPanel Spacing="6">
+                            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <TextBlock Text="{Binding Title}" FontWeight="Normal" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="{Binding PublishedAt}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                            </localControls:SettingsRow>
+                            <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" FontSize="12" LineHeight="18" Foreground="{DynamicResource SukiLowText}"/>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

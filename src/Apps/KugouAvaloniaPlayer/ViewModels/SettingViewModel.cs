@@ -21,18 +21,17 @@ using KugouAvaloniaPlayer.Services.GlobalShortcutService;
 using SimpleAudio;
 using SukiUI;
 using SukiUI.Dialogs;
-using EqSettingsView = KugouAvaloniaPlayer.Views.EqSettingsView;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class SettingViewModel : PageViewModelBase
 {
-    private const string SettingsSectionGeneral = "常规";
-    private const string SettingsSectionPlayback = "播放与音效";
-    private const string SettingsSectionShortcuts = "快捷键";
-    private const string SettingsSectionLyrics = "歌词设置";
-    private const string SettingsSectionUpdate = "更新与关于";
-    private const string SettingsSectionAccount = "账户";
+    private const string SettingsSectionGeneral = "general";
+    private const string SettingsSectionPlayback = "playback";
+    private const string SettingsSectionShortcuts = "shortcuts";
+    private const string SettingsSectionLyrics = "lyrics";
+    private const string SettingsSectionUpdate = "about";
+    private const string SettingsSectionAccount = "account";
     private const string RepositoryUrl = "https://github.com/Linsxyx/KugouMusic.NET";
     private const string LyricScopeDesktop = "桌面歌词";
     private const string LyricScopePlayPage = "播放页面歌词";
@@ -49,6 +48,7 @@ public partial class SettingViewModel : PageViewModelBase
     private const string DefaultTaskbarUnplayedColor = "#FF2E2E2E";
     private const string DefaultTaskbarPlayedColor = "#FF268EEB";
 
+    private readonly INavigationService _navigation;
     private readonly LoginClient _authClient;
     private readonly ISukiDialogManager _dialogManager;
     private readonly EqSettingsViewModel _eqSettingsViewModel;
@@ -170,7 +170,7 @@ public partial class SettingViewModel : PageViewModelBase
 
     [ObservableProperty] public partial string SelectedEQPreset { get; set; }
 
-    [ObservableProperty] public partial string SelectedSettingsSection { get; set; } = SettingsSectionGeneral;
+    [ObservableProperty] public partial string SelectedSettingsSection { get; set; } = "appearance";
 
     [ObservableProperty] public partial string? UserAvatar { get; set; }
 
@@ -185,8 +185,9 @@ public partial class SettingViewModel : PageViewModelBase
         IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService,
         IFolderPickerService folderPickerService, IUiPreferencesState uiPreferencesState,
         IMainWindowService mainWindowService, IMessenger messenger, ITaskbarLyricsService taskbarLyricsService,
-        IDesktopLyricWindowService desktopLyricWindowService)
+        IDesktopLyricWindowService desktopLyricWindowService, INavigationService navigation)
     {
+        _navigation = navigation;
         _userClient = userClient;
         _authClient = authClient;
         _dialogManager = dialogManager;
@@ -202,7 +203,8 @@ public partial class SettingViewModel : PageViewModelBase
         _taskbarLyricsService = taskbarLyricsService;
 
         Player = player;
-        EQPresetOptions = ["原声", "流行", "摇滚", "爵士", "古典", "嘻哈", "布鲁斯", "电子音乐", "金属", "自定义"];
+        EQPresetOptions = EqualizerPresets.Names;
+        _eqSettingsViewModel.PresetChanged += SyncEqPreset;
         LyricFontFamilyOptions = AppFontService.LoadSystemFontFamilies();
         AppFontFamilyOptions = [AppFontService.SystemDefaultOption, .. LyricFontFamilyOptions];
         UserId = _sessionManager.Session.UserId;
@@ -287,7 +289,7 @@ public partial class SettingViewModel : PageViewModelBase
 
     public string[] SettingsSections { get; } =
     [
-        SettingsSectionGeneral, SettingsSectionPlayback, SettingsSectionShortcuts, SettingsSectionLyrics,
+        "appearance", SettingsSectionGeneral, SettingsSectionPlayback, SettingsSectionShortcuts, SettingsSectionLyrics,
         SettingsSectionUpdate,
         SettingsSectionAccount
     ];
@@ -311,7 +313,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string[] LyricColorPalette { get; } =
     [
         "#FFFFFFFF",
-        "#FFCCFFFFFF",
+        "#FFCCFFFF",
         "#FFFFE082",
         "#FFFFAB91",
         "#FFA5D6A7",
@@ -353,11 +355,6 @@ public partial class SettingViewModel : PageViewModelBase
     public bool IsReleaseNotesStatusVisible => IsLoadingReleaseNotes || !HasReleaseNotes;
     public bool IsOutputDeviceStatusVisible => !string.IsNullOrWhiteSpace(OutputDeviceStatus);
 
-    public FontFamily AppFontPreviewFamily =>
-        SelectedAppFontFamily == AppFontService.SystemDefaultOption
-            ? FontFamily.Default
-            : new FontFamily(SelectedAppFontFamily);
-
     public IBrush DesktopLyricColorPreviewBrush =>
         new SolidColorBrush(ParseColorOrDefault(DesktopLyricColorHexInput, Colors.Transparent));
 
@@ -377,7 +374,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string CustomBackgroundImageStatus =>
         string.IsNullOrWhiteSpace(CustomBackgroundImagePath)
             ? "未选择图片"
-            : CustomBackgroundImagePath;
+            : Path.GetFileName(CustomBackgroundImagePath);
 
     public bool IsDarkMode
     {
@@ -430,11 +427,13 @@ public partial class SettingViewModel : PageViewModelBase
     }
 
     [RelayCommand]
-    private async Task Logout()
+    private void Logout()
     {
-        _authClient.LogOutAsync();
-        _messenger.Send(new AuthStateChangedEvent(false));
-        await Task.CompletedTask;
+        ShowSettingsConfirmation("退出当前账户？", "退出后可重新登录，本地音乐记录和个人设置会保留。", "退出登录", () =>
+        {
+            _authClient.LogOutAsync();
+            _messenger.Send(new AuthStateChangedEvent(false));
+        });
     }
 
     [RelayCommand]
@@ -442,6 +441,7 @@ public partial class SettingViewModel : PageViewModelBase
     {
         if (IsCheckingUpdate) return;
         IsCheckingUpdate = true;
+        UpdateStatus = "正在检查新版本…";
         CheckForUpdateRequested?.Invoke();
         await Task.CompletedTask;
     }
@@ -482,6 +482,7 @@ public partial class SettingViewModel : PageViewModelBase
     private void ApplyDesktopLyricColorHex()
     {
         var normalized = NormalizeColorHex(DesktopLyricColorHexInput);
+        DesktopColorError = normalized == null ? "请输入有效的十六进制颜色，例如 #FFFFFFFF。" : "";
         if (normalized == null) return;
 
         if (!IsDesktopLyricColorCustomMode)
@@ -512,6 +513,7 @@ public partial class SettingViewModel : PageViewModelBase
     private void ApplyPlayPageLyricColorHex()
     {
         var normalized = NormalizeColorHex(PlayPageLyricColorHexInput);
+        PlayPageColorError = normalized == null ? "请输入有效的十六进制颜色，例如 #FFFFFFFF。" : "";
         if (normalized == null) return;
 
         if (!IsPlayPageLyricColorCustomMode)
@@ -534,6 +536,7 @@ public partial class SettingViewModel : PageViewModelBase
     private void ApplyTaskbarUnplayedColorHex()
     {
         var normalized = NormalizeColorHex(TaskbarUnplayedColorHexInput);
+        TaskbarUnplayedColorError = normalized == null ? "请输入有效的十六进制颜色，例如 #FFFFFFFF。" : "";
         if (normalized == null) return;
 
         TaskbarUnplayedColorHexInput = normalized;
@@ -546,6 +549,7 @@ public partial class SettingViewModel : PageViewModelBase
     private void ApplyTaskbarPlayedColorHex()
     {
         var normalized = NormalizeColorHex(TaskbarPlayedColorHexInput);
+        TaskbarPlayedColorError = normalized == null ? "请输入有效的十六进制颜色，例如 #FFFFFFFF。" : "";
         if (normalized == null) return;
 
         TaskbarPlayedColorHexInput = normalized;
@@ -883,11 +887,13 @@ public partial class SettingViewModel : PageViewModelBase
 
     partial void OnDesktopLyricColorHexInputChanged(string value)
     {
+        DesktopColorError = "";
         OnPropertyChanged(nameof(DesktopLyricColorPreviewBrush));
     }
 
     partial void OnPlayPageLyricColorHexInputChanged(string value)
     {
+        PlayPageColorError = "";
         OnPropertyChanged(nameof(PlayPageLyricColorPreviewBrush));
     }
 
@@ -1040,15 +1046,8 @@ public partial class SettingViewModel : PageViewModelBase
     [RelayCommand]
     private void OpenEqSettings()
     {
-        var eqSettings = new EqSettingsView
-        {
-            DataContext = _eqSettingsViewModel
-        };
-
-        _dialogManager.CreateDialog()
-            .WithContent(eqSettings)
-            .WithActionButton("确定", _ => { }, true)
-            .TryShow();
+        _eqSettingsViewModel.ReloadFromSettings();
+        _navigation.Navigate(_eqSettingsViewModel);
     }
 
     [RelayCommand]
@@ -1077,15 +1076,24 @@ public partial class SettingViewModel : PageViewModelBase
     [RelayCommand]
     private void ResetAllSettings()
     {
-        _dialogManager.CreateDialog()
-            .WithTitle("重置设置")
-            .WithContent("确认要一键重置所有设置吗？这会将设置恢复为默认值，但不会清除本地音乐记录。")
-            .WithActionButton("取消", _ => { }, true, "Standard")
-            .WithActionButton("确认", _ =>
-            {
-                SettingsManager.ResetSettings();
-                ApplySettingsSnapshot();
-            }, true)
+        ShowSettingsConfirmation("恢复默认设置？", "将恢复外观、歌词、快捷键和播放设置。本地音乐记录、歌单资料和 Jellyfin 服务器配置会保留。", "恢复默认设置", () =>
+        {
+            SettingsManager.ResetSettings();
+            ApplySettingsSnapshot();
+            UpdateStatus = "设置已恢复默认。";
+        });
+    }
+
+    private void ShowSettingsConfirmation(string title, string description, string action, Action confirm)
+    {
+        var focused = _mainWindowService.MainWindow?.FocusManager?.GetFocusedElement();
+        var builder = _dialogManager.CreateDialog();
+        var content = new Views.Settings.SettingsConfirmation(title, description, action,
+            () => { _dialogManager.TryDismissDialog(builder.Dialog); confirm(); },
+            () => _dialogManager.TryDismissDialog(builder.Dialog));
+        builder.WithViewModel(_ => content)
+            .ShowCardBackground(false)
+            .OnDismissed(_ => Avalonia.Threading.Dispatcher.UIThread.Post(() => focused?.Focus()))
             .TryShow();
     }
 
@@ -1113,6 +1121,21 @@ public partial class SettingViewModel : PageViewModelBase
             UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
             RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
+            DesktopSelectedLyricAlignment = FormatAlignment(SettingsManager.Settings.DesktopLyricAlignment);
+            DesktopSelectedLyricLayout = SettingsManager.Settings.DesktopLyricLayoutMode == DesktopLyricLayoutMode.Vertical
+                ? DesktopLyricLayoutVertical : DesktopLyricLayoutHorizontal;
+            EnableTaskbarLyrics = IsTaskbarLyricsSupported && SettingsManager.Settings.EnableTaskbarLyrics;
+            TaskbarLyricsShowTranslation = SettingsManager.Settings.TaskbarLyricsShowTranslation;
+            TaskbarLyricsHorizontalOffset = SettingsManager.Settings.TaskbarLyricsHorizontalOffset;
+            TaskbarSelectedLyricAlignment = SettingsManager.Settings.TaskbarLyricsAlignment == LyricAlignmentOption.Right ? LyricAlignmentRight : LyricAlignmentLeft;
+            TaskbarSelectedLyricFontFamily = NormalizeFontName(SettingsManager.Settings.TaskbarLyricsFontFamily) ?? GetDefaultTaskbarFontFamily();
+            TaskbarLyricsFontSize = SettingsManager.Settings.TaskbarLyricsFontSize;
+            TaskbarUnplayedColorHexInput = SettingsManager.Settings.TaskbarLyricsUnplayedColor;
+            TaskbarPlayedColorHexInput = SettingsManager.Settings.TaskbarLyricsPlayedColor;
+#if KUGOU_LINUX
+            LinuxUseFullWindowDecorations = SettingsManager.Settings.LinuxUseFullWindowDecorations;
+#endif
+            DesktopColorError = PlayPageColorError = TaskbarUnplayedColorError = TaskbarPlayedColorError = "";
 
             LoadDesktopLyricColorEditorFromSettings();
             LoadDesktopLyricFontEditorFromSettings();
@@ -1140,6 +1163,11 @@ public partial class SettingViewModel : PageViewModelBase
         RefreshShortcutTexts();
         ApplyRegistrationResults(shortcutApplyResult.Results);
 
+        _taskbarLyricsService.SetEnabled(EnableTaskbarLyrics);
+        _taskbarLyricsService.Refresh();
+#if KUGOU_LINUX
+        _mainWindowService.ApplyLinuxWindowDecorations(LinuxUseFullWindowDecorations);
+#endif
         NotifyUiPreferencesChanged();
         OnPropertyChanged(nameof(IsDarkMode));
     }
@@ -1374,6 +1402,11 @@ public partial class SettingViewModel : PageViewModelBase
 
     partial void OnSelectedSettingsSectionChanged(string value)
     {
+        CancelShortcutRecording();
+        var category = Array.Find(Categories, c => c.Id == value);
+        if (category != null && SelectedCategory != category) SelectedCategory = category;
+        OnPropertyChanged(nameof(IsAppearanceSection));
+        OnPropertyChanged(nameof(ScrollKey));
         OnPropertyChanged(nameof(IsGeneralSection));
         OnPropertyChanged(nameof(IsPlaybackSection));
         OnPropertyChanged(nameof(IsShortcutsSection));
@@ -1392,7 +1425,6 @@ public partial class SettingViewModel : PageViewModelBase
 
     partial void OnSelectedAppFontFamilyChanged(string value)
     {
-        OnPropertyChanged(nameof(AppFontPreviewFamily));
 
         if (_isApplyingSettingsSnapshot)
             return;

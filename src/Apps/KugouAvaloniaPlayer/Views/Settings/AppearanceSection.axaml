@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.AppearanceSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+    <StackPanel Spacing="16">
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="深色模式" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ToggleSwitch Grid.Column="1" Classes="Gorgeous" IsChecked="{Binding IsDarkMode, Mode=TwoWay}"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="界面字体" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="未自定义字体的歌词也会使用此字体。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding AppFontFamilyOptions}" SelectedItem="{Binding SelectedAppFontFamily}" MaxWidth="300">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="x:String">
+                            <TextBlock Text="{Binding .}" FontFamily="{Binding .}" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="自定义背景" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding CustomBackgroundImageStatus}" ToolTip.Tip="{Binding CustomBackgroundImagePath}" FontSize="12" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource SukiLowText}"/>
+                </StackPanel>
+                <WrapPanel Grid.Column="1" Orientation="Horizontal">
+                    <ToggleSwitch IsChecked="{Binding UseCustomBackgroundImage, Mode=TwoWay}"/>
+                    <Button Classes="Basic" Command="{Binding PickCustomBackgroundImageCommand}" MinWidth="88">
+                        <TextBlock Text="选择图片" TextWrapping="Wrap"/>
+                    </Button>
+                    <Button Classes="Basic" Command="{Binding ClearCustomBackgroundImageCommand}" MinWidth="72">
+                        <TextBlock Text="清除" TextWrapping="Wrap"/>
+                    </Button>
+                </WrapPanel>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6" IsEnabled="{Binding UseCustomBackgroundImage}">
+                <StackPanel>
+                    <TextBlock Text="图片透明度" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding CustomBackgroundImageOpacityDisplay}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Slider Grid.Column="1" Width="180" Minimum="0.1" Maximum="1" TickFrequency="0.05" Value="{Binding CustomBackgroundImageOpacity, Mode=TwoWay}" MaxWidth="300"/>
+            </localControls:SettingsRow>
+        </Border>
+        <TextBlock Text="开启自定义背景后可调节透明度。" IsVisible="{Binding !UseCustomBackgroundImage}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="播放页背景" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding NowPlayingBackgroundSourceOptions}" SelectedItem="{Binding SelectedNowPlayingBackgroundSource}" MaxWidth="300">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="models:NowPlayingBackgroundSource">
+                            <TextBlock Text="{Binding Converter={StaticResource NowPlayingBackgroundSourceConverter}}" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                    <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource NowPlayingBackgroundSourceConverter}}" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="播放页背景模糊" FontWeight="Normal" TextWrapping="Wrap"/>
+                <TextBlock Grid.Column="1" Text="{Binding NowPlayingBackgroundBlurRadiusDisplay}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Slider Minimum="0" Maximum="80" Value="{Binding NowPlayingBackgroundBlurRadius, Mode=TwoWay}" TickFrequency="5" Margin="0,0,0,4" Classes="Player" MaxWidth="300"/>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,60 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:KugouAvaloniaPlayer.Controls" xmlns:suki="https://github.com/kikipoulet/SukiUI">
+    <Style Selector="TextBlock"><Setter Property="FontSize" Value="14" /></Style>
+    <Style Selector="ComboBox"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="MinHeight" Value="36" /></Style>
+    <Style Selector="Button"><Setter Property="MinHeight" Value="32" /></Style>
+    <Style Selector="local|SettingsRow"><Setter Property="Margin" Value="0,8" /><Setter Property="RowSpacing" Value="10" /></Style>
+
+    <Style Selector="ListBox.SettingsNavigation">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem">
+        <!-- Replace the inherited item theme as well as its template so selection cannot style descendants. -->
+        <Setter Property="Theme"><ControlTheme TargetType="ListBoxItem" /></Setter>
+        <Setter Property="Padding" Value="14,11" />
+        <Setter Property="Margin" Value="0,3" />
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel Background="Transparent">
+                    <!-- Own the navigation states; reuse only the glass material from SukiUI. -->
+                    <Border Name="HoverFill" CornerRadius="12" Background="{DynamicResource SukiText}" Opacity="0" IsHitTestVisible="False">
+                        <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions></Border.Transitions>
+                    </Border>
+                    <suki:GlassCard Name="SelectionGlass" CornerRadius="12" Padding="0" BorderThickness="1" IsAnimated="False" IsHitTestVisible="False" Opacity="0">
+                        <suki:GlassCard.BorderBrush>
+                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                <GradientStop Offset="0" Color="{DynamicResource SukiLiquid1}" />
+                                <GradientStop Offset="0.5" Color="Transparent" />
+                                <GradientStop Offset="1" Color="{DynamicResource SukiLiquid2}" />
+                            </LinearGradientBrush>
+                        </suki:GlassCard.BorderBrush>
+                        <suki:GlassCard.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions></suki:GlassCard.Transitions>
+                    </suki:GlassCard>
+                    <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Foreground="{TemplateBinding Foreground}" Margin="{TemplateBinding Padding}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" />
+                    <Border Name="KeyboardFocus" CornerRadius="12" BorderBrush="{DynamicResource SukiPrimaryColor}" BorderThickness="2" IsHitTestVisible="False" Opacity="0" />
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:pointerover /template/ Border#HoverFill">
+        <Setter Property="Opacity" Value="0.035" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected /template/ Border#HoverFill">
+        <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected /template/ suki|GlassCard#SelectionGlass">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:focus-visible /template/ Border#KeyboardFocus">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="ComboBox.SettingsCategoryPicker">
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+</Styles>
