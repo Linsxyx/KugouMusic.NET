@@ -18,6 +18,8 @@ public sealed class SonnetScene : EffectScene
     private int _activeParagraph = -1;
     private int _buildCursor;
     private EffectContainer? _overlay;
+    private EffectContainer? _credits;
+    private SonnetSongMetadata _metadata = new();
     private ShapeNode? _swapCover;
     private PendingSongSwap? _songSwap;
 
@@ -44,7 +46,16 @@ public sealed class SonnetScene : EffectScene
     public SonnetTuning Tuning => Options.Tuning;
     public SonnetModulation Modulation { get; } = new();
     public SonnetSongContext CurrentSong { get; private set; }
-    public SonnetSongMetadata Metadata { get; set; } = new();
+    public SonnetSongMetadata Metadata
+    {
+        get => _metadata;
+        set
+        {
+            if (_metadata == value) return;
+            _metadata = value;
+            RebuildChrome();
+        }
+    }
     public SonnetAudioFrame Audio { get; set; }
     public int ActiveParagraphIndex => _activeParagraph;
     public SonnetShotKind? ActiveShotKind { get; private set; }
@@ -83,9 +94,7 @@ public sealed class SonnetScene : EffectScene
             Math.Max(1, (int)Math.Round(pixelSize.Height / renderScaling)));
         _stage.Scale = new Vector2((float)renderScaling);
         ClearViews();
-        if (_overlay is not null) _stage.Remove(_overlay);
-        _overlay = SonnetMgBuilder.BuildOverlay(Theme, _size.Width, _size.Height);
-        _stage.Add(_overlay);
+        RebuildChrome();
         RebuildSwapCover();
     }
 
@@ -102,8 +111,9 @@ public sealed class SonnetScene : EffectScene
         foreach (var (index, view) in _cache)
         {
             view.Root.IsVisible = index == paragraphIndex;
-            if (index == paragraphIndex) UpdateParagraph(view, time);
+            if (index == paragraphIndex) UpdateParagraph(view, index, time);
         }
+        UpdateCredits(time);
         Prune(paragraphIndex);
 
         // Match Folia's one-expensive-build-per-frame pre-roll policy.
@@ -153,8 +163,19 @@ public sealed class SonnetScene : EffectScene
             if (!Tuning.ShowOnlyText) shotRoot.Add(mg.Root);
             var glyphs = new List<GlyphView>();
             var tracking = new List<IReadOnlyList<(Vector2 Position, double StartTime, bool IsBackgroundShape)>>();
+            var decorationTracking = new List<IReadOnlyList<(Vector2 Position, double StartTime, bool IsBackgroundShape)>>();
             var guides = new List<SonnetGuideView>();
             var frames = new List<SonnetFrameDecorView>();
+            // Folia's shot stacking: guides, then the text layer whose bottom holds frame decor and
+            // text geometry, then the shared aberration copies, then every glyph wrapper.
+            var guideLayer = new EffectContainer();
+            var textLayer = new EffectContainer();
+            var behindTextLayer = new EffectContainer();
+            var caLayer = new EffectContainer();
+            textLayer.Add(behindTextLayer).Add(caLayer);
+            shotRoot.Add(guideLayer).Add(textLayer);
+            // Virtual instrumental lines can share one shot; the staff belongs to the shot.
+            var staffAdded = false;
             for (var placementIndex = 0; placementIndex < placements.Count; placementIndex++)
             {
                 var placement = placements[placementIndex];
@@ -162,19 +183,41 @@ public sealed class SonnetScene : EffectScene
                 var fontSize = baseFontSize * placement.FontScale;
                 var weight = SonnetTypographyLayout.ResolveFontWeight(Theme.FontWeight, placement.Role);
                 var decorSeed = SonnetRandom.Hash($"{shot.Id}:{placementIndex}:{segment.Text}");
-                if (!Tuning.ShowOnlyText && Tuning.ShowGiantDecorativeText && placement.Role == SonnetSegmentRole.Hero)
+                var isDecoration = placement.Role == SonnetSegmentRole.Decoration;
+                var normalSeed = SonnetRandom.Hash(FormattableString.Invariant(
+                    $"{segment.Text}:{segment.StartOffset}:{segment.EndOffset}:{placement.SegmentIndex}:normal-offset"));
+                var normalOffset = SonnetMotion.SegmentNormalOffset(placement.Role,
+                    placement.LayoutDirection == SonnetLayoutDirection.Vertical, placement.Rotation, fontSize,
+                    normalSeed / (double)uint.MaxValue);
+                placement = placement with { X = placement.X + normalOffset.X, Y = placement.Y + normalOffset.Y };
+                // Folia draws this from Math.random; seed it so seeking always lands on the same frame.
+                var depthRandom = new Random(unchecked((int)decorSeed));
+                var depth = (float)SonnetMotion.SegmentDepth(placement.Role, depthRandom.NextDouble);
+                var glowColor = SonnetTypographyLayout.IsEmphasis(placement.Role) ? Theme.Primary : Theme.Accent;
+                if (segment.Text == SonnetStaffView.Marker)
                 {
-                    var giant = Text(segment.Text, Math.Min(_size.Width, _size.Height) * 0.48f, 300,
-                        Theme.Secondary with { A = 0.045f });
-                    giant.Anchor = new Vector2(0.5f);
-                    giant.Position = new Vector2(-_size.Width * 0.14f, _size.Height * (placementIndex % 2 == 0 ? -0.18f : 0.2f));
-                    giant.Rotation = placementIndex % 2 == 0 ? -0.09f : 0.08f;
-                    shotRoot.Add(giant);
+                    if (staffAdded) continue;
+                    staffAdded = true;
+                    var staff = new SonnetStaffView(placement, Theme, baseFontSize, shot.StartTime, _size.Width);
+                    textLayer.Add(staff.Root);
+                    if (!isDecoration && !Tuning.ShowOnlyText && Tuning.ShowGuide)
+                    {
+                        var staffGuide = SonnetMgBuilder.BuildGuide(segment, placement, fontSize, Theme, decorSeed);
+                        guideLayer.Add(staffGuide.Root);
+                        guides.Add(staffGuide);
+                    }
+                    var staffPosition = new Vector2(placement.X, placement.Y);
+                    glyphs.Add(new GlyphView(staff.Root, null, null, null, null, [],
+                        new SonnetGlyphPlacement(segment.Text, staffPosition, new Vector2(placement.EnterX, placement.EnterY),
+                            0, shot.StartTime, shot.StartTime + 0.5),
+                        placement.Role, placement.Rotation, fontSize, 0, 0, false, staff));
+                    (isDecoration ? decorationTracking : tracking).Add([(staffPosition, shot.StartTime, false)]);
+                    continue;
                 }
-                if (!Tuning.ShowOnlyText && Tuning.ShowGuide)
+                if (!isDecoration && !Tuning.ShowOnlyText && Tuning.ShowGuide)
                 {
                     var guide = SonnetMgBuilder.BuildGuide(segment, placement, fontSize, Theme, decorSeed);
-                    shotRoot.Add(guide.Root);
+                    guideLayer.Add(guide.Root);
                     guides.Add(guide);
                 }
                 var glyphLayout = SonnetMotion.BuildGlyphs(segment, placement, fontSize,
@@ -182,56 +225,105 @@ public sealed class SonnetScene : EffectScene
                     shot.StartTime, shot.EndTime);
                 var frameSpec = SonnetFrameDecorView.ResolveSpec(segment);
                 if (!Tuning.ShowOnlyText && Tuning.ShowFixedGeo && frameSpec.Applied &&
-                    placement.Role != SonnetSegmentRole.Decoration && glyphLayout.Count > 0)
+                    !isDecoration && glyphLayout.Count > 0)
                 {
                     var frameDecor = new SonnetFrameDecorView(placement, fontSize, Theme, frameSpec.Variant,
                         glyphLayout[0].StartTime, shot.StartTime, shot.EndTime);
-                    shotRoot.Add(frameDecor.Root);
+                    behindTextLayer.Add(frameDecor.Root);
                     frames.Add(frameDecor);
                 }
+                var textSeed = SonnetTextFixedGeo.Seed(segment.Text, placement.SegmentIndex);
+                var chorusEffect = SonnetTextFixedGeo.IsChorusEffect(textSeed, paragraph.Kind);
+                if (!Tuning.ShowOnlyText && Tuning.ShowFixedGeo && SonnetTextFixedGeo.ShouldApply(textSeed, chorusEffect) &&
+                    !isDecoration && segment.IsWordLike && !frameSpec.Applied && glyphLayout.Count > 0)
+                {
+                    var shape = SonnetTextFixedGeo.Build(textSeed, chorusEffect, fontSize, _size.Width, Theme);
+                    var shapeWrapper = new EffectContainer { Alpha = 0 };
+                    shapeWrapper.Add(shape);
+                    behindTextLayer.Add(shapeWrapper);
+                    var first = glyphLayout[0];
+                    glyphs.Add(new GlyphView(shapeWrapper, null, null, null, null, [],
+                        first with
+                        {
+                            Position = new Vector2(placement.X, placement.Y),
+                            Entrance = new Vector2(placement.EnterX, placement.EnterY),
+                            EntryRotation = 0,
+                        },
+                        placement.Role, placement.Rotation, fontSize, -0.5f - textSeed % 5 * 0.1f, 0, true));
+                }
                 if (glyphLayout.Count > 0)
-                    tracking.Add(glyphLayout.Select(glyph => (glyph.Position, glyph.StartTime, false)).ToArray());
+                    (isDecoration ? decorationTracking : tracking).Add(
+                        glyphLayout.Select(glyph => (glyph.Position, glyph.StartTime, false)).ToArray());
+                var strokeWidth = Math.Clamp(fontSize * 0.006f, 1, 8);
+                var emphasis = SonnetTypographyLayout.IsEmphasis(placement.Role);
+                var ghostDuration = Math.Min(0.7, Math.Max(0.4, (shot.EndTime - shot.StartTime) * 0.12 + 0.1));
+                var ghostSide = normalSeed % 2 == 0 ? 1 : -1;
+                var screenNormal = placement.LayoutDirection == SonnetLayoutDirection.Vertical ? Vector2.UnitX : Vector2.UnitY;
+                var ghostNormal = Vector2.Transform(screenNormal, Matrix3x2.CreateRotation(-placement.Rotation));
                 foreach (var glyph in glyphLayout)
                 {
-                    var wrapper = new EffectContainer { Position = glyph.Position, Alpha = 0 };
-                    var cyan = Text(glyph.Text, fontSize, weight, new EffectColor(0, 1, 1, 0.65f), EffectBlendMode.Screen);
-                    var red = Text(glyph.Text, fontSize, weight, new EffectColor(1, 0, 0.27f, 0.65f), EffectBlendMode.Screen);
-                    var glowColor = placement.Role is SonnetSegmentRole.Hero or SonnetSegmentRole.SemiHero
-                        ? Theme.Primary
-                        : Theme.Accent;
-                    var core = placement.Role == SonnetSegmentRole.Decoration
-                        ? Text(glyph.Text, fontSize, weight, Theme.Primary)
-                        : GlowText(glyph.Text, fontSize, weight, Theme.Primary, glowColor with { A = 0.9f });
-                    if (Tuning.ShowChromaticSplit)
-                        wrapper.Add(cyan).Add(red);
+                    var wrapper = new EffectContainer { Position = glyph.Position, Rotation = placement.Rotation, Alpha = 0 };
+                    TextNode core;
+                    if (isDecoration)
+                    {
+                        // Giant hollow echo: outline only, faint, and never part of the aberration.
+                        core = Text(glyph.Text, fontSize, weight, glowColor);
+                        core.StrokeWidth = strokeWidth;
+                        core.Alpha = 0.2f;
+                    }
+                    else core = GlowText(glyph.Text, fontSize, weight, Theme.Primary, glowColor with { A = 0.8f });
+                    var ghosts = new List<GhostView>();
+                    if (placement.Role == SonnetSegmentRole.SemiHero)
+                    {
+                        for (var layer = 1; layer <= 2; layer++)
+                        {
+                            var ghost = Text(glyph.Text, fontSize, weight, glowColor);
+                            ghost.StrokeWidth = strokeWidth;
+                            ghost.IsVisible = false;
+                            wrapper.Add(ghost);
+                            ghosts.Add(new GhostView(ghost,
+                                ghostNormal * ghostSide * (layer == 1 ? 1 : 1.7f) * fontSize * 0.85f,
+                                layer == 1 ? 0.3f : 0.16f));
+                        }
+                    }
                     wrapper.Add(core);
-                    shotRoot.Add(wrapper);
-                    glyphs.Add(new GlyphView(wrapper, cyan, red, glyph, placement.Role, fontSize));
+                    EffectContainer? caWrapper = null;
+                    TextNode? cyan = null;
+                    TextNode? red = null;
+                    if (!isDecoration && Tuning.ShowChromaticSplit)
+                    {
+                        var caAlpha = emphasis ? 0.8f : 0.5f;
+                        cyan = Text(glyph.Text, fontSize, weight, new EffectColor(0, 1, 1, caAlpha), EffectBlendMode.Screen);
+                        red = Text(glyph.Text, fontSize, weight, new EffectColor(1, 0, 0.267f, caAlpha), EffectBlendMode.Screen);
+                        caWrapper = new EffectContainer { Alpha = 0 };
+                        caWrapper.Add(cyan).Add(red);
+                        caLayer.Add(caWrapper);
+                    }
+                    textLayer.Add(wrapper);
+                    glyphs.Add(new GlyphView(wrapper, caWrapper, cyan, red, core, ghosts, glyph, placement.Role,
+                        placement.Rotation, fontSize, depth, ghostDuration, false));
                 }
             }
+            if (tracking.Count == 0) tracking = decorationTracking;
             root.Add(shotRoot);
             var hero = placements.FirstOrDefault(item => item.Role == SonnetSegmentRole.Hero);
             var poster = shot.Kind == SonnetShotKind.PosterBlocks;
             var basePosition = new Vector2(
                 _size.Width * (float)(poster ? 0.5 : 0.5 + shot.Camera.X),
                 _size.Height * (float)(poster ? 0.5 : 0.48 + shot.Camera.Y + (shotIndex % 2 == 1 ? 0.025 : -0.025)));
-            var revealDoneTime = glyphs.Count == 0 ? shot.EndTime : glyphs.Max(item => item.Placement.StartTime);
+            var revealDoneTime = tracking.Count == 0 ? shot.EndTime : tracking.Max(item => item[^1].StartTime);
             shots.Add(new ShotView(shot, shotRoot, glyphs, guides, frames, mg,
                 poster ? Vector2.Zero : new Vector2(hero?.X ?? 0, hero?.Y ?? 0), basePosition,
                 new TrackingFocusData(tracking), revealDoneTime));
         }
         _stage.Add(root);
-        if (_overlay is not null)
-        {
-            _stage.Remove(_overlay);
-            _stage.Add(_overlay);
-        }
+        BringChromeToFront();
         var shotList = paragraph.Shots.ToArray();
         var transitionSeed = SonnetRandom.Hash($"{Program.Seed}:{paragraph.Id}:transition-frame");
         _cache[index] = new ParagraphView(paragraph, root, shots, sceneSeed, transitionSeed, shotList);
     }
 
-    private void UpdateParagraph(ParagraphView paragraph, double time)
+    private void UpdateParagraph(ParagraphView paragraph, int paragraphIndex, double time)
     {
         Device.PostProcess.SonnetNoiseSeed = paragraph.NoiseSeed % 10000 / 10000f;
         var shotIndex = 0;
@@ -239,12 +331,35 @@ public sealed class SonnetScene : EffectScene
             if (time >= paragraph.Shots[index].Shot.StartTime) { shotIndex = index; break; }
         var shotTransition = SonnetTransitions.ResolveShot(paragraph.ShotList, shotIndex, time,
             Tuning.EnableTransitions, paragraph.TransitionSeed, Tuning.EnableGlitchTransitions);
-        var paragraphTransition = SonnetTransitions.ResolveParagraph(paragraph.Paragraph, time, Tuning.EnableTransitions, paragraph.TransitionSeed, Tuning.EnableGlitchTransitions);
+        var transitionsEnabled = Tuning.EnableTransitions && !Options.StaticMode;
+        var previousTransition = paragraphIndex > 0 ? Program.Paragraphs[paragraphIndex - 1].TransitionOut : null;
+        var enterDuration = previousTransition is null
+            ? 0
+            : Math.Clamp(previousTransition.EndTime - previousTransition.StartTime, 0.16, 0.3);
+        var paragraphStart = paragraph.Paragraph.StartTime;
+        var entering = transitionsEnabled && previousTransition is not null &&
+            time >= paragraphStart && time <= paragraphStart + enterDuration;
+        var paragraphTransition = entering
+            ? SonnetTransitions.ResolveEnter(previousTransition!.Kind, time - paragraphStart, enterDuration,
+                true, paragraph.TransitionSeed, Tuning.EnableGlitchTransitions)
+            : SonnetTransitions.ResolveParagraph(paragraph.Paragraph, time, transitionsEnabled,
+                paragraph.TransitionSeed, Tuning.EnableGlitchTransitions);
         var transition = shotTransition != SonnetMotion.IdleTransition ? shotTransition : paragraphTransition;
-        paragraph.Root.Alpha = (float)transition.Alpha;
+        var credits = ResolveCreditsFrame(time);
+        var isFinal = paragraphIndex == Program.Paragraphs.Count - 1;
+        paragraph.Root.Alpha = (float)(transition.Alpha * (isFinal && _credits is not null ? credits.LyricAlpha : 1));
+        // Folia defocuses the final scene while the credits poster rises; blur the lyric
+        // glyphs themselves so the poster above stays sharp.
+        var lyricBlur = isFinal && _credits is not null ? (float)credits.LyricBlur * 0.5f : 0;
+        foreach (var shot in paragraph.Shots)
+            foreach (var glyph in shot.Glyphs)
+                if (glyph.Core is { } core) core.Blur = lyricBlur;
         Device.PostProcess.Blur = (float)(transition.Blur / 14);
         Device.PostProcess.Glitch = (float)transition.Glitch;
-        Device.PostProcess.Seed = (float)transition.GlitchSeed;
+        // Folia's glitch seed reaches ~4e5, which pushes the shader's sin() hash far past
+        // float32 range so every slice gate reads the same. Wrap it in double precision first;
+        // the 0.173 step between glitch frames still changes the tear pattern.
+        Device.PostProcess.Seed = (float)(transition.GlitchSeed % 1024);
 
         for (var index = 0; index < paragraph.Shots.Count; index++)
         {
@@ -277,32 +392,46 @@ public sealed class SonnetScene : EffectScene
 
     private void UpdateShot(ShotView view, double time)
     {
-        var progress = SonnetMotion.ShotProgress(view.Shot, time);
-        var camera = SonnetMotion.ShotFrame(view.Shot.Kind, progress);
-        var phase = SonnetRandom.Hash(view.Shot.Id) % 1024 / 1024d * Math.PI * 2;
-        var revealDone = view.RevealDoneTime;
-        var breathWeight = SonnetMotion.BreathWeight(time, revealDone);
-        var breath = SonnetMotion.CameraBreath(time, phase);
-        var cameraIntensity = Tuning.CameraIntensity * AnimationScale();
-        var scale = view.Shot.Camera.Zoom * (1 + (camera.Scale - 1) * cameraIntensity) *
-            (1 + breath.Scale * breathWeight * cameraIntensity);
-        var focus = ResolveTrackingFocus(view.TrackingFocus, time, view.Shot.StartTime, view.Shot.EndTime, view.Focus);
-        view.Root.Pivot = Vector2.Lerp(view.Focus, focus, (float)cameraIntensity);
-        view.Root.Position = view.BasePosition + new Vector2(
-            _size.Width * (float)((camera.X + breath.X * breathWeight) * cameraIntensity),
-            _size.Height * (float)((camera.Y + breath.Y * breathWeight) * cameraIntensity));
-        view.Root.Scale = new Vector2((float)scale);
-        view.Root.Rotation = (float)((view.Shot.Camera.Rotation + camera.Rotation + breath.Rotation * breathWeight) * cameraIntensity);
-        var cameraOffset = new Vector2(
-            _size.Width * (float)(camera.X * cameraIntensity + breath.X * breathWeight),
-            _size.Height * (float)(camera.Y * cameraIntensity + breath.Y * breathWeight));
-        view.Mg.Update(time, view.Shot.StartTime, view.Shot.EndTime, Audio, cameraOffset,
-            (float)camera.Scale, view.Root.Rotation);
-
-        foreach (var frame in view.Frames)
+        var kind = view.Shot.Kind;
+        var frame = SonnetMotion.ShotFrame(kind, SonnetMotion.ShotProgress(view.Shot, time));
+        double frameX = frame.X, frameY = frame.Y, frameScale = frame.Scale, frameRotation = frame.Rotation;
+        // Keep drifting through the gap after the shot ends, continuing the direction the
+        // camera travelled over the last fifth of the shot, so the frame never freezes.
+        var gapTime = Math.Max(0, time - view.Shot.EndTime);
+        if (gapTime > 0)
         {
-            frame.Root.IsVisible = Tuning.ShowFixedGeo && !Tuning.ShowOnlyText;
-            frame.Update(time);
+            var tail = SonnetMotion.ShotFrame(kind, 0.8);
+            var drift = (1 - Math.Exp(-gapTime * 0.4)) * 2.0;
+            frameX += (frame.X - tail.X) * drift;
+            frameY += (frame.Y - tail.Y) * drift;
+            frameScale += (frame.Scale - tail.Scale) * drift;
+            frameRotation += (frame.Rotation - tail.Rotation) * drift;
+        }
+        var breathWeight = SonnetMotion.BreathWeight(time, view.RevealDoneTime);
+        if (breathWeight > 0)
+        {
+            var phase = SonnetRandom.Hash(view.Shot.Id) % 1024 / 1024d * Math.PI * 2;
+            var breath = SonnetMotion.CameraBreath(time, phase);
+            frameX += breath.X * breathWeight;
+            frameY += breath.Y * breathWeight;
+            frameScale += breath.Scale * breathWeight;
+            frameRotation += breath.Rotation * breathWeight;
+        }
+        var camera = Tuning.CameraIntensity * AnimationScale();
+        var motion = Tuning.TypographyMotion * AnimationScale();
+        var focus = ResolveTrackingFocus(view.TrackingFocus, time, view.Shot.StartTime, view.Shot.EndTime, view.Focus);
+        view.Root.Pivot = Vector2.Lerp(view.Focus, focus, camera);
+        view.Root.Scale = new Vector2((float)(view.Shot.Camera.Zoom * (1 + (frameScale - 1) * camera)));
+        view.Root.Rotation = (float)((view.Shot.Camera.Rotation + frameRotation) * camera);
+        var cameraOffset = new Vector2(_size.Width * (float)frameX, _size.Height * (float)frameY) * camera;
+        view.Root.Position = view.BasePosition + cameraOffset;
+        view.Mg.Update(time, view.Shot.StartTime, view.Shot.EndTime, Audio, cameraOffset,
+            (float)frameScale, view.Root.Rotation);
+
+        foreach (var decor in view.Frames)
+        {
+            decor.Root.IsVisible = Tuning.ShowFixedGeo && !Tuning.ShowOnlyText;
+            decor.Update(time);
         }
 
         foreach (var guide in view.Guides)
@@ -319,17 +448,57 @@ public sealed class SonnetScene : EffectScene
         {
             var glyphProgress = SonnetMotion.SegmentProgress(glyph.Placement.StartTime, glyph.Placement.SettleTime, time);
             var waiting = time < glyph.Placement.StartTime;
-            var offset = (float)((1 - glyphProgress) * Tuning.TypographyMotion * AnimationScale());
-            glyph.Wrapper.Position = glyph.Placement.Position + glyph.Placement.Entrance * offset;
-            glyph.Wrapper.Rotation = glyph.Placement.EntryRotation * offset;
-            glyph.Wrapper.Alpha = waiting ? 0 : (float)(0.16 + glyphProgress * 0.84);
-            var glyphScale = glyph.Role == SonnetSegmentRole.Hero && view.Shot.Kind == SonnetShotKind.TypeImpact
-                ? 0.52f + (float)glyphProgress * 0.48f : 0.86f + (float)glyphProgress * 0.14f;
-            glyph.Wrapper.Scale = new Vector2(glyphScale);
-            var caOffset = glyph.FontSize * (glyph.Role is SonnetSegmentRole.Hero or SonnetSegmentRole.SemiHero ? 0.025f : 0.01f) *
-                (float)(1 - SonnetMotion.EaseInOut(glyphProgress) * 0.8);
-            glyph.Cyan.Position = new Vector2(-caOffset, caOffset * 0.5f);
-            glyph.Red.Position = new Vector2(caOffset, -caOffset * 0.5f);
+            var offset = (float)((1 - glyphProgress) * motion);
+            var coreAlpha = waiting ? 0 : (float)(0.16 + glyphProgress * 0.84);
+            var scale = SonnetTypographyLayout.IsEmphasis(glyph.Role) && kind == SonnetShotKind.TypeImpact
+                ? 0.52f + (float)glyphProgress * 0.48f
+                : 0.86f + (float)glyphProgress * 0.14f;
+            var isDecoration = glyph.Role == SonnetSegmentRole.Decoration;
+            var visible = Tuning.ShowOnlyText
+                ? glyph.IsTextGlyph && (!isDecoration || Tuning.ShowGiantDecorativeText)
+                : (!glyph.IsBackgroundShape || Tuning.ShowBackgroundDecor) && (!isDecoration || Tuning.ShowGiantDecorativeText);
+            // Simulated depth: far layers trail the camera and shrink, near ones lead and grow.
+            var parallax = cameraOffset * glyph.Depth * 2.5f;
+            var depthScale = 1 + glyph.Depth * 0.45f;
+            var wrapper = glyph.Wrapper;
+            wrapper.IsVisible = visible;
+            wrapper.Alpha = coreAlpha;
+            wrapper.Scale = new Vector2(scale * depthScale);
+            wrapper.Position = glyph.Placement.Position + glyph.Placement.Entrance * offset + parallax;
+            wrapper.Rotation = glyph.FinalRotation + glyph.Placement.EntryRotation * offset;
+
+            if (glyph.CaWrapper is { } ca && glyph.Cyan is { } cyan && glyph.Red is { } red)
+            {
+                ca.IsVisible = visible && !Tuning.ShowOnlyText;
+                ca.Alpha = coreAlpha;
+                ca.Scale = wrapper.Scale;
+                ca.Position = wrapper.Position;
+                ca.Rotation = wrapper.Rotation;
+                // Starts split on impact and merges down to a fifth of the offset.
+                var caOffset = glyph.FontSize * (SonnetTypographyLayout.IsEmphasis(glyph.Role) ? 0.025f : 0.01f) *
+                    (float)(1 - SonnetMotion.EaseInOut(glyphProgress) * 0.8);
+                cyan.Position = new Vector2(-caOffset, caOffset * 0.5f);
+                red.Position = new Vector2(caOffset, -caOffset * 0.5f);
+            }
+
+            glyph.Staff?.Update(time);
+            if (glyph.Ghosts.Count > 0)
+            {
+                // Semi-hero echoes split along the layout normal on entry, then die fast.
+                var ghostProgress = SonnetMotion.Clamp01((time - glyph.Placement.StartTime) / glyph.GhostDuration);
+                var active = visible && ghostProgress > 0 && ghostProgress < 1;
+                var envelope = ghostProgress <= 0.2
+                    ? ghostProgress / 0.2
+                    : Math.Pow(1 - (ghostProgress - 0.2) / 0.8, 2);
+                var spread = (float)(1 - Math.Pow(1 - ghostProgress, 3));
+                foreach (var ghost in glyph.Ghosts)
+                {
+                    ghost.Node.IsVisible = active;
+                    if (!active) continue;
+                    ghost.Node.Position = ghost.Offset * spread;
+                    ghost.Node.Alpha = (float)envelope * ghost.AlphaBase;
+                }
+            }
         }
     }
 
@@ -428,15 +597,56 @@ public sealed class SonnetScene : EffectScene
         Theme = song.Theme;
         Metadata = song.Metadata ?? new SonnetSongMetadata();
         ClearViews();
-        if (_overlay is not null) _stage.Remove(_overlay);
-        _overlay = _size.Width > 0 && _size.Height > 0
-            ? SonnetMgBuilder.BuildOverlay(Theme, _size.Width, _size.Height)
-            : null;
-        if (_overlay is not null) _stage.Add(_overlay);
+        RebuildChrome();
         if (_swapCover is not null)
         {
             _stage.Remove(_swapCover);
             _stage.Add(_swapCover);
+        }
+    }
+
+    private SonnetCreditsFrame ResolveCreditsFrame(double time) =>
+        SonnetCredits.Resolve(time, Program.Paragraphs.Count > 0 ? Program.Paragraphs[^1].EndTime : double.PositiveInfinity);
+
+    private void UpdateCredits(double time)
+    {
+        if (_credits is null) return;
+        var frame = ResolveCreditsFrame(time);
+        _credits.IsVisible = frame.Active && !Tuning.ShowOnlyText;
+        _credits.Alpha = (float)frame.PosterAlpha;
+        var center = new Vector2(_size.Width, _size.Height) * 0.5f;
+        _credits.Pivot = center;
+        _credits.Position = center + new Vector2(0, (float)(frame.PosterOffsetY * _size.Height));
+        _credits.Scale = new Vector2((float)frame.PosterScale);
+    }
+
+    /// <summary>Rebuilds the theme-dependent chrome (credits poster and outer frame) for the current size.</summary>
+    private void RebuildChrome()
+    {
+        if (_credits is not null) _stage.Remove(_credits);
+        if (_overlay is not null) _stage.Remove(_overlay);
+        _credits = null;
+        _overlay = null;
+        if (_size.Width <= 0 || _size.Height <= 0 || Tuning.ShowOnlyText) return;
+        if (SonnetCredits.HasMetadata(Metadata))
+        {
+            _credits = SonnetCreditsPoster.Build(Theme, Metadata, _size.Width, _size.Height,
+                Options.LyricsFontScale, Tuning.TextureResolution);
+            _credits.IsVisible = false;
+        }
+        if (Tuning.OuterFrameMode != SonnetOuterFrameMode.None)
+            _overlay = SonnetMgBuilder.BuildOverlay(Theme, _size.Width, _size.Height);
+        BringChromeToFront();
+    }
+
+    // Folia's stage order: scenes, then credits, then the outer frame, with the song-swap cover on top.
+    private void BringChromeToFront()
+    {
+        foreach (var node in new EffectNode?[] { _credits, _overlay, _swapCover })
+        {
+            if (node is null) continue;
+            if (node.Parent is not null) _stage.Remove(node);
+            _stage.Add(node);
         }
     }
 
@@ -566,8 +776,14 @@ public sealed class SonnetScene : EffectScene
         public double[] WeightsBuffer { get; }
     }
 
-    private sealed record GlyphView(EffectContainer Wrapper, TextNode Cyan, TextNode Red,
-        SonnetGlyphPlacement Placement, SonnetSegmentRole Role, float FontSize);
+    private sealed record GlyphView(EffectContainer Wrapper, EffectContainer? CaWrapper, TextNode? Cyan, TextNode? Red,
+        TextNode? Core, List<GhostView> Ghosts, SonnetGlyphPlacement Placement, SonnetSegmentRole Role,
+        float FinalRotation, float FontSize, float Depth, double GhostDuration, bool IsBackgroundShape,
+        SonnetStaffView? Staff = null)
+    {
+        public bool IsTextGlyph => !IsBackgroundShape && Staff is null;
+    }
+    private sealed record GhostView(TextNode Node, Vector2 Offset, float AlphaBase);
     private sealed record ShotView(SonnetShot Shot, EffectContainer Root, List<GlyphView> Glyphs,
         List<SonnetGuideView> Guides, List<SonnetFrameDecorView> Frames, SonnetMgView Mg, Vector2 Focus, Vector2 BasePosition,
         TrackingFocusData TrackingFocus, double RevealDoneTime);

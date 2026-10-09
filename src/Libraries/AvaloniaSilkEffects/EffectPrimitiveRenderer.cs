@@ -6,7 +6,7 @@ using Silk.NET.OpenGL;
 namespace AvaloniaSilkEffects;
 
 [StructLayout(LayoutKind.Sequential)]
-internal readonly record struct EffectVertex(Vector2 Position, Vector2 Uv, Vector4 Color);
+internal readonly record struct EffectVertex(Vector2 Position, Vector2 Uv, Vector4 Color, float Blur = 0);
 
 public sealed class EffectPrimitiveRenderer : IDisposable
 {
@@ -15,15 +15,18 @@ public sealed class EffectPrimitiveRenderer : IDisposable
         layout (location = 0) in vec2 aPosition;
         layout (location = 1) in vec2 aUv;
         layout (location = 2) in vec4 aColor;
+        layout (location = 3) in float aBlur;
         uniform vec2 uViewport;
         out vec2 vUv;
         out vec4 vColor;
+        out float vBlur;
         void main() {
             vec2 clip = vec2(aPosition.x * 2.0 / uViewport.x - 1.0,
                              1.0 - aPosition.y * 2.0 / uViewport.y);
             gl_Position = vec4(clip, 0.0, 1.0);
             vUv = aUv;
             vColor = aColor;
+            vBlur = aBlur;
         }
         """;
 
@@ -31,10 +34,33 @@ public sealed class EffectPrimitiveRenderer : IDisposable
         #version 330 core
         in vec2 vUv;
         in vec4 vColor;
+        in float vBlur;
         uniform sampler2D uTexture;
         out vec4 finalColor;
         void main() {
-            finalColor = texture(uTexture, vUv) * vColor;
+            if (vBlur < 0.35) {
+                finalColor = texture(uTexture, vUv) * vColor;
+                return;
+            }
+            // Defocus: a golden-angle disc of taps read from a mip level that
+            // already integrates the gaps between them, so large radii stay smooth.
+            vec2 texel = 1.0 / vec2(textureSize(uTexture, 0));
+            float lod = max(0.0, log2(vBlur) - 1.5);
+            vec4 sum = textureLod(uTexture, vUv, lod);
+            float weight = 1.0;
+            for (int i = 0; i < 16; i++) {
+                float f = (float(i) + 0.5) / 16.0;
+                float angle = float(i) * 2.39996323;
+                vec2 offset = vec2(cos(angle), sin(angle)) * sqrt(f) * vBlur;
+                float w = 1.0 - f * 0.55;
+                vec2 uv = vUv + offset * texel;
+                // Outside the quad is transparent; clamping would smear the
+                // border texels into a visible box around the glyph.
+                float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
+                sum += textureLod(uTexture, uv, lod) * (w * inside);
+                weight += w;
+            }
+            finalColor = sum / weight * vColor;
         }
         """;
 
@@ -70,6 +96,8 @@ public sealed class EffectPrimitiveRenderer : IDisposable
         gl.EnableVertexAttribArray(1);
         gl.VertexAttribPointer(2, 4, VertexAttribPointerType.Float, false, stride, (void*)(4 * sizeof(float)));
         gl.EnableVertexAttribArray(2);
+        gl.VertexAttribPointer(3, 1, VertexAttribPointerType.Float, false, stride, (void*)(8 * sizeof(float)));
+        gl.EnableVertexAttribArray(3);
 
         _whiteTexture = gl.GenTexture();
         gl.BindTexture(TextureTarget.Texture2D, _whiteTexture);
@@ -210,7 +238,8 @@ public sealed class EffectPrimitiveRenderer : IDisposable
             sprite.Size == Vector2.Zero ? sprite.Texture!.LogicalSize : sprite.Size,
             sprite.WorldAlpha,
             sprite.BlendMode,
-            sprite.Tint);
+            sprite.Tint,
+            sprite.Blur);
     }
 
     public void DrawTexture(
@@ -219,8 +248,15 @@ public sealed class EffectPrimitiveRenderer : IDisposable
         Vector2 size,
         float alpha = 1,
         EffectBlendMode blendMode = EffectBlendMode.Alpha,
-        EffectColor? tint = null) =>
-        DrawQuad(transform, size, WithAlpha(tint ?? EffectColor.White, alpha), blendMode, texture.Handle);
+        EffectColor? tint = null,
+        float blur = 0) =>
+        DrawQuad(transform, size, WithAlpha(tint ?? EffectColor.White, alpha), blendMode, texture.Handle,
+            BlurInTexels(texture, size, blur));
+
+    // Blur is authored in the node's local units; the shader samples in texels of
+    // the (possibly higher-resolution) raster, so convert by the texel density.
+    private static float BlurInTexels(EffectTexture texture, Vector2 size, float blur) =>
+        blur <= 0 || size.X <= 0 ? 0 : MathF.Min(blur * texture.Width / size.X, 64);
 
     public void DrawRectangle(
         Matrix3x2 transform,
@@ -338,7 +374,8 @@ public sealed class EffectPrimitiveRenderer : IDisposable
         return capacity;
     }
 
-    private void DrawQuad(Matrix3x2 transform, Vector2 size, EffectColor color, EffectBlendMode blendMode, uint texture)
+    private void DrawQuad(Matrix3x2 transform, Vector2 size, EffectColor color, EffectBlendMode blendMode, uint texture,
+        float blur = 0)
     {
         Select(texture, blendMode);
         AddQuad(
@@ -346,17 +383,19 @@ public sealed class EffectPrimitiveRenderer : IDisposable
             Vector2.Transform(new Vector2(size.X, 0), transform),
             Vector2.Transform(size, transform),
             Vector2.Transform(new Vector2(0, size.Y), transform),
-            color.Premultiplied().ToVector4());
+            color.Premultiplied().ToVector4(),
+            blur);
     }
 
-    private void AddQuad(Vector2 topLeft, Vector2 topRight, Vector2 bottomRight, Vector2 bottomLeft, Vector4 color)
+    private void AddQuad(Vector2 topLeft, Vector2 topRight, Vector2 bottomRight, Vector2 bottomLeft, Vector4 color,
+        float blur = 0)
     {
-        _vertices.Add(new EffectVertex(topLeft, new Vector2(0, 0), color));
-        _vertices.Add(new EffectVertex(topRight, new Vector2(1, 0), color));
-        _vertices.Add(new EffectVertex(bottomRight, new Vector2(1, 1), color));
-        _vertices.Add(new EffectVertex(topLeft, new Vector2(0, 0), color));
-        _vertices.Add(new EffectVertex(bottomRight, new Vector2(1, 1), color));
-        _vertices.Add(new EffectVertex(bottomLeft, new Vector2(0, 1), color));
+        _vertices.Add(new EffectVertex(topLeft, new Vector2(0, 0), color, blur));
+        _vertices.Add(new EffectVertex(topRight, new Vector2(1, 0), color, blur));
+        _vertices.Add(new EffectVertex(bottomRight, new Vector2(1, 1), color, blur));
+        _vertices.Add(new EffectVertex(topLeft, new Vector2(0, 0), color, blur));
+        _vertices.Add(new EffectVertex(bottomRight, new Vector2(1, 1), color, blur));
+        _vertices.Add(new EffectVertex(bottomLeft, new Vector2(0, 1), color, blur));
     }
 
     private void AddTriangle(Vector2 a, Vector2 b, Vector2 c, Vector4 color)

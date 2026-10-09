@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.PlaybackSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+    <StackPanel Spacing="16">
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8" IsVisible="{Binding IsOutputDeviceSelectionVisible}">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6" IsVisible="{Binding IsOutputDeviceSelectionVisible}">
+                <StackPanel>
+                    <TextBlock Text="输出设备" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding OutputDeviceStatus}" IsVisible="{Binding IsOutputDeviceStatusVisible}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" MinWidth="200">
+                    <ComboBox Grid.Column="0" ItemsSource="{Binding OutputDeviceOptions}" SelectedItem="{Binding SelectedOutputDevice}" MaxWidth="300">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate DataType="simpleAudio:AudioOutputDevice">
+                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                        <ComboBox.SelectionBoxItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ComboBox.SelectionBoxItemTemplate>
+                    </ComboBox>
+                    <Button Grid.Column="1" Classes="Basic" Cursor="Hand" Command="{Binding RefreshOutputDevicesCommand}" ToolTip.Tip="刷新输出设备列表">
+                        <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="16" Height="16"/>
+                    </Button>
+                </Grid>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="播放音质" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="可用音质取决于音源。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding Player.QualityOptions}" SelectedItem="{Binding Player.QualitySelection}" MaxWidth="300">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="x:String">
+                            <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                    <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="均衡器" FontWeight="Normal" TextWrapping="Wrap"/>
+                <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8" MinWidth="200">
+                    <ComboBox Grid.Column="0" ItemsSource="{Binding EQPresetOptions}" SelectedItem="{Binding SelectedEQPreset}" MaxWidth="300"/>
+                    <Button Grid.Column="1" Classes="Basic" Content="调整曲线" Command="{Binding OpenEqSettingsCommand}"/>
+                </Grid>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="智能过渡" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="在歌曲尾段平滑切换到下一首。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableSeamlessTransition, Mode=TwoWay}"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="音量平衡" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="减小歌曲之间的音量差异。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableVolumeNormalization, Mode=TwoWay}"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="空间音效" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="增强声音的空间感。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableSurround, Mode=TwoWay}"/>
+            </localControls:SettingsRow>
+        </Border>
+    </StackPanel>
+</UserControl>

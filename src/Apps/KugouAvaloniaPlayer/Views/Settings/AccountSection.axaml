@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.AccountSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+    <StackPanel Spacing="16">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,4,0,0">
+            <Border Width="56" Height="56" CornerRadius="28" ClipToBounds="True" Background="#E0E0E0">
+                <Image asyncImageLoader:ImageLoader.Source="{Binding UserAvatar}" Stretch="UniformToFill"/>
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Text="{Binding UserName}" FontWeight="Normal" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding VipStatus}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding UserId, StringFormat='ID: {0}'}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <Button Grid.Column="1" Classes="Basic" Command="{Binding LogoutCommand}" MinWidth="120">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <PathIcon Data="{x:Static suki:Icons.Logout}" Width="16" Height="16"/>
+                        <TextBlock Text="退出登录" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+            </localControls:SettingsRow>
+        </Border>
+    </StackPanel>
+</UserControl>

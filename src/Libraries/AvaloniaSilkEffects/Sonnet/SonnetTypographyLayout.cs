@@ -179,9 +179,55 @@ public static class SonnetTypographyLayout
 
         Place(boxes, shotKind, width, height, baseFontSize, seed, layoutVariantSeed,
             globalHeroIndex, editorialVariant, secondaryHeroIndex);
-        return boxes.Select(box => new SonnetTypographyPlacement(
+        var placements = boxes.Select(box => new SonnetTypographyPlacement(
             box.Index, box.Text, box.Role, box.Scale, box.Width, box.Height,
-            box.X, box.Y, box.Rotation, box.EnterX, box.EnterY, box.Vertical, box.Phase, box.LayoutDirection)).ToArray();
+            box.X, box.Y, box.Rotation, box.EnterX, box.EnterY, box.Vertical, box.Phase, box.LayoutDirection)).ToList();
+        if (globalHeroIndex >= 0)
+            placements.InsertRange(0, ResolveDecorations(placements, shotKind, width, height));
+        return placements;
+    }
+
+    /// <summary>
+    /// Folia's giant hollow echoes: oversized outline copies of the hero words (and one
+    /// trailing word) drawn behind the layout. Prepended so they render underneath.
+    /// </summary>
+    private static List<SonnetTypographyPlacement> ResolveDecorations(
+        IReadOnlyList<SonnetTypographyPlacement> placements, SonnetShotKind shotKind, float width, float height)
+    {
+        var decorations = new List<SonnetTypographyPlacement>();
+        if (shotKind is SonnetShotKind.QuietTableau or SonnetShotKind.PosterBlocks) return decorations;
+        var heroes = placements.Where(item => item.Role == SonnetSegmentRole.Hero).ToArray();
+        for (var index = 0; index < heroes.Length; index++)
+        {
+            var hero = heroes[index];
+            decorations.Add(hero with
+            {
+                Role = SonnetSegmentRole.Decoration,
+                FontScale = Math.Max(2.8f, Math.Min(hero.FontScale * 3.5f, 5.5f)),
+                Vertical = false,
+                X = hero.X - width * (0.1f - index * 0.03f),
+                Y = hero.Y - height * (0.05f - index * 0.02f),
+                Rotation = -0.15f + (index % 2 == 0 ? 0 : 0.05f),
+                EnterX = -width * 0.05f,
+                EnterY = -height * 0.05f,
+            });
+        }
+        if (placements.Count > 1 && heroes.Length > 0)
+        {
+            var echo = placements[^1].Role == SonnetSegmentRole.Hero ? placements[0] : placements[^1];
+            decorations.Add(echo with
+            {
+                Role = SonnetSegmentRole.Decoration,
+                FontScale = Math.Max(1.8f, Math.Min(heroes[0].FontScale * 2.2f, 3.5f)),
+                Vertical = false,
+                X = heroes[0].X + width * 0.25f,
+                Y = heroes[0].Y + height * 0.15f,
+                Rotation = 0.08f,
+                EnterX = width * 0.05f,
+                EnterY = height * 0.05f,
+            });
+        }
+        return decorations;
     }
 
     private static void Place(

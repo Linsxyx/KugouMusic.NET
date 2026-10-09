@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             x:Class="KugouAvaloniaPlayer.Views.Settings.SettingsConfirmation" KeyboardNavigation.TabNavigation="Cycle">
+    <suki:GlassCard Padding="24" CornerRadius="16" Width="420">
+        <StackPanel Spacing="16">
+            <TextBlock x:Name="Heading" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="Description" FontSize="14" TextWrapping="Wrap" LineHeight="22" Foreground="{DynamicResource SukiLowText}" />
+            <Border Height="1" Background="{DynamicResource SukiBorder}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
+                <Button x:Name="CancelButton" Classes="Basic" Content="取消" MinWidth="80" />
+                <Button x:Name="ConfirmButton" Classes="Basic" MinWidth="112" Foreground="{DynamicResource SukiRed}" />
+            </StackPanel>
+        </StackPanel>
+    </suki:GlassCard>
+</UserControl>

@@ -572,7 +572,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     {
         try
         {
-            await _appUpdateService.CheckForUpdatesAsync(true);
+            var result = await _appUpdateService.CheckForUpdatesAsync(true);
+            Dispatcher.UIThread.Post(() => _settingViewModel.UpdateStatus = result.Message);
         }
         finally
         {

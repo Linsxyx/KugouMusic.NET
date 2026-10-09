@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.GeneralSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+    <StackPanel Spacing="16">
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="关闭窗口时" FontWeight="Normal" TextWrapping="Wrap"/>
+                <ComboBox Grid.Column="1" MinWidth="120" ItemsSource="{Binding AvailableCloseBehaviors}" SelectedItem="{Binding SelectedCloseBehavior}" MaxWidth="300">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="models:CloseBehavior">
+                            <TextBlock Text="{Binding Converter={StaticResource CloseBehaviorConverter}}" TextWrapping="Wrap"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8" IsVisible="{Binding IsLinuxWindowDecorationToggleVisible}">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6" IsVisible="{Binding IsLinuxWindowDecorationToggleVisible}">
+                <StackPanel>
+                    <TextBlock Text="系统标题栏" FontWeight="Normal" TextWrapping="Wrap"/>
+                    <TextBlock Text="改善 Linux 下的窗口拖动与缩放兼容性。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding LinuxUseFullWindowDecorations, Mode=TwoWay}"/>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <TextBlock Text="日志文件夹" FontWeight="Normal" TextWrapping="Wrap"/>
+                <Button Grid.Column="1" Classes="Basic" Command="{Binding OpenLogFolderCommand}" MinWidth="120">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Svg Classes="ThemeSvgIcon" Path="/Assets/open-log-folder.svg" Width="16" Height="16"/>
+                        <TextBlock Text="打开文件夹" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+            </localControls:SettingsRow>
+        </Border>
+        <Border BorderBrush="{DynamicResource SukiBorder}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+            <localControls:SettingsRow ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,6">
+                <StackPanel>
+                    <TextBlock Text="恢复默认设置" FontWeight="Normal" Foreground="{DynamicResource SukiRed}" TextWrapping="Wrap"/>
+                    <TextBlock Text="保留本地音乐记录和服务器配置。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="Basic" Command="{Binding ResetAllSettingsCommand}" MinWidth="120">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="重置" Foreground="{DynamicResource SukiRed}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Button>
+            </localControls:SettingsRow>
+        </Border>
+    </StackPanel>
+</UserControl>

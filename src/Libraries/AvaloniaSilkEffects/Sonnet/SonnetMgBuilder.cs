@@ -340,6 +340,12 @@ internal static partial class SonnetMgBuilder
                 ToRgb(theme.Primary), ToRgb(theme.Secondary)).Replay(48));
             return;
         }
+        if (SonnetCoreDrawLists.Handles(geoVariant))
+        {
+            root.Add(SonnetCoreDrawLists.Build(geoVariant, width, height, seed,
+                ToRgb(theme.Primary), ToRgb(theme.Secondary)).Replay(48));
+            return;
+        }
         if (geoVariant is >= 24 and <= 35)
         {
             BuildThemedGeometry(root, theme, width, height, radius, seed, geoVariant);
@@ -373,54 +379,6 @@ internal static partial class SonnetMgBuilder
                 root.Add(SonnetSpatialDrawLists.TrapezoidPrism(-radius * 0.42 * direction, radius * 0.28, radius * 0.2, radius * 0.38, radius * 0.22, radius * 0.08 * direction, -radius * 0.06, color, 0.21).Replay());
                 root.Add(SonnetSpatialDrawLists.TrapezoidPrism(radius * 0.5 * direction, -radius * 0.3, radius * 0.2, radius * 0.12, radius * 0.22, -radius * 0.06 * direction, -radius * 0.05, color, 0.18).Replay());
             }
-            return;
-        }
-
-        switch ((seed >> 4) % 6)
-        {
-            case 0:
-                AddRing(root, Vector2.Zero, radius * 0.6f, theme.Primary with { A = 0.58f }, 5);
-                AddRing(root, Vector2.Zero, radius * 0.57f, theme.Secondary with { A = 0.3f }, 1.5f);
-                for (var i = 0; i < 32; i++)
-                {
-                    var angle = MathF.Tau * i / 32;
-                    AddLine(root, new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius * (0.31f + i % 3 * 0.04f),
-                        new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius * 0.55f, 1, theme.Primary with { A = 0.22f });
-                }
-                break;
-            case 1:
-                for (var scale = 1f; scale >= 0.42f; scale -= 0.28f) AddPolygon(root,
-                    [new Vector2(0, -radius * 0.68f * scale), new Vector2(radius * 0.68f * scale, 0), new Vector2(0, radius * 0.68f * scale), new Vector2(-radius * 0.68f * scale, 0)],
-                    scale > 0.9f ? 5 : 2, theme.Primary with { A = 0.55f * scale });
-                break;
-            case 2:
-                AddRegularPolygon(root, Vector2.Zero, radius * 0.6f, 6, theme.Primary with { A = 0.6f }, 5);
-                AddRegularPolygon(root, Vector2.Zero, radius * 0.25f, 6, theme.Secondary with { A = 0.42f }, 2);
-                for (var i = 0; i < 6; i++)
-                {
-                    var angle = i * MathF.PI / 3 - MathF.PI / 6;
-                    AddLine(root, new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius * 0.25f,
-                        new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius * 0.57f, 2, theme.Primary with { A = 0.32f });
-                }
-                break;
-            case 3:
-                for (var i = 0; i < 3; i++) AddEllipseRing(root, Vector2.Zero, radius * 0.68f, radius * 0.12f, i * MathF.PI / 3, theme.Primary with { A = 0.32f });
-                AddCircle(root, Vector2.Zero, radius * 0.045f, theme.Accent with { A = 0.7f });
-                break;
-            case 4:
-                for (var i = 1; i <= 6; i++) AddRing(root, Vector2.Zero, radius * 0.13f * i, theme.Primary with { A = 0.13f + i % 3 * 0.08f }, i % 2 == 0 ? 2 : 1);
-                for (var i = 0; i < 72; i++)
-                {
-                    var angle = MathF.Tau * i / 72; var length = i % 18 == 0 ? 20 : i % 6 == 0 ? 10 : 5;
-                    AddLine(root, new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * radius * 0.79f,
-                        new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * (radius * 0.79f + length), 1, theme.Primary with { A = 0.3f });
-                }
-                break;
-            default:
-                var chain = Enumerable.Range(0, 8).Select(i => new Vector2((i - 3.5f) * radius * 0.16f, (i % 2 == 0 ? -1 : 1) * radius * 0.08f)).ToArray();
-                AddPolyline(root, chain, 3, theme.Primary with { A = 0.62f });
-                foreach (var point in chain) AddCircle(root, point, 5, theme.Accent with { A = 0.55f });
-                break;
         }
     }
 
@@ -601,8 +559,6 @@ internal static partial class SonnetMgBuilder
         }).ToArray();
         AddPolyline(root, points, width, color);
     }
-    private static void AddRegularPolygon(EffectContainer root, Vector2 center, float radius, int sides, EffectColor color, float width = 1) =>
-        AddPolygon(root, Enumerable.Range(0, sides).Select(i => center + new Vector2(MathF.Cos(MathF.Tau * i / sides - MathF.PI / 2), MathF.Sin(MathF.Tau * i / sides - MathF.PI / 2)) * radius).ToArray(), width, color);
     private static void AddDiamond(EffectContainer root, Vector2 center, float size, EffectColor color) =>
         AddPolygon(root, [center + new Vector2(0, -size), center + new Vector2(size, 0), center + new Vector2(0, size), center + new Vector2(-size, 0)], Math.Max(1, size * 0.35f), color);
     private static void AddFillPolygon(EffectContainer root, IReadOnlyList<Vector2> points, EffectColor color) =>

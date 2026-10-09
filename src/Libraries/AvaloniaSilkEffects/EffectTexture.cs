@@ -40,7 +40,8 @@ public readonly record struct TextTextureKey(
     float FontSize,
     int FontWeight,
     EffectColor Color,
-    float RasterScale);
+    float RasterScale,
+    float StrokeWidth = 0);
 
 internal readonly record struct LayeredTextTextureKey(
     string Text,

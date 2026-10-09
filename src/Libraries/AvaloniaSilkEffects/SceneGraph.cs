@@ -138,6 +138,8 @@ public sealed class SpriteNode : EffectNode
     public Vector2 Size { get; set; }
     public EffectColor Tint { get; set; } = EffectColor.White;
     public Vector2 Anchor { get; set; }
+    /// <summary>Defocus radius in logical units, applied by the sprite shader.</summary>
+    public float Blur { get; set; }
 
     public override void Render(EffectRenderContext context)
     {
@@ -159,6 +161,7 @@ public sealed class TextNode : EffectNode
     private float _cachedRasterScale;
     private EffectColor _cachedGlowColor;
     private float _cachedGlowSigma;
+    private float _cachedStrokeWidth;
 
     public string Text { get; set; } = string.Empty;
     public string FontFamily { get; set; } = "Inter";
@@ -168,7 +171,13 @@ public sealed class TextNode : EffectNode
     public float RasterScale { get; set; } = 2;
     public EffectColor GlowColor { get; set; } = EffectColor.Transparent;
     public float GlowSigma { get; set; }
+    /// <summary>When positive, only the glyph outline is drawn, this many logical units wide.</summary>
+    public float StrokeWidth { get; set; }
     public Vector2 Anchor { get; set; }
+    /// <summary>Multiplies the rasterized colors without re-rasterizing the text.</summary>
+    public EffectColor Tint { get; set; } = EffectColor.White;
+    /// <summary>Defocus radius in logical units, applied by the sprite shader.</summary>
+    public float Blur { get; set; }
 
     public override void Render(EffectRenderContext context)
     {
@@ -181,14 +190,15 @@ public sealed class TextNode : EffectNode
             !ReferenceEquals(_cachedFontFamily, FontFamily) && _cachedFontFamily != FontFamily ||
             _cachedFontSize != FontSize || _cachedFontWeight != FontWeight ||
             _cachedColor != Color || _cachedRasterScale != RasterScale ||
-            _cachedGlowColor != GlowColor || _cachedGlowSigma != GlowSigma)
+            _cachedGlowColor != GlowColor || _cachedGlowSigma != GlowSigma ||
+            _cachedStrokeWidth != StrokeWidth)
         {
             // Keep glyph resources lazy and recover after idle/pressure eviction.
             _texture = GlowSigma > 0 && GlowColor.A > 0
                 ? context.Device.Textures.GetOrCreateTextLayer(
                     Text, FontFamily, FontSize, FontWeight, Color, GlowColor, GlowSigma, RasterScale)
                 : context.Device.Textures.GetOrCreateText(
-                    Text, FontFamily, FontSize, FontWeight, Color, RasterScale);
+                    Text, FontFamily, FontSize, FontWeight, Color, RasterScale, StrokeWidth);
             _cachedText = Text;
             _cachedFontFamily = FontFamily;
             _cachedFontSize = FontSize;
@@ -197,9 +207,10 @@ public sealed class TextNode : EffectNode
             _cachedRasterScale = RasterScale;
             _cachedGlowColor = GlowColor;
             _cachedGlowSigma = GlowSigma;
+            _cachedStrokeWidth = StrokeWidth;
         }
         context.Device.Textures.Touch(_texture);
         var transform = Matrix3x2.CreateTranslation(-_texture.LogicalSize * Anchor) * WorldTransform;
-        context.Primitives.DrawTexture(_texture, transform, _texture.LogicalSize, WorldAlpha, BlendMode, EffectColor.White);
+        context.Primitives.DrawTexture(_texture, transform, _texture.LogicalSize, WorldAlpha, BlendMode, Tint, Blur);
     }
 }

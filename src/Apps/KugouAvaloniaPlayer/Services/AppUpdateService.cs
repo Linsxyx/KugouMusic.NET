@@ -9,6 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
+using KugouAvaloniaPlayer.Models;
 using SukiUI.Toasts;
 using Velopack;
 using Velopack.Sources;
@@ -17,7 +18,7 @@ namespace KugouAvaloniaPlayer.Services;
 
 public interface IAppUpdateService
 {
-    Task CheckForUpdatesAsync(bool showNoUpdateToast = false);
+    Task<UpdateCheckResult> CheckForUpdatesAsync(bool showNoUpdateToast = false);
 }
 
 public sealed class AppUpdateService(
@@ -27,7 +28,7 @@ public sealed class AppUpdateService(
     private const string GitHubRepositoryUrl = "https://github.com/Linsxyx/KugouMusic.NET";
     private const string GiteeReleaseBaseUrl = "https://gitee.com/Linsxyx/KAMusic/releases/download/v1.0.0/";
 
-    public async Task CheckForUpdatesAsync(bool showNoUpdateToast = false)
+    public async Task<UpdateCheckResult> CheckForUpdatesAsync(bool showNoUpdateToast = false)
     {
         try
         {
@@ -56,7 +57,7 @@ public sealed class AppUpdateService(
                             .Dismiss().After(TimeSpan.FromSeconds(3))
                             .Queue();
                     });
-                return;
+                return new(UpdateCheckState.Unsupported, "当前运行版本不支持自动更新，请从项目页面下载正式安装包。");
             }
 
             var checkedCandidates = await CheckAllSourcesAsync(candidates);
@@ -80,10 +81,11 @@ public sealed class AppUpdateService(
                             .Dismiss().After(TimeSpan.FromSeconds(3))
                             .Queue();
                     });
-                return;
+                return new(UpdateCheckState.Current, "当前已是最新版本。");
             }
 
             Dispatcher.UIThread.Post(() => ShowActionToast(updateSources));
+            return new(UpdateCheckState.Available, $"发现新版本 {updateSources[0].UpdateInfo.TargetFullRelease.Version}，可从更新通知开始下载。");
         }
         catch (Exception ex)
         {
@@ -94,10 +96,11 @@ public sealed class AppUpdateService(
                     toastManager.CreateToast()
                         .OfType(NotificationType.Error)
                         .WithTitle("检查更新失败")
-                        .WithContent(ex.Message)
+                        .WithContent("暂时无法检查更新，请检查网络后重试。")
                         .Dismiss().After(TimeSpan.FromSeconds(4))
                         .Queue();
                 });
+            return new(UpdateCheckState.Failed, "检查失败，请检查网络后重试。");
         }
     }
 
@@ -117,6 +120,7 @@ public sealed class AppUpdateService(
             logger.LogWarning("所有更新源检查失败: {Failures}",
                 string.Join("; ", failedSources.AsValueEnumerable().Select(result =>
                     $"{result.SourceName}: {DescribeException(result.Error!)}").ToArray()));
+            UpdateCheckResult.RequireSuccessfulSource(checkedSources.Count);
         }
 
         return checkedSources;
@@ -199,9 +203,9 @@ public sealed class AppUpdateService(
 
         var hideButton = new Button
         {
-            Content = "x",
-            Width = 24,
-            Height = 24,
+            Content = "后台下载",
+            MinWidth = 80,
+            Height = 32,
             Padding = new Thickness(0),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top
@@ -225,7 +229,9 @@ public sealed class AppUpdateService(
         {
             RowDefinitions = new RowDefinitions("Auto,Auto"),
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
-            RowSpacing = 8
+            RowSpacing = 12,
+            ColumnSpacing = 12,
+            MinWidth = 260
         };
         progressContent.Children.Add(sourceStatusText);
         progressContent.Children.Add(hideButton);
@@ -372,7 +378,9 @@ public sealed class AppUpdateService(
         var button = new Button
         {
             Content = content,
-            Margin = new Thickness(14, 9, 0, 12)
+            Margin = new Thickness(12, 8, 0, 12),
+            MinHeight = 36,
+            Padding = new Thickness(16, 8)
         };
 
         ApplyClass(button.Classes, "Standard");

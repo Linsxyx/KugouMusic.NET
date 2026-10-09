@@ -1,47 +1,40 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             x:Class="KugouAvaloniaPlayer.Views.EqSettingsView"
-             x:DataType="vm:EqSettingsViewModel">
-    <StackPanel Spacing="20" Margin="10" Width="550">
-        <Grid ColumnDefinitions="*, Auto">
-            <StackPanel>
-                <TextBlock Text="均衡器设置" FontSize="18" FontWeight="Bold" />
-                <TextBlock Text="调节各频段增益 (±15dB)" FontSize="12" Opacity="0.6" />
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:local="using:KugouAvaloniaPlayer.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             x:Class="KugouAvaloniaPlayer.Views.EqSettingsView" x:DataType="vm:EqSettingsViewModel">
+    <suki:GlassCard Margin="16,16,16,100" Padding="24">
+        <Grid RowDefinitions="Auto,*" RowSpacing="16">
+            <StackPanel Spacing="8">
+                <Button Classes="Basic" Content="‹  播放与音效" Command="{Binding BackCommand}" HorizontalAlignment="Left" />
+                <TextBlock Text="均衡器" FontSize="24" FontWeight="Bold" />
+                <TextBlock Text="画出你喜欢的声音。按住并划过曲线，调整实时生效。" TextWrapping="Wrap" Foreground="{DynamicResource SukiLowText}" FontSize="12" />
             </StackPanel>
-            <Button Grid.Column="1" Classes="Basic" Content="重置"
-                    Command="{Binding ResetCommand}" VerticalAlignment="Center" />
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="16">
+                    <WrapPanel Orientation="Horizontal">
+                        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" MinWidth="130" Margin="0,0,12,8" />
+                        <Button Classes="Basic" Content="撤销上次修改" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" Margin="0,0,8,8" />
+                        <Button Classes="Basic" Content="全部归零" Command="{Binding ResetCommand}" Margin="0,0,0,8" />
+                    </WrapPanel>
+                    <Border CornerRadius="12" Background="{DynamicResource SukiPrimaryColorLow}" Padding="8" BorderThickness="1" BorderBrush="{DynamicResource SukiBorder}">
+                        <local:EqualizerCurveControl Height="250" Accent="{DynamicResource SukiPrimaryColor}" GridBrush="{DynamicResource SukiBorder}" TextBrush="{DynamicResource SukiText}" />
+                    </Border>
+                    <TextBlock Text="32 Hz — 16 kHz · ±15 dB · 曲线连接实际生效的十段增益" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap" />
+                    <TextBlock Text="精细调节" FontSize="16" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding Bands}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:EqBandViewModel">
+                                <StackPanel Spacing="8" Width="112" Margin="0,0,12,12">
+                                    <TextBlock Text="{Binding Frequency}" FontSize="12" />
+                                    <NumericUpDown Minimum="-15" Maximum="15" Increment="0.5" FormatString="0.0" Value="{Binding Value, Mode=TwoWay}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="更改自动保存；绘制或微调后切换为自定义预设。" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
-
-        <Border Background="{DynamicResource SukiPrimaryColor1}"
-                CornerRadius="12" Padding="15,25">
-            <ItemsControl ItemsSource="{Binding Bands}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="10" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:EqBandViewModel">
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="{Binding Value, StringFormat=\{0:F1\}}"
-                                       FontSize="10" HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource SukiPrimaryColor}" />
-
-                            <Slider Orientation="Vertical" Height="160"
-                                    Minimum="-15" Maximum="15"
-                                    Value="{Binding Value}"
-                                    HorizontalAlignment="Center" />
-
-                            <TextBlock Text="{Binding Frequency}" FontSize="10"
-                                       HorizontalAlignment="Center" Opacity="0.8" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </Border>
-
-        <TextBlock Text="注意：调整将自动切换至“自定义”预设模式"
-                   FontSize="11" HorizontalAlignment="Center" Opacity="0.5" />
-    </StackPanel>
+    </suki:GlassCard>
 </UserControl>
