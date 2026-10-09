@@ -195,7 +195,7 @@ public partial class SonnetNowPlayingThemeView : UserControl
 
         var song = player.DisplayedPlayingSong ?? player.CurrentPlayingSong;
         var identity = ResolveTrackIdentity(song);
-        var lines = BuildLines(player.RenderLyricLines, song, player.TotalDurationSeconds);
+        var lines = BuildLines(player.RenderLyricLines, player.TotalDurationSeconds);
         var program = SonnetProgramCompiler.Compile(lines, identity);
         var color = _viewModel!.LyricColor;
         var theme = PlayerTheme with
@@ -221,7 +221,6 @@ public partial class SonnetNowPlayingThemeView : UserControl
                     PostProcessGrain = 0,
                     PostProcessVignette = 0,
                     ShowChromaticSplit = false,
-                    EnableGlitchTransitions = false,
                     PostProcessRgbShift = 0,
                     PostProcessLensDispersion = 0,
                 },
@@ -340,15 +339,11 @@ public partial class SonnetNowPlayingThemeView : UserControl
 
     private static IReadOnlyList<SonnetLine> BuildLines(
         IReadOnlyList<LyricLine> source,
-        SongItem? song,
         double durationSeconds)
     {
+        // Like Folia, a track without lyrics plays the La Folia staff instead of text.
         if (source.Count == 0)
-        {
-            var title = string.IsNullOrWhiteSpace(song?.DisplayTitle) ? "SONNET" : song.DisplayTitle;
-            var end = Math.Max(8, durationSeconds);
-            return [new(title, 0, end, [])];
-        }
+            return SonnetStaffView.VirtualLines();
 
         var result = new List<SonnetLine>(source.Count);
         for (var index = 0; index < source.Count; index++)
@@ -370,9 +365,7 @@ public partial class SonnetNowPlayingThemeView : UserControl
             result.Add(new(line.Text, start, Math.Max(start + 0.1, end), words));
         }
 
-        return result.Count > 0
-            ? result
-            : [new SonnetLine(song?.DisplayTitle ?? "SONNET", 0, Math.Max(8, durationSeconds), [])];
+        return result.Count > 0 ? result : SonnetStaffView.VirtualLines();
     }
 
     private static string ResolveTrackIdentity(SongItem? song)

@@ -82,9 +82,13 @@ public sealed class SonnetProgramTests
         var signatures = new HashSet<string>();
         foreach (var kind in SonnetProgramCompiler.ShotKinds)
         {
-            var layout = SonnetTypographyLayout.Resolve([segments], kind, SonnetParagraphKind.Verse,
+            var all = SonnetTypographyLayout.Resolve([segments], kind, SonnetParagraphKind.Verse,
                 1280, 720, 40, (text, size, _) => (text.Length * size * 0.58f, size * 1.2f));
-            Assert.Equal(segments.Count, layout.Count);
+            // Folia prepends giant hollow echoes except for tableau and poster compositions.
+            var decorations = all.TakeWhile(item => item.Role == SonnetSegmentRole.Decoration).Count();
+            Assert.Equal(kind is SonnetShotKind.QuietTableau or SonnetShotKind.PosterBlocks ? 0 : 2, decorations);
+            var layout = all.Skip(decorations).ToArray();
+            Assert.Equal(segments.Count, layout.Length);
             Assert.Equal(Enumerable.Range(0, segments.Count), layout.Select(item => item.SegmentIndex));
             signatures.Add(string.Join('|', layout.Select(item => $"{item.X:F1},{item.Y:F1},{item.Rotation:F2}")));
         }

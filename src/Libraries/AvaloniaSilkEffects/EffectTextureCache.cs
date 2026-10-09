@@ -133,10 +133,11 @@ public sealed class EffectTextureCache : IDisposable
         float fontSize,
         int fontWeight,
         EffectColor color,
-        float rasterScale = 2)
+        float rasterScale = 2,
+        float strokeWidth = 0)
     {
         rasterScale = Math.Clamp(rasterScale, 1, 4);
-        var key = new TextTextureKey(text, fontFamily, fontSize, fontWeight, color, rasterScale);
+        var key = new TextTextureKey(text, fontFamily, fontSize, fontWeight, color, rasterScale, Math.Max(0, strokeWidth));
         if (_textTextures.TryGetValue(key, out var cached))
         {
             Touch(cached);
@@ -274,6 +275,13 @@ public sealed class EffectTextureCache : IDisposable
                 (byte)Math.Clamp(key.Color.A * 255, 0, 255)),
         };
         canvas.Clear(SKColors.Transparent);
+        if (key.StrokeWidth > 0)
+        {
+            // Outline-only glyphs, like a Pixi TextStyle with a transparent fill and a stroke.
+            paint.Style = SKPaintStyle.Stroke;
+            paint.StrokeWidth = key.StrokeWidth * key.RasterScale;
+            paint.StrokeJoin = SKStrokeJoin.Round;
+        }
 
         // 基线 y 坐标计算
         var y = padding - metrics.Ascent;
@@ -314,7 +322,7 @@ public sealed class EffectTextureCache : IDisposable
         var blurPhysical = Math.Max(0f, key.GlowSigma * key.RasterScale);
         var padding = Math.Max(
             key.GlowSigma > 0 ? 20f : 12f,
-            blurPhysical > 0 ? blurPhysical * 2.5f + 6f : 12f);
+            blurPhysical > 0 ? blurPhysical * 3.2f + 6f : 12f);
         padding = MathF.Ceiling(padding);
         var width = Math.Max(1, (int)Math.Ceiling(textWidth) + (int)padding * 2);
         var height = Math.Max(1, (int)Math.Ceiling(metrics.Descent - metrics.Ascent) + (int)padding * 2);

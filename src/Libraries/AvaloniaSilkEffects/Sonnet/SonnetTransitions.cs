@@ -9,6 +9,14 @@ public static class SonnetTransitions
         return Resolve(transition.Kind, false, (time - transition.StartTime) / Math.Max(transition.EndTime - transition.StartTime, 0.001), seed, allowGlitch);
     }
 
+    /// <summary>Folia's resolveSonnetEnterTransitionFrame: the incoming half of the previous paragraph's exit.</summary>
+    public static SonnetTransitionFrame ResolveEnter(SonnetTransitionKind? kind, double timeSinceStart, double duration,
+        bool enabled, uint seed, bool allowGlitch = true)
+    {
+        if (!enabled || kind is not { } value || timeSinceStart < 0 || timeSinceStart > duration) return SonnetMotion.IdleTransition;
+        return Resolve(value, true, timeSinceStart / Math.Max(duration, 0.001), seed, allowGlitch);
+    }
+
     public static SonnetTransitionFrame ResolveShot(IReadOnlyList<SonnetShot> shots, int active, double time, bool enabled, uint seed, bool allowGlitch = true)
     {
         if (!enabled || shots.Count < 2 || active < 0 || active >= shots.Count) return SonnetMotion.IdleTransition;
