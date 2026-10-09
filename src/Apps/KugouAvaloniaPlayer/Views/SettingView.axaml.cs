@@ -24,7 +24,7 @@ public partial class SettingView : UserControl
         SideNavigation.IsVisible = wide;
         CategoryTitle.IsVisible = wide;
         CompactNavigation.IsVisible = !wide;
-        LayoutGrid.ColumnDefinitions = new ColumnDefinitions(wide ? "168,*" : "*");
+        LayoutGrid.ColumnDefinitions = new ColumnDefinitions(wide ? "188,*" : "*");
         Grid.SetColumn(ContentGrid, wide ? 1 : 0);
     }
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)

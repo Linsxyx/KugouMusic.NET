@@ -12,9 +12,14 @@
     <Style Selector="ListBox.SettingsNavigation ListBoxItem">
         <!-- Replace the inherited item theme as well as its template so selection cannot style descendants. -->
         <Setter Property="Theme"><ControlTheme TargetType="ListBoxItem" /></Setter>
-        <Setter Property="Padding" Value="14,11" />
-        <Setter Property="Margin" Value="0,3" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Margin" Value="0,2" />
         <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="RenderTransform" Value="scale(1)" />
+        <Setter Property="Transitions">
+            <Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" /></Transitions>
+        </Setter>
         <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="FontWeight" Value="Normal" />
@@ -35,6 +40,9 @@
                         </suki:GlassCard.BorderBrush>
                         <suki:GlassCard.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions></suki:GlassCard.Transitions>
                     </suki:GlassCard>
+                    <Border Name="Indicator" Width="3" Height="18" CornerRadius="2" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,0,0,0" Background="{DynamicResource SukiPrimaryColor}" IsHitTestVisible="False" RenderTransform="scaleY(0)">
+                        <Border.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut" /></Transitions></Border.Transitions>
+                    </Border>
                     <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Background="Transparent" BorderBrush="Transparent" BorderThickness="0" Foreground="{TemplateBinding Foreground}" Margin="{TemplateBinding Padding}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" />
                     <Border Name="KeyboardFocus" CornerRadius="12" BorderBrush="{DynamicResource SukiPrimaryColor}" BorderThickness="2" IsHitTestVisible="False" Opacity="0" />
                 </Panel>
@@ -52,6 +60,46 @@
     </Style>
     <Style Selector="ListBox.SettingsNavigation ListBoxItem:focus-visible /template/ Border#KeyboardFocus">
         <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected /template/ Border#Indicator">
+        <Setter Property="RenderTransform" Value="scaleY(1)" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.97)" />
+    </Style>
+
+    <!-- Item content: icon tile + title. -->
+    <Style Selector="ListBox.SettingsNavigation Border.NavIconTile">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Transitions">
+            <Transitions><BrushTransition Property="Background" Duration="0:0:0.15" /></Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation PathIcon.NavIcon">
+        <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        <Setter Property="Opacity" Value="0.72" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation TextBlock.NavTitle">
+        <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        <Setter Property="Opacity" Value="0.85" />
+        <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:pointerover TextBlock.NavTitle">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:pointerover PathIcon.NavIcon">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected Border.NavIconTile">
+        <Setter Property="Background" Value="{DynamicResource SukiPrimaryColor10}" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected PathIcon.NavIcon">
+        <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected TextBlock.NavTitle">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="ComboBox.SettingsCategoryPicker">
         <Setter Property="CornerRadius" Value="10" />

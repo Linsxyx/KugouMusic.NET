@@ -5,17 +5,23 @@
              x:Class="KugouAvaloniaPlayer.Views.SettingView" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <UserControl.Styles><StyleInclude Source="/Views/Settings/SettingsStyles.axaml" /></UserControl.Styles>
     <suki:GlassCard Margin="16,16,16,100" Padding="20">
-        <Grid x:Name="LayoutGrid" ColumnDefinitions="168,*" ColumnSpacing="24">
-            <Grid x:Name="SideNavigation" RowDefinitions="Auto,*" RowSpacing="16">
-                <TextBlock Text="设置" FontSize="18" FontWeight="SemiBold" Margin="14,4,0,0" />
+        <Grid x:Name="LayoutGrid" ColumnDefinitions="188,*" ColumnSpacing="24">
+            <Grid x:Name="SideNavigation" RowDefinitions="Auto,*">
+                <StackPanel Margin="14,2,0,14" Spacing="2">
+                    <TextBlock Text="设置" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock Text="个性化你的播放器" FontSize="12" Opacity="0.55" />
+                </StackPanel>
                 <ListBox Grid.Row="1" Classes="SettingsNavigation" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemTemplate><DataTemplate x:DataType="models:SettingsCategory">
-                        <Grid ColumnDefinitions="24,*" ColumnSpacing="8">
-                            <TextBlock Text="{Binding Symbol}" FontSize="18" FontWeight="Normal" Foreground="{DynamicResource SukiText}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="14" FontWeight="Normal" Foreground="{DynamicResource SukiText}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Border Classes="NavIconTile" Width="30" Height="30" CornerRadius="9" VerticalAlignment="Center">
+                                <PathIcon Classes="NavIcon" Data="{Binding Icon}" Width="16" Height="16" />
+                            </Border>
+                            <TextBlock Grid.Column="1" Classes="NavTitle" Text="{Binding Title}" VerticalAlignment="Center" TextWrapping="Wrap" />
                         </Grid>
                     </DataTemplate></ListBox.ItemTemplate>
                 </ListBox>
+                <Border Grid.RowSpan="2" Width="1" HorizontalAlignment="Right" Margin="0,0,-12,0" Background="{DynamicResource SukiBorder}" Opacity="0.6" />
             </Grid>
             <Grid Grid.Column="1" x:Name="ContentGrid" RowDefinitions="Auto,*" RowSpacing="16">
                 <StackPanel Spacing="12">
