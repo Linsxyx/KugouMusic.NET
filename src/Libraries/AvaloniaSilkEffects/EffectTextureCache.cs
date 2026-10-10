@@ -60,7 +60,7 @@ public sealed class EffectTextureCache : IDisposable
     /// <summary>
     /// 获取能够支持当前文本的 Typeface（包含 Linux 中文 Fallback）
     /// </summary>
-    private static SKTypeface ResolveTypeface(string? fontFamily, SKFontStyle style, string? sampleText = null)
+    internal static SKTypeface ResolveTypeface(string? fontFamily, SKFontStyle style, string? sampleText = null)
     {
         // 1. 尝试匹配用户指定的 fontFamily
         if (!string.IsNullOrWhiteSpace(fontFamily))

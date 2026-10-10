@@ -146,6 +146,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsPendoloTheme))]
     [NotifyPropertyChangedFor(nameof(IsFumeTheme))]
     [NotifyPropertyChangedFor(nameof(IsSonnetTheme))]
+    [NotifyPropertyChangedFor(nameof(IsLumiereTheme))]
     [NotifyPropertyChangedFor(nameof(IsFoliaThemeActive))]
     [NotifyPropertyChangedFor(nameof(IsFoliaLatentMaterialActive))]
     [NotifyPropertyChangedFor(nameof(IsFoliaBlurredCoverActive))]
@@ -235,7 +236,9 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     public bool IsSonnetTheme => SelectedThemePreset == NowPlayingThemePreset.Sonnet;
 
-    public bool IsFoliaThemeActive => IsOpen && (IsFumeTheme || IsSonnetTheme);
+    public bool IsLumiereTheme => SelectedThemePreset == NowPlayingThemePreset.Lumiere;
+
+    public bool IsFoliaThemeActive => IsOpen && (IsFumeTheme || IsSonnetTheme || IsLumiereTheme);
 
     public bool IsFoliaLatentMaterialActive =>
         IsFoliaThemeActive && FoliaBackgroundMode == FoliaVisualizerBackgroundMode.LatentMaterial;
@@ -515,7 +518,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        if (value is NowPlayingThemePreset.Pendolo or NowPlayingThemePreset.Fume or NowPlayingThemePreset.Sonnet)
+        if (value is NowPlayingThemePreset.Pendolo or NowPlayingThemePreset.Fume or NowPlayingThemePreset.Sonnet or NowPlayingThemePreset.Lumiere)
             IsPortraitModeEnabled = false;
 
         SettingsManager.Settings.NowPlayingThemePreset = value;

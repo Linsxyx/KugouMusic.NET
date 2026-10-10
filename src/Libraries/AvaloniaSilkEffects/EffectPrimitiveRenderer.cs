@@ -119,6 +119,15 @@ public sealed class EffectPrimitiveRenderer : IDisposable
         FrameUploadedBytes = 0;
     }
 
+    internal Vector2 Viewport => _viewport;
+
+    /// <summary>Flushes pending geometry and retargets the pixel space, e.g. to an offscreen group.</summary>
+    internal void SetViewport(Vector2 viewport)
+    {
+        Flush();
+        _viewport = viewport;
+    }
+
     public void DrawShape(ShapeNode shape)
     {
         var color = WithAlpha(shape.Color, shape.WorldAlpha);
@@ -264,6 +273,24 @@ public sealed class EffectPrimitiveRenderer : IDisposable
         EffectColor color,
         EffectBlendMode blendMode = EffectBlendMode.Alpha) =>
         DrawQuad(transform, size, color, blendMode, _whiteTexture);
+
+    /// <summary>Draws the sub-rectangle <paramref name="uv"/> (u0, v0, u1, v1) of a texture as a quad of <paramref name="size"/>.</summary>
+    public void DrawTextureRegion(EffectTexture texture, Matrix3x2 transform, Vector2 size, Vector4 uv,
+        float alpha = 1, EffectColor? tint = null, EffectBlendMode blendMode = EffectBlendMode.Alpha)
+    {
+        Select(texture.Handle, blendMode);
+        var color = WithAlpha(tint ?? EffectColor.White, alpha).Premultiplied().ToVector4();
+        var a = Vector2.Transform(Vector2.Zero, transform);
+        var b = Vector2.Transform(new Vector2(size.X, 0), transform);
+        var c = Vector2.Transform(size, transform);
+        var d = Vector2.Transform(new Vector2(0, size.Y), transform);
+        _vertices.Add(new EffectVertex(a, new Vector2(uv.X, uv.Y), color));
+        _vertices.Add(new EffectVertex(b, new Vector2(uv.Z, uv.Y), color));
+        _vertices.Add(new EffectVertex(c, new Vector2(uv.Z, uv.W), color));
+        _vertices.Add(new EffectVertex(a, new Vector2(uv.X, uv.Y), color));
+        _vertices.Add(new EffectVertex(c, new Vector2(uv.Z, uv.W), color));
+        _vertices.Add(new EffectVertex(d, new Vector2(uv.X, uv.W), color));
+    }
 
     /// <summary>Draws a horizontal slice without a scissor change or batch flush.</summary>
     public void DrawTextureSlice(EffectTexture texture, Matrix3x2 transform,
