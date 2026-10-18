@@ -59,4 +59,34 @@
             <TargetPath>%(Filename)%(Extension)</TargetPath>
         </Content>
     </ItemGroup>
+
+    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' or
+                          ('$(RuntimeIdentifier)' == '' and
+                           $([MSBuild]::IsOSPlatform('OSX')) and
+                           '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64')">
+        <Content Include="runtimes\osx-x64\native\*av3a_decoder*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>%(Filename)%(Extension)</TargetPath>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' or
+                          ('$(RuntimeIdentifier)' == '' and
+                           $([MSBuild]::IsOSPlatform('OSX')) and
+                           '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64')">
+        <Content Include="runtimes\osx-arm64\native\*av3a_decoder*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>%(Filename)%(Extension)</TargetPath>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="Codecs\Av3a\Native\NOTICE">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            <TargetPath>av3a-decoder.NOTICE</TargetPath>
+        </Content>
+    </ItemGroup>
 </Project>

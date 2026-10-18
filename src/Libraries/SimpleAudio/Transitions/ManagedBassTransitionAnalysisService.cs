@@ -284,19 +284,7 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
 
     private static int CreateDecodeStream(string source, bool isLocal, BassFlags flags)
     {
-        if (!isLocal && source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            return Bass.CreateStream(source, 0, flags, null, IntPtr.Zero);
-        }
-
-        if (File.Exists(source))
-        {
-            return Bass.CreateStream(source, 0, 0, flags);
-        }
-
-        return source.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? Bass.CreateStream(source, 0, flags, null, IntPtr.Zero)
-            : 0;
+        return AudioSourceStreamFactory.Create(source, flags);
     }
 
     private static double GetDurationSeconds(int handle)

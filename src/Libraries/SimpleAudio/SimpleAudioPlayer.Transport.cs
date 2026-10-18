@@ -5,27 +5,29 @@ namespace SimpleAudio;
 
 public partial class SimpleAudioPlayer : IDisposable
 {
-    private const int RemoteStreamLoadAttempts = 3;
-    private const int RemoteStreamRetryDelayMilliseconds = 300;
-
     public string? LastErrorDetail { get; private set; }
 
     public bool Load(string url)
     {
-        return LoadCore(url, sourceFlags => CreateSourceStream(url, sourceFlags));
+        return LoadCore(url, sourceFlags => AudioSourceStreamFactory.Create(url, sourceFlags));
     }
 
     public bool Load(Stream inputStream, long contentLength, string sourceDescription, IDisposable? owner = null)
     {
         ArgumentNullException.ThrowIfNull(inputStream);
 
-        var managedSource = new ManagedStreamSource(inputStream, contentLength, owner);
+        var sourceCreated = false;
         var loaded = LoadCore(sourceDescription, sourceFlags =>
-            Bass.CreateStream(StreamSystem.Buffer, sourceFlags, managedSource.CreateProcedures(), IntPtr.Zero),
-            managedSource);
-        if (!loaded)
-            managedSource.Dispose();
-
+        {
+            sourceCreated = true;
+            return AudioSourceStreamFactory.Create(inputStream, contentLength, sourceFlags, owner);
+        });
+        if (!sourceCreated)
+        {
+            inputStream.Dispose();
+            if (!ReferenceEquals(owner, inputStream))
+                owner?.Dispose();
+        }
         return loaded;
     }
 
@@ -70,7 +72,7 @@ public partial class SimpleAudioPlayer : IDisposable
         if (Stream == 0)
         {
             LastErrorDetail =
-                $"BASS CreateStream 失败: path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}";
+                $"BASS CreateStream 失败: path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}, detail={AudioSourceStreamFactory.LastError}";
             Console.WriteLine($"[BASS CreateStream Error] path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}");
             return false;
         }
@@ -97,28 +99,6 @@ public partial class SimpleAudioPlayer : IDisposable
         UpdateActualVolume();
 
         return true;
-    }
-
-    private static int CreateSourceStream(string source, BassFlags sourceFlags)
-    {
-        if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            for (var attempt = 1; attempt <= RemoteStreamLoadAttempts; attempt++)
-            {
-                var stream = Bass.CreateStream(source, 0, sourceFlags, null, IntPtr.Zero);
-                if (stream != 0)
-                    return stream;
-
-                if (attempt < RemoteStreamLoadAttempts)
-                    Thread.Sleep(RemoteStreamRetryDelayMilliseconds * attempt);
-            }
-
-            return 0;
-        }
-
-        return File.Exists(source)
-            ? Bass.CreateStream(source, 0, 0, sourceFlags)
-            : 0;
     }
 
     public void Play()
@@ -155,6 +135,7 @@ public partial class SimpleAudioPlayer : IDisposable
 
             if (stream != 0)
             {
+                AudioSourceStreamFactory.CancelPendingReads(sourceStream);
                 Bass.ChannelStop(stream);
                 if (!Bass.StreamFree(stream) && sourceStream != 0)
                     Bass.StreamFree(sourceStream);
