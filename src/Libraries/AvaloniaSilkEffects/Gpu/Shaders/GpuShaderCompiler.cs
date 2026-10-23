@@ -65,6 +65,9 @@ internal static unsafe partial class GpuShaderCompiler
 {
     private static readonly ConcurrentDictionary<(string, string, GpuShaderTarget), GpuCompiledProgram> Cache = new();
     private static readonly Lazy<Shaderc> ShadercApi = new(Shaderc.GetApi);
+    // Held for the process lifetime: releasing the last shaderc compiler finalizes glslang, which drops its built-in
+    // symbol tables, so a compiler per call rebuilds them every time (~30 ms per stage instead of ~0.2 ms).
+    private static readonly Lazy<nint> ShadercInstance = new(() => (nint)ShadercApi.Value.CompilerInitialize());
     private static readonly Lazy<Cross> CrossApi = new(Cross.GetApi);
     private static readonly object Gate = new();
 
@@ -157,7 +160,7 @@ internal static unsafe partial class GpuShaderCompiler
     private static uint[] ToSpirv(string source, GpuShaderStage stage, string name)
     {
         var shaderc = ShadercApi.Value;
-        var compiler = shaderc.CompilerInitialize();
+        var compiler = (ShadercCompiler*)ShadercInstance.Value;
         var options = shaderc.CompileOptionsInitialize();
         try
         {
@@ -193,7 +196,6 @@ internal static unsafe partial class GpuShaderCompiler
         finally
         {
             shaderc.CompileOptionsRelease(options);
-            shaderc.CompilerRelease(compiler);
         }
     }
 
