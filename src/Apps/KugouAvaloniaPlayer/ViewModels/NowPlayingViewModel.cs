@@ -106,13 +106,14 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PortraitModeStatusText))]
+    [NotifyPropertyChangedFor(nameof(IsStandardLayoutVisible))]
+    [NotifyPropertyChangedFor(nameof(LyricsGridColumn))]
+    [NotifyPropertyChangedFor(nameof(LyricsGridColumnSpan))]
+    [NotifyPropertyChangedFor(nameof(LyricsMargin))]
     public partial bool IsPortraitModeEnabled { get; set; }
 
     [ObservableProperty]
     public partial bool IsPortraitLoading { get; set; }
-
-    [ObservableProperty]
-    public partial bool IsPortraitAvailable { get; set; }
 
     [ObservableProperty]
     public partial string? PortraitBackgroundA { get; set; }
@@ -256,7 +257,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public bool IsBlurredCoverBackground =>
         FoliaBackgroundMode == FoliaVisualizerBackgroundMode.BlurredCover;
 
-    public bool IsStandardLayoutVisible => IsStandardTheme && !HasPortraitBackground;
+    public bool IsStandardLayoutVisible => IsStandardTheme && !IsPortraitModeEnabled;
 
     public string CurrentThemePresetName =>
         NowPlayingThemePresetRegistry.Get(SelectedThemePreset).DisplayName;
@@ -269,11 +270,11 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             ? CustomBackgroundImagePath
             : Player.DisplayedPlayingSong?.Cover;
 
-    public int LyricsGridColumn => HasPortraitBackground ? 0 : 1;
+    public int LyricsGridColumn => IsPortraitModeEnabled ? 0 : 1;
 
-    public int LyricsGridColumnSpan => HasPortraitBackground ? 2 : 1;
+    public int LyricsGridColumnSpan => IsPortraitModeEnabled ? 2 : 1;
 
-    public Thickness LyricsMargin => HasPortraitBackground
+    public Thickness LyricsMargin => IsPortraitModeEnabled
         ? new Thickness(96, 0)
         : new Thickness(60, 0, 0, 0);
 
@@ -410,37 +411,9 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(CurrentSingerDisplayText));
         OnPropertyChanged(nameof(NowPlayingBackgroundImageSource));
         IsSingerMenuExpanded = false;
-        IsPortraitAvailable = false;
 
         if (IsPortraitModeEnabled)
             _ = RefreshPortraitsAsync();
-
-        _ = PrefetchPortraitAvailabilityAsync();
-    }
-
-    private async Task PrefetchPortraitAvailabilityAsync()
-    {
-        var song = Player.DisplayedPlayingSong;
-        if (song == null || !song.Singers.Exists(s => s.Id > 0))
-            return;
-
-        try
-        {
-            var groups = await FetchPortraitUrlsAsync(song);
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (Player.DisplayedPlayingSong?.Hash != song.Hash)
-                    return;
-
-                IsPortraitAvailable = groups.Count > 0;
-                if (!IsPortraitAvailable)
-                    IsPortraitModeEnabled = false;
-            });
-        }
-        catch
-        {
-            // Silently ignore — portrait just won't be available.
-        }
     }
 
     partial void OnIsPortraitModeEnabledChanged(bool value)

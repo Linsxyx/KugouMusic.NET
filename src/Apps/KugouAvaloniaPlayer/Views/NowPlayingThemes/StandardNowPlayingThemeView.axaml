@@ -174,7 +174,6 @@
                 Command="{Binding TogglePortraitModeCommand}"
                 Classes="Basic"
                 ToolTip.Tip="写真模式"
-                IsVisible="{Binding IsPortraitAvailable}"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="40,84,0,0">
