@@ -11,6 +11,8 @@
         <DefineConstants>$(DefineConstants);SIMPLEAUDIO_WINDOWS</DefineConstants>
     </PropertyGroup>
 
+    <!-- Android packs BASS through AndroidNativeLibrary items in the Android head (runtimes/android-*/native). -->
+
     <ItemGroup>
         <PackageReference Include="ManagedBass" />
         <PackageReference Include="ManagedBass.Fx" />
@@ -26,7 +28,7 @@
         </Content>
     </ItemGroup>
 
-    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(RuntimeIdentifier)' != 'win-arm64'">
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(RuntimeIdentifier)' != 'win-arm64' and !$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('android-'))">
         <Content Include="runtimes\win-x64\**">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <TargetPath>%(Filename)%(Extension)</TargetPath>
@@ -53,7 +55,7 @@
         </Content>
     </ItemGroup>
 
-    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) and !$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('android-'))">
         <Content Include="runtimes\osx-universal\**">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <TargetPath>%(Filename)%(Extension)</TargetPath>

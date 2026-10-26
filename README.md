@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="src/Apps/KugouAvaloniaPlayer/Assets/ka-logo.png" alt="KA Music Logo" width="128" />
+  <img src="src/Apps/KugouAvaloniaPlayer.Shared/Assets/ka-logo.png" alt="KA Music Logo" width="128" />
 
   <h1>KA Music</h1>
 
@@ -215,7 +215,9 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 这个仓库不只有播放器本体，也包含围绕酷狗能力做的几个底层项目。
 
-- `src/Apps/KugouAvaloniaPlayer`：Avalonia 桌面客户端，也就是现在的 `KA Music`
+- `src/Apps/KugouAvaloniaPlayer`：Avalonia 桌面客户端（启动项目），也就是现在的 `KA Music`
+- `src/Apps/KugouAvaloniaPlayer.Shared`：播放器的界面、视图模型与服务，桌面端与 Android 端共用
+- `src/Apps/KugouAvaloniaPlayer.Android`：Android 启动项目（脚手架阶段，尚未正式实现）
 - `src/Apps/KgTest`：终端 TUI 播放器
 - `src/Libraries/KuGou.Net`：酷狗业务 SDK，封装登录、搜索、歌单、歌词、榜单、用户等能力
 - `src/Apps/KgWebApi.Net`：基于 SDK 的 ASP.NET Core Web API 封装
@@ -241,6 +243,12 @@ dotnet build KugouMusic.NET.slnx
 dotnet run --project src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj
 ```
 
+Android 启动项目不在 `KugouMusic.NET.slnx` 中，需要先安装 Android 工作负载（`dotnet workload install android`）、Android SDK 与 JDK，再单独构建：
+
+```bash
+dotnet build src/Apps/KugouAvaloniaPlayer.Android/KugouAvaloniaPlayer.Android.csproj -p:EnableAndroidTarget=true
+```
+
 如需运行终端播放器：
 
 ```bash
@@ -261,7 +269,9 @@ Web API 文档（开发环境）：`http://localhost:5058/scalar/v1`
 KugouMusic.NET
 ├─ src
 │  ├─ Apps
-│  │  ├─ KugouAvaloniaPlayer   # Avalonia 桌面客户端
+│  │  ├─ KugouAvaloniaPlayer          # 桌面启动项目
+│  │  ├─ KugouAvaloniaPlayer.Shared   # 播放器共享代码（UI / 视图模型 / 服务）
+│  │  ├─ KugouAvaloniaPlayer.Android  # Android 启动项目（脚手架）
 │  │  ├─ KgTest                # 终端 TUI 播放器
 │  │  └─ KgWebApi.Net          # ASP.NET Core Web API
 │  ├─ Libraries

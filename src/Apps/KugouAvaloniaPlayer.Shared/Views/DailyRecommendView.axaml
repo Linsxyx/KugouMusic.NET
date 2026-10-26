@@ -1,0 +1,372 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
+             x:Class="KugouAvaloniaPlayer.Views.DailyRecommendView"
+             x:Name="DailyRecommendRoot"
+             x:DataType="vm:DailyRecommendViewModel">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <x:String x:Key="DailyRecommendHeroBackground">avares://KugouAvaloniaPlayer.Shared/Assets/daily-recommend-hero.webp</x:String>
+                    <Color x:Key="DailyHeroOverlayTop">#100B1D42</Color>
+                    <Color x:Key="DailyHeroOverlayMid">#180B1D42</Color>
+                    <Color x:Key="DailyHeroOverlayBottom">#300B1D42</Color>
+                    <Color x:Key="DailyHeroFadeStart">#00FFFFFF</Color>
+                    <Color x:Key="DailyHeroFadeMid">#28FFFFFF</Color>
+                    <Color x:Key="DailyHeroFadeEnd">#F6FFFFFF</Color>
+                    <SolidColorBrush x:Key="DailyTableHeadingBrush" Color="#6D78A0" />
+                    <SolidColorBrush x:Key="DailyHeroActionBrush" Color="#78101B35" />
+                    <SolidColorBrush x:Key="DailyHeroActionHoverBrush" Color="#9018273E" />
+                    <SolidColorBrush x:Key="DailyHeroActionBorderBrush" Color="#78FFFFFF" />
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Dark">
+                    <x:String x:Key="DailyRecommendHeroBackground">avares://KugouAvaloniaPlayer.Shared/Assets/daily-recommend-hero-dark.webp</x:String>
+                    <Color x:Key="DailyHeroOverlayTop">#24101B35</Color>
+                    <Color x:Key="DailyHeroOverlayMid">#34101B35</Color>
+                    <Color x:Key="DailyHeroOverlayBottom">#68101B35</Color>
+                    <Color x:Key="DailyHeroFadeStart">#0012192A</Color>
+                    <Color x:Key="DailyHeroFadeMid">#A012192A</Color>
+                    <Color x:Key="DailyHeroFadeEnd">#FF12192A</Color>
+                    <SolidColorBrush x:Key="DailyTableHeadingBrush" Color="#9CA8C6" />
+                    <SolidColorBrush x:Key="DailyHeroActionBrush" Color="#2A000000" />
+                    <SolidColorBrush x:Key="DailyHeroActionHoverBrush" Color="#44000000" />
+                    <SolidColorBrush x:Key="DailyHeroActionBorderBrush" Color="#30FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.daily-table-heading">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource DailyTableHeadingBrush}" />
+        </Style>
+        <Style Selector="Border.daily-badge">
+            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="BorderBrush" Value="#36FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="10,4" />
+        </Style>
+        <Style Selector="Border.daily-fm-panel">
+            <Setter Property="Background" Value="{DynamicResource DailyHeroActionBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DailyHeroActionBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="BoxShadow" Value="0 18 42 0 #30050A24" />
+        </Style>
+        <Style Selector="Button.fm-glass-icon">
+            <Setter Property="Background" Value="#18FFFFFF" />
+            <Setter Property="BorderBrush" Value="#2CFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.fm-glass-icon:pointerover">
+            <Setter Property="Background" Value="{DynamicResource DailyHeroActionHoverBrush}" />
+        </Style>
+        <Style Selector="Button.fm-pool-toggle">
+            <Setter Property="Background" Value="#20FFFFFF" />
+            <Setter Property="BorderBrush" Value="#36FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="9,4" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.fm-pool-toggle:pointerover">
+            <Setter Property="Background" Value="#34FFFFFF" />
+        </Style>
+        <Style Selector="Button.fm-play-fab">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Background" Value="#F4F1FF" />
+            <Setter Property="BorderBrush" Value="#80FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.fm-play-fab:pointerover">
+            <Setter Property="Background" Value="White" />
+        </Style>
+        <Style Selector="Button.fm-inline-icon">
+            <Setter Property="Background" Value="#18FFFFFF" />
+            <Setter Property="BorderBrush" Value="#2CFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="999" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.fm-inline-icon:pointerover">
+            <Setter Property="Background" Value="#2EFFFFFF" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="15">
+        <Grid RowDefinitions="Auto,*">
+            <Grid Grid.Row="0"
+                  Height="188"
+                  ClipToBounds="False">
+                <Border CornerRadius="16,16,0,0"
+                        ClipToBounds="True"
+                        Background="{DynamicResource SukiPrimaryColorLow}">
+                    <Grid>
+                        <Image asyncImageLoader:ImageLoader.Source="{DynamicResource DailyRecommendHeroBackground}"
+                               IsVisible="{DynamicResource KugouHeroBackgroundImageVisible}"
+                               Stretch="UniformToFill" />
+                        <Border>
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="{DynamicResource DailyHeroOverlayTop}" Offset="0" />
+                                    <GradientStop Color="{DynamicResource DailyHeroOverlayMid}" Offset="0.62" />
+                                    <GradientStop Color="{DynamicResource DailyHeroOverlayBottom}" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border IsVisible="{DynamicResource KugouHeroBackgroundImageVisible}"
+                                VerticalAlignment="Bottom"
+                                Height="76">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                    <GradientStop Color="{DynamicResource DailyHeroFadeStart}" Offset="0" />
+                                    <GradientStop Color="{DynamicResource DailyHeroFadeMid}" Offset="0.56" />
+                                    <GradientStop Color="{DynamicResource DailyHeroFadeEnd}" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Grid ColumnDefinitions="*,392"
+                      ColumnSpacing="24"
+                      Margin="30,20,28,18">
+                    <StackPanel Grid.Column="0"
+                                VerticalAlignment="Center"
+                                Spacing="10">
+                        <Border Classes="daily-badge"
+                                HorizontalAlignment="Left">
+                            <TextBlock Text="DAILY RECOMMENDATION"
+                                       FontSize="11"
+                                       FontWeight="Heavy"
+                                       Foreground="White" />
+                        </Border>
+                        <TextBlock Text="每日推荐"
+                                   FontSize="34"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="520" />
+                        <TextBlock Text="{Binding DailyRecommendSubtitle}"
+                                   FontSize="14"
+                                   Foreground="#DCE5FF"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="520" />
+                    </StackPanel>
+
+                    <Border Grid.Column="1"
+                            Classes="daily-fm-panel"
+                            VerticalAlignment="Stretch">
+                        <Grid RowDefinitions="*,Auto">
+                            <Grid Grid.Row="0"
+                                  ColumnDefinitions="*,104"
+                                  ColumnSpacing="14">
+                                <StackPanel Grid.Column="0"
+                                            Spacing="7">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="8"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding FmCardTitle}"
+                                                   FontSize="21"
+                                                   FontWeight="Bold"
+                                                   Foreground="White"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   MaxWidth="180" />
+                                        <Button Classes="fm-glass-icon"
+                                                Width="28"
+                                                Height="28"
+                                                IsEnabled="{Binding CanEditFmConfiguration}"
+                                                Command="{Binding CyclePersonalFmModeCommand}">
+                                            <Svg Classes="ThemeSvgIcon"
+                                                 Path="/Assets/switch-up.svg"
+                                                 Width="15"
+                                                 Height="15" />
+                                        </Button>
+                                    </StackPanel>
+
+                                    <Button Classes="fm-pool-toggle"
+                                            HorizontalAlignment="Left"
+                                            IsVisible="{Binding CanUsePersonalFm}"
+                                            IsEnabled="{Binding CanEditFmConfiguration}"
+                                            Command="{Binding TogglePersonalFmSongPoolCommand}"
+                                            Content="{Binding FmSongPoolButtonText}" />
+
+                                    <TextBlock Text="{Binding FmCardSubtitle}"
+                                               Foreground="#DDE8FF"
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               MaxLines="2"
+                                               IsVisible="{Binding ShowFmSongs}" />
+                                    <TextBlock Text="{Binding FmEmptyText}"
+                                               Foreground="#F8FBFF"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               MaxLines="2"
+                                               IsVisible="{Binding ShowFmLoginState}" />
+                                    <TextBlock Text="{Binding FmEmptyText}"
+                                               Foreground="#F8FBFF"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               MaxLines="2"
+                                               IsVisible="{Binding ShowFmEmptyState}" />
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="8"
+                                                IsVisible="{Binding IsFmLoading}">
+                                        <suki:Loading Width="15" Height="15" />
+                                        <TextBlock Text="正在更新专属电台..."
+                                                   Foreground="#F8FBFF"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Grid Grid.Column="1"
+                                      Width="75"
+                                      Height="75"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Top">
+                                    <Ellipse Width="92"
+                                             Height="92"
+                                             Margin="-1,-1,0,0"
+                                             Fill="#22FFFFFF"
+                                             HorizontalAlignment="Center"
+                                             VerticalAlignment="Center" />
+                                    <Border Width="75"
+                                            Height="75"
+                                            CornerRadius="999"
+                                            BorderBrush="#B8FFFFFF"
+                                            BorderThickness="2"
+                                            ClipToBounds="True"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Background="#20FFFFFF">
+                                        <Image asyncImageLoader:ImageLoader.Source="{Binding CurrentFmPreviewSong.Cover, FallbackValue=avares://KugouAvaloniaPlayer.Shared/Assets/Default.webp, TargetNullValue=avares://KugouAvaloniaPlayer.Shared/Assets/Default.webp}"
+                                                             Stretch="UniformToFill" />
+                                    </Border>
+                                    <Button Classes="fm-play-fab"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Bottom"
+                                            Margin="60,80,0,0"
+                                            Padding="2,2,-2,0"
+                                            IsVisible="{Binding ShowFmControls}"
+                                            Command="{Binding PlayPersonalFmCommand}">
+                                        <Svg Classes="ThemeSvgIcon"
+                                             Path="{Binding FmPlayIconPath}"
+                                             Width="18"
+                                             Height="18" />
+                                    </Button>
+                                </Grid>
+                            </Grid>
+
+                            <StackPanel Grid.Row="1"
+                                        Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="10"
+                                        Margin="0,10,0,0">
+                                <Button Classes="fm-inline-icon"
+                                        Width="30"
+                                        Height="30"
+                                        ToolTip.Tip="不喜欢"
+                                        IsVisible="{Binding ShowFmControls}"
+                                        Command="{Binding DislikePersonalFmCommand}">
+                                    <Svg Classes="ThemeSvgIcon"
+                                         Path="/Assets/unlike-svgrepo-com.svg"
+                                         Width="17"
+                                         Height="17" />
+                                </Button>
+
+                                <Button Classes="fm-inline-icon"
+                                        Width="30"
+                                        Height="30"
+                                        ToolTip.Tip="刷新"
+                                        IsVisible="{Binding CanUsePersonalFm}"
+                                        IsEnabled="{Binding CanEditFmConfiguration}"
+                                        Command="{Binding RefreshPersonalFmCommand}">
+                                    <PathIcon Data="{x:Static suki:Icons.Refresh}"
+                                              Foreground="White"
+                                              Width="15"
+                                              Height="15" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <suki:GlassCard Grid.Row="1"
+                            Margin="0,15,0,0"
+                            Padding="22,16,22,0"
+                            CornerRadius="18">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,150,80,150"
+                          Margin="70,0,16,8">
+                        <TextBlock Classes="daily-table-heading" Text="歌曲" />
+                        <TextBlock Grid.Column="1" Classes="daily-table-heading" Text="专辑" />
+                        <TextBlock Grid.Column="2" Classes="daily-table-heading" Text="时长" />
+                        <TextBlock Grid.Column="3" Classes="daily-table-heading" Text="操作" HorizontalAlignment="Right" Margin="0,0,50,0" />
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <ListBox Classes="SongList"
+                                 ItemsSource="{Binding Songs}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 Padding="0,0,0,80">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <VirtualizingStackPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="vm:SongItem">
+                                    <localControls:SongListItemControl
+                                        PlayCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).PlaySongCommand}"
+                                        AddToNextCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).AddSongToNextCommand}"
+                                        ShowPlaylistDialogCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ShowSongPlaylistDialogCommand}"
+                                        ViewSingerCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ViewSongSingerCommand}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <StackPanel VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    IsVisible="{Binding IsDailyRecommendationsLoading}"
+                                    Spacing="10">
+                            <suki:Loading Width="40" Height="40" />
+                            <TextBlock Text="正在加载每日推荐..."
+                                       Foreground="{DynamicResource SukiLiquid2}" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </suki:GlassCard>
+        </Grid>
+    </Grid>
+</UserControl>

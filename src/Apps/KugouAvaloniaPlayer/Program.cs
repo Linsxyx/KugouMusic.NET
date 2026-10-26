@@ -11,8 +11,6 @@ namespace KugouAvaloniaPlayer;
 
 internal sealed class Program
 {
-    private static readonly StartupInstanceCoordinator StartupCoordinator = new();
-
     [STAThread]
     public static void Main(string[] args)
     {
@@ -20,7 +18,7 @@ internal sealed class Program
         CrashReporting.RegisterGlobalHandlers();
         GraphicsBackendSelection.Initialize();
 
-        var launchResult = StartupCoordinator.TryAcquireOrForward(args);
+        var launchResult = StartupInstanceCoordinator.Current.TryAcquireOrForward(args);
         if (launchResult == StartupInstanceLaunchResult.ForwardedToPrimary)
         {
             Log.CloseAndFlush();
@@ -47,11 +45,6 @@ internal sealed class Program
         {
             Log.CloseAndFlush();
         }
-    }
-
-    internal static void ShutdownStartupCoordinator()
-    {
-        StartupCoordinator.Dispose();
     }
 
     public static AppBuilder BuildAvaloniaApp()

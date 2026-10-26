@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <!--
+        Android head. Scaffolding only: it starts App in a single-view lifetime with a placeholder view.
+        Needs the Android workload, SDK and JDK, and the Android target of Shared:
+          dotnet build src/Apps/KugouAvaloniaPlayer.Android/KugouAvaloniaPlayer.Android.csproj -p:EnableAndroidTarget=true
+    -->
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0-android</TargetFramework>
+        <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+        <AssemblyName>KugouAvaloniaPlayer.Android</AssemblyName>
+        <ApplicationId>com.kugouavaloniaplayer.app</ApplicationId>
+        <ApplicationVersion>1</ApplicationVersion>
+        <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+        <AndroidPackageFormat>apk</AndroidPackageFormat>
+        <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    </PropertyGroup>
+
+    <Import Project="..\KugouAvaloniaPlayer.Common.props" />
+
+    <PropertyGroup>
+        <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AndroidResource Include="..\KugouAvaloniaPlayer.Shared\Assets\ka-logo.png" Link="Resources\drawable\icon.png" />
+    </ItemGroup>
+
+    <!-- BASS for Android: drop the .so files under SimpleAudio/runtimes/android-*/native/. -->
+    <ItemGroup>
+        <AndroidNativeLibrary Include="..\..\Libraries\SimpleAudio\runtimes\android-arm64\native\*.so" Abi="arm64-v8a" />
+        <AndroidNativeLibrary Include="..\..\Libraries\SimpleAudio\runtimes\android-x64\native\*.so" Abi="x86_64" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Android" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\KugouAvaloniaPlayer.Shared\KugouAvaloniaPlayer.Shared.csproj" />
+        <TrimmerRootAssembly Include="KugouAvaloniaPlayer.Shared" />
+    </ItemGroup>
+
+    <!-- Without it Shared resolves to its desktop net10.0 build (wrong platform code). -->
+    <Target Name="KugouRequireAndroidTarget" BeforeTargets="PrepareForBuild" Condition="'$(EnableAndroidTarget)' != 'true'">
+        <Error Text="Build the Android head with -p:EnableAndroidTarget=true (or set EnableAndroidTarget=true in the environment) so KugouAvaloniaPlayer.Shared targets net10.0-android." />
+    </Target>
+</Project>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="auto">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- TODO(android): READ_MEDIA_AUDIO, FOREGROUND_SERVICE(_MEDIA_PLAYBACK), POST_NOTIFICATIONS with the playback service. -->
+    <application android:label="KA Music" android:icon="@drawable/icon" />
+</manifest>

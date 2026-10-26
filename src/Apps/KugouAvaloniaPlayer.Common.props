@@ -1,0 +1,47 @@
+<Project>
+    <!--
+        Settings shared by the player's projects (Shared, the desktop head and the Android head).
+        Import it after TargetFramework is set: the platform is resolved from the target framework first,
+        then the runtime identifier, then the build host, so cross-RID builds pick the right code.
+        Pass -p:KugouTargetPlatform=android|windows|macos|linux to override it.
+    -->
+    <PropertyGroup>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <RootNamespace>KugouAvaloniaPlayer</RootNamespace>
+
+        <Version Condition="'$(BUILD_VERSION)' == ''">1.0.0</Version>
+        <Version Condition="'$(BUILD_VERSION)' != ''">$(BUILD_VERSION)</Version>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <_KugouTfmPlatform>$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)'))</_KugouTfmPlatform>
+        <KugouTargetPlatform Condition="'$(KugouTargetPlatform)' == '' And '$(_KugouTfmPlatform)' == 'android'">android</KugouTargetPlatform>
+        <KugouTargetPlatform Condition="'$(KugouTargetPlatform)' == '' And '$(_KugouTfmPlatform)' == 'windows'">windows</KugouTargetPlatform>
+        <KugouTargetPlatform Condition="'$(KugouTargetPlatform)' == '' And $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('osx'))">macos</KugouTargetPlatform>
+        <KugouTargetPlatform Condition="'$(KugouTargetPlatform)' == '' And $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))">linux</KugouTargetPlatform>
+        <KugouTargetPlatform Condition="'$(KugouTargetPlatform)' == '' And $([MSBuild]::IsOSPlatform('Windows'))">windows</KugouTargetPlatform>
+        <KugouTargetPlatform Condition="'$(KugouTargetPlatform)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">macos</KugouTargetPlatform>
+        <KugouTargetPlatform Condition="'$(KugouTargetPlatform)' == ''">linux</KugouTargetPlatform>
+
+        <KugouDesktop Condition="'$(KugouTargetPlatform)' != 'android'">true</KugouDesktop>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(KugouTargetPlatform)' == 'windows'">
+        <DefineConstants>$(DefineConstants);KUGOU_WINDOWS</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(KugouTargetPlatform)' == 'macos'">
+        <DefineConstants>$(DefineConstants);KUGOU_MACOS</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(KugouTargetPlatform)' == 'linux'">
+        <UseSystemSqlite>true</UseSystemSqlite>
+        <DefineConstants>$(DefineConstants);KUGOU_LINUX;KUGOU_SYSTEM_SQLITE</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(KugouTargetPlatform)' == 'android'">
+        <DefineConstants>$(DefineConstants);KUGOU_ANDROID</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(KugouDesktop)' == 'true'">
+        <DefineConstants>$(DefineConstants);KUGOU_DESKTOP</DefineConstants>
+    </PropertyGroup>
+</Project>

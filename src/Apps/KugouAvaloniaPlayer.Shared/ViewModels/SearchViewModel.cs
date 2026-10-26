@@ -1,0 +1,553 @@
+using System;
+using ZLinq;
+using System.Threading.Tasks;
+using Avalonia.Collections;
+using Avalonia.Controls.Notifications;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using KuGou.Net.Abstractions.Models;
+using KuGou.Net.Clients;
+using KugouAvaloniaPlayer.Models;
+using KugouAvaloniaPlayer.Services;
+using Microsoft.Extensions.Logging;
+using SukiUI.Toasts;
+
+namespace KugouAvaloniaPlayer.ViewModels;
+
+public partial class SearchViewModel(
+    SearchClient searchClient,
+    PlaylistClient playlistClient,
+    AlbumClient albumClient,
+    INavigationService navigationService,
+    PlayerViewModel player,
+    ISongInteractionService songInteractions,
+    IMessenger messenger,
+    ISukiToastManager toastManager,
+    ILogger<SearchViewModel> logger) : PageViewModelBase
+{
+    private const string DefaultSongCover = "avares://KugouAvaloniaPlayer.Shared/Assets/default_song.webp";
+    private const string DefaultCardCover = "avares://KugouAvaloniaPlayer.Shared/Assets/default_listcard.webp";
+    private const string DefaultSingerCover = "avares://KugouAvaloniaPlayer.Shared/Assets/default_singer.webp";
+    private const int PlaylistSongPageSize = 200;
+    private string _currentDetailId = "";
+    private long _currentAlbumAuthorId;
+    private long _currentAlbumId;
+
+    private int _currentDetailPage = 1;
+    private DetailType _currentDetailType = DetailType.None;
+
+    // 用于收藏歌单的信息
+    private string _currentPlaylistGlobalId = "";
+    private string _currentPlaylistName = "";
+    [ObservableProperty]
+    public partial SearchType CurrentSearchType { get; set; } = SearchType.Song;
+
+    [ObservableProperty]
+    public partial string? DetailCover { get; set; }
+
+    [ObservableProperty]
+    public partial string? DetailSubTitle { get; set; }
+
+    [ObservableProperty]
+    public partial string? DetailTitle { get; set; }
+
+    private bool _hasMoreDetails = true;
+    [ObservableProperty]
+    public partial bool HasSearched { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsLoadingMoreDetails { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsSearching { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsShowingDetail { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
+    public partial string SearchKeyword { get; set; } = "";
+
+    public override string DisplayName => "搜索";
+    public override string Icon => "/Assets/Search.svg";
+
+    public AvaloniaList<SongItem> Songs { get; } = new();
+    public AvaloniaList<SearchPlaylistItem> Playlists { get; } = new();
+    public AvaloniaList<SearchAlbumItem> Albums { get; } = new();
+    public AvaloniaList<SearchAuthorItem> Singers { get; } = new();
+    public AvaloniaList<SongItem> DetailSongs { get; } = new();
+
+    [RelayCommand]
+    private Task PlaySong(SongItem? song) =>
+        song is null
+            ? Task.CompletedTask
+            : ((IPlaybackCommands)player).PlayAsync(song, Songs);
+
+    [RelayCommand]
+    private void AddSongToNext(SongItem? song)
+    {
+        if (song != null)
+            ((IPlaybackCommands)player).AddToNext(song);
+    }
+
+    [RelayCommand]
+    private Task ShowSongPlaylistDialog(SongItem? song) =>
+        song is null
+            ? Task.CompletedTask
+            : songInteractions.ShowAddToPlaylistDialogAsync(song);
+
+    [RelayCommand]
+    private void ViewSongSinger(SingerLite? singer)
+    {
+        if (singer != null)
+            songInteractions.NavigateToSinger(singer);
+    }
+
+    // 当前是否显示歌单详情（用于控制收藏按钮可见性）
+    public bool IsPlaylistDetail => _currentDetailType == DetailType.Playlist;
+    public bool IsAlbumDetail => _currentDetailType == DetailType.Album;
+    public bool CanCollectDetail => IsPlaylistDetail || IsAlbumDetail;
+
+    [RelayCommand]
+    private async Task Search()
+    {
+        if (string.IsNullOrWhiteSpace(SearchKeyword)) return;
+
+        HasSearched = true;
+        IsShowingDetail = false;
+
+        IsSearching = true;
+        logger.LogInformation("正在搜索: {Keyword}, 类型: {Type}", SearchKeyword, CurrentSearchType);
+
+        ClearResults();
+
+        try
+        {
+            switch (CurrentSearchType)
+            {
+                case SearchType.Song:
+                    await SearchSongs();
+                    break;
+                case SearchType.Playlist:
+                    await SearchPlaylists();
+                    break;
+                case SearchType.Album:
+                    await SearchAlbums();
+                    break;
+                case SearchType.Singer:
+                    await SearchSingers();
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "搜索失败");
+        }
+        finally
+        {
+            IsSearching = false;
+        }
+    }
+
+    private void ClearResults()
+    {
+        Songs.Clear();
+        Playlists.Clear();
+        Albums.Clear();
+        Singers.Clear();
+    }
+
+    private async Task SearchSongs()
+    {
+        var results = await searchClient.SearchAsync(SearchKeyword);
+        foreach (var item in results)
+            Songs.Add(ConvertSong(item));
+    }
+
+    private async Task SearchPlaylists()
+    {
+        for (var page = 1; ; page++)
+        {
+            try
+            {
+                var results = await searchClient.SearchSpecialAsync(SearchKeyword, page,pageSize:100);
+                if (results == null || results.Count == 0) break;
+
+                foreach (var item in results)
+                    Playlists.Add(item);
+
+                if (results.Count < 100) break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "网络问题，歌单搜索中断");
+                break;
+            }
+        }
+    }
+
+    private async Task SearchAlbums()
+    {
+        for (var page = 1; ; page++)
+        {
+            try
+            {
+                var results = await searchClient.SearchAlbumAsync(SearchKeyword, page,pageSize:100);
+                if (results == null || results.Count == 0) break;
+                
+                foreach (var item in results)
+                    Albums.Add(item);
+
+                if (results.Count < 100) break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "网络问题，专辑搜索中断");
+                break;
+            }
+        }
+    }
+
+    private async Task SearchSingers()
+    {
+        try
+        {
+            var results = await searchClient.SearchAuthorAsync(SearchKeyword, pageSize: 50);
+            if (results == null || results.Count == 0)
+                return;
+
+            Singers.AddRange(results);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "网络问题，歌手搜索失败");
+        }
+    }
+
+    [RelayCommand]
+    private void SwitchSearchType(string type)
+    {
+        if (!Enum.TryParse<SearchType>(type, out var searchType)) return;
+        CurrentSearchType = searchType;
+        IsShowingDetail = false;
+        ClearResults();
+        if (!string.IsNullOrWhiteSpace(SearchKeyword)) _ = Search();
+    }
+
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        ResetSearchState();
+        navigationService.GoBack();
+    }
+
+    private void ResetSearchState()
+    {
+        SearchKeyword = string.Empty;
+        IsSearching = false;
+        IsShowingDetail = false;
+        HasSearched = false;
+
+        _currentDetailType = DetailType.None;
+        _currentDetailId = string.Empty;
+        _currentDetailPage = 1;
+        _hasMoreDetails = true;
+        DetailTitle = null;
+        DetailSubTitle = null;
+        DetailCover = null;
+        _currentAlbumId = 0;
+        _currentAlbumAuthorId = 0;
+        _currentPlaylistGlobalId = string.Empty;
+        _currentPlaylistName = string.Empty;
+
+        ClearResults();
+        DetailSongs.Clear();
+        OnPropertyChanged(nameof(IsPlaylistDetail));
+        OnPropertyChanged(nameof(IsAlbumDetail));
+        OnPropertyChanged(nameof(CanCollectDetail));
+    }
+
+    [RelayCommand]
+    private async Task OpenPlaylist(SearchPlaylistItem? item)
+    {
+        if (item == null) return;
+
+        // 初始化状态
+        _currentDetailType = DetailType.Playlist;
+        OnPropertyChanged(nameof(IsPlaylistDetail));
+        OnPropertyChanged(nameof(IsAlbumDetail));
+        OnPropertyChanged(nameof(CanCollectDetail));
+        _currentDetailId = item.GlobalId;
+        _currentDetailPage = 1;
+        _hasMoreDetails = true;
+
+        // 保存收藏歌单所需的信息
+        _currentPlaylistGlobalId = item.GlobalId;
+        _currentPlaylistName = item.Name;
+
+        DetailTitle = item.Name;
+        DetailSubTitle = $"{item.SongCount} 首歌曲 - {item.CreatorName}";
+        DetailCover = item.Cover ?? DefaultCardCover;
+
+        IsShowingDetail = true;
+        DetailSongs.Clear();
+
+        await LoadMoreDetailsInternal();
+    }
+
+    [RelayCommand]
+    private async Task OpenAlbum(SearchAlbumItem? item)
+    {
+        if (item == null) return;
+
+        _currentDetailType = DetailType.Album;
+        OnPropertyChanged(nameof(IsPlaylistDetail));
+        OnPropertyChanged(nameof(IsAlbumDetail));
+        OnPropertyChanged(nameof(CanCollectDetail));
+        _currentDetailId = item.AlbumId.ToString();
+        _currentAlbumId = item.AlbumId;
+        _currentAlbumAuthorId = 0;
+        _currentDetailPage = 1;
+        _hasMoreDetails = true;
+
+        DetailTitle = item.Name;
+        DetailSubTitle = $"{item.SingerName}";
+        DetailCover = item.Cover ?? DefaultCardCover;
+
+        IsShowingDetail = true;
+        DetailSongs.Clear();
+
+        await LoadMoreDetailsInternal();
+    }
+
+    [RelayCommand]
+    private void OpenSinger(SearchAuthorItem? item)
+    {
+        if (item is not { AuthorId: > 0 })
+            return;
+
+        songInteractions.NavigateToSinger(new SingerLite
+        {
+            Id = item.AuthorId,
+            Name = item.Name,
+            SingerPic = string.IsNullOrWhiteSpace(item.Cover) ? DefaultSingerCover : item.Cover
+        });
+    }
+
+    [RelayCommand]
+    private async Task LoadMoreDetails()
+    {
+        if (IsLoadingMoreDetails || !_hasMoreDetails || !IsShowingDetail)
+            return;
+
+
+        _currentDetailPage++;
+        await LoadMoreDetailsInternal();
+    }
+
+    private async Task LoadMoreDetailsInternal()
+    {
+        IsLoadingMoreDetails = true;
+        try
+        {
+            if (_currentDetailType == DetailType.Playlist)
+            {
+                var data = await playlistClient.GetSongsAsync(_currentDetailId, _currentDetailPage, PlaylistSongPageSize);
+                if (data == null)
+                {
+                    logger.LogWarning("Playlist detail response is null. detailId={DetailId} page={Page}",
+                        _currentDetailId, _currentDetailPage);
+                    if (_currentDetailPage > 1) _currentDetailPage--;
+                    return;
+                }
+
+                if (data.Status != 1) logger.LogError("Error : {data.ErrorCode}" ,data.ErrorCode);
+                var songs = data.Songs;
+                if (songs.Count < PlaylistSongPageSize) _hasMoreDetails = false;
+
+                var songItems = songs.AsValueEnumerable().Select(s =>
+                {
+                    var singerName = s.Singers.Count > 0 ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray()) : "未知";
+                    return new SongItem
+                    {
+                        Name = s.Name,
+                        Singer = singerName,
+                        Hash = s.Hash,
+                        AlbumId = s.AlbumId,
+                        AlbumName = s.Album?.Name ?? "",
+                        Singers = s.Singers,
+                        Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
+                        DurationSeconds = s.DurationMs / 1000.0
+                    };
+                }).ToList();
+
+                if (songItems.AsValueEnumerable().Any())
+                    DetailSongs.AddRange(songItems);
+            }
+            else if (_currentDetailType == DetailType.Album)
+            {
+                var songs = await albumClient.GetSongsAsync(_currentDetailId, _currentDetailPage, 50);
+
+                if (songs == null || songs.Count < 50) _hasMoreDetails = false;
+
+                if (songs != null)
+                {
+                    var songItems = songs.AsValueEnumerable().Select(s =>
+                    {
+                        var singerName = s.Singers.Count > 0
+                            ? string.Join("、", s.Singers.AsValueEnumerable().Select(x => x.Name).ToArray())
+                            : "未知";
+
+                        return new SongItem
+                        {
+                            Name = s.Name,
+                            Singer = singerName,
+                            Hash = s.Hash,
+                            AlbumId = s.AlbumId,
+                            AlbumName = s.AlbumInfo.AlbumName,
+                            Singers = s.Singers,
+                            Cover = string.IsNullOrWhiteSpace(s.Cover) ? DefaultSongCover : s.Cover,
+                            DurationSeconds = s.DurationMs / 1000.0
+                        };
+                    }).ToList();
+
+                    if (songItems.AsValueEnumerable().Any())
+                    {
+                        if (_currentAlbumAuthorId <= 0)
+                        {
+                            var authorId = songItems
+                                .AsValueEnumerable().SelectMany(x => x.Singers)
+                                .Select(x => x.Id)
+                                .FirstOrDefault(x => x > 0);
+                            if (authorId > 0)
+                                _currentAlbumAuthorId = authorId;
+                        }
+
+                        DetailSongs.AddRange(songItems);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "加载详情失败");
+            if (_currentDetailPage > 1) _currentDetailPage--;
+        }
+        finally
+        {
+            IsLoadingMoreDetails = false;
+        }
+    }
+
+    [RelayCommand]
+    private void GoBack()
+    {
+        IsShowingDetail = false;
+        DetailSongs.Clear();
+    }
+
+    public async Task SearchAsync(string keyword)
+    {
+        SearchKeyword = keyword;
+        await Search();
+    }
+
+    private SongItem ConvertSong(SongInfo item)
+    {
+        return new SongItem
+        {
+            Name = item.Name,
+            Singer = item.Singer,
+            Hash = item.Hash,
+            AlbumId = item.AlbumId,
+            AlbumName = item.AlbumName,
+            Singers = item.Singers,
+            Cover = string.IsNullOrWhiteSpace(item.Cover) ? DefaultSongCover : item.Cover,
+            DurationSeconds = item.Duration
+        };
+    }
+
+    [RelayCommand]
+    private async Task CollectPlaylist()
+    {
+        if (_currentDetailType == DetailType.Playlist)
+        {
+            await CollectPlaylistInternalAsync();
+            return;
+        }
+
+        if (_currentDetailType == DetailType.Album)
+            await CollectAlbumInternalAsync();
+    }
+
+    private async Task CollectPlaylistInternalAsync()
+    {
+        if (string.IsNullOrEmpty(_currentPlaylistGlobalId))
+            return;
+
+        try
+        {
+            var result = await playlistClient.CollectPlaylistAsync(_currentPlaylistName, _currentPlaylistGlobalId);
+            if (result != null)
+            {
+                messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
+                toastManager.CreateToast()
+                    .OfType(NotificationType.Success)
+                    .WithTitle("收藏成功")
+                    .WithContent($"已将「{_currentPlaylistName}」收藏到我的歌单")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "收藏歌单失败");
+            toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("收藏失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+
+    private async Task CollectAlbumInternalAsync()
+    {
+        if (_currentAlbumId <= 0 || string.IsNullOrWhiteSpace(DetailTitle))
+            return;
+
+        try
+        {
+            var result = await playlistClient.CollectAlbumAsync(
+                DetailTitle,
+                _currentAlbumId,
+                _currentAlbumAuthorId);
+
+            if (result != null)
+            {
+                messenger.Send(new PlaylistCollectionChangedEvent(PlaylistChangeKind.Created));
+                toastManager.CreateToast()
+                    .OfType(NotificationType.Success)
+                    .WithTitle("收藏成功")
+                    .WithContent($"已将专辑「{DetailTitle}」收藏到我的歌单")
+                    .Dismiss().After(TimeSpan.FromSeconds(3))
+                    .Dismiss().ByClicking()
+                    .Queue();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "收藏专辑失败");
+            toastManager.CreateToast()
+                .OfType(NotificationType.Error)
+                .WithTitle("收藏失败")
+                .WithContent(ex.Message)
+                .Dismiss().After(TimeSpan.FromSeconds(3))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+    }
+}

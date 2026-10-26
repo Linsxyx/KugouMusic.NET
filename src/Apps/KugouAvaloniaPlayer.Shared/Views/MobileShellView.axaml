@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="390" d:DesignHeight="800"
+             x:Class="KugouAvaloniaPlayer.Views.MobileShellView"
+             x:DataType="vm:MainWindowViewModel">
+    <!-- Root view for single-view lifetimes (Android). Placeholder until the mobile layout lands. -->
+    <StackPanel HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="16">
+        <Image Source="/Assets/ka-logo.png"
+               Width="96"
+               Height="96" />
+        <TextBlock HorizontalAlignment="Center"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Text="KA Music" />
+        <TextBlock HorizontalAlignment="Center"
+                   Foreground="{DynamicResource SukiLowText}"
+                   Text="移动端界面开发中" />
+    </StackPanel>
+</UserControl>

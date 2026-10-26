@@ -1,0 +1,739 @@
+#if KUGOU_MACOS
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using ATL;
+using Avalonia.Controls;
+using Avalonia.Platform;
+using Avalonia.Threading;
+using KugouAvaloniaPlayer.Converters;
+using KugouAvaloniaPlayer.ViewModels;
+using Microsoft.Extensions.Logging;
+
+namespace KugouAvaloniaPlayer.Services.SystemMediaSession;
+
+public sealed class SystemMediaSessionService(
+    IHttpClientFactory httpClientFactory,
+    ILogger<SystemMediaSessionService> logger) : ISystemMediaSessionService
+{
+    private const string DefaultArtwork = "avares://KugouAvaloniaPlayer.Shared/Assets/default_song.webp";
+    private static readonly TimeSpan TimelineUpdateInterval = TimeSpan.FromMilliseconds(750);
+    private static readonly IntPtr SelAlloc = sel_registerName("alloc");
+    private static readonly IntPtr SelInit = sel_registerName("init");
+    private static readonly IntPtr SelRetain = sel_registerName("retain");
+    private static readonly IntPtr SelAutorelease = sel_registerName("autorelease");
+    private static readonly IntPtr SelRelease = sel_registerName("release");
+    private static readonly IntPtr SelSharedCenter = sel_registerName("defaultCenter");
+    private static readonly IntPtr SelSharedCommandCenter = sel_registerName("sharedCommandCenter");
+    private static readonly IntPtr SelSetNowPlayingInfo = sel_registerName("setNowPlayingInfo:");
+    private static readonly IntPtr SelSetPlaybackState = sel_registerName("setPlaybackState:");
+    private static readonly IntPtr SelRespondsToSelector = sel_registerName("respondsToSelector:");
+    private static readonly IntPtr SelDictionary = sel_registerName("dictionary");
+    private static readonly IntPtr SelSetObjectForKey = sel_registerName("setObject:forKey:");
+    private static readonly IntPtr SelStringWithUtf8String = sel_registerName("stringWithUTF8String:");
+    private static readonly IntPtr SelNumberWithDouble = sel_registerName("numberWithDouble:");
+    private static readonly IntPtr SelDataWithBytesLength = sel_registerName("dataWithBytes:length:");
+    private static readonly IntPtr SelInitWithData = sel_registerName("initWithData:");
+    private static readonly IntPtr SelInitWithBoundsSizeRequestHandler =
+        sel_registerName("initWithBoundsSize:requestHandler:");
+    private static readonly IntPtr SelAddTargetAction = sel_registerName("addTarget:action:");
+    private static readonly IntPtr SelRemoveTarget = sel_registerName("removeTarget:");
+    private static readonly IntPtr SelSetEnabled = sel_registerName("setEnabled:");
+    private static readonly IntPtr SelPositionTime = sel_registerName("positionTime");
+    private static readonly IntPtr SelPlay = sel_registerName("kugouPlay:");
+    private static readonly IntPtr SelPause = sel_registerName("kugouPause:");
+    private static readonly IntPtr SelTogglePlayPause = sel_registerName("kugouTogglePlayPause:");
+    private static readonly IntPtr SelNext = sel_registerName("kugouNext:");
+    private static readonly IntPtr SelPrevious = sel_registerName("kugouPrevious:");
+    private static readonly IntPtr SelChangePlaybackPosition = sel_registerName("kugouChangePlaybackPosition:");
+
+    private static readonly CommandActionDelegate s_playHandler = HandlePlayCommand;
+    private static readonly CommandActionDelegate s_pauseHandler = HandlePauseCommand;
+    private static readonly CommandActionDelegate s_togglePlayPauseHandler = HandleTogglePlayPauseCommand;
+    private static readonly CommandActionDelegate s_nextHandler = HandleNextCommand;
+    private static readonly CommandActionDelegate s_previousHandler = HandlePreviousCommand;
+    private static readonly CommandActionDelegate s_changePlaybackPositionHandler = HandleChangePlaybackPositionCommand;
+    private static readonly ArtworkRequestDelegate s_artworkRequestHandler = HandleArtworkRequest;
+    private static readonly IntPtr s_artworkRequestBlock = CreateArtworkRequestBlock();
+    private static IntPtr s_mediaPlayerFramework;
+    private static IntPtr s_commandTargetClass;
+    private static SystemMediaSessionService? s_currentInstance;
+
+    private readonly List<IntPtr> _registeredCommands = [];
+    private readonly object _artworkSync = new();
+    private PlayerViewModel? _playerViewModel;
+    private IntPtr _commandCenter;
+    private IntPtr _commandTarget;
+    private IntPtr _nowPlayingInfoCenter;
+    private IntPtr _artwork;
+    private IntPtr _artworkImage;
+    private int _artworkLoadVersion;
+    private DateTimeOffset _lastTimelineUpdate = DateTimeOffset.MinValue;
+    private SongItem? _currentSong;
+    private bool _isInitialized;
+    private bool _isPlaying;
+    private double _positionSeconds;
+    private double _durationSeconds;
+
+    public bool IsSupported => OperatingSystem.IsMacOS();
+
+    public void Initialize(Window mainWindow, PlayerViewModel playerViewModel)
+    {
+        if (_isInitialized)
+            return;
+
+        try
+        {
+            LoadMediaPlayerFramework();
+            _playerViewModel = playerViewModel;
+            _currentSong = playerViewModel.DisplayedPlayingSong;
+            _isPlaying = playerViewModel.IsPlayingAudio;
+            _positionSeconds = playerViewModel.CurrentPositionSeconds;
+            _durationSeconds = playerViewModel.TotalDurationSeconds;
+
+            EnsureCommandTargetClass();
+            _commandTarget = objc_msgSend(objc_msgSend(s_commandTargetClass, SelAlloc), SelInit);
+            _nowPlayingInfoCenter = objc_msgSend(objc_getClass("MPNowPlayingInfoCenter"), SelSharedCenter);
+            _commandCenter = objc_msgSend(objc_getClass("MPRemoteCommandCenter"), SelSharedCommandCenter);
+
+            s_currentInstance = this;
+            RegisterRemoteCommands();
+            _isInitialized = true;
+            _ = UpdateSongAsync(_currentSong);
+            logger.LogInformation("macOS 系统媒体控件已启用。");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "macOS 系统媒体控件初始化失败。");
+            Shutdown();
+        }
+    }
+
+    public async Task UpdateSongAsync(SongItem? song)
+    {
+        _currentSong = song;
+        ReleaseArtwork();
+        UpdateNowPlayingInfo();
+
+        var loadVersion = Interlocked.Increment(ref _artworkLoadVersion);
+        var imageBytes = await LoadArtworkBytesAsync(song?.Cover).ConfigureAwait(false);
+        if (loadVersion != Volatile.Read(ref _artworkLoadVersion) || !ReferenceEquals(song, _currentSong))
+            return;
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (loadVersion != Volatile.Read(ref _artworkLoadVersion) || !ReferenceEquals(song, _currentSong))
+                return;
+
+            SetArtwork(imageBytes);
+            UpdateNowPlayingInfo();
+        });
+    }
+
+    public void UpdatePlaybackState(bool isPlaying)
+    {
+        if (_isPlaying == isPlaying)
+            return;
+
+        _isPlaying = isPlaying;
+        UpdateNowPlayingInfo();
+    }
+
+    public void UpdateTimeline(double positionSeconds, double durationSeconds)
+    {
+        _positionSeconds = Math.Max(0, positionSeconds);
+        _durationSeconds = Math.Max(0, durationSeconds);
+
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastTimelineUpdate < TimelineUpdateInterval)
+            return;
+
+        _lastTimelineUpdate = now;
+        UpdateNowPlayingInfo();
+    }
+
+    public void Shutdown()
+    {
+        if (_commandCenter != IntPtr.Zero && _commandTarget != IntPtr.Zero)
+        {
+            foreach (var command in _registeredCommands)
+            {
+                if (command != IntPtr.Zero)
+                    objc_msgSend_void_IntPtr(command, SelRemoveTarget, _commandTarget);
+            }
+        }
+
+        _registeredCommands.Clear();
+        Interlocked.Increment(ref _artworkLoadVersion);
+
+        if (_nowPlayingInfoCenter != IntPtr.Zero)
+        {
+            objc_msgSend_void_IntPtr(_nowPlayingInfoCenter, SelSetNowPlayingInfo, IntPtr.Zero);
+            TrySetPlaybackState(MacPlaybackStateStopped);
+        }
+
+        if (_commandTarget != IntPtr.Zero)
+        {
+            objc_msgSend(_commandTarget, SelRelease);
+            _commandTarget = IntPtr.Zero;
+        }
+
+        ReleaseArtwork();
+
+        if (ReferenceEquals(s_currentInstance, this))
+            s_currentInstance = null;
+
+        _playerViewModel = null;
+        _currentSong = null;
+        _commandCenter = IntPtr.Zero;
+        _nowPlayingInfoCenter = IntPtr.Zero;
+        _isInitialized = false;
+    }
+
+    public void Dispose()
+    {
+        Shutdown();
+    }
+
+    private void RegisterRemoteCommands()
+    {
+        RegisterCommand("playCommand", SelPlay);
+        RegisterCommand("pauseCommand", SelPause);
+        RegisterCommand("togglePlayPauseCommand", SelTogglePlayPause);
+        RegisterCommand("nextTrackCommand", SelNext);
+        RegisterCommand("previousTrackCommand", SelPrevious);
+        RegisterCommand("changePlaybackPositionCommand", SelChangePlaybackPosition);
+    }
+
+    private void RegisterCommand(string commandSelector, IntPtr actionSelector)
+    {
+        if (_commandCenter == IntPtr.Zero || _commandTarget == IntPtr.Zero)
+            return;
+
+        var commandSel = sel_registerName(commandSelector);
+        if (!objc_msgSend_boolReturn_IntPtr(_commandCenter, SelRespondsToSelector, commandSel))
+            return;
+
+        var command = objc_msgSend(_commandCenter, commandSel);
+        if (command == IntPtr.Zero)
+            return;
+
+        objc_msgSend_bool(command, SelSetEnabled, true);
+        objc_msgSend_IntPtr_IntPtr(command, SelAddTargetAction, _commandTarget, actionSelector);
+        _registeredCommands.Add(command);
+    }
+
+    private void UpdateNowPlayingInfo()
+    {
+        if (!_isInitialized || _nowPlayingInfoCenter == IntPtr.Zero)
+            return;
+
+        try
+        {
+            var info = objc_msgSend(objc_getClass("NSMutableDictionary"), SelDictionary);
+            var song = _currentSong;
+            var title = song?.DisplayTitle;
+            if (string.IsNullOrWhiteSpace(title))
+                title = "KA Music";
+
+            SetString(info, "MPMediaItemPropertyTitle", title);
+            SetString(info, "MPMediaItemPropertyArtist", song?.Singer ?? string.Empty);
+            SetDouble(info, "MPMediaItemPropertyPlaybackDuration",
+                song?.DurationSeconds > 0 ? song.DurationSeconds : _durationSeconds);
+            SetDouble(info, "MPNowPlayingInfoPropertyElapsedPlaybackTime", _positionSeconds);
+            SetDouble(info, "MPNowPlayingInfoPropertyPlaybackRate", _isPlaying ? 1 : 0);
+            SetDouble(info, "MPNowPlayingInfoPropertyDefaultPlaybackRate", 1);
+            SetObject(info, "MPMediaItemPropertyArtwork", _artwork);
+
+            objc_msgSend_void_IntPtr(_nowPlayingInfoCenter, SelSetNowPlayingInfo, info);
+            TrySetPlaybackState(_currentSong == null
+                ? MacPlaybackStateStopped
+                : _isPlaying
+                    ? MacPlaybackStatePlaying
+                    : MacPlaybackStatePaused);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "更新 macOS 系统媒体控件信息失败。");
+        }
+    }
+
+    private void SetString(IntPtr dictionary, string mediaPlayerKeyName, string value)
+    {
+        var key = GetMediaPlayerStringConstant(mediaPlayerKeyName);
+        if (key == IntPtr.Zero)
+            return;
+
+        var text = CreateNSString(value);
+        if (text != IntPtr.Zero)
+            objc_msgSend_IntPtr_IntPtr(dictionary, SelSetObjectForKey, text, key);
+    }
+
+    private void SetDouble(IntPtr dictionary, string mediaPlayerKeyName, double value)
+    {
+        var key = GetMediaPlayerStringConstant(mediaPlayerKeyName);
+        if (key == IntPtr.Zero)
+            return;
+
+        var number = objc_msgSend_double(objc_getClass("NSNumber"), SelNumberWithDouble, Math.Max(0, value));
+        if (number != IntPtr.Zero)
+            objc_msgSend_IntPtr_IntPtr(dictionary, SelSetObjectForKey, number, key);
+    }
+
+    private static void SetObject(IntPtr dictionary, string mediaPlayerKeyName, IntPtr value)
+    {
+        if (value == IntPtr.Zero)
+            return;
+
+        var key = GetMediaPlayerStringConstant(mediaPlayerKeyName);
+        if (key != IntPtr.Zero)
+            objc_msgSend_IntPtr_IntPtr(dictionary, SelSetObjectForKey, value, key);
+    }
+
+    private async Task<byte[]?> LoadArtworkBytesAsync(string? cover)
+    {
+        try
+        {
+            var bytes = await TryLoadArtworkBytesAsync(cover).ConfigureAwait(false);
+            if (bytes is { Length: > 0 })
+                return bytes;
+
+            return await TryLoadArtworkBytesAsync(DefaultArtwork).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "加载 macOS 系统媒体控件封面失败。");
+            return null;
+        }
+    }
+
+    private async Task<byte[]?> TryLoadArtworkBytesAsync(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return null;
+
+        if (LocalImageSourceHelper.TryGetEmbeddedCoverFilePath(source, out var trackPath))
+        {
+            return await Task.Run(() =>
+            {
+                var track = new Track(trackPath!);
+                return track.EmbeddedPictures.Count > 0 ? track.EmbeddedPictures[0].PictureData : null;
+            }).ConfigureAwait(false);
+        }
+
+        if (source.StartsWith("avares://", StringComparison.OrdinalIgnoreCase))
+        {
+            await using var stream = AssetLoader.Open(new Uri(source));
+            return await ReadAllBytesAsync(stream).ConfigureAwait(false);
+        }
+
+        if (Uri.TryCreate(source, UriKind.Absolute, out var uri))
+        {
+            if (uri.Scheme is "http" or "https")
+            {
+                using var response = await httpClientFactory.CreateClient().GetAsync(
+                    uri,
+                    HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            }
+
+            if (uri.IsFile && File.Exists(uri.LocalPath))
+                return await File.ReadAllBytesAsync(uri.LocalPath).ConfigureAwait(false);
+        }
+
+        return File.Exists(source)
+            ? await File.ReadAllBytesAsync(source).ConfigureAwait(false)
+            : null;
+    }
+
+    private static async Task<byte[]> ReadAllBytesAsync(Stream source)
+    {
+        using var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer).ConfigureAwait(false);
+        return buffer.ToArray();
+    }
+
+    private void SetArtwork(byte[]? bytes)
+    {
+        if (bytes is not { Length: > 0 } || s_artworkRequestBlock == IntPtr.Zero)
+        {
+            ReleaseArtwork();
+            return;
+        }
+
+        var dataBuffer = Marshal.AllocHGlobal(bytes.Length);
+        IntPtr image = IntPtr.Zero;
+        IntPtr artwork = IntPtr.Zero;
+        try
+        {
+            Marshal.Copy(bytes, 0, dataBuffer, bytes.Length);
+            var data = objc_msgSend_IntPtr_UIntPtr(
+                objc_getClass("NSData"), SelDataWithBytesLength, dataBuffer, (nuint)bytes.Length);
+            if (data == IntPtr.Zero)
+                return;
+
+            image = objc_msgSend_IntPtr(objc_msgSend(objc_getClass("NSImage"), SelAlloc), SelInitWithData, data);
+            if (image == IntPtr.Zero)
+                return;
+
+            artwork = objc_msgSend_CGSize_IntPtr(
+                objc_msgSend(objc_getClass("MPMediaItemArtwork"), SelAlloc),
+                SelInitWithBoundsSizeRequestHandler,
+                new CGSize(512, 512),
+                s_artworkRequestBlock);
+            if (artwork == IntPtr.Zero)
+                return;
+
+            lock (_artworkSync)
+            {
+                var oldArtwork = _artwork;
+                var oldImage = _artworkImage;
+                _artworkImage = image;
+                _artwork = artwork;
+                image = IntPtr.Zero;
+                artwork = IntPtr.Zero;
+
+                if (oldArtwork != IntPtr.Zero)
+                    objc_msgSend(oldArtwork, SelRelease);
+                if (oldImage != IntPtr.Zero)
+                    objc_msgSend(oldImage, SelRelease);
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(dataBuffer);
+            if (artwork != IntPtr.Zero)
+                objc_msgSend(artwork, SelRelease);
+            if (image != IntPtr.Zero)
+                objc_msgSend(image, SelRelease);
+        }
+    }
+
+    private void ReleaseArtwork()
+    {
+        lock (_artworkSync)
+        {
+            if (_artwork != IntPtr.Zero)
+            {
+                objc_msgSend(_artwork, SelRelease);
+                _artwork = IntPtr.Zero;
+            }
+
+            if (_artworkImage != IntPtr.Zero)
+            {
+                objc_msgSend(_artworkImage, SelRelease);
+                _artworkImage = IntPtr.Zero;
+            }
+        }
+    }
+
+    private static IntPtr HandleArtworkRequest(IntPtr block, CGSize requestedSize)
+    {
+        var instance = s_currentInstance;
+        if (instance == null)
+            return IntPtr.Zero;
+
+        lock (instance._artworkSync)
+        {
+            if (instance._artworkImage == IntPtr.Zero)
+                return IntPtr.Zero;
+
+            var retainedImage = objc_msgSend(instance._artworkImage, SelRetain);
+            return objc_msgSend(retainedImage, SelAutorelease);
+        }
+    }
+
+    private static IntPtr CreateArtworkRequestBlock()
+    {
+        var processHandle = dlopen(null, RtldLazy);
+        var blockClass = dlsym(processHandle, "_NSConcreteGlobalBlock");
+        if (blockClass == IntPtr.Zero)
+            return IntPtr.Zero;
+
+        var descriptor = Marshal.AllocHGlobal(Marshal.SizeOf<BlockDescriptor>());
+        Marshal.StructureToPtr(new BlockDescriptor
+        {
+            Reserved = 0,
+            Size = (nuint)Marshal.SizeOf<BlockLiteral>()
+        }, descriptor, false);
+
+        var block = Marshal.AllocHGlobal(Marshal.SizeOf<BlockLiteral>());
+        Marshal.StructureToPtr(new BlockLiteral
+        {
+            Isa = blockClass,
+            Flags = BlockIsGlobal,
+            Invoke = Marshal.GetFunctionPointerForDelegate(s_artworkRequestHandler),
+            Descriptor = descriptor
+        }, block, false);
+        return block;
+    }
+
+    private void TrySetPlaybackState(long state)
+    {
+        if (_nowPlayingInfoCenter == IntPtr.Zero)
+            return;
+
+        try
+        {
+            if (!objc_msgSend_boolReturn_IntPtr(_nowPlayingInfoCenter, SelRespondsToSelector, SelSetPlaybackState))
+                return;
+
+            objc_msgSend_long(_nowPlayingInfoCenter, SelSetPlaybackState, state);
+        }
+        catch (EntryPointNotFoundException)
+        {
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "更新 macOS 系统媒体控件播放状态失败。");
+        }
+    }
+
+    private void DispatchPlayerCommand(Action<PlayerViewModel> action)
+    {
+        var player = _playerViewModel;
+        if (player == null)
+            return;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                action(player);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "执行 macOS 系统媒体控件命令失败。");
+            }
+        });
+    }
+
+    private static long HandlePlayCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
+    {
+        s_currentInstance?.DispatchPlayerCommand(player =>
+        {
+            if (!player.IsPlayingAudio)
+                ((IPlaybackCommands)player).TogglePlayPause();
+        });
+        return RemoteCommandSuccess;
+    }
+
+    private static long HandlePauseCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
+    {
+        s_currentInstance?.DispatchPlayerCommand(player =>
+        {
+            if (player.IsPlayingAudio)
+                ((IPlaybackCommands)player).TogglePlayPause();
+        });
+        return RemoteCommandSuccess;
+    }
+
+    private static long HandleTogglePlayPauseCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
+    {
+        s_currentInstance?.DispatchTogglePlayPause();
+        return RemoteCommandSuccess;
+    }
+
+    private static long HandleNextCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
+    {
+        s_currentInstance?.DispatchTrackChange(playNext: true);
+        return RemoteCommandSuccess;
+    }
+
+    private static long HandlePreviousCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
+    {
+        s_currentInstance?.DispatchTrackChange(playNext: false);
+        return RemoteCommandSuccess;
+    }
+
+    private static long HandleChangePlaybackPositionCommand(IntPtr self, IntPtr selector, IntPtr commandEvent)
+    {
+        var targetPosition = objc_msgSend_retDouble(commandEvent, SelPositionTime);
+        s_currentInstance?.DispatchPlayerCommand(player => player.CurrentPositionSeconds = Math.Max(0, targetPosition));
+        return RemoteCommandSuccess;
+    }
+
+    private static void EnsureCommandTargetClass()
+    {
+        if (s_commandTargetClass != IntPtr.Zero)
+            return;
+
+        var existingClass = objc_getClass("KugouMacMediaCommandTarget");
+        if (existingClass != IntPtr.Zero)
+        {
+            s_commandTargetClass = existingClass;
+            return;
+        }
+
+        var nsObject = objc_getClass("NSObject");
+        var targetClass = objc_allocateClassPair(nsObject, "KugouMacMediaCommandTarget", IntPtr.Zero);
+        if (targetClass == IntPtr.Zero)
+            throw new InvalidOperationException("无法创建 macOS 媒体控制命令目标。");
+
+        AddCommandMethod(targetClass, SelPlay, s_playHandler);
+        AddCommandMethod(targetClass, SelPause, s_pauseHandler);
+        AddCommandMethod(targetClass, SelTogglePlayPause, s_togglePlayPauseHandler);
+        AddCommandMethod(targetClass, SelNext, s_nextHandler);
+        AddCommandMethod(targetClass, SelPrevious, s_previousHandler);
+        AddCommandMethod(targetClass, SelChangePlaybackPosition, s_changePlaybackPositionHandler);
+        objc_registerClassPair(targetClass);
+        s_commandTargetClass = targetClass;
+    }
+
+    private static void AddCommandMethod(IntPtr targetClass, IntPtr selector, CommandActionDelegate handler)
+    {
+        var imp = Marshal.GetFunctionPointerForDelegate(handler);
+        if (!class_addMethod(targetClass, selector, imp, "q@:@"))
+            throw new InvalidOperationException("无法注册 macOS 媒体控制命令处理方法。");
+    }
+
+    private static IntPtr GetMediaPlayerStringConstant(string symbolName)
+    {
+        var handle = LoadMediaPlayerFramework();
+        if (handle == IntPtr.Zero)
+            return CreateNSString(symbolName);
+
+        var symbol = dlsym(handle, symbolName);
+        return symbol == IntPtr.Zero ? CreateNSString(symbolName) : Marshal.ReadIntPtr(symbol);
+    }
+
+    private static IntPtr LoadMediaPlayerFramework()
+    {
+        if (s_mediaPlayerFramework != IntPtr.Zero)
+            return s_mediaPlayerFramework;
+
+        s_mediaPlayerFramework = dlopen("/System/Library/Frameworks/MediaPlayer.framework/MediaPlayer", RtldLazy);
+        return s_mediaPlayerFramework;
+    }
+
+    private static IntPtr CreateNSString(string value)
+    {
+        var utf8 = StringToHGlobalUtf8(value);
+        try
+        {
+            return objc_msgSend_IntPtr(objc_getClass("NSString"), SelStringWithUtf8String, utf8);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(utf8);
+        }
+    }
+
+    private static IntPtr StringToHGlobalUtf8(string value)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(value + '\0');
+        var buffer = Marshal.AllocHGlobal(bytes.Length);
+        Marshal.Copy(bytes, 0, buffer, bytes.Length);
+        return buffer;
+    }
+
+    private void DispatchTogglePlayPause()
+    {
+        DispatchPlayerCommand(player => ((IPlaybackCommands)player).TogglePlayPause());
+    }
+
+    private void DispatchTrackChange(bool playNext)
+    {
+        DispatchPlayerCommand(player =>
+        {
+            var commands = (IPlaybackCommands)player;
+            _ = playNext
+                ? commands.PlayNextAsync()
+                : commands.PlayPreviousAsync();
+        });
+    }
+
+    private const int RtldLazy = 1;
+    private const long RemoteCommandSuccess = 0;
+    private const int BlockIsGlobal = 1 << 28;
+    private const long MacPlaybackStatePlaying = 1;
+    private const long MacPlaybackStatePaused = 2;
+    private const long MacPlaybackStateStopped = 3;
+
+    private delegate long CommandActionDelegate(IntPtr self, IntPtr selector, IntPtr commandEvent);
+    private delegate IntPtr ArtworkRequestDelegate(IntPtr block, CGSize requestedSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly record struct CGSize(double Width, double Height);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BlockLiteral
+    {
+        public IntPtr Isa;
+        public int Flags;
+        public int Reserved;
+        public IntPtr Invoke;
+        public IntPtr Descriptor;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BlockDescriptor
+    {
+        public nuint Reserved;
+        public nuint Size;
+    }
+
+    [DllImport("/usr/lib/libobjc.A.dylib")]
+    private static extern IntPtr objc_getClass(string name);
+
+    [DllImport("/usr/lib/libobjc.A.dylib")]
+    private static extern IntPtr sel_registerName(string name);
+
+    [DllImport("/usr/lib/libobjc.A.dylib")]
+    private static extern IntPtr objc_allocateClassPair(IntPtr superclass, string name, IntPtr extraBytes);
+
+    [DllImport("/usr/lib/libobjc.A.dylib")]
+    private static extern void objc_registerClassPair(IntPtr cls);
+
+    [DllImport("/usr/lib/libobjc.A.dylib")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool class_addMethod(IntPtr cls, IntPtr name, IntPtr imp, string types);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend(IntPtr receiver, IntPtr selector);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern double objc_msgSend_retDouble(IntPtr receiver, IntPtr selector);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_IntPtr_UIntPtr(
+        IntPtr receiver, IntPtr selector, IntPtr arg1, nuint arg2);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_CGSize_IntPtr(
+        IntPtr receiver, IntPtr selector, CGSize arg1, IntPtr arg2);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_void_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_IntPtr_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1, IntPtr arg2);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_bool(IntPtr receiver, IntPtr selector, [MarshalAs(UnmanagedType.I1)] bool arg1);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool objc_msgSend_boolReturn_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern IntPtr objc_msgSend_double(IntPtr receiver, IntPtr selector, double arg1);
+
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_long(IntPtr receiver, IntPtr selector, long arg1);
+
+    [DllImport("/usr/lib/libSystem.dylib")]
+    private static extern IntPtr dlopen(string? path, int mode);
+
+    [DllImport("/usr/lib/libSystem.dylib")]
+    private static extern IntPtr dlsym(IntPtr handle, string symbol);
+}
+#endif

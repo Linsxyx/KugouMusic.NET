@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="../../Apps/KugouAvaloniaPlayer/Services/DesktopLyric/WaylandLyricProtocol.cs" Link="Lyrics/WaylandLyricProtocol.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer.Shared/Services/DesktopLyric/WaylandLyricProtocol.cs" Link="Lyrics/WaylandLyricProtocol.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
@@ -21,12 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="../../Apps/KugouAvaloniaPlayer/Views/NowPlayingThemes/NowPlayingLyricSnapshot.cs" Link="Lyrics/NowPlayingLyricSnapshot.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer.Shared/Views/NowPlayingThemes/NowPlayingLyricSnapshot.cs" Link="Lyrics/NowPlayingLyricSnapshot.cs" />
     <!-- Compile the VM-independent Fume adapter without building the player. -->
-    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeBackgroundScene.cs" Link="Fume/FumeBackgroundScene.cs" />
-    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeArticleLayout.cs" Link="Fume/FumeArticleLayout.cs" />
-    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeRenderFrame.cs" Link="Fume/FumeRenderFrame.cs" />
-    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumePlayback.cs" Link="Fume/FumePlayback.cs" />
-    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeEffectScene.cs" Link="Fume/FumeEffectScene.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer.Shared/Controls/FumeBackgroundScene.cs" Link="Fume/FumeBackgroundScene.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer.Shared/Controls/FumeArticleLayout.cs" Link="Fume/FumeArticleLayout.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer.Shared/Controls/FumeRenderFrame.cs" Link="Fume/FumeRenderFrame.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer.Shared/Controls/FumePlayback.cs" Link="Fume/FumePlayback.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer.Shared/Controls/FumeEffectScene.cs" Link="Fume/FumeEffectScene.cs" />
   </ItemGroup>
 </Project>
