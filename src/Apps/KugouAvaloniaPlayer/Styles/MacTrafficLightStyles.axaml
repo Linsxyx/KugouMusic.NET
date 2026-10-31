@@ -1,0 +1,127 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ══════════════════════════════════════════════════════
+         macOS Traffic Light Window Controls
+         Three coloured dots: Close (red) · Minimize (yellow) · Zoom (green)
+         Hovering the group reveals symbolic icons on each dot.
+         ══════════════════════════════════════════════════════ -->
+
+    <!-- Base template shared by all three dots -->
+    <Style Selector="Button.MacTrafficLight">
+        <Setter Property="Width"            Value="12" />
+        <Setter Property="Height"           Value="12" />
+        <Setter Property="Padding"          Value="0" />
+        <Setter Property="BorderThickness"  Value="0" />
+        <Setter Property="Cursor"           Value="Hand" />
+        <Setter Property="VerticalAlignment"   Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment"   Value="Center" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel Width="12" Height="12">
+                    <!-- Coloured circle with subtle native-like border -->
+                    <Ellipse Name="Dot"
+                             Width="12" Height="12"
+                             Fill="{TemplateBinding Background}"
+                             Stroke="#26000000"
+                             StrokeThickness="0.5">
+                        <Ellipse.Transitions>
+                            <Transitions>
+                                <BrushTransition Property="Fill" Duration="0:0:0.12" />
+                            </Transitions>
+                        </Ellipse.Transitions>
+                    </Ellipse>
+
+                    <!-- Symbol icon – invisible by default, fades in on group hover -->
+                    <ContentPresenter Name="Symbol"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Opacity="0">
+                        <ContentPresenter.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+                            </Transitions>
+                        </ContentPresenter.Transitions>
+                    </ContentPresenter>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- ── Close button (red) ── -->
+    <Style Selector="Button.MacTrafficLight.MacClose">
+        <Setter Property="Background" Value="#FF5F57" />
+        <Setter Property="Content">
+            <Template>
+                <!-- × symbol -->
+                <Path Data="M -2.5,-2.5 L 2.5,2.5 M 2.5,-2.5 L -2.5,2.5"
+                      Stroke="#80000000"
+                      StrokeThickness="1.5"
+                      StrokeLineCap="Round" />
+            </Template>
+        </Setter>
+    </Style>
+
+    <!-- ── Minimize button (yellow) ── -->
+    <Style Selector="Button.MacTrafficLight.MacMinimize">
+        <Setter Property="Background" Value="#FFBD2E" />
+        <Setter Property="Content">
+            <Template>
+                <!-- − symbol -->
+                <Path Data="M -2.5,0 L 2.5,0"
+                      Stroke="#80000000"
+                      StrokeThickness="1.5"
+                      StrokeLineCap="Round" />
+            </Template>
+        </Setter>
+    </Style>
+
+    <!-- ── Zoom/Maximize button (green) ── -->
+    <Style Selector="Button.MacTrafficLight.MacZoom">
+        <Setter Property="Background" Value="#28C840" />
+        <Setter Property="Content">
+            <Template>
+                <!-- ⤢ outward corner brackets -->
+                <Path Data="M -2.5,-0.8 L -2.5,-2.5 L -0.8,-2.5 M 2.5,0.8 L 2.5,2.5 L 0.8,2.5"
+                      Stroke="#80000000"
+                      StrokeThickness="1.5"
+                      StrokeLineCap="Round"
+                      StrokeJoin="Round" />
+            </Template>
+        </Setter>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════
+         Hover effects – triggered on the parent StackPanel
+         via the "group-hover" pattern using :pointerover on
+         the ancestor panel (Name=MacTrafficLights).
+         ══════════════════════════════════════════════════════ -->
+
+    <!-- When pointer is over the group, show all symbols -->
+    <Style Selector="StackPanel#MacTrafficLights:pointerover Button.MacTrafficLight /template/ ContentPresenter#Symbol">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <!-- Darken dot slightly on individual button hover -->
+    <Style Selector="Button.MacTrafficLight.MacClose:pointerover /template/ Ellipse#Dot">
+        <Setter Property="Fill" Value="#E0443D" />
+    </Style>
+    <Style Selector="Button.MacTrafficLight.MacMinimize:pointerover /template/ Ellipse#Dot">
+        <Setter Property="Fill" Value="#DFA020" />
+    </Style>
+    <Style Selector="Button.MacTrafficLight.MacZoom:pointerover /template/ Ellipse#Dot">
+        <Setter Property="Fill" Value="#1AAD2E" />
+    </Style>
+
+    <!-- Press feedback -->
+    <Style Selector="Button.MacTrafficLight.MacClose:pressed /template/ Ellipse#Dot">
+        <Setter Property="Fill" Value="#BF3830" />
+    </Style>
+    <Style Selector="Button.MacTrafficLight.MacMinimize:pressed /template/ Ellipse#Dot">
+        <Setter Property="Fill" Value="#BF8A1A" />
+    </Style>
+    <Style Selector="Button.MacTrafficLight.MacZoom:pressed /template/ Ellipse#Dot">
+        <Setter Property="Fill" Value="#159425" />
+    </Style>
+</Styles>

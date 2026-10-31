@@ -76,6 +76,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     public partial bool IsMiniPlayerOpaque { get; set; } = true;
 
+    public bool IsMacOS { get; } = OperatingSystem.IsMacOS();
+
     private bool _isUpdatingActivePageFromNavigation;
     private bool _isUpdatingSelectedMenuPageFromNavigation;
     private bool _isClosingDesktopLyricForShutdown;
