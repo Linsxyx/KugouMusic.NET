@@ -13,7 +13,7 @@
                            IsPaneOpen="{TemplateBinding IsMenuExpanded}"
                            OpenPaneLength="{TemplateBinding OpenPaneLength}">
                     <SplitView.Pane>
-                        <Border Margin="8,8,0,10">
+                        <Border Margin="8,4,0,10">
                             <Grid Background="Transparent"
                                   ClipToBounds="True">
                                 <suki:GlassCard Name="Glass"
@@ -23,7 +23,7 @@
                                                 IsAnimated="False" />
                                 <DockPanel ClipToBounds="True">
                                     <Button Name="PART_SidebarToggleButton"
-                                            Margin="7,14,7,7"
+                                            Margin="7,10,7,4"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Top"
                                             Classes="Basic"
@@ -139,7 +139,7 @@
                         </Border>
                     </SplitView.Pane>
                     <Border Name="ContentBorder"
-                            Margin="0,36,0,0"
+                            Margin="0"
                             Background="{DynamicResource SukiBackground}"
                             BorderBrush="{DynamicResource SukiBorderBrush}"
                             BorderThickness="0"
