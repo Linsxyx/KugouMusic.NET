@@ -35,7 +35,7 @@
 - 下载地址：[Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)
 - 问题反馈：[Issues](https://github.com/Linsxyx/KugouMusic.NET/issues)
 - 桌面客户端：`KugouAvaloniaPlayer`
-- 终端播放器：`KgTest`
+- 终端播放器：`KaMusic.Cli`
 - 开发者入口：`KuGou.Net` / `KgWebApi.Net` / `SimpleAudio` / `AvaloniaLyrics`
 - 安卓版正在开发中，[项目地址](https://github.com/umr-xiaomai/kgka_Music_hl)
 
@@ -216,16 +216,16 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 这个仓库不只有播放器本体，也包含围绕酷狗能力做的几个底层项目。
 
 - `src/Apps/KugouAvaloniaPlayer`：Avalonia 桌面客户端，也就是现在的 `KA Music`
-- `src/Apps/KgTest`：终端 TUI 播放器
+- `src/Apps/KaMusic.Cli`：终端 TUI 播放器
 - `src/Libraries/KuGou.Net`：酷狗业务 SDK，封装登录、搜索、歌单、歌词、榜单、用户等能力
 - `src/Apps/KgWebApi.Net`：基于 SDK 的 ASP.NET Core Web API 封装
 - `src/Libraries/SimpleAudio`：基于 ManagedBass 的跨平台播放与音效层
 - `src/Libraries/AvaloniaLyrics`：歌词控件库
 - `src/Native/KuGou.Net.Native`：把 SDK 能力导出为 Native AOT 友好的 C ABI
 
-## 终端播放器 KgTest
+## 终端播放器 KaMusic.Cli
 
-`KgTest` 一个测试用的终端播放器，功能还算凑合，目前也把智能过渡功能加上了，想试试的可以克隆仓库运行。详细功能、快捷键和配置说明见 [src/Apps/KgTest/README.md](src/Apps/KgTest/README.md)。
+`KaMusic.Cli` 是终端 TUI 播放器，目前也把智能过渡功能加上了，想试试的可以克隆仓库运行。详细功能、快捷键和配置说明见 [src/Apps/KaMusic.Cli/README.md](src/Apps/KaMusic.Cli/README.md)。
 
 ## 本地开发
 
@@ -244,7 +244,7 @@ dotnet run --project src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj
 如需运行终端播放器：
 
 ```bash
-dotnet run --project src/Apps/KgTest/KgTest.csproj
+dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj
 ```
 
 如需运行 Web API：
@@ -262,7 +262,7 @@ KugouMusic.NET
 ├─ src
 │  ├─ Apps
 │  │  ├─ KugouAvaloniaPlayer   # Avalonia 桌面客户端
-│  │  ├─ KgTest                # 终端 TUI 播放器
+│  │  ├─ KaMusic.Cli           # 终端 TUI 播放器
 │  │  └─ KgWebApi.Net          # ASP.NET Core Web API
 │  ├─ Libraries
 │  │  ├─ KuGou.Net             # 核心 SDK

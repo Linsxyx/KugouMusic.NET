@@ -62,7 +62,7 @@ stdout 仅输出事件，日志写入 stderr：
 ```bash
 cargo test --locked --manifest-path src/Native/KugouWaylandLyrics/Cargo.toml
 cargo clippy --locked --all-targets --manifest-path src/Native/KugouWaylandLyrics/Cargo.toml -- -D warnings
-dotnet test src/Tests/AvaloniaSilkEffects.Tests/AvaloniaSilkEffects.Tests.csproj --filter FullyQualifiedName~WaylandLyricProtocolTests
+dotnet test src/Tests/KaMusic.Tests/KaMusic.Tests.csproj --filter FullyQualifiedName~WaylandLyricProtocolTests
 ```
 
 实际 layer-shell 会话下运行以下冒烟验证（短暂显示测试歌词，不修改播放器设置）：

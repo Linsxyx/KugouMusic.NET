@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Apps/KugouAvaloniaPlayer/Services/DesktopLyric/WaylandLyricProtocol.cs" Link="Lyrics/WaylandLyricProtocol.cs" />
+    <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/KgSession.cs" Link="Session/KgSession.cs" />
+    <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/SessionPersistence.cs" Link="Session/SessionPersistence.cs" />
+    <Compile Include="../../Apps/KaMusic.Cli/Services/TerminalSessionPersistence.cs" Link="Session/TerminalSessionPersistence.cs" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <ProjectReference Include="../../Libraries/AvaloniaSilkEffects/AvaloniaSilkEffects.csproj" />
+    <ProjectReference Include="../../Libraries/AvaloniaLyrics/AvaloniaLyrics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Apps/KugouAvaloniaPlayer/Views/NowPlayingThemes/NowPlayingLyricSnapshot.cs" Link="Lyrics/NowPlayingLyricSnapshot.cs" />
+    <!-- Compile the VM-independent Fume adapter without building the player. -->
+    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeBackgroundScene.cs" Link="Fume/FumeBackgroundScene.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeArticleLayout.cs" Link="Fume/FumeArticleLayout.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeRenderFrame.cs" Link="Fume/FumeRenderFrame.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumePlayback.cs" Link="Fume/FumePlayback.cs" />
+    <Compile Include="../../Apps/KugouAvaloniaPlayer/Controls/FumeEffectScene.cs" Link="Fume/FumeEffectScene.cs" />
+  </ItemGroup>
+</Project>

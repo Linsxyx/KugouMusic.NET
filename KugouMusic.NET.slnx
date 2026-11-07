@@ -1,5 +1,5 @@
 <Solution>
-    <Project Path="src/Apps/KgTest/KgTest.csproj" />
+    <Project Path="src/Apps/KaMusic.Cli/KaMusic.Cli.csproj" />
     <Project Path="src/Apps/KgWebApi.Net/KgWebApi.Net.csproj" />
     <Project Path="src/Apps/AvaloniaSilkEffects.Showcase/AvaloniaSilkEffects.Showcase.csproj" />
     <Project Path="src/Native/KuGou.Net.Native/KuGou.Net.Native.csproj" />
@@ -8,5 +8,5 @@
     <Project Path="src/Libraries/KuGou.Net/KuGou.Net.csproj" />
     <Project Path="src/Apps/KugouAvaloniaPlayer\KugouAvaloniaPlayer.csproj" />
     <Project Path="src/Libraries/SimpleAudio\SimpleAudio.csproj" />
-    <Project Path="src/Tests/AvaloniaSilkEffects.Tests/AvaloniaSilkEffects.Tests.csproj" />
+    <Project Path="src/Tests/KaMusic.Tests/KaMusic.Tests.csproj" />
 </Solution>
