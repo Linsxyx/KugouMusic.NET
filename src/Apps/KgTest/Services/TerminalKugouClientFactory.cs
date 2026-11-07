@@ -6,10 +6,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KgTest.Services;
 
+// 构建 KuGou.Net 各业务 Client，并与桌面端共用同一个持久化 Session。
+
 internal sealed class TerminalKugouClients
 {
     public required KgSessionManager SessionManager { get; init; }
     public required LoginClient Login { get; init; }
+    public required RegisterClient Device { get; init; }
     public required RecommendClient Recommend { get; init; }
     public required SearchClient Search { get; init; }
     public required SongClient Song { get; init; }
@@ -27,6 +30,7 @@ internal static class TerminalKugouClientFactory
         var (transport, sessionManager) = KgHttpClientFactory.CreateWithSession(new TerminalSessionPersistence());
 
         var rawLogin = new RawLoginApi(transport, sessionManager, NullLogger<RawLoginApi>.Instance);
+        var rawDevice = new RawDeviceApi(transport, sessionManager, NullLogger<RawDeviceApi>.Instance);
         var rawSearch = new RawSearchApi(transport);
         var rawUser = new RawUserApi(transport);
         var rawPlaylist = new RawPlaylistApi(transport, NullLogger<RawPlaylistApi>.Instance);
@@ -40,6 +44,7 @@ internal static class TerminalKugouClientFactory
         {
             SessionManager = sessionManager,
             Login = new LoginClient(rawLogin, sessionManager, NullLogger<LoginClient>.Instance),
+            Device = new RegisterClient(rawDevice, sessionManager, NullLogger<RegisterClient>.Instance),
             Recommend = new RecommendClient(rawDiscovery, sessionManager),
             Search = new SearchClient(rawSearch, sessionManager),
             Song = new SongClient(rawSong),

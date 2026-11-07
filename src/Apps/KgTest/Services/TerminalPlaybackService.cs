@@ -15,6 +15,7 @@ internal sealed class TerminalPlaybackService : IDisposable
     private readonly TerminalLyricsService _lyricsService;
     private readonly TerminalSettingsStore _settingsStore;
     private readonly TerminalAppSettings _settings;
+    private readonly TerminalVipEntitlementService? _vipEntitlement;
     private readonly DualTrackAudioPlayer _player = new();
     private readonly ITransitionAnalysisService _transitionAnalysisService = new ManagedBassTransitionAnalysisService();
     private readonly SemaphoreSlim _playLock = new(1, 1);
@@ -38,12 +39,14 @@ internal sealed class TerminalPlaybackService : IDisposable
         SongClient songClient,
         TerminalLyricsService lyricsService,
         TerminalSettingsStore settingsStore,
-        TerminalAppSettings settings)
+        TerminalAppSettings settings,
+        TerminalVipEntitlementService? vipEntitlement = null)
     {
         _songClient = songClient;
         _lyricsService = lyricsService;
         _settingsStore = settingsStore;
         _settings = settings;
+        _vipEntitlement = vipEntitlement;
         _player.PlaybackEnded += HandlePlaybackEnded;
         ApplySettings();
     }
@@ -171,6 +174,40 @@ internal sealed class TerminalPlaybackService : IDisposable
         _settingsStore.Save(_settings);
     }
 
+    public void RemoveFromQueueAt(int index)
+    {
+        if (index < 0 || index >= _queue.Count || index == _currentIndex)
+        {
+            return;
+        }
+
+        ResetTransitionPipeline(cancelPreparedTrack: true);
+        var removed = _queue[index];
+        _queue.RemoveAt(index);
+        if (index < _currentIndex)
+        {
+            _currentIndex--;
+        }
+
+        StatusMessage = $"已从队列移除：{removed.Name}";
+    }
+
+    public void EnqueueNext(TerminalSongItem song)
+    {
+        var copy = CloneSong(song);
+        if (_queue.Count == 0 || _currentIndex < 0)
+        {
+            _queue.Add(copy);
+        }
+        else
+        {
+            _queue.Insert(Math.Min(_queue.Count, _currentIndex + 1), copy);
+        }
+
+        ResetTransitionPipeline(cancelPreparedTrack: true);
+        StatusMessage = $"已加入下一首：{song.Name}";
+    }
+
     public void ToggleShuffle()
     {
         _settings.Shuffle = !_settings.Shuffle;
@@ -248,6 +285,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         }
 
         var analysis = _player.GetActiveAnalysisSnapshot();
+        var position = _player.GetPosition();
         var snapshot = new PlaybackStateSnapshot
         {
             CurrentSong = CurrentSong,
@@ -259,10 +297,11 @@ internal sealed class TerminalPlaybackService : IDisposable
             EnableSeamlessTransition = _settings.EnableSeamlessTransition,
             IsCrossfading = _player.IsCrossfading,
             Volume = _settings.Volume,
-            Position = _player.GetPosition(),
+            Position = position,
             Duration = duration,
             LyricMode = _settings.LyricMode,
-            LyricWindow = _lyricsService.GetWindow(_player.GetPosition(), _settings.LyricMode),
+            LyricWindow = _lyricsService.GetWindow(position, _settings.LyricMode),
+            LyricLines = _lyricsService.GetRichWindow(position, _settings.LyricMode, 5),
             SpectrumBands = analysis.SpectrumBands ?? [],
             Rms = analysis.Rms
         };
@@ -300,6 +339,16 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         var playData = await _songClient.GetPlayInfoAsync(song.Hash, _settings.MusicQuality);
         var url = playData?.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+        if ((playData?.Status != 1 || string.IsNullOrWhiteSpace(url)) && _vipEntitlement != null)
+        {
+            StatusMessage = $"正在恢复账号与 VIP 权益：{song.Name}";
+            if (await _vipEntitlement.TryRecoverPlaybackAccountAsync())
+            {
+                playData = await _songClient.GetPlayInfoAsync(song.Hash, _settings.MusicQuality);
+                url = playData?.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            }
+        }
+
         if (playData?.Status != 1 || string.IsNullOrWhiteSpace(url))
         {
             StatusMessage = $"无法播放：{song.Name}";

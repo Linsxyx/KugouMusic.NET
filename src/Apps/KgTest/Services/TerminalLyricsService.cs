@@ -5,6 +5,8 @@ using KgTest.Models;
 
 namespace KgTest.Services;
 
+// 歌词加载与窗口采样：支持原文、翻译、罗马音、双行组合，以及 KRC 逐字高亮进度计算。
+
 internal sealed class TerminalLyricsService(LyricClient lyricClient)
 {
     private KrcLyric? _current;
@@ -59,7 +61,7 @@ internal sealed class TerminalLyricsService(LyricClient lyricClient)
         var currentIndex = FindCurrentIndex(lines, currentMs);
         var window = new List<string>();
 
-        for (var offset = -2; offset <= 2; offset++)
+        for (var offset = -3; offset <= 3; offset++)
         {
             var index = currentIndex + offset;
             if (index < 0 || index >= lines.Count)
@@ -74,6 +76,75 @@ internal sealed class TerminalLyricsService(LyricClient lyricClient)
 
         return window;
     }
+
+    /// <summary>
+    ///     获取带主副行与逐字进度的歌词窗口，用于侧栏和沉浸页。
+    /// </summary>
+    public IReadOnlyList<TerminalLyricLineView> GetRichWindow(TimeSpan position, TerminalLyricMode mode, int radius = 4)
+    {
+        var lines = _current?.Lines;
+        if (lines == null || lines.Count == 0)
+        {
+            return [];
+        }
+
+        var currentMs = position.TotalMilliseconds;
+        var currentIndex = FindCurrentIndex(lines, currentMs);
+        var result = new List<TerminalLyricLineView>(radius * 2 + 1);
+
+        for (var offset = -radius; offset <= radius; offset++)
+        {
+            var index = currentIndex + offset;
+            if (index < 0 || index >= lines.Count)
+            {
+                result.Add(new TerminalLyricLineView { Offset = offset, Primary = "" });
+                continue;
+            }
+
+            var line = lines[index];
+            var secondary = mode switch
+            {
+                TerminalLyricMode.Translation => EmptyToNull(line.Translation),
+                TerminalLyricMode.Romanization => EmptyToNull(line.Romanization),
+                TerminalLyricMode.Combined => EmptyToNull(string.Join(" · ",
+                    new[] { line.Translation, line.Romanization }.Where(x => !string.IsNullOrWhiteSpace(x)))),
+                _ => null
+            };
+
+            result.Add(new TerminalLyricLineView
+            {
+                Offset = offset,
+                IsCurrent = offset == 0,
+                Primary = line.Content,
+                Secondary = secondary,
+                Words = offset == 0 ? BuildWordProgress(line, currentMs) : []
+            });
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<(string Text, float Progress)> BuildWordProgress(KrcLine line, double currentMs)
+    {
+        if (line.Words.Count == 0)
+        {
+            return [];
+        }
+
+        var elapsed = currentMs - line.StartTime;
+        var words = new List<(string Text, float Progress)>(line.Words.Count);
+        foreach (var word in line.Words)
+        {
+            var progress = word.Duration <= 0
+                ? elapsed >= word.StartTime ? 1f : 0f
+                : (float)Math.Clamp((elapsed - word.StartTime) / word.Duration, 0.0, 1.0);
+            words.Add((word.Text, progress));
+        }
+
+        return words;
+    }
+
+    private static string? EmptyToNull(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     private static int FindCurrentIndex(IReadOnlyList<KrcLine> lines, double currentMs)
     {

@@ -1,15 +1,22 @@
-using KuGou.Net.Abstractions.Models;
+using KgTest.Graphics;
 using KgTest.Models;
 using KgTest.Services;
-using Spectre.Console;
-using Spectre.Console.Rendering;
-using System.Text;
+using KgTest.Tui;
+using KgTest.Views;
 
 namespace KgTest;
 
+// 终端播放器主控制器：单线程事件循环、焦点与模态路由、异步页面加载与差量渲染。
+
+internal enum FocusZone
+{
+    Navigation,
+    Content
+}
+
 internal sealed class TerminalApp : IAsyncDisposable
 {
-    private const int SettingsHeaderItemCount = 5;
+    private const int SettingsHeaderItemCount = 6;
     private const int SeekStepSeconds = 10;
     private static int SettingsItemCount => SettingsHeaderItemCount + 10;
 
@@ -26,117 +33,356 @@ internal sealed class TerminalApp : IAsyncDisposable
         TerminalPage.Account
     ];
 
+    private static readonly TerminalImageMode[] ImageModes =
+    [
+        TerminalImageMode.Auto,
+        TerminalImageMode.Kitty,
+        TerminalImageMode.ITerm,
+        TerminalImageMode.Sixel,
+        TerminalImageMode.Blocks,
+        TerminalImageMode.Off
+    ];
+
+    private readonly UiDispatcher _dispatcher = new();
     private readonly TerminalSettingsStore _settingsStore = new();
     private readonly TerminalAppSettings _settings;
     private readonly TerminalKugouClients _clients;
     private readonly TerminalDataService _data;
+    private readonly TerminalVipEntitlementService _vipEntitlement;
     private readonly TerminalLyricsService _lyrics;
     private readonly TerminalPlaybackService _playback;
+    private readonly ImageCache _images;
+    private readonly Canvas _canvas = new();
+    private readonly TerminalRenderer _renderer = new();
+    private readonly Theme _theme = new();
+    private readonly VisualizerView _visualizer = new();
+    private readonly LoginController _login;
+    private readonly TextField _searchInput = new("输入歌名、歌手或专辑关键词", 64);
+    private readonly Dictionary<TerminalPage, int> _savedSelection = [];
 
     private TerminalPage _page = TerminalPage.Daily;
+    private FocusZone _focus = FocusZone.Content;
     private readonly List<TerminalSongItem> _songs = [];
     private readonly List<TerminalPlaylistItem> _playlists = [];
     private TerminalPlaylistItem? _openedPlaylist;
+    private int _playlistReturnIndex;
+    private TerminalUserProfile _profile = new();
     private string _title = "每日推荐";
+    private string _searchKeyword = "";
     private string _status = "启动中";
-    private string _userName = "未登录";
     private int _selectedIndex;
     private int _settingsIndex;
-    private bool _showingSongs;
+    private int _loadVersion;
+    private bool _isLoading;
+    private bool _showingSongs = true;
     private bool _searchShowsPlaylists;
-    private bool _exitRequested;
-    private bool _screenInitialized;
+    private bool _searchModalOpen;
+    private bool _helpModalOpen;
     private bool _isImmersive;
-    private float[] _visualizerBars = [];
-    private float[] _visualizerPeaks = [];
+    private bool _exitRequested;
+    private bool _dirty = true;
 
     public TerminalApp()
     {
         _settings = _settingsStore.Load();
         _clients = TerminalKugouClientFactory.Create();
         _data = new TerminalDataService(_clients);
+        _vipEntitlement = new TerminalVipEntitlementService(_clients);
         _lyrics = new TerminalLyricsService(_clients.Lyric);
-        _playback = new TerminalPlaybackService(_clients.Song, _lyrics, _settingsStore, _settings);
+        _playback = new TerminalPlaybackService(_clients.Song, _lyrics, _settingsStore, _settings, _vipEntitlement);
+        _images = new ImageCache(RequestRender);
+        _login = new LoginController(_clients, _images, RequestRender, OnLoginCompletedAsync);
+        _renderer.TrueColor = TerminalCapabilities.DetectTrueColor();
+        _renderer.CellPixelSize = TerminalCapabilities.GetCellPixelSize();
+        _dispatcher.UnhandledException += ex =>
+        {
+            _status = ex.Message;
+            _dirty = true;
+        };
     }
 
-    public async Task RunAsync()
+    public Task RunAsync()
     {
-        Console.Write("\u001b[?1049h\u001b[?25l");
-        Console.CursorVisible = false;
+        var previousContext = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(_dispatcher);
+        _renderer.Enter();
         try
         {
-            _userName = await SafeLoadAsync(_data.GetUserDisplayNameAsync(), "未登录");
-            await LoadCurrentPageAsync();
-            Render();
-            var nextPassiveRender = DateTimeOffset.UtcNow.AddMilliseconds(500);
+            _ = InitializeAsync();
+            var nextTick = Environment.TickCount64;
 
             while (!_exitRequested)
             {
-                if (Console.KeyAvailable)
+                while (TryReadKey(out var key))
                 {
-                    var key = Console.ReadKey(true);
-                    await HandleKeyAsync(key);
-                    Render();
-                    nextPassiveRender = DateTimeOffset.UtcNow.AddMilliseconds(GetRenderDelayMs(_playback.GetSnapshot()));
-                    continue;
+                    _ = HandleKeyAsync(key);
+                    _dirty = true;
                 }
 
-                var now = DateTimeOffset.UtcNow;
-                if (now >= nextPassiveRender)
+                if (_dispatcher.Drain())
                 {
-                    Render();
+                    _dirty = true;
+                }
+
+                var now = Environment.TickCount64;
+                if (_dirty || now >= nextTick)
+                {
+                    RenderFrame();
+                    _dirty = false;
                     var snapshot = _playback.GetSnapshot();
-                    nextPassiveRender = now.AddMilliseconds(GetRenderDelayMs(snapshot));
+                    nextTick = now + GetFrameIntervalMs(snapshot);
                 }
 
-                await Task.Delay(50);
+                var wait = (int)Math.Clamp(nextTick - Environment.TickCount64, 5, 45);
+                if (!IsKeyAvailable())
+                {
+                    _dispatcher.Wait(wait);
+                }
             }
         }
         finally
         {
-            Console.CursorVisible = true;
-            Console.Write("\u001b[?25h\u001b[?1049l");
+            _login.Dispose();
+            _renderer.Exit();
+            SynchronizationContext.SetSynchronizationContext(previousContext);
         }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task InitializeAsync()
+    {
+        if (string.IsNullOrEmpty(_clients.SessionManager.Session.Token))
+        {
+            _clients.Login.LogOutAsync();
+        }
+
+        _profile = await _data.GetUserProfileAsync();
+        if (_profile.IsLoggedIn)
+        {
+            _ = EnsureDailyVipInBackgroundAsync();
+        }
+
+        await LoadPageAsync(_page);
+    }
+
+    private async Task OnLoginCompletedAsync(string nickname)
+    {
+        _profile = await _data.GetUserProfileAsync();
+        if (!string.IsNullOrWhiteSpace(nickname) && _profile.Name.StartsWith("用户 ", StringComparison.Ordinal))
+        {
+            _profile = new TerminalUserProfile
+            {
+                IsLoggedIn = true,
+                UserId = _profile.UserId,
+                Name = nickname,
+                AvatarUrl = _profile.AvatarUrl,
+                VipType = _profile.VipType
+            };
+        }
+
+        _status = $"登录成功：{_profile.Name}";
+        RequestRender();
+        _ = EnsureDailyVipInBackgroundAsync();
+        await LoadPageAsync(TerminalPage.Daily, force: true);
+    }
+
+    private async Task EnsureDailyVipInBackgroundAsync()
+    {
+        try
+        {
+            var result = await _vipEntitlement.TryEnsureDailyVipAsync();
+            _status = result.Summary;
+            _profile = await _data.GetUserProfileAsync();
+            RequestRender();
+        }
+        catch (Exception ex)
+        {
+            _status = $"VIP 初始化失败：{ex.Message}";
+            RequestRender();
+        }
+    }
+
+    private void RequestRender()
+    {
+        _dirty = true;
+        _dispatcher.Wake();
     }
 
     private async Task HandleKeyAsync(ConsoleKeyInfo key)
     {
+        if (_helpModalOpen)
+        {
+            _helpModalOpen = false;
+            return;
+        }
+
+        if (_searchModalOpen)
+        {
+            await HandleSearchModalKeyAsync(key);
+            return;
+        }
+
+        // 在账号页的输入框处于焦点时，优先把字符键交给输入框。
+        if (_page == TerminalPage.Account && _focus == FocusZone.Content && _login.IsEditingText)
+        {
+            if (key.Key == ConsoleKey.Escape)
+            {
+                _focus = FocusZone.Navigation;
+                return;
+            }
+
+            if (await _login.HandleKeyAsync(key))
+            {
+                return;
+            }
+        }
+
+        // 全局功能键
         switch (key.Key)
         {
+            case ConsoleKey.F5:
+                _isImmersive = false;
+                await SwitchToAccountAsync(LoginTab.Qr);
+                return;
+            case ConsoleKey.F6:
+                _isImmersive = false;
+                await SwitchToAccountAsync(LoginTab.Sms);
+                return;
+            case ConsoleKey.F9:
+                Logout();
+                return;
+        }
+
+        if (key.KeyChar == '?')
+        {
+            _helpModalOpen = true;
+            return;
+        }
+
+        if (key.Key == ConsoleKey.Oem2 || key.KeyChar == '/')
+        {
+            _isImmersive = false;
+            _searchModalOpen = true;
+            return;
+        }
+
+        if (_isImmersive)
+        {
+            await HandleImmersiveKeyAsync(key);
+            return;
+        }
+
+        // 数字键 1-9 直接切页
+        if (key.KeyChar is >= '1' and <= '9' && !(_page == TerminalPage.Account && _focus == FocusZone.Content))
+        {
+            var idx = key.KeyChar - '1';
+            if (idx < Pages.Length)
+            {
+                _focus = FocusZone.Content;
+                await SetPageAsync(Pages[idx]);
+                return;
+            }
+        }
+
+        if (_page == TerminalPage.Account && _focus == FocusZone.Content)
+        {
+            if (key.KeyChar == 'L')
+            {
+                Logout();
+                return;
+            }
+
+            if (key.KeyChar is 'v' or 'V')
+            {
+                _ = EnsureDailyVipInBackgroundAsync();
+                return;
+            }
+
+            if (await _login.HandleKeyAsync(key))
+            {
+                return;
+            }
+        }
+
+        switch (key.Key)
+        {
+            case ConsoleKey.Tab:
+                _focus = _focus == FocusZone.Navigation ? FocusZone.Content : FocusZone.Navigation;
+                break;
             case ConsoleKey.LeftArrow:
-                if (_isImmersive)
+            case ConsoleKey.H:
+                if (_page == TerminalPage.Settings && _focus == FocusZone.Content)
                 {
-                    _playback.SeekRelative(TimeSpan.FromSeconds(-SeekStepSeconds));
+                    AdjustSetting(-1);
                 }
                 else
                 {
-                    await SwitchPageAsync(-1);
+                    _focus = FocusZone.Navigation;
                 }
+
                 break;
             case ConsoleKey.RightArrow:
-                if (_isImmersive)
+            case ConsoleKey.L when key.KeyChar != 'l' && key.KeyChar != 'L':
+                if (_page == TerminalPage.Settings && _focus == FocusZone.Content)
                 {
-                    _playback.SeekRelative(TimeSpan.FromSeconds(SeekStepSeconds));
+                    AdjustSetting(1);
                 }
                 else
                 {
-                    await SwitchPageAsync(1);
+                    _focus = FocusZone.Content;
                 }
-                break;
-            case ConsoleKey.Tab:
-                if (!_isImmersive)
-                {
-                    await SwitchPageAsync(1);
-                }
+
                 break;
             case ConsoleKey.UpArrow:
-                MoveSelection(-1);
+            case ConsoleKey.K:
+                if (_focus == FocusZone.Navigation)
+                {
+                    await CyclePageAsync(-1);
+                }
+                else
+                {
+                    MoveSelection(-1);
+                }
+
                 break;
             case ConsoleKey.DownArrow:
-                MoveSelection(1);
+            case ConsoleKey.J:
+                if (_focus == FocusZone.Navigation)
+                {
+                    await CyclePageAsync(1);
+                }
+                else
+                {
+                    MoveSelection(1);
+                }
+
+                break;
+            case ConsoleKey.PageUp:
+                MoveSelection(-12);
+                break;
+            case ConsoleKey.PageDown:
+                MoveSelection(12);
+                break;
+            case ConsoleKey.Home:
+                JumpSelection(false);
+                break;
+            case ConsoleKey.End:
+                JumpSelection(true);
                 break;
             case ConsoleKey.Enter:
-                await ActivateSelectionAsync();
+                if (_focus == FocusZone.Navigation)
+                {
+                    _focus = FocusZone.Content;
+                }
+                else
+                {
+                    await ActivateSelectionAsync();
+                }
+
+                break;
+            case ConsoleKey.Backspace:
+                ReturnFromPlaylist();
                 break;
             case ConsoleKey.Spacebar:
                 _playback.TogglePlayPause();
@@ -147,22 +393,95 @@ internal sealed class TerminalApp : IAsyncDisposable
             case ConsoleKey.B:
                 await _playback.PlayPreviousAsync();
                 break;
+            case ConsoleKey.Oem4:
+                _playback.SeekRelative(TimeSpan.FromSeconds(-SeekStepSeconds));
+                break;
+            case ConsoleKey.Oem6:
+                _playback.SeekRelative(TimeSpan.FromSeconds(SeekStepSeconds));
+                break;
             case ConsoleKey.Add:
             case ConsoleKey.OemPlus:
-                HandlePlus();
+                if (_page == TerminalPage.Settings && _focus == FocusZone.Content)
+                {
+                    AdjustSetting(1);
+                }
+                else
+                {
+                    _playback.ChangeVolume(0.05f);
+                }
+
                 break;
             case ConsoleKey.Subtract:
             case ConsoleKey.OemMinus:
-                HandleMinus();
+                if (_page == TerminalPage.Settings && _focus == FocusZone.Content)
+                {
+                    AdjustSetting(-1);
+                }
+                else
+                {
+                    _playback.ChangeVolume(-0.05f);
+                }
+
                 break;
             case ConsoleKey.S:
                 _playback.ToggleShuffle();
                 break;
-            case ConsoleKey.L:
-                _playback.CycleLyricMode();
-                break;
             case ConsoleKey.T:
                 _playback.ToggleSeamlessTransition();
+                break;
+            case ConsoleKey.L:
+                if (key.KeyChar == 'L')
+                {
+                    Logout();
+                }
+                else
+                {
+                    _playback.CycleLyricMode();
+                }
+
+                break;
+            case ConsoleKey.P:
+                CycleImageMode();
+                break;
+            case ConsoleKey.I:
+                _isImmersive = true;
+                _renderer.Invalidate();
+                break;
+            case ConsoleKey.V:
+                if (_page == TerminalPage.Search && _openedPlaylist == null)
+                {
+                    _searchShowsPlaylists = !_searchShowsPlaylists;
+                    _showingSongs = !_searchShowsPlaylists;
+                    _selectedIndex = 0;
+                }
+
+                break;
+            case ConsoleKey.A:
+                if (SelectedSong() is { } toAdd)
+                {
+                    _playback.EnqueueNext(toAdd);
+                }
+
+                break;
+            case ConsoleKey.X:
+            case ConsoleKey.Delete:
+                if (_page == TerminalPage.Queue && _selectedIndex >= 0 && _selectedIndex < _songs.Count)
+                {
+                    _playback.RemoveFromQueueAt(_selectedIndex);
+                    _songs.Clear();
+                    _songs.AddRange(_playback.Queue);
+                    _selectedIndex = Math.Clamp(_selectedIndex, 0, Math.Max(0, _songs.Count - 1));
+                }
+
+                break;
+            case ConsoleKey.D:
+                if (_page == TerminalPage.PersonalFm)
+                {
+                    await _data.ReportPersonalFmAsync(_playback.CurrentSong,
+                        (int)_playback.GetSnapshot().Position.TotalSeconds, false, "garbage");
+                    await _playback.PlayNextAsync();
+                }
+
                 break;
             case ConsoleKey.E:
                 if (_page == TerminalPage.Settings)
@@ -173,62 +492,164 @@ internal sealed class TerminalApp : IAsyncDisposable
                 {
                     await SetPageAsync(TerminalPage.Settings);
                 }
-                break;
-            case ConsoleKey.I:
-                _isImmersive = !_isImmersive;
-                _status = _isImmersive ? "进入沉浸播放页" : "返回列表";
-                break;
-            case ConsoleKey.Oem4:
-                _playback.SeekRelative(TimeSpan.FromSeconds(-SeekStepSeconds));
-                break;
-            case ConsoleKey.Oem6:
-                _playback.SeekRelative(TimeSpan.FromSeconds(SeekStepSeconds));
+
                 break;
             case ConsoleKey.R:
-                await LoadCurrentPageAsync(true);
+                await LoadPageAsync(_page, force: true);
                 break;
-            case ConsoleKey.D:
-                if (_page == TerminalPage.PersonalFm)
+            case ConsoleKey.Escape:
+                if (!ReturnFromPlaylist())
                 {
-                    await _data.ReportPersonalFmAsync(_playback.CurrentSong, (int)_playback.GetSnapshot().Position.TotalSeconds, false, "garbage");
-                    await _playback.PlayNextAsync();
+                    _focus = _focus == FocusZone.Content ? FocusZone.Navigation : FocusZone.Content;
                 }
+
                 break;
             case ConsoleKey.Q:
-            case ConsoleKey.Escape:
-                if (_isImmersive)
-                {
-                    _isImmersive = false;
-                }
-                else if (_showingSongs && _openedPlaylist != null)
-                {
-                    _showingSongs = false;
-                    _openedPlaylist = null;
-                    _songs.Clear();
-                    _selectedIndex = 0;
-                    _title = PageTitle(_page);
-                }
-                else
+                if (!ReturnFromPlaylist())
                 {
                     _exitRequested = true;
                 }
-                break;
-            case ConsoleKey.Oem2:
-                await PromptSearchAsync();
-                break;
-            case ConsoleKey.F5:
-                await LoginWithQrAsync();
-                break;
-            case ConsoleKey.F6:
-                await LoginWithSmsAsync();
-                break;
-            case ConsoleKey.F9:
-                Logout();
+
                 break;
         }
     }
 
-    private async Task SwitchPageAsync(int delta)
+    private async Task HandleImmersiveKeyAsync(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
+        {
+            case ConsoleKey.I:
+            case ConsoleKey.Escape:
+            case ConsoleKey.Q:
+            case ConsoleKey.Backspace:
+                _isImmersive = false;
+                _renderer.Invalidate();
+                break;
+            case ConsoleKey.Spacebar:
+                _playback.TogglePlayPause();
+                break;
+            case ConsoleKey.LeftArrow:
+            case ConsoleKey.Oem4:
+                _playback.SeekRelative(TimeSpan.FromSeconds(-SeekStepSeconds));
+                break;
+            case ConsoleKey.RightArrow:
+            case ConsoleKey.Oem6:
+                _playback.SeekRelative(TimeSpan.FromSeconds(SeekStepSeconds));
+                break;
+            case ConsoleKey.UpArrow:
+            case ConsoleKey.Add:
+            case ConsoleKey.OemPlus:
+                _playback.ChangeVolume(0.05f);
+                break;
+            case ConsoleKey.DownArrow:
+            case ConsoleKey.Subtract:
+            case ConsoleKey.OemMinus:
+                _playback.ChangeVolume(-0.05f);
+                break;
+            case ConsoleKey.N:
+                await _playback.PlayNextAsync();
+                break;
+            case ConsoleKey.B:
+                await _playback.PlayPreviousAsync();
+                break;
+            case ConsoleKey.L:
+                _playback.CycleLyricMode();
+                break;
+            case ConsoleKey.P:
+                CycleImageMode();
+                break;
+            case ConsoleKey.S:
+                _playback.ToggleShuffle();
+                break;
+            case ConsoleKey.T:
+                _playback.ToggleSeamlessTransition();
+                break;
+        }
+    }
+
+    private async Task HandleSearchModalKeyAsync(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
+        {
+            case ConsoleKey.Escape:
+                _searchModalOpen = false;
+                _renderer.Invalidate();
+                return;
+            case ConsoleKey.Enter:
+                _searchModalOpen = false;
+                _renderer.Invalidate();
+                var keyword = _searchInput.Text.Trim();
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    await ExecuteSearchAsync(keyword);
+                }
+
+                return;
+        }
+
+        _searchInput.HandleKey(key);
+    }
+
+    private async Task ExecuteSearchAsync(string keyword)
+    {
+        _searchKeyword = keyword;
+        _page = TerminalPage.Search;
+        _focus = FocusZone.Content;
+        _openedPlaylist = null;
+        _selectedIndex = 0;
+        var version = ++_loadVersion;
+        _isLoading = true;
+        _title = $"搜索：{keyword}";
+        _status = $"正在搜索 \"{keyword}\"...";
+        _songs.Clear();
+        _playlists.Clear();
+        RequestRender();
+
+        try
+        {
+            var songsTask = _data.SearchSongsAsync(keyword);
+            var playlistsTask = _data.SearchPlaylistsAsync(keyword);
+            await Task.WhenAll(songsTask, playlistsTask);
+            if (version != _loadVersion)
+            {
+                return;
+            }
+
+            _songs.AddRange(await songsTask);
+            _playlists.AddRange(await playlistsTask);
+            _searchShowsPlaylists = _songs.Count == 0 && _playlists.Count > 0;
+            _showingSongs = !_searchShowsPlaylists;
+            _status = $"找到歌曲 {_songs.Count} 首 · 歌单 {_playlists.Count} 个（按 v 切换）";
+        }
+        catch (Exception ex)
+        {
+            if (version == _loadVersion)
+            {
+                _status = $"搜索失败：{ex.Message}";
+            }
+        }
+        finally
+        {
+            if (version == _loadVersion)
+            {
+                _isLoading = false;
+                RequestRender();
+            }
+        }
+    }
+
+    private async Task SwitchToAccountAsync(LoginTab tab)
+    {
+        await SetPageAsync(TerminalPage.Account);
+        _focus = FocusZone.Content;
+        _login.SwitchTab(tab);
+        if (tab == LoginTab.Qr)
+        {
+            await _login.RefreshQrAsync();
+        }
+    }
+
+    private async Task CyclePageAsync(int delta)
     {
         var index = Array.IndexOf(Pages, _page);
         index = (index + delta + Pages.Length) % Pages.Length;
@@ -237,27 +658,50 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     private async Task SetPageAsync(TerminalPage page)
     {
+        if (_page != page)
+        {
+            _savedSelection[_page] = _selectedIndex;
+        }
+
+        if (_page == TerminalPage.Account && page != TerminalPage.Account)
+        {
+            _login.StopPolling();
+        }
+
         _page = page;
-        _selectedIndex = 0;
-        _showingSongs = false;
         _openedPlaylist = null;
         _searchShowsPlaylists = false;
-        await LoadCurrentPageAsync();
+        await LoadPageAsync(page);
     }
 
-    private async Task LoadCurrentPageAsync(bool force = false)
+    private async Task LoadPageAsync(TerminalPage page, bool force = false)
     {
-        _ = force;
-        _status = "加载中...";
+        if (page == TerminalPage.Search && !force && !string.IsNullOrEmpty(_searchKeyword) &&
+            (_songs.Count > 0 || _playlists.Count > 0))
+        {
+            _title = $"搜索：{_searchKeyword}";
+            _showingSongs = !_searchShowsPlaylists;
+            return;
+        }
+
+        if (page == TerminalPage.Search && !string.IsNullOrEmpty(_searchKeyword) && force)
+        {
+            await ExecuteSearchAsync(_searchKeyword);
+            return;
+        }
+
+        var version = ++_loadVersion;
+        _isLoading = true;
         _songs.Clear();
         _playlists.Clear();
-        _title = PageTitle(_page);
-        _selectedIndex = 0;
-        _showingSongs = _page is TerminalPage.Daily or TerminalPage.PersonalFm;
+        _title = WorkspaceViews.PageTitle(page);
+        _showingSongs = page is TerminalPage.Daily or TerminalPage.PersonalFm or TerminalPage.Queue;
+        _status = "正在加载...";
+        RequestRender();
 
         try
         {
-            switch (_page)
+            switch (page)
             {
                 case TerminalPage.Daily:
                     _songs.AddRange(await _data.GetDailySongsAsync());
@@ -276,51 +720,50 @@ internal sealed class TerminalApp : IAsyncDisposable
                     break;
                 case TerminalPage.Queue:
                     _songs.AddRange(_playback.Queue);
-                    _showingSongs = true;
                     break;
                 case TerminalPage.Account:
-                    _userName = await _data.GetUserDisplayNameAsync();
+                    _profile = await _data.GetUserProfileAsync();
+                    _login.EnsureStarted();
+                    break;
+                case TerminalPage.Search:
+                    _status = "按 / 输入关键词开始搜索";
                     break;
             }
 
-            _status = _songs.Count > 0 || _playlists.Count > 0 || _page is TerminalPage.Settings or TerminalPage.Account
-                ? "就绪"
-                : "没有可显示的内容";
+            if (version != _loadVersion)
+            {
+                return;
+            }
+
+            SyncPlayingFlag();
+            var count = CurrentListCount();
+            _selectedIndex = _savedSelection.TryGetValue(page, out var saved) && count > 0
+                ? Math.Clamp(saved, 0, count - 1)
+                : 0;
+
+            if (page != TerminalPage.Search)
+            {
+                _status = count > 0 || page is TerminalPage.Settings or TerminalPage.Account
+                    ? "就绪"
+                    : _profile.IsLoggedIn
+                        ? "暂无内容"
+                        : "暂无内容（部分功能需按 F5 登录）";
+            }
         }
         catch (Exception ex)
         {
-            _status = ex.Message;
+            if (version == _loadVersion)
+            {
+                _status = ex.Message;
+            }
         }
-    }
-
-    private async Task PromptSearchAsync()
-    {
-        Console.CursorVisible = true;
-        AnsiConsole.Clear();
-        var keyword = AnsiConsole.Ask<string>("[cyan]搜索关键词[/]");
-        Console.CursorVisible = false;
-        if (string.IsNullOrWhiteSpace(keyword))
+        finally
         {
-            return;
-        }
-
-        _page = TerminalPage.Search;
-        _title = $"搜索：{keyword}";
-        _status = "搜索中...";
-        _selectedIndex = 0;
-        _songs.Clear();
-        _playlists.Clear();
-        try
-        {
-            _songs.AddRange(await _data.SearchSongsAsync(keyword));
-            _playlists.AddRange(await _data.SearchPlaylistsAsync(keyword));
-            _showingSongs = true;
-            _searchShowsPlaylists = _songs.Count == 0 && _playlists.Count > 0;
-            _status = $"歌曲 {_songs.Count} 首，歌单 {_playlists.Count} 个";
-        }
-        catch (Exception ex)
-        {
-            _status = ex.Message;
+            if (version == _loadVersion)
+            {
+                _isLoading = false;
+                RequestRender();
+            }
         }
     }
 
@@ -328,7 +771,13 @@ internal sealed class TerminalApp : IAsyncDisposable
     {
         if (_page == TerminalPage.Settings)
         {
-            ActivateSetting();
+            AdjustSetting(1);
+            return;
+        }
+
+        if (_page == TerminalPage.Search && _songs.Count == 0 && _playlists.Count == 0)
+        {
+            _searchModalOpen = true;
             return;
         }
 
@@ -336,6 +785,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         if (song != null)
         {
             await _playback.PlayAsync(song, CurrentSongContext());
+            SyncPlayingFlag();
             return;
         }
 
@@ -345,52 +795,61 @@ internal sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
+        _playlistReturnIndex = _selectedIndex;
         _openedPlaylist = playlist;
         _showingSongs = true;
         _title = playlist.Name;
         _songs.Clear();
         _selectedIndex = 0;
-        _status = $"加载 {playlist.Name}...";
+        var version = ++_loadVersion;
+        _isLoading = true;
+        _status = $"正在打开《{playlist.Name}》...";
+        RequestRender();
 
         try
         {
             _songs.AddRange(await _data.GetPlaylistSongsAsync(playlist));
-            _status = _songs.Count > 0 ? "就绪" : "歌单为空";
+            if (version != _loadVersion)
+            {
+                return;
+            }
+
+            SyncPlayingFlag();
+            _status = _songs.Count > 0 ? $"共 {_songs.Count} 首 · Backspace 返回" : "歌单为空 · Backspace 返回";
         }
         catch (Exception ex)
         {
-            _status = ex.Message;
+            if (version == _loadVersion)
+            {
+                _status = ex.Message;
+            }
+        }
+        finally
+        {
+            if (version == _loadVersion)
+            {
+                _isLoading = false;
+                RequestRender();
+            }
         }
     }
 
-    private IReadOnlyList<TerminalSongItem> CurrentSongContext()
+    private bool ReturnFromPlaylist()
     {
-        return _page == TerminalPage.Queue ? _playback.Queue : _songs;
-    }
-
-    private TerminalSongItem? SelectedSong()
-    {
-        if (_showingSongs && _selectedIndex >= 0 && _selectedIndex < _songs.Count)
+        if (_openedPlaylist == null)
         {
-            return _songs[_selectedIndex];
+            return false;
         }
 
-        return null;
-    }
-
-    private TerminalPlaylistItem? SelectedPlaylist()
-    {
-        if (_searchShowsPlaylists)
-        {
-            return _selectedIndex >= 0 && _selectedIndex < _playlists.Count ? _playlists[_selectedIndex] : null;
-        }
-
-        if (!_showingSongs && _selectedIndex >= 0 && _selectedIndex < _playlists.Count)
-        {
-            return _playlists[_selectedIndex];
-        }
-
-        return null;
+        _openedPlaylist = null;
+        _showingSongs = _page == TerminalPage.Search && !_searchShowsPlaylists;
+        _songs.Clear();
+        _selectedIndex = Math.Clamp(_playlistReturnIndex, 0, Math.Max(0, _playlists.Count - 1));
+        _title = _page == TerminalPage.Search && !string.IsNullOrEmpty(_searchKeyword)
+            ? $"搜索：{_searchKeyword}"
+            : WorkspaceViews.PageTitle(_page);
+        _status = "就绪";
+        return true;
     }
 
     private void MoveSelection(int delta)
@@ -401,41 +860,48 @@ internal sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
-        var count = _searchShowsPlaylists ? _playlists.Count : _showingSongs ? _songs.Count : _playlists.Count;
-        if (count == 0)
+        var count = CurrentListCount();
+        if (count <= 0)
         {
             _selectedIndex = 0;
             return;
         }
 
-        _selectedIndex = (_selectedIndex + delta + count) % count;
-    }
-
-    private void HandlePlus()
-    {
-        if (_page == TerminalPage.Settings)
+        if (Math.Abs(delta) == 1)
         {
-            AdjustSetting(1);
+            _selectedIndex = (_selectedIndex + delta + count) % count;
         }
         else
         {
-            _playback.ChangeVolume(0.05f);
+            _selectedIndex = Math.Clamp(_selectedIndex + delta, 0, count - 1);
         }
     }
 
-    private void HandleMinus()
+    private void JumpSelection(bool toEnd)
     {
         if (_page == TerminalPage.Settings)
         {
-            AdjustSetting(-1);
+            _settingsIndex = toEnd ? SettingsItemCount - 1 : 0;
+            return;
         }
-        else
-        {
-            _playback.ChangeVolume(-0.05f);
-        }
+
+        var count = CurrentListCount();
+        _selectedIndex = toEnd ? Math.Max(0, count - 1) : 0;
     }
 
-    private void ActivateSetting()
+    private int CurrentListCount() =>
+        _showingSongs ? _songs.Count : _playlists.Count;
+
+    private IReadOnlyList<TerminalSongItem> CurrentSongContext() =>
+        _page == TerminalPage.Queue ? _playback.Queue : _songs;
+
+    private TerminalSongItem? SelectedSong() =>
+        _showingSongs && _selectedIndex >= 0 && _selectedIndex < _songs.Count ? _songs[_selectedIndex] : null;
+
+    private TerminalPlaylistItem? SelectedPlaylist() =>
+        !_showingSongs && _selectedIndex >= 0 && _selectedIndex < _playlists.Count ? _playlists[_selectedIndex] : null;
+
+    private void AdjustSetting(int direction)
     {
         switch (_settingsIndex)
         {
@@ -454,653 +920,278 @@ internal sealed class TerminalApp : IAsyncDisposable
             case 4:
                 _playback.CycleLyricMode();
                 break;
+            case 5:
+                CycleImageMode(direction);
+                break;
+            default:
+                _playback.SetEqBand(_settingsIndex - SettingsHeaderItemCount, direction);
+                break;
         }
     }
 
-    private void AdjustSetting(int direction)
+    private void CycleImageMode(int direction = 1)
     {
-        if (_settingsIndex < SettingsHeaderItemCount)
-        {
-            ActivateSetting();
-            return;
-        }
-
-        _playback.SetEqBand(_settingsIndex - SettingsHeaderItemCount, direction);
+        var idx = Array.IndexOf(ImageModes, _settings.ImageMode);
+        idx = (idx + direction + ImageModes.Length) % ImageModes.Length;
+        _settings.ImageMode = ImageModes[idx];
+        _settingsStore.Save(_settings);
+        _renderer.Invalidate();
+        var effective = EffectiveImageMode();
+        _status = $"图片显示：{TerminalCapabilities.DisplayName(_settings.ImageMode)}（当前生效：{TerminalCapabilities.DisplayName(effective)}）";
     }
 
-    private async Task LoginWithQrAsync()
-    {
-        AnsiConsole.Clear();
-        _status = "正在获取二维码...";
-        try
-        {
-            var qr = await _clients.Login.GetQrCodeAsync();
-            if (qr == null || string.IsNullOrWhiteSpace(qr.Qrcode))
-            {
-                _status = "二维码获取失败";
-                return;
-            }
-
-            AnsiConsole.MarkupLine("[bold cyan]酷狗二维码登录[/]");
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[yellow]图片显示已关闭。请复制下面地址到可扫码环境：[/]");
-            AnsiConsole.MarkupLine(Markup.Escape(qr.Qrcode));
-
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[grey]请用酷狗客户端扫码确认，按 Q 取消。[/]");
-
-            for (var i = 0; i < 90; i++)
-            {
-                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Q)
-                {
-                    _status = "已取消登录";
-                    return;
-                }
-
-                var status = await _clients.Login.CheckQrStatusAsync(qr.Qrcode);
-                if (status?.QrStatus == QrLoginStatus.Success)
-                {
-                    _userName = status.Nickname ?? await _data.GetUserDisplayNameAsync();
-                    _status = $"登录成功：{_userName}";
-                    return;
-                }
-
-                if (status?.QrStatus == QrLoginStatus.Expired)
-                {
-                    _status = "二维码已过期";
-                    return;
-                }
-
-                await Task.Delay(2000);
-            }
-
-            _status = "二维码登录超时";
-        }
-        catch (Exception ex)
-        {
-            _status = ex.Message;
-        }
-    }
-
-    private async Task LoginWithSmsAsync()
-    {
-        Console.CursorVisible = true;
-        AnsiConsole.Clear();
-        try
-        {
-            var mobile = AnsiConsole.Ask<string>("[cyan]手机号[/]");
-            var send = await _clients.Login.SendCodeAsync(mobile);
-            AnsiConsole.MarkupLine(send?.Status == 1 ? "[green]验证码已发送[/]" : "[yellow]验证码发送请求已提交，请留意手机[/]");
-            var code = AnsiConsole.Ask<string>("[cyan]验证码[/]");
-            var login = await _clients.Login.LoginByMobileAsync(mobile, code);
-            _status = login?.Status == 1
-                ? "短信登录成功"
-                : $"短信登录失败：{login?.FailureMessage ?? login?.ErrorCode.ToString() ?? "未知错误"}";
-            _userName = await _data.GetUserDisplayNameAsync();
-        }
-        catch (Exception ex)
-        {
-            _status = ex.Message;
-        }
-        finally
-        {
-            Console.CursorVisible = false;
-        }
-    }
+    private TerminalImageMode EffectiveImageMode() =>
+        _settings.ImageMode == TerminalImageMode.Auto
+            ? TerminalCapabilities.DetectImageMode()
+            : _settings.ImageMode;
 
     private void Logout()
     {
+        _login.StopPolling();
         _clients.Login.LogOutAsync();
-        _userName = "未登录";
+        _profile = new TerminalUserProfile { IsLoggedIn = false, Name = "未登录" };
         _status = "已退出登录";
     }
 
-    private void Render()
+    private void SyncPlayingFlag()
     {
-        if (!_screenInitialized)
+        var currentHash = _playback.CurrentSong?.Hash;
+        foreach (var song in _songs)
         {
-            AnsiConsole.Clear();
-            _screenInitialized = true;
+            song.IsPlaying = !string.IsNullOrEmpty(currentHash) &&
+                             string.Equals(song.Hash, currentHash, StringComparison.OrdinalIgnoreCase);
         }
-        else
+    }
+
+    private void RenderFrame()
+    {
+        var (width, height) = GetConsoleSize();
+        var effectiveMode = EffectiveImageMode();
+        _canvas.ImageMode = effectiveMode;
+        _canvas.Reset(width, height);
+
+        if (_page == TerminalPage.Queue && !_isLoading)
         {
-            Console.SetCursorPosition(0, 0);
+            _songs.Clear();
+            _songs.AddRange(_playback.Queue);
+            _selectedIndex = Math.Clamp(_selectedIndex, 0, Math.Max(0, _songs.Count - 1));
         }
 
+        SyncPlayingFlag();
         var snapshot = _playback.GetSnapshot();
+
         if (_isImmersive)
         {
-            AnsiConsole.Write(BuildImmersive(snapshot));
-            Console.Write("\u001b[J");
-            return;
+            _visualizer.RenderImmersive(_canvas, snapshot, _images, _theme);
+        }
+        else
+        {
+            RenderWorkspace(snapshot, effectiveMode);
         }
 
-        var root = new Layout("root")
-            .SplitRows(
-                new Layout("main").Ratio(1),
-                new Layout("bar").Size(5));
+        if (_searchModalOpen)
+        {
+            WorkspaceViews.RenderSearchModal(_canvas, _searchInput, _theme);
+        }
 
-        root["main"].SplitColumns(
-            new Layout("nav").Size(22),
-            new Layout("content").Ratio(2),
-            new Layout("side").Ratio(1));
+        if (_helpModalOpen)
+        {
+            WorkspaceViews.RenderHelpModal(_canvas, _theme);
+        }
 
-        root["nav"].Update(BuildNavigation());
-        root["content"].Update(BuildContent());
-        root["side"].Update(BuildSide(snapshot));
-        root["bar"].Update(BuildPlaybackBar(snapshot));
-        AnsiConsole.Write(root);
-        Console.Write("\u001b[J");
+        _renderer.Present(_canvas);
     }
 
-    private IRenderable BuildNavigation()
+    private void RenderWorkspace(PlaybackStateSnapshot snapshot, TerminalImageMode effectiveMode)
     {
-        var lines = new List<string>
-        {
-            $"[bold green]KgTest[/]",
-            $"[grey]{Markup.Escape(_userName)}[/]",
-            ""
-        };
+        var bounds = _canvas.Bounds;
+        var barHeight = 4;
+        var main = bounds.SkipBottom(barHeight);
+        var bar = bounds.TakeBottom(barHeight);
 
-        foreach (var page in Pages)
+        var navWidth = bounds.W >= 88 ? 22 : 0;
+        var sideWidth = bounds.W >= 112 ? Math.Clamp(bounds.W * 28 / 100, 30, 42) : 0;
+        var contentRect = main.SkipLeft(navWidth).SkipRight(sideWidth);
+
+        if (navWidth > 0)
         {
-            var active = page == _page;
-            var text = $"{(active ? ">" : " ")} {PageTitle(page)}";
-            lines.Add(active ? $"[black on green]{Markup.Escape(text)}[/]" : Markup.Escape(text));
+            WorkspaceViews.RenderNavigation(
+                _canvas,
+                main.TakeLeft(navWidth),
+                Pages,
+                _page,
+                _profile,
+                _focus == FocusZone.Navigation,
+                _theme);
         }
 
-        lines.Add("");
-        lines.Add("[grey]F5 二维码登录[/]");
-        lines.Add("[grey]F6 短信登录[/]");
-        lines.Add("[grey]F9 退出登录[/]");
-        lines.Add("[grey]/ 搜索  q 退出[/]");
+        RenderContentArea(contentRect);
 
-        return new Panel(new Markup(string.Join(Environment.NewLine, lines)))
-            .Header(Header("导航"))
-            .Border(BoxBorder.Rounded);
+        if (sideWidth > 0)
+        {
+            WorkspaceViews.RenderNowPlayingSide(
+                _canvas,
+                main.TakeRight(sideWidth),
+                snapshot,
+                _playback.MusicQuality,
+                _images,
+                _theme);
+        }
+
+        WorkspaceViews.RenderPlaybackBar(
+            _canvas,
+            bar,
+            snapshot,
+            _playback.StatusMessage,
+            _status,
+            effectiveMode,
+            _theme);
     }
 
-    private IRenderable BuildContent()
+    private void RenderContentArea(Rect area)
     {
-        if (_page == TerminalPage.Settings)
+        var focused = _focus == FocusZone.Content;
+        switch (_page)
         {
-            return BuildSettings();
+            case TerminalPage.Settings:
+                WorkspaceViews.RenderSettings(
+                    _canvas,
+                    area,
+                    _settings,
+                    EffectiveImageMode(),
+                    _playback,
+                    _settingsIndex,
+                    focused,
+                    _theme);
+                return;
+            case TerminalPage.Account:
+                var border = focused ? new CellStyle(_theme.Accent) : _theme.BorderStyle;
+                _canvas.Box(area, border, "账号与登录 · F5 扫码 · F6 短信 · L 退出登录",
+                    focused ? _theme.AccentBold : _theme.Bold);
+                _login.Render(_canvas, area.Inset(2, 1), _profile, _theme, focused);
+                return;
         }
 
-        if (_page == TerminalPage.Account)
-        {
-            return BuildAccount();
-        }
-
-        if (_searchShowsPlaylists)
-        {
-            return BuildPlaylistTable(_playlists, _title);
-        }
-
+        var subtitle = BuildContentSubtitle();
         if (_showingSongs)
         {
-            return BuildSongTable(_songs, _title);
-        }
-
-        return BuildPlaylistTable(_playlists, _title);
-    }
-
-    private IRenderable BuildSongTable(IReadOnlyList<TerminalSongItem> songs, string title)
-    {
-        var table = new Table().Expand().Border(TableBorder.Rounded);
-        table.AddColumn(new TableColumn("#").Width(4));
-        table.AddColumn("歌曲");
-        table.AddColumn("歌手");
-        table.AddColumn(new TableColumn("时长").Width(7));
-        table.AddColumn(new TableColumn("来源").Width(10));
-
-        if (songs.Count == 0)
-        {
-            table.AddRow("", "[grey]暂无歌曲[/]", "", "", "");
+            WorkspaceViews.RenderSongs(
+                _canvas,
+                area,
+                _title,
+                subtitle,
+                _songs,
+                _selectedIndex,
+                focused,
+                _isLoading,
+                _theme);
         }
         else
         {
-            var start = Math.Max(0, Math.Min(_selectedIndex - 10, Math.Max(0, songs.Count - 22)));
-            foreach (var (song, visibleIndex) in songs.Skip(start).Take(22).Select((song, i) => (song, start + i)))
-            {
-                var selected = visibleIndex == _selectedIndex;
-                var marker = selected ? ">" : song.IsPlaying ? "*" : "";
-                table.AddRow(
-                    Paint($"{marker}{visibleIndex + 1}", selected),
-                    Paint(song.Name, selected),
-                    Paint(song.Singer, selected),
-                    Paint(FormatTime(song.DurationSeconds), selected),
-                    Paint(song.Source, selected));
-            }
-        }
-
-        return new Panel(table)
-            .Header(Header($"{title} · Enter 播放 · i 沉浸页 · 方括号键快退/快进"))
-            .Border(BoxBorder.Rounded);
-    }
-
-    private IRenderable BuildPlaylistTable(IReadOnlyList<TerminalPlaylistItem> playlists, string title)
-    {
-        var table = new Table().Expand().Border(TableBorder.Rounded);
-        table.AddColumn(new TableColumn("#").Width(4));
-        table.AddColumn("名称");
-        table.AddColumn("说明");
-        table.AddColumn(new TableColumn("歌曲").Width(8));
-
-        if (playlists.Count == 0)
-        {
-            table.AddRow("", "[grey]暂无歌单[/]", "", "");
-        }
-        else
-        {
-            var start = Math.Max(0, Math.Min(_selectedIndex - 10, Math.Max(0, playlists.Count - 22)));
-            foreach (var (playlist, visibleIndex) in playlists.Skip(start).Take(22).Select((item, i) => (item, start + i)))
-            {
-                var selected = visibleIndex == _selectedIndex;
-                table.AddRow(
-                    Paint($">{visibleIndex + 1}".Replace(">", selected ? ">" : ""), selected),
-                    Paint(playlist.Name, selected),
-                    Paint(playlist.Subtitle, selected),
-                    Paint(playlist.Count > 0 ? playlist.Count.ToString() : "-", selected));
-            }
-        }
-
-        return new Panel(table)
-            .Header(Header($"{title} · Enter 打开 · i 沉浸页"))
-            .Border(BoxBorder.Rounded);
-    }
-
-    private IRenderable BuildSettings()
-    {
-        var table = new Table().Expand().Border(TableBorder.Rounded);
-        table.AddColumn("设置");
-        table.AddColumn("值");
-
-        table.AddRow(PaintSetting("音质", 0), PaintSetting(_playback.MusicQuality, 0));
-        table.AddRow(PaintSetting("环绕", 1), PaintSetting(_settings.EnableSurround ? "开启" : "关闭", 1));
-        table.AddRow(PaintSetting("智能过渡", 2), PaintSetting(_settings.EnableSeamlessTransition ? "开启" : "关闭", 2));
-        table.AddRow(PaintSetting("随机播放", 3), PaintSetting(_settings.Shuffle ? "开启" : "关闭", 3));
-        table.AddRow(PaintSetting("歌词模式", 4), PaintSetting(_settings.LyricMode.ToString(), 4));
-        table.AddEmptyRow();
-
-        for (var i = 0; i < _playback.EqGains.Length; i++)
-        {
-            var rowIndex = SettingsHeaderItemCount + i;
-            table.AddRow(PaintSetting($"EQ {i + 1}", rowIndex), PaintSetting($"{_playback.EqGains[i]:0.#} dB", rowIndex));
-        }
-
-        return new Panel(table)
-            .Header(Header("设置 · ↑/↓ 选择 · Enter/+/- 调整"))
-            .Border(BoxBorder.Rounded);
-    }
-
-    private IRenderable BuildAccount()
-    {
-        var loggedIn = !string.IsNullOrWhiteSpace(_clients.SessionManager.Session.Token) &&
-                       _clients.SessionManager.Session.UserId != "0";
-        var rows = new Rows(
-            new Markup($"[bold]用户[/] {Markup.Escape(_userName)}"),
-            new Markup($"[bold]状态[/] {(loggedIn ? "[green]已登录[/]" : "[yellow]未登录[/]")}"),
-            new Markup($"[bold]UserId[/] {Markup.Escape(_clients.SessionManager.Session.UserId)}"),
-            new Text(""),
-            new Markup("[grey]F5 二维码登录，F6 短信验证码登录，F9 退出登录。[/]"),
-            new Markup("[grey]KgTest 与 Avalonia 客户端共用 ApplicationData/kugou/session.json。[/]"));
-
-        return new Panel(rows)
-            .Header(Header("账号"))
-            .Border(BoxBorder.Rounded);
-    }
-
-    private IRenderable BuildSide(PlaybackStateSnapshot snapshot)
-    {
-        var song = snapshot.CurrentSong;
-        var lines = new List<IRenderable>
-        {
-            new Markup(song == null ? "[grey]还没有播放歌曲[/]" : $"[bold cyan]{Markup.Escape(song.Name)}[/]"),
-            new Markup(song == null ? "" : Markup.Escape(song.Singer)),
-            new Text("")
-        };
-
-        foreach (var lyric in snapshot.LyricWindow.Take(7))
-        {
-            var escaped = Markup.Escape(TrimToWidth(lyric, 34));
-            lines.Add(new Markup(lyric.StartsWith("> ", StringComparison.Ordinal) ? $"[green]{escaped}[/]" : $"[grey]{escaped}[/]"));
-        }
-
-        lines.Add(new Text(""));
-        lines.Add(new Markup($"[grey]音质[/] {_playback.MusicQuality}   [grey]音量[/] {(int)(snapshot.Volume * 100)}%"));
-        lines.Add(new Markup($"[grey]随机[/] {(snapshot.IsShuffle ? "on" : "off")}   [grey]环绕[/] {(snapshot.EnableSurround ? "on" : "off")}"));
-        lines.Add(new Markup($"[grey]智能过渡[/] {(snapshot.EnableSeamlessTransition ? "on" : "off")}   [grey]混音[/] {(snapshot.IsCrossfading ? "on" : "off")}"));
-        lines.Add(new Markup($"[grey]队列[/] {snapshot.Queue.Count} 首"));
-        lines.Add(new Text(""));
-        lines.Add(new Markup("[grey]Space 暂停 · n/b 切歌[/]"));
-        lines.Add(new Markup("[grey]+/- 音量 · r 刷新[/]"));
-
-        return new Panel(new Rows(lines))
-            .Header(Header("正在播放"))
-            .Border(BoxBorder.Rounded);
-    }
-
-    private IRenderable BuildPlaybackBar(PlaybackStateSnapshot snapshot)
-    {
-        var percent = snapshot.Duration.TotalSeconds > 0
-            ? Math.Clamp(snapshot.Position.TotalSeconds / snapshot.Duration.TotalSeconds, 0, 1)
-            : 0;
-        var barWidth = Math.Max(10, Console.WindowWidth - 42);
-        var filled = (int)(barWidth * percent);
-        var bar = new string('=', filled) + new string('-', barWidth - filled);
-        var state = snapshot.IsPlaying ? "播放" : snapshot.IsPaused ? "暂停" : "停止";
-        var text =
-            $"[{state}] {FormatTime(snapshot.Position.TotalSeconds)} / {FormatTime(snapshot.Duration.TotalSeconds)}  {bar}  {_playback.StatusMessage} · {_status}";
-
-        return new Panel(new Markup(Markup.Escape(TrimToWidth(text, Math.Max(40, Console.WindowWidth - 8)))))
-            .Border(BoxBorder.Rounded);
-    }
-
-    private IRenderable BuildImmersive(PlaybackStateSnapshot snapshot)
-    {
-        var song = snapshot.CurrentSong;
-        var title = song == null ? "未播放" : $"{song.Name} - {song.Singer}";
-        var root = new Layout("immersive")
-            .SplitRows(
-                new Layout("header").Size(5),
-                new Layout("visualizer").Ratio(1),
-                new Layout("lyrics").Size(10),
-                new Layout("bar").Size(5));
-
-        root["header"].Update(new Panel(new Rows(
-                new Markup($"[bold cyan]{Markup.Escape(TrimToWidth(title, Math.Max(20, Console.WindowWidth - 10)))}[/]"),
-                new Markup($"[grey]{Markup.Escape($"i 返回 · Space 暂停 · ←/→ 或 方括号键快退/快进 {SeekStepSeconds}s · n/b 切歌")}[/]")))
-            .Border(BoxBorder.Rounded));
-
-        root["visualizer"].Update(new Panel(new Markup(BuildVisualizer(snapshot)))
-            .Header(Header("频谱"))
-            .Border(BoxBorder.Rounded));
-
-        var lyricRows = snapshot.LyricWindow
-            .Take(9)
-            .Select(line =>
-            {
-                var escaped = Markup.Escape(TrimToWidth(line, Math.Max(20, Console.WindowWidth - 10)));
-                return line.StartsWith("> ", StringComparison.Ordinal)
-                    ? new Markup($"[bold green]{escaped}[/]")
-                    : new Markup($"[grey]{escaped}[/]");
-            })
-            .Cast<IRenderable>()
-            .ToList();
-        if (lyricRows.Count == 0)
-        {
-            lyricRows.Add(new Markup("[grey]暂无歌词[/]"));
-        }
-
-        root["lyrics"].Update(new Panel(new Rows(lyricRows))
-            .Header(Header("歌词"))
-            .Border(BoxBorder.Rounded));
-        root["bar"].Update(BuildPlaybackBar(snapshot));
-        return root;
-    }
-
-    private string BuildVisualizer(PlaybackStateSnapshot snapshot)
-    {
-        if (snapshot.SpectrumBands.Count == 0)
-        {
-            return CenterVisualizerText("等待音频数据...");
-        }
-
-        var width = Math.Clamp(Console.WindowWidth - 8, 32, 118);
-        var height = Math.Clamp(Console.WindowHeight - 24, 10, 28);
-        var targetBars = Math.Clamp(width, 24, 112);
-        var rawBands = ResampleBands(snapshot.SpectrumBands, targetBars);
-        EnsureVisualizerState(targetBars);
-
-        for (var i = 0; i < targetBars; i++)
-        {
-            var shaped = (float)Math.Pow(Math.Clamp(rawBands[i], 0f, 1f), 0.62);
-            var body = Math.Clamp(shaped * (0.82f + (float)Math.Clamp(snapshot.Rms * 5.5, 0, 0.55)), 0f, 1f);
-            var attack = body > _visualizerBars[i] ? 0.62f : 0.24f;
-            _visualizerBars[i] = Lerp(_visualizerBars[i], body, attack);
-            _visualizerPeaks[i] = Math.Max(_visualizerBars[i], _visualizerPeaks[i] - 0.018f);
-        }
-
-        var output = new StringBuilder();
-        output.Append("[grey]");
-        output.Append(Markup.Escape(BuildVuLine(snapshot.Rms, targetBars)));
-        output.AppendLine("[/]");
-
-        for (var row = height; row >= 1; row--)
-        {
-            var threshold = row / (float)height;
-            var line = new StringBuilder(targetBars);
-            for (var i = 0; i < targetBars; i++)
-            {
-                if (_visualizerBars[i] >= threshold)
-                {
-                    line.Append('█');
-                }
-                else if (Math.Abs(_visualizerPeaks[i] - threshold) <= 0.5f / height)
-                {
-                    line.Append('▀');
-                }
-                else if (row == 1 && i % 4 == 0)
-                {
-                    line.Append('▁');
-                }
-                else
-                {
-                    line.Append(' ');
-                }
-            }
-
-            output.Append(VisualizerGradientTag(row, height));
-            output.Append(Markup.Escape(line.ToString()));
-            output.AppendLine("[/]");
-        }
-
-        output.Append("[grey]");
-        output.Append(Markup.Escape(BuildFrequencyRail(targetBars)));
-        output.Append("[/]");
-        return output.ToString();
-    }
-
-    private void EnsureVisualizerState(int count)
-    {
-        if (_visualizerBars.Length == count && _visualizerPeaks.Length == count)
-        {
-            return;
-        }
-
-        _visualizerBars = new float[count];
-        _visualizerPeaks = new float[count];
-    }
-
-    private static float[] ResampleBands(IReadOnlyList<float> source, int count)
-    {
-        var result = new float[count];
-        if (source.Count == 0)
-        {
-            return result;
-        }
-
-        if (source.Count == 1)
-        {
-            Array.Fill(result, source[0]);
-            return result;
-        }
-
-        for (var i = 0; i < count; i++)
-        {
-            var position = i * (source.Count - 1) / (double)Math.Max(1, count - 1);
-            var left = (int)Math.Floor(position);
-            var right = Math.Min(source.Count - 1, left + 1);
-            var t = (float)(position - left);
-            result[i] = Lerp(source[left], source[right], t);
-        }
-
-        return result;
-    }
-
-    private static string BuildVuLine(double rms, int width)
-    {
-        var label = " VU ";
-        var safeWidth = Math.Max(12, width - label.Length - 1);
-        var filled = (int)Math.Clamp(rms * 11.5 * safeWidth, 0, safeWidth);
-        return label + new string('━', filled) + new string('─', safeWidth - filled);
-    }
-
-    private static string BuildFrequencyRail(int width)
-    {
-        if (width < 20)
-        {
-            return new string('─', width);
-        }
-
-        var line = new char[width];
-        Array.Fill(line, '─');
-        WriteRailLabel(line, 0, "50Hz");
-        WriteRailLabel(line, width / 2 - 2, "1k");
-        WriteRailLabel(line, Math.Max(0, width - 5), "16k");
-        return new string(line);
-    }
-
-    private static void WriteRailLabel(char[] line, int start, string label)
-    {
-        for (var i = 0; i < label.Length && start + i < line.Length; i++)
-        {
-            line[start + i] = label[i];
+            WorkspaceViews.RenderPlaylists(
+                _canvas,
+                area,
+                _title,
+                subtitle,
+                _playlists,
+                _selectedIndex,
+                focused,
+                _isLoading,
+                _images,
+                _theme);
         }
     }
 
-    private static string CenterVisualizerText(string text)
+    private string BuildContentSubtitle()
     {
-        var width = Math.Max(20, Console.WindowWidth - 8);
-        var padding = Math.Max(0, (width - text.Length) / 2);
-        return $"[grey]{Markup.Escape(new string(' ', padding) + text)}[/]";
-    }
-
-    private static string VisualizerGradientTag(int row, int height)
-    {
-        var ratio = row / (float)Math.Max(1, height);
-        var (r, g, b) = InterpolateGradient(ratio);
-        return $"[#{r:X2}{g:X2}{b:X2}]";
-    }
-
-    private static (int R, int G, int B) InterpolateGradient(float ratio)
-    {
-        ReadOnlySpan<(float Stop, int R, int G, int B)> stops =
-        [
-            (0.00f, 92, 75, 255),
-            (0.24f, 0, 194, 255),
-            (0.48f, 33, 214, 132),
-            (0.70f, 245, 222, 87),
-            (0.86f, 255, 137, 54),
-            (1.00f, 255, 72, 96)
-        ];
-
-        var safe = Math.Clamp(ratio, 0f, 1f);
-        for (var i = 1; i < stops.Length; i++)
+        if (_openedPlaylist != null)
         {
-            if (safe > stops[i].Stop)
-            {
-                continue;
-            }
-
-            var from = stops[i - 1];
-            var to = stops[i];
-            var local = (safe - from.Stop) / Math.Max(0.001f, to.Stop - from.Stop);
-            return (
-                (int)Math.Round(Lerp(from.R, to.R, local)),
-                (int)Math.Round(Lerp(from.G, to.G, local)),
-                (int)Math.Round(Lerp(from.B, to.B, local)));
+            return $"共 {_songs.Count} 首 · Backspace 返回";
         }
 
-        var last = stops[^1];
-        return (last.R, last.G, last.B);
+        if (_page == TerminalPage.Search)
+        {
+            return _searchShowsPlaylists
+                ? $"歌单 ({_playlists.Count}) · 按 v 切到歌曲 ({_songs.Count}) · / 重新搜索"
+                : $"歌曲 ({_songs.Count}) · 按 v 切到歌单 ({_playlists.Count}) · / 重新搜索";
+        }
+
+        if (_page == TerminalPage.Queue)
+        {
+            return $"共 {_songs.Count} 首 · x 移除选中";
+        }
+
+        if (_page == TerminalPage.PersonalFm)
+        {
+            return "Enter 播放 · d 不喜欢并切歌 · r 换一批";
+        }
+
+        return _showingSongs ? $"共 {_songs.Count} 首 · Enter 播放 · a 下一首播放" : $"共 {_playlists.Count} 个 · Enter 打开";
     }
 
-    private static float Lerp(float from, float to, float amount)
+    private int GetFrameIntervalMs(PlaybackStateSnapshot snapshot)
     {
-        return from + (to - from) * Math.Clamp(amount, 0f, 1f);
-    }
+        if (_page == TerminalPage.Account && _login.CooldownSeconds > 0)
+        {
+            return 250;
+        }
 
-    private int GetRenderDelayMs(PlaybackStateSnapshot snapshot)
-    {
         if (_isImmersive && snapshot.IsPlaying)
         {
-            return 80;
+            return 60;
         }
 
-        return snapshot.IsPlaying ? 350 : 1200;
+        return snapshot.IsPlaying ? 250 : 900;
     }
 
-    private static string PageTitle(TerminalPage page)
-    {
-        return page switch
-        {
-            TerminalPage.Daily => "每日推荐",
-            TerminalPage.PersonalFm => "私人 FM",
-            TerminalPage.Discover => "发现歌单",
-            TerminalPage.Ranks => "排行榜",
-            TerminalPage.Search => "搜索",
-            TerminalPage.MyPlaylists => "我的歌单",
-            TerminalPage.Queue => "播放队列",
-            TerminalPage.Settings => "设置",
-            TerminalPage.Account => "账号",
-            _ => page.ToString()
-        };
-    }
-
-    private static string Paint(string value, bool selected)
-    {
-        var text = Markup.Escape(TrimToWidth(value, 80));
-        return selected ? $"[black on green]{text}[/]" : text;
-    }
-
-    private static string Header(string value)
-    {
-        return Markup.Escape(value);
-    }
-
-    private string PaintSetting(string value, int rowIndex)
-    {
-        return Paint(value, _settingsIndex == rowIndex);
-    }
-
-    private static string FormatTime(double seconds)
-    {
-        if (seconds <= 0 || double.IsNaN(seconds) || double.IsInfinity(seconds))
-        {
-            return "--:--";
-        }
-
-        return TimeSpan.FromSeconds(seconds).ToString(seconds >= 3600 ? @"h\:mm\:ss" : @"mm\:ss");
-    }
-
-    private static string TrimToWidth(string? text, int width)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return "";
-        }
-
-        var normalized = text.ReplaceLineEndings(" ").Trim();
-        return normalized.Length <= width ? normalized : normalized[..Math.Max(0, width - 1)] + "…";
-    }
-
-    private static async Task<T> SafeLoadAsync<T>(Task<T> task, T fallback)
+    private static (int Width, int Height) GetConsoleSize()
     {
         try
         {
-            return await task;
+            var w = Console.WindowWidth;
+            var h = Console.WindowHeight;
+            if (w > 20 && h > 10)
+            {
+                return (w, h);
+            }
         }
         catch
         {
-            return fallback;
         }
+
+        return (120, 34);
+    }
+
+    private static bool IsKeyAvailable()
+    {
+        try
+        {
+            return !Console.IsInputRedirected && Console.KeyAvailable;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryReadKey(out ConsoleKeyInfo key)
+    {
+        if (IsKeyAvailable())
+        {
+            key = Console.ReadKey(true);
+            return true;
+        }
+
+        key = default;
+        return false;
     }
 
     public async ValueTask DisposeAsync()
     {
+        _login.Dispose();
+        _images.Dispose();
         _playback.Dispose();
+        _renderer.Dispose();
         await Task.CompletedTask;
     }
 }

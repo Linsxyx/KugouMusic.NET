@@ -137,13 +137,53 @@ internal sealed class TerminalDataService(TerminalKugouClients clients)
 
     public async Task<string> GetUserDisplayNameAsync()
     {
+        var profile = await GetUserProfileAsync();
+        return profile.Name;
+    }
+
+    public async Task<TerminalUserProfile> GetUserProfileAsync()
+    {
+        var session = clients.SessionManager.Session;
         if (!clients.User.IsLoggedIn())
         {
-            return "未登录";
+            return new TerminalUserProfile { IsLoggedIn = false, Name = "未登录" };
         }
 
-        var user = await clients.User.GetUserInfoAsync();
-        return string.IsNullOrWhiteSpace(user?.Name) ? $"用户 {clients.SessionManager.Session.UserId}" : user.Name;
+        try
+        {
+            var userTask = clients.User.GetUserInfoAsync();
+            var vipTask = clients.User.GetVipInfoAsync();
+            await Task.WhenAll(userTask, vipTask);
+            var user = await userTask;
+            var vip = await vipTask;
+            var name = string.IsNullOrWhiteSpace(user?.Name) ? $"用户 {session.UserId}" : user.Name;
+            var vipLabel = vip switch
+            {
+                { IsSuperVip: true } => "豪华 VIP",
+                { IsConceptVip: true } => "概念 VIP",
+                { IsVip: 1 } => "VIP 会员",
+                _ => session.VipType is "0" or "" ? "普通用户" : $"VIP ({session.VipType})"
+            };
+
+            return new TerminalUserProfile
+            {
+                IsLoggedIn = true,
+                UserId = session.UserId,
+                Name = name,
+                AvatarUrl = user?.Pic,
+                VipType = vipLabel
+            };
+        }
+        catch
+        {
+            return new TerminalUserProfile
+            {
+                IsLoggedIn = true,
+                UserId = session.UserId,
+                Name = $"用户 {session.UserId}",
+                VipType = session.VipType
+            };
+        }
     }
 
     private static TerminalSongItem MapSongInfo(SongInfo song)

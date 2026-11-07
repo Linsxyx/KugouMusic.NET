@@ -1,6 +1,9 @@
 using KuGou.Net.Abstractions;
+using KgTest.Graphics;
 
 namespace KgTest.Models;
+
+// 终端播放器的页面、歌曲/歌单/歌词视图模型与持久化配置。
 
 internal enum TerminalPage
 {
@@ -58,6 +61,24 @@ internal sealed class TerminalPlaylistItem
     public long RankId { get; set; }
 }
 
+internal sealed class TerminalLyricLineView
+{
+    public int Offset { get; init; }
+    public bool IsCurrent { get; init; }
+    public string Primary { get; init; } = "";
+    public string? Secondary { get; init; }
+    public IReadOnlyList<(string Text, float Progress)> Words { get; init; } = [];
+}
+
+internal sealed class TerminalUserProfile
+{
+    public bool IsLoggedIn { get; init; }
+    public string UserId { get; init; } = "0";
+    public string Name { get; init; } = "未登录";
+    public string? AvatarUrl { get; init; }
+    public string VipType { get; init; } = "0";
+}
+
 internal sealed class PlaybackStateSnapshot
 {
     public TerminalSongItem? CurrentSong { get; init; }
@@ -73,6 +94,7 @@ internal sealed class PlaybackStateSnapshot
     public TimeSpan Duration { get; init; }
     public TerminalLyricMode LyricMode { get; init; }
     public IReadOnlyList<string> LyricWindow { get; init; } = [];
+    public IReadOnlyList<TerminalLyricLineView> LyricLines { get; init; } = [];
     public IReadOnlyList<float> SpectrumBands { get; init; } = [];
     public double Rms { get; init; }
 }
@@ -85,5 +107,6 @@ internal sealed class TerminalAppSettings
     public bool EnableSeamlessTransition { get; set; }
     public bool Shuffle { get; set; }
     public TerminalLyricMode LyricMode { get; set; } = TerminalLyricMode.Translation;
+    public TerminalImageMode ImageMode { get; set; } = TerminalImageMode.Auto;
     public float[] CustomEqGains { get; set; } = new float[10];
 }
