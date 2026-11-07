@@ -12,7 +12,6 @@
     <ItemGroup>
         <PackageReference Include="SkiaSharp"/>
         <PackageReference Include="Spectre.Console"/>
-        <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
         <ProjectReference Include="..\..\Libraries\SimpleAudio\SimpleAudio.csproj"/>
         <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>

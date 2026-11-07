@@ -90,4 +90,7 @@ internal readonly record struct Rect(int X, int Y, int W, int H)
 
     public bool Intersects(Rect other) =>
         !IsEmpty && !other.IsEmpty && X < other.Right && other.X < Right && Y < other.Bottom && other.Y < Bottom;
+
+    public bool Contains(int x, int y) =>
+        !IsEmpty && x >= X && x < Right && y >= Y && y < Bottom;
 }

@@ -80,7 +80,6 @@ internal sealed class LoginController(
         {
             switch (key.Key)
             {
-                case ConsoleKey.RightArrow:
                 case ConsoleKey.D2:
                     SwitchTab(LoginTab.Sms);
                     return true;
@@ -139,7 +138,7 @@ internal sealed class LoginController(
 
         switch (key.Key)
         {
-            case ConsoleKey.LeftArrow when Field != SmsField.AccountList:
+            case ConsoleKey.D1:
                 SwitchTab(LoginTab.Qr);
                 return true;
             case ConsoleKey.UpArrow:
@@ -493,6 +492,93 @@ internal sealed class LoginController(
         }
     }
 
+    public async Task<bool> HandleMouseAsync(MouseEvent mouse, Rect area)
+    {
+        if (!area.Contains(mouse.X, mouse.Y) || mouse.Kind is not (MouseKind.LeftDown or MouseKind.LeftDoubleClick))
+        {
+            return false;
+        }
+
+        var tabY = area.Y + 7;
+        if (mouse.Y == tabY)
+        {
+            var relX = mouse.X - area.X;
+            if (relX is >= 0 and < 14)
+            {
+                SwitchTab(LoginTab.Qr);
+                return true;
+            }
+
+            if (relX is >= 14 and < 36)
+            {
+                SwitchTab(LoginTab.Sms);
+                Field = SmsField.Mobile;
+                return true;
+            }
+        }
+
+        var bodyY = area.Y + 9;
+        if (Tab == LoginTab.Qr)
+        {
+            if (mouse.Y >= bodyY)
+            {
+                await RefreshQrAsync();
+                return true;
+            }
+
+            return false;
+        }
+
+        var fieldWidth = Math.Clamp(area.W - 14, 16, 36);
+        var inputX = area.X + 10;
+        if (mouse.Y == bodyY && mouse.X >= inputX && mouse.X < inputX + fieldWidth)
+        {
+            Field = SmsField.Mobile;
+            MobileInput.SetCursorFromVisualColumn(mouse.X - inputX, fieldWidth);
+            return true;
+        }
+
+        if (mouse.Y == bodyY + 2 && mouse.X >= inputX && mouse.X < inputX + fieldWidth)
+        {
+            Field = SmsField.Code;
+            CodeInput.SetCursorFromVisualColumn(mouse.X - inputX, fieldWidth);
+            return true;
+        }
+
+        if (mouse.Y == bodyY + 4 && mouse.X >= inputX)
+        {
+            var rel = mouse.X - inputX;
+            if (rel < 15)
+            {
+                Field = SmsField.SendButton;
+                await SendSmsCodeAsync();
+                return true;
+            }
+
+            if (rel is >= 15 and < 32)
+            {
+                Field = SmsField.LoginButton;
+                await SubmitSmsAsync(null);
+                return true;
+            }
+        }
+
+        var accountsStartY = bodyY + 9;
+        if (Accounts.Count > 0 && mouse.Y >= accountsStartY && mouse.Y < accountsStartY + Accounts.Count)
+        {
+            Field = SmsField.AccountList;
+            _accountIndex = mouse.Y - accountsStartY;
+            if (mouse.Kind == MouseKind.LeftDoubleClick)
+            {
+                await SubmitSmsAsync(Accounts[_accountIndex].UserId.ToString());
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     private void RenderProfileCard(Canvas canvas, Rect area, TerminalUserProfile profile, Theme theme)
     {
         canvas.Box(area, theme.BorderStyle, "当前会话", theme.MutedStyle);
@@ -528,7 +614,7 @@ internal sealed class LoginController(
             $"UserId: {profile.UserId}   VIP: {(profile.VipType is "0" or "" ? "普通用户" : profile.VipType)}",
             theme.MutedStyle, textW);
         canvas.Text(textX, inner.Y + 2,
-            "共享桌面端 session.json · V 领取/升级今日 VIP · L 退出登录",
+            "独立会话 KgTestSession.json · V 领取/升级今日 VIP · L 退出登录",
             theme.FaintStyle, textW);
     }
 

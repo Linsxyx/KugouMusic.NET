@@ -13,6 +13,9 @@ internal sealed class TerminalRenderer : IDisposable
     private const uint EnableProcessedOutput = 0x0001;
     private const uint EnableVirtualTerminalProcessing = 0x0004;
     private const uint DisableNewlineAutoReturn = 0x0008;
+    private const uint EnableMouseInput = 0x0010;
+    private const uint EnableQuickEditMode = 0x0040;
+    private const uint EnableExtendedFlags = 0x0080;
     private const uint EnableVirtualTerminalInput = 0x0200;
     private const uint CpUtf8 = 65001;
 
@@ -52,8 +55,11 @@ internal sealed class TerminalRenderer : IDisposable
         {
         }
 
-        // 备用屏幕、隐藏光标、关闭自动换行（写最后一格时不会滚屏）。
-        WriteRaw("\u001b[?1049h\u001b[?25l\u001b[?7l\u001b[2J\u001b[H");
+        // 备用屏幕、隐藏光标、关闭自动换行；Unix 终端开启 SGR 1006 鼠标事件报告。
+        var enterSeq = OperatingSystem.IsWindows()
+            ? "\u001b[?1049h\u001b[?25l\u001b[?7l\u001b[2J\u001b[H"
+            : "\u001b[?1049h\u001b[?25l\u001b[?7l\u001b[?1000h\u001b[?1006h\u001b[2J\u001b[H";
+        WriteRaw(enterSeq);
     }
 
     public void Exit()
@@ -68,6 +74,11 @@ internal sealed class TerminalRenderer : IDisposable
         if (_kittyUsed)
         {
             ImageProtocolEncoder.AppendKittyDeleteAll(builder);
+        }
+
+        if (!OperatingSystem.IsWindows())
+        {
+            builder.Append("\u001b[?1006l\u001b[?1000l");
         }
 
         builder.Append("\u001b[0m\u001b[2J\u001b[?7h\u001b[?25h\u001b[?1049l");
@@ -398,7 +409,11 @@ internal sealed class TerminalRenderer : IDisposable
 
             if (inHandle != nint.Zero && GetConsoleMode(inHandle, out _savedInMode))
             {
-                SetConsoleMode(inHandle, _savedInMode | EnableVirtualTerminalInput);
+                // 注意：不能在输入句柄上开启 ENABLE_VIRTUAL_TERMINAL_INPUT（会把方向键拆成 ESC [ A 三次按键）；
+                // 开启 ENABLE_MOUSE_INPUT 支持鼠标点击/滚轮，关闭 ENABLE_QUICK_EDIT_MODE 避免点击控制台挂起进程。
+                var newInMode = (_savedInMode | EnableMouseInput | EnableExtendedFlags) &
+                                ~(EnableVirtualTerminalInput | EnableQuickEditMode);
+                SetConsoleMode(inHandle, newInMode);
             }
         }
         catch

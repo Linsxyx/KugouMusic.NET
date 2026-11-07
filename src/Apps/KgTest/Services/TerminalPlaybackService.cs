@@ -143,6 +143,30 @@ internal sealed class TerminalPlaybackService : IDisposable
         StatusMessage = "已停止";
     }
 
+    public void SeekToRatio(double ratio)
+    {
+        if (_player.IsStopped)
+        {
+            return;
+        }
+
+        var duration = _player.GetDuration();
+        if (duration <= TimeSpan.Zero && CurrentSong?.DurationSeconds > 0)
+        {
+            duration = TimeSpan.FromSeconds(CurrentSong.DurationSeconds);
+        }
+
+        if (duration <= TimeSpan.Zero)
+        {
+            return;
+        }
+
+        ResetTransitionPipeline(cancelPreparedTrack: true);
+        var target = TimeSpan.FromSeconds(duration.TotalSeconds * Math.Clamp(ratio, 0.0, 1.0));
+        _player.SetPosition(target);
+        StatusMessage = $"跳转到 {target:mm\\:ss}";
+    }
+
     public void SeekRelative(TimeSpan delta)
     {
         if (_player.IsStopped)

@@ -565,7 +565,7 @@ internal static class WorkspaceViews
         }
     }
 
-    private static int ComputeScrollStart(int selectedIndex, int total, int visible)
+    public static int ComputeScrollStart(int selectedIndex, int total, int visible)
     {
         if (total <= visible)
         {

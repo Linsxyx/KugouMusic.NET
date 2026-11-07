@@ -59,6 +59,7 @@ internal sealed class TerminalApp : IAsyncDisposable
     private readonly LoginController _login;
     private readonly TextField _searchInput = new("输入歌名、歌手或专辑关键词", 64);
     private readonly Dictionary<TerminalPage, int> _savedSelection = [];
+    private TerminalInput? _input;
 
     private TerminalPage _page = TerminalPage.Daily;
     private FocusZone _focus = FocusZone.Content;
@@ -106,6 +107,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         var previousContext = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(_dispatcher);
         _renderer.Enter();
+        _input = new TerminalInput(_dispatcher.Wake);
         try
         {
             _ = InitializeAsync();
@@ -113,9 +115,15 @@ internal sealed class TerminalApp : IAsyncDisposable
 
             while (!_exitRequested)
             {
-                while (TryReadKey(out var key))
+                while (_input.TryReadKey(out var key))
                 {
                     _ = HandleKeyAsync(key);
+                    _dirty = true;
+                }
+
+                while (_input.TryReadMouse(out var mouse))
+                {
+                    _ = HandleMouseAsync(mouse);
                     _dirty = true;
                 }
 
@@ -134,7 +142,7 @@ internal sealed class TerminalApp : IAsyncDisposable
                 }
 
                 var wait = (int)Math.Clamp(nextTick - Environment.TickCount64, 5, 45);
-                if (!IsKeyAvailable())
+                if (!_input.HasPending)
                 {
                     _dispatcher.Wait(wait);
                 }
@@ -142,6 +150,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         }
         finally
         {
+            _input.Dispose();
             _login.Dispose();
             _renderer.Exit();
             SynchronizationContext.SetSynchronizationContext(previousContext);
@@ -152,11 +161,6 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     private async Task InitializeAsync()
     {
-        if (string.IsNullOrEmpty(_clients.SessionManager.Session.Token))
-        {
-            _clients.Login.LogOutAsync();
-        }
-
         _profile = await _data.GetUserProfileAsync();
         if (_profile.IsLoggedIn)
         {
@@ -318,7 +322,7 @@ internal sealed class TerminalApp : IAsyncDisposable
                 }
                 else
                 {
-                    _focus = FocusZone.Navigation;
+                    await CyclePageAsync(-1);
                 }
 
                 break;
@@ -330,7 +334,7 @@ internal sealed class TerminalApp : IAsyncDisposable
                 }
                 else
                 {
-                    _focus = FocusZone.Content;
+                    await CyclePageAsync(1);
                 }
 
                 break;
@@ -588,6 +592,290 @@ internal sealed class TerminalApp : IAsyncDisposable
         }
 
         _searchInput.HandleKey(key);
+    }
+
+    private async Task HandleMouseAsync(MouseEvent mouse)
+    {
+        if (_helpModalOpen)
+        {
+            if (mouse.Kind is MouseKind.LeftDown or MouseKind.RightDown)
+            {
+                _helpModalOpen = false;
+                _renderer.Invalidate();
+            }
+
+            return;
+        }
+
+        if (_searchModalOpen)
+        {
+            var modal = _canvas.Bounds.Center(Math.Min(64, _canvas.Width - 6), 5);
+            if (!modal.Contains(mouse.X, mouse.Y))
+            {
+                if (mouse.Kind is MouseKind.LeftDown or MouseKind.RightDown)
+                {
+                    _searchModalOpen = false;
+                    _renderer.Invalidate();
+                }
+
+                return;
+            }
+
+            if (mouse.Kind == MouseKind.LeftDown && mouse.Y == modal.Y + 2)
+            {
+                _searchInput.SetCursorFromVisualColumn(mouse.X - (modal.X + 2), modal.W - 4);
+            }
+
+            return;
+        }
+
+        var bounds = _canvas.Bounds;
+        if (_isImmersive)
+        {
+            HandleImmersiveMouse(mouse, bounds);
+            return;
+        }
+
+        var barHeight = 4;
+        var main = bounds.SkipBottom(barHeight);
+        var bar = bounds.TakeBottom(barHeight);
+        var navWidth = bounds.W >= 88 ? 22 : 0;
+        var sideWidth = bounds.W >= 112 ? Math.Clamp(bounds.W * 28 / 100, 30, 42) : 0;
+        var navRect = navWidth > 0 ? main.TakeLeft(navWidth) : Rect.Empty;
+        var sideRect = sideWidth > 0 ? main.TakeRight(sideWidth) : Rect.Empty;
+        var contentRect = main.SkipLeft(navWidth).SkipRight(sideWidth);
+
+        // 滚轮
+        if (mouse.Kind is MouseKind.WheelUp or MouseKind.WheelDown)
+        {
+            var dir = mouse.Kind == MouseKind.WheelUp ? -1 : 1;
+            if (bar.Contains(mouse.X, mouse.Y) || sideRect.Contains(mouse.X, mouse.Y))
+            {
+                _playback.ChangeVolume(dir < 0 ? 0.05f : -0.05f);
+            }
+            else if (navRect.Contains(mouse.X, mouse.Y))
+            {
+                await CyclePageAsync(dir);
+            }
+            else
+            {
+                MoveSelection(dir * 3);
+            }
+
+            return;
+        }
+
+        if (mouse.Kind == MouseKind.RightDown)
+        {
+            ReturnFromPlaylist();
+            return;
+        }
+
+        // 底部播放控制栏点击（播放/暂停 & 进度条跳转）
+        if (bar.Contains(mouse.X, mouse.Y))
+        {
+            HandlePlaybackBarMouse(mouse, bar);
+            return;
+        }
+
+        // 右侧正在播放点击进入沉浸页
+        if (sideRect.Contains(mouse.X, mouse.Y))
+        {
+            if (mouse.Kind == MouseKind.LeftDoubleClick)
+            {
+                _isImmersive = true;
+                _renderer.Invalidate();
+            }
+
+            return;
+        }
+
+        // 左侧导航栏点击切页
+        if (navRect.Contains(mouse.X, mouse.Y))
+        {
+            _focus = FocusZone.Navigation;
+            var inner = navRect.Inset(1, 1);
+            var pageIndex = mouse.Y - (inner.Y + 3);
+            if (pageIndex >= 0 && pageIndex < Pages.Length)
+            {
+                _focus = FocusZone.Content;
+                await SetPageAsync(Pages[pageIndex]);
+            }
+
+            return;
+        }
+
+        // 中间内容区点击
+        if (contentRect.Contains(mouse.X, mouse.Y))
+        {
+            _focus = FocusZone.Content;
+            await HandleContentMouseAsync(mouse, contentRect);
+        }
+    }
+
+    private async Task HandleContentMouseAsync(MouseEvent mouse, Rect area)
+    {
+        if (_page == TerminalPage.Account)
+        {
+            await _login.HandleMouseAsync(mouse, area.Inset(2, 1));
+            return;
+        }
+
+        var inner = area.Inset(2, 1);
+        if (!inner.Contains(mouse.X, mouse.Y))
+        {
+            return;
+        }
+
+        if (_page == TerminalPage.Settings)
+        {
+            var relY = mouse.Y - inner.Y;
+            if (relY >= 0 && relY < SettingsHeaderItemCount)
+            {
+                var same = _settingsIndex == relY;
+                _settingsIndex = relY;
+                if (same || mouse.Kind == MouseKind.LeftDoubleClick || mouse.X >= inner.X + 20)
+                {
+                    AdjustSetting(1);
+                }
+            }
+            else if (relY >= SettingsHeaderItemCount + 2 && relY < SettingsHeaderItemCount + 12)
+            {
+                var band = relY - (SettingsHeaderItemCount + 2);
+                _settingsIndex = SettingsHeaderItemCount + band;
+                var sliderX = inner.X + 20;
+                var sliderW = Math.Clamp(inner.W - 32, 12, 28);
+                if (mouse.X >= sliderX && mouse.X < sliderX + sliderW)
+                {
+                    var ratio = (mouse.X - sliderX) / (double)Math.Max(1, sliderW - 1);
+                    var targetGain = (float)Math.Round(ratio * 24.0 - 12.0);
+                    var current = _playback.EqGains[band];
+                    _playback.SetEqBand(band, targetGain - current);
+                }
+            }
+
+            return;
+        }
+
+        if (_showingSongs)
+        {
+            var listArea = inner.SkipTop(2);
+            if (!listArea.Contains(mouse.X, mouse.Y) || _songs.Count == 0)
+            {
+                return;
+            }
+
+            var visible = Math.Max(1, listArea.H);
+            var start = WorkspaceViews.ComputeScrollStart(_selectedIndex, _songs.Count, visible);
+            var idx = start + (mouse.Y - listArea.Y);
+            if (idx >= 0 && idx < _songs.Count)
+            {
+                var wasSelected = _selectedIndex == idx;
+                _selectedIndex = idx;
+                if (mouse.Kind == MouseKind.LeftDoubleClick || wasSelected)
+                {
+                    await ActivateSelectionAsync();
+                }
+            }
+
+            return;
+        }
+
+        // 歌单列表
+        var playlistArea = inner;
+        if (_selectedIndex >= 0 && _selectedIndex < _playlists.Count && inner.H >= 14 &&
+            EffectiveImageMode() != TerminalImageMode.Off)
+        {
+            if (mouse.Y < inner.Y + 5)
+            {
+                await ActivateSelectionAsync();
+                return;
+            }
+
+            playlistArea = inner.SkipTop(6);
+        }
+
+        var rowsArea = playlistArea.SkipTop(2);
+        if (!rowsArea.Contains(mouse.X, mouse.Y) || _playlists.Count == 0)
+        {
+            return;
+        }
+
+        var visibleRows = Math.Max(1, rowsArea.H);
+        var rowStart = WorkspaceViews.ComputeScrollStart(_selectedIndex, _playlists.Count, visibleRows);
+        var playlistIdx = rowStart + (mouse.Y - rowsArea.Y);
+        if (playlistIdx >= 0 && playlistIdx < _playlists.Count)
+        {
+            var wasSelected = _selectedIndex == playlistIdx;
+            _selectedIndex = playlistIdx;
+            if (mouse.Kind == MouseKind.LeftDoubleClick || wasSelected)
+            {
+                await ActivateSelectionAsync();
+            }
+        }
+    }
+
+    private void HandlePlaybackBarMouse(MouseEvent mouse, Rect bar)
+    {
+        var inner = bar.Inset(2, 1);
+        if (mouse.Y != inner.Y)
+        {
+            return;
+        }
+
+        var leftW = Math.Clamp(inner.W / 4, 18, 36);
+        if (mouse.X < inner.X + 8)
+        {
+            _playback.TogglePlayPause();
+            return;
+        }
+
+        var progressX = inner.X + leftW + 2;
+        var progressW = Math.Max(12, inner.Right - progressX);
+        var snapshot = _playback.GetSnapshot();
+        var posLen = VisualizerView.FormatTime(snapshot.Position.TotalSeconds).Length;
+        var durLen = VisualizerView.FormatTime(snapshot.Duration.TotalSeconds).Length;
+        var barX = progressX + posLen + 2;
+        var barW = progressW - posLen - durLen - 4;
+        if (barW >= 6 && mouse.X >= barX && mouse.X <= barX + barW)
+        {
+            var ratio = (mouse.X - barX) / (double)Math.Max(1, barW);
+            _playback.SeekToRatio(ratio);
+        }
+    }
+
+    private void HandleImmersiveMouse(MouseEvent mouse, Rect bounds)
+    {
+        if (mouse.Kind == MouseKind.RightDown)
+        {
+            _isImmersive = false;
+            _renderer.Invalidate();
+            return;
+        }
+
+        if (mouse.Kind is MouseKind.WheelUp or MouseKind.WheelDown)
+        {
+            _playback.ChangeVolume(mouse.Kind == MouseKind.WheelUp ? 0.05f : -0.05f);
+            return;
+        }
+
+        var footer = bounds.TakeBottom(4).Inset(4, 0);
+        if (mouse.Y == footer.Y + 1)
+        {
+            var snapshot = _playback.GetSnapshot();
+            var posLen = VisualizerView.FormatTime(snapshot.Position.TotalSeconds).Length;
+            var durLen = VisualizerView.FormatTime(snapshot.Duration.TotalSeconds).Length;
+            var barX = footer.X + posLen + 2;
+            var barW = footer.W - posLen - durLen - 4;
+            if (barW >= 6 && mouse.X >= barX && mouse.X <= barX + barW)
+            {
+                _playback.SeekToRatio((mouse.X - barX) / (double)Math.Max(1, barW));
+            }
+        }
+        else if (mouse.Kind == MouseKind.LeftDoubleClick)
+        {
+            _playback.TogglePlayPause();
+        }
     }
 
     private async Task ExecuteSearchAsync(string keyword)
@@ -1162,32 +1450,9 @@ internal sealed class TerminalApp : IAsyncDisposable
         return (120, 34);
     }
 
-    private static bool IsKeyAvailable()
-    {
-        try
-        {
-            return !Console.IsInputRedirected && Console.KeyAvailable;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool TryReadKey(out ConsoleKeyInfo key)
-    {
-        if (IsKeyAvailable())
-        {
-            key = Console.ReadKey(true);
-            return true;
-        }
-
-        key = default;
-        return false;
-    }
-
     public async ValueTask DisposeAsync()
     {
+        _input?.Dispose();
         _login.Dispose();
         _images.Dispose();
         _playback.Dispose();

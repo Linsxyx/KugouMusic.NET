@@ -1,35 +1,52 @@
-using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using KuGou.Net.Protocol.Session;
 
 namespace KgTest.Services;
 
+// KgTest 独立的登录会话持久化（与 Avalonia 桌面端分开存储）：
+// 存储在 ApplicationData/kugou/KgTestSession.json，Windows 下直接调用 crypt32.dll DPAPI，避免跨平台打包时 ProtectedData NuGet 抛 PlatformNotSupportedException。
+
 internal sealed class TerminalSessionPersistence : ISessionPersistence
 {
     private const string ProtectedSessionPrefix = "KGSESSION:v1:";
+    private const uint CryptprotectUiForbidden = 0x1;
 
     private static readonly string SessionPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "kugou",
-        "session.json");
+        "KgTestSession.json");
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    private static readonly string LegacySessionPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "kugou",
+        "session.json");
 
     public KgSession? Load()
     {
-        if (!File.Exists(SessionPath))
+        var path = File.Exists(SessionPath)
+            ? SessionPath
+            : File.Exists(LegacySessionPath)
+                ? LegacySessionPath
+                : null;
+        if (path == null)
         {
             return null;
         }
 
         try
         {
-            var content = File.ReadAllText(SessionPath);
+            var content = File.ReadAllText(path);
             var json = UnprotectSessionJson(content);
-            return JsonSerializer.Deserialize<KgSession>(json, JsonOptions);
+            var session = JsonSerializer.Deserialize(json, TerminalSessionJsonContext.Default.KgSession);
+            if (session != null && path == LegacySessionPath)
+            {
+                Save(session);
+            }
+
+            return session;
         }
         catch
         {
@@ -49,7 +66,7 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
 
             RestrictDirectoryAccess(dir);
 
-            var json = JsonSerializer.Serialize(session, JsonOptions);
+            var json = JsonSerializer.Serialize(session, TerminalSessionJsonContext.Default.KgSession);
             var content = ProtectSessionJson(json);
             var tempPath = SessionPath + ".tmp";
             File.WriteAllText(tempPath, content);
@@ -85,9 +102,19 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
             return json;
         }
 
-        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        var protectedBytes = ProtectedData.Protect(bytes, null, DataProtectionScope.CurrentUser);
-        return ProtectedSessionPrefix + Convert.ToBase64String(protectedBytes);
+        try
+        {
+            var bytes = Encoding.UTF8.GetBytes(json);
+            if (TryDpapiTransform(bytes, protect: true, out var encrypted))
+            {
+                return ProtectedSessionPrefix + Convert.ToBase64String(encrypted);
+            }
+        }
+        catch
+        {
+        }
+
+        return json;
     }
 
     private static string UnprotectSessionJson(string content)
@@ -103,8 +130,47 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
         }
 
         var protectedBytes = Convert.FromBase64String(content[ProtectedSessionPrefix.Length..]);
-        var bytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
-        return System.Text.Encoding.UTF8.GetString(bytes);
+        if (!TryDpapiTransform(protectedBytes, protect: false, out var plainBytes))
+        {
+            throw new InvalidOperationException("Failed to unprotect session data.");
+        }
+
+        return Encoding.UTF8.GetString(plainBytes);
+    }
+
+    private static bool TryDpapiTransform(byte[] input, bool protect, out byte[] output)
+    {
+        output = [];
+        var inHandle = GCHandle.Alloc(input, GCHandleType.Pinned);
+        var outBlob = new DataBlob();
+        try
+        {
+            var inBlob = new DataBlob
+            {
+                cbData = input.Length,
+                pbData = inHandle.AddrOfPinnedObject()
+            };
+
+            var ok = protect
+                ? CryptProtectData(ref inBlob, null, nint.Zero, nint.Zero, nint.Zero, CryptprotectUiForbidden, out outBlob)
+                : CryptUnprotectData(ref inBlob, nint.Zero, nint.Zero, nint.Zero, nint.Zero, CryptprotectUiForbidden, out outBlob);
+            if (!ok || outBlob.pbData == nint.Zero)
+            {
+                return false;
+            }
+
+            output = new byte[outBlob.cbData];
+            Marshal.Copy(outBlob.pbData, output, 0, outBlob.cbData);
+            return true;
+        }
+        finally
+        {
+            inHandle.Free();
+            if (outBlob.pbData != nint.Zero)
+            {
+                LocalFree(outBlob.pbData);
+            }
+        }
     }
 
     private static void RestrictDirectoryAccess(string? directory)
@@ -120,7 +186,6 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
         }
         catch
         {
-            // Best effort for file systems that do not support Unix modes.
         }
     }
 
@@ -137,7 +202,41 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
         }
         catch
         {
-            // Best effort for file systems that do not support Unix modes.
         }
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DataBlob
+    {
+        public int cbData;
+        public nint pbData;
+    }
+
+    [DllImport("crypt32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CryptProtectData(
+        ref DataBlob pDataIn,
+        string? szDataDescr,
+        nint pOptionalEntropy,
+        nint pvReserved,
+        nint pPromptStruct,
+        uint dwFlags,
+        out DataBlob pDataOut);
+
+    [DllImport("crypt32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CryptUnprotectData(
+        ref DataBlob pDataIn,
+        nint ppszDataDescr,
+        nint pOptionalEntropy,
+        nint pvReserved,
+        nint pPromptStruct,
+        uint dwFlags,
+        out DataBlob pDataOut);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern nint LocalFree(nint hMem);
+}
+
+[JsonSerializable(typeof(KgSession))]
+internal partial class TerminalSessionJsonContext : JsonSerializerContext
+{
 }

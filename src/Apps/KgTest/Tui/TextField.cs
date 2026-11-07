@@ -119,6 +119,37 @@ internal sealed class TextField
     }
 
     /// <summary>
+    ///     根据点击在输入框内的列偏移移动光标。
+    /// </summary>
+    public void SetCursorFromVisualColumn(int columnOffset, int width)
+    {
+        var elements = Elements();
+        if (elements.Count == 0)
+        {
+            _cursor = 0;
+            return;
+        }
+
+        var before = string.Concat(elements.Take(_cursor));
+        var scroll = Math.Max(0, TextWidth.Of(before) - (width - 2));
+        var targetVisual = Math.Max(0, columnOffset + scroll);
+        var acc = 0;
+        for (var i = 0; i < elements.Count; i++)
+        {
+            var w = Math.Max(1, TextWidth.Of(elements[i]));
+            if (targetVisual < acc + w)
+            {
+                _cursor = i;
+                return;
+            }
+
+            acc += w;
+        }
+
+        _cursor = elements.Count;
+    }
+
+    /// <summary>
     ///     在给定位置绘制输入框；focused 时显示块状光标。
     /// </summary>
     public void Render(Canvas canvas, int x, int y, int width, bool focused, Theme theme)
