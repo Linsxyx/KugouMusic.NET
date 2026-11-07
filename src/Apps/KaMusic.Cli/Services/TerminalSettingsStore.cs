@@ -1,5 +1,6 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using KaMusic.Cli.Models;
 
 namespace KaMusic.Cli.Services;
@@ -11,12 +12,12 @@ internal sealed class TerminalSettingsStore
         "kugou",
         "KgTestTerminalSettings.json");
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly TerminalSettingsJsonContext JsonContext = new(new JsonSerializerOptions
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         PropertyNameCaseInsensitive = true
-    };
+    });
 
     public TerminalAppSettings Load()
     {
@@ -28,7 +29,7 @@ internal sealed class TerminalSettingsStore
             }
 
             var json = File.ReadAllText(SettingsPath);
-            var settings = JsonSerializer.Deserialize<TerminalAppSettings>(json, JsonOptions) ?? new TerminalAppSettings();
+            var settings = JsonSerializer.Deserialize(json, JsonContext.TerminalAppSettings) ?? new TerminalAppSettings();
             if (settings.CustomEqGains.Length != 10)
             {
                 settings.CustomEqGains = new float[10];
@@ -53,7 +54,7 @@ internal sealed class TerminalSettingsStore
                 Directory.CreateDirectory(dir);
             }
 
-            var json = JsonSerializer.Serialize(settings, JsonOptions);
+            var json = JsonSerializer.Serialize(settings, JsonContext.TerminalAppSettings);
             File.WriteAllText(SettingsPath, json);
         }
         catch
@@ -61,4 +62,9 @@ internal sealed class TerminalSettingsStore
             // Terminal settings are non-critical.
         }
     }
+}
+
+[JsonSerializable(typeof(TerminalAppSettings))]
+internal partial class TerminalSettingsJsonContext : JsonSerializerContext
+{
 }
