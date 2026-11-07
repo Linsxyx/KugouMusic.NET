@@ -10,6 +10,9 @@
 
   <ItemGroup>
     <Compile Include="../../Apps/KugouAvaloniaPlayer/Services/DesktopLyric/WaylandLyricProtocol.cs" Link="Lyrics/WaylandLyricProtocol.cs" />
+    <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/KgSession.cs" Link="Session/KgSession.cs" />
+    <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/SessionPersistence.cs" Link="Session/SessionPersistence.cs" />
+    <Compile Include="../../Apps/KgTest/Services/TerminalSessionPersistence.cs" Link="Session/TerminalSessionPersistence.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">

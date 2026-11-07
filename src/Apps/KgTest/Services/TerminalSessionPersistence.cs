@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -11,25 +12,54 @@ namespace KgTest.Services;
 
 internal sealed class TerminalSessionPersistence : ISessionPersistence
 {
-    private const string ProtectedSessionPrefix = "KGSESSION:v1:";
+    internal delegate bool DpapiTransformDelegate(byte[] input, bool protect, out byte[] output);
+
+    internal const string ProtectedSessionPrefix = "KGSESSION:v1:";
     private const uint CryptprotectUiForbidden = 0x1;
 
-    private static readonly string SessionPath = Path.Combine(
+    private static readonly string DefaultSessionPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "kugou",
         "KgTestSession.json");
 
-    private static readonly string LegacySessionPath = Path.Combine(
+    private static readonly string DefaultLegacySessionPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "kugou",
         "session.json");
 
+    private readonly string _sessionPath;
+    private readonly string _legacySessionPath;
+    private readonly Func<bool> _isWindows;
+    private readonly DpapiTransformDelegate _dpapiTransform;
+    private readonly Action<string> _warningLogger;
+
+    public TerminalSessionPersistence()
+        : this(DefaultSessionPath, DefaultLegacySessionPath, OperatingSystem.IsWindows, TryDpapiTransform, DefaultLogWarning)
+    {
+    }
+
+    internal TerminalSessionPersistence(
+        string sessionPath,
+        string? legacySessionPath = null,
+        Func<bool>? isWindows = null,
+        DpapiTransformDelegate? dpapiTransform = null,
+        Action<string>? warningLogger = null)
+    {
+        _sessionPath = sessionPath;
+        _legacySessionPath = legacySessionPath ?? DefaultLegacySessionPath;
+        _isWindows = isWindows ?? OperatingSystem.IsWindows;
+        _dpapiTransform = dpapiTransform ?? TryDpapiTransform;
+        _warningLogger = warningLogger ?? DefaultLogWarning;
+    }
+
+    internal string? LastWarning { get; private set; }
+
     public KgSession? Load()
     {
-        var path = File.Exists(SessionPath)
-            ? SessionPath
-            : File.Exists(LegacySessionPath)
-                ? LegacySessionPath
+        var path = File.Exists(_sessionPath)
+            ? _sessionPath
+            : File.Exists(_legacySessionPath)
+                ? _legacySessionPath
                 : null;
         if (path == null)
         {
@@ -41,7 +71,7 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
             var content = File.ReadAllText(path);
             var json = UnprotectSessionJson(content);
             var session = JsonSerializer.Deserialize(json, TerminalSessionJsonContext.Default.KgSession);
-            if (session != null && path == LegacySessionPath)
+            if (session != null && path == _legacySessionPath)
             {
                 Save(session);
             }
@@ -58,7 +88,13 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
     {
         try
         {
-            var dir = Path.GetDirectoryName(SessionPath);
+            var json = JsonSerializer.Serialize(session, TerminalSessionJsonContext.Default.KgSession);
+            if (!TryProtectSessionJson(json, out var content))
+            {
+                return;
+            }
+
+            var dir = Path.GetDirectoryName(_sessionPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
@@ -66,17 +102,16 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
 
             RestrictDirectoryAccess(dir);
 
-            var json = JsonSerializer.Serialize(session, TerminalSessionJsonContext.Default.KgSession);
-            var content = ProtectSessionJson(json);
-            var tempPath = SessionPath + ".tmp";
+            var tempPath = _sessionPath + ".tmp";
             File.WriteAllText(tempPath, content);
             RestrictFileAccess(tempPath);
-            File.Move(tempPath, SessionPath, true);
-            RestrictFileAccess(SessionPath);
+            File.Move(tempPath, _sessionPath, true);
+            RestrictFileAccess(_sessionPath);
         }
-        catch
+        catch (Exception ex)
         {
             // Keep playback usable even if session persistence fails.
+            ReportWarning($"[TerminalSessionPersistence] Failed to persist session file ({ex.GetType().Name}, HResult=0x{ex.HResult:X8}); keeping in-memory session.");
         }
     }
 
@@ -84,9 +119,9 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
     {
         try
         {
-            if (File.Exists(SessionPath))
+            if (File.Exists(_sessionPath))
             {
-                File.Delete(SessionPath);
+                File.Delete(_sessionPath);
             }
         }
         catch
@@ -95,47 +130,73 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
         }
     }
 
-    private static string ProtectSessionJson(string json)
+    // Windows 下加密会话 JSON；若 DPAPI 返回失败或抛异常则记录脱敏警告并中止落盘，防止明文 Token 写入磁盘。
+    private bool TryProtectSessionJson(string json, out string protectedContent)
     {
-        if (!OperatingSystem.IsWindows())
+        if (!_isWindows())
         {
-            return json;
+            protectedContent = json;
+            return true;
         }
 
         try
         {
             var bytes = Encoding.UTF8.GetBytes(json);
-            if (TryDpapiTransform(bytes, protect: true, out var encrypted))
+            if (_dpapiTransform(bytes, protect: true, out var encrypted) && encrypted is { Length: > 0 })
             {
-                return ProtectedSessionPrefix + Convert.ToBase64String(encrypted);
+                protectedContent = ProtectedSessionPrefix + Convert.ToBase64String(encrypted);
+                return true;
             }
+
+            var win32Error = Marshal.GetLastWin32Error();
+            ReportWarning($"[TerminalSessionPersistence] Windows DPAPI encryption failed (Win32Error={win32Error}); aborting session save to avoid plaintext token persistence.");
         }
-        catch
+        catch (Exception ex)
         {
+            ReportWarning($"[TerminalSessionPersistence] Windows DPAPI encryption threw {ex.GetType().Name} (HResult=0x{ex.HResult:X8}); aborting session save to avoid plaintext token persistence.");
         }
 
-        return json;
+        protectedContent = string.Empty;
+        return false;
     }
 
-    private static string UnprotectSessionJson(string content)
+    private string UnprotectSessionJson(string content)
     {
         if (!content.StartsWith(ProtectedSessionPrefix, StringComparison.Ordinal))
         {
             return content;
         }
 
-        if (!OperatingSystem.IsWindows())
+        if (!_isWindows())
         {
             throw new PlatformNotSupportedException("Protected session file is Windows-only.");
         }
 
         var protectedBytes = Convert.FromBase64String(content[ProtectedSessionPrefix.Length..]);
-        if (!TryDpapiTransform(protectedBytes, protect: false, out var plainBytes))
+        if (!_dpapiTransform(protectedBytes, protect: false, out var plainBytes))
         {
             throw new InvalidOperationException("Failed to unprotect session data.");
         }
 
         return Encoding.UTF8.GetString(plainBytes);
+    }
+
+    private void ReportWarning(string message)
+    {
+        LastWarning = message;
+        try
+        {
+            _warningLogger(message);
+        }
+        catch
+        {
+            // Never let warning logger throw into session flow.
+        }
+    }
+
+    private static void DefaultLogWarning(string message)
+    {
+        Trace.TraceWarning(message);
     }
 
     private static bool TryDpapiTransform(byte[] input, bool protect, out byte[] output)

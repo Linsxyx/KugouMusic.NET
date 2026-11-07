@@ -1,7 +1,11 @@
+using System.Net;
+using System.Security.Cryptography;
 using KgTest.Graphics;
 using KgTest.Models;
+using KgTest.Services;
 using KgTest.Tui;
 using KgTest.Views;
+using KuGou.Net.Protocol.Session;
 using SkiaSharp;
 
 namespace KgTest;
@@ -117,9 +121,152 @@ internal static class CliDiagnostics
 
         var visualizer = new VisualizerView();
         visualizer.RenderImmersive(tui, snapshot, cache, theme);
+
+        // 4. 验证 Windows DPAPI 返回失败或抛异常时的会话持久化安全行为。
+        if (!VerifySessionPersistenceSecurity())
+        {
+            return 1;
+        }
+
         Console.WriteLine(tui.Snapshot());
-        Console.WriteLine($"Self-test OK · Accent=#{coverImage.Accent.R:X2}{coverImage.Accent.G:X2}{coverImage.Accent.B:X2} · EncodedBytes={sb.Length}");
+        Console.WriteLine($"Self-test OK · Accent=#{coverImage.Accent.R:X2}{coverImage.Accent.G:X2}{coverImage.Accent.B:X2} · EncodedBytes={sb.Length} · SessionSecurity=Verified");
         return 0;
+    }
+
+    // 验证 Windows DPAPI 失败/异常时不会将明文 Token 落盘、保留已有文件与内存会话，且警告日志不含 Token。
+    private static bool VerifySessionPersistenceSecurity()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"kgtest-session-selftest-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            const string existingToken = "EXISTING_TOKEN_111111";
+            const string secretTokenFalse = "SECRET_TOKEN_DPAPI_FALSE_222222";
+            const string secretVipFalse = "SECRET_VIP_DPAPI_FALSE_333333";
+            const string secretT1False = "SECRET_T1_DPAPI_FALSE_444444";
+            const string secretTokenThrow = "SECRET_TOKEN_DPAPI_THROW_555555";
+            const string secretVipThrow = "SECRET_VIP_DPAPI_THROW_666666";
+            const string secretT1Throw = "SECRET_T1_DPAPI_THROW_777777";
+
+            var sessionPath = Path.Combine(tempDir, "KgTestSession.json");
+            var legacyPath = Path.Combine(tempDir, "session.json");
+            var warnings = new List<string>();
+
+            static bool XorTransform(byte[] input, bool protect, out byte[] output)
+            {
+                output = new byte[input.Length];
+                for (var i = 0; i < input.Length; i++)
+                {
+                    output[i] = (byte)(input[i] ^ 0x5A);
+                }
+
+                return true;
+            }
+
+            // (a) 先写入一份合法的加密会话文件，作为已有文件基线。
+            var okPersistence = new TerminalSessionPersistence(
+                sessionPath,
+                legacyPath,
+                isWindows: static () => true,
+                dpapiTransform: XorTransform,
+                warningLogger: warnings.Add);
+
+            var manager = new KgSessionManager(new CookieContainer(), okPersistence);
+            manager.UpdateAuth("10001", existingToken, "1", "EXISTING_VIP", "EXISTING_T1");
+
+            if (!File.Exists(sessionPath))
+            {
+                Console.Error.WriteLine("Session self-test failed: baseline encrypted session file was not created.");
+                return false;
+            }
+
+            var baselineEncryptedContent = File.ReadAllText(sessionPath);
+            if (!baselineEncryptedContent.StartsWith(TerminalSessionPersistence.ProtectedSessionPrefix, StringComparison.Ordinal) ||
+                baselineEncryptedContent.Contains(existingToken, StringComparison.Ordinal))
+            {
+                Console.Error.WriteLine("Session self-test failed: baseline session file is not encrypted.");
+                return false;
+            }
+
+            // (b) 测试 DPAPI 返回 false：中止保存、保留内存会话与磁盘已有文件、记录不含 Token 的警告。
+            warnings.Clear();
+            var failPersistence = new TerminalSessionPersistence(
+                sessionPath,
+                legacyPath,
+                isWindows: static () => true,
+                dpapiTransform: (byte[] _, bool _, out byte[] output) =>
+                {
+                    output = [];
+                    return false;
+                },
+                warningLogger: warnings.Add);
+
+            var failManager = new KgSessionManager(new CookieContainer(), failPersistence);
+            warnings.Clear();
+            failManager.UpdateAuth("10002", secretTokenFalse, "6", secretVipFalse, secretT1False);
+
+            var afterFalseDiskContent = File.ReadAllText(sessionPath);
+            if (afterFalseDiskContent != baselineEncryptedContent ||
+                File.Exists(sessionPath + ".tmp") ||
+                failManager.Session.Token != secretTokenFalse ||
+                warnings.Count == 0 ||
+                warnings.Any(w =>
+                    w.Contains(secretTokenFalse, StringComparison.Ordinal) ||
+                    w.Contains(secretVipFalse, StringComparison.Ordinal) ||
+                    w.Contains(secretT1False, StringComparison.Ordinal)))
+            {
+                Console.Error.WriteLine("Session self-test failed: DPAPI false branch did not preserve file/memory or leaked token.");
+                return false;
+            }
+
+            // (c) 测试 DPAPI 抛异常（即使异常消息本身带有 Token 也不得泄露到警告日志）：中止保存、保留内存会话与磁盘已有文件。
+            warnings.Clear();
+            var throwPersistence = new TerminalSessionPersistence(
+                sessionPath,
+                legacyPath,
+                isWindows: static () => true,
+                dpapiTransform: (byte[] _, bool _, out byte[] _) =>
+                    throw new CryptographicException($"Simulated DPAPI failure with {secretTokenThrow}"),
+                warningLogger: warnings.Add);
+
+            var throwManager = new KgSessionManager(new CookieContainer(), throwPersistence);
+            warnings.Clear();
+            throwManager.UpdateAuth("10003", secretTokenThrow, "6", secretVipThrow, secretT1Throw);
+
+            var afterThrowDiskContent = File.ReadAllText(sessionPath);
+            if (afterThrowDiskContent != baselineEncryptedContent ||
+                File.Exists(sessionPath + ".tmp") ||
+                throwManager.Session.Token != secretTokenThrow ||
+                warnings.Count == 0 ||
+                warnings.Any(w =>
+                    w.Contains(secretTokenThrow, StringComparison.Ordinal) ||
+                    w.Contains(secretVipThrow, StringComparison.Ordinal) ||
+                    w.Contains(secretT1Throw, StringComparison.Ordinal)))
+            {
+                Console.Error.WriteLine("Session self-test failed: DPAPI exception branch did not preserve file/memory or leaked token.");
+                return false;
+            }
+
+            // (d) 验证磁盘上的已有加密会话仍可正常解密读取。
+            var reloaded = okPersistence.Load();
+            if (reloaded == null || reloaded.Token != existingToken)
+            {
+                Console.Error.WriteLine("Session self-test failed: existing encrypted session could not be reloaded.");
+                return false;
+            }
+
+            return true;
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     private static async Task<int> PreviewImageAsync(string? source)
