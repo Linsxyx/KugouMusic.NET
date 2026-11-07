@@ -1,4 +1,5 @@
 using System.Text;
+using KgTest.Tui;
 using SimpleAudio;
 
 namespace KgTest;
@@ -7,6 +8,7 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        TerminalRenderer.EnableWindowsVirtualTerminalStatic();
         Console.OutputEncoding = Encoding.UTF8;
         Console.InputEncoding = Encoding.UTF8;
 

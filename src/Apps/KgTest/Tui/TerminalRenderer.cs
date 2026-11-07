@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text;
 using KgTest.Graphics;
 
@@ -7,6 +8,14 @@ namespace KgTest.Tui;
 
 internal sealed class TerminalRenderer : IDisposable
 {
+    private const int StdOutputHandle = -11;
+    private const int StdInputHandle = -10;
+    private const uint EnableProcessedOutput = 0x0001;
+    private const uint EnableVirtualTerminalProcessing = 0x0004;
+    private const uint DisableNewlineAutoReturn = 0x0008;
+    private const uint EnableVirtualTerminalInput = 0x0200;
+    private const uint CpUtf8 = 65001;
+
     private static readonly int[] CubeLevels = [0, 95, 135, 175, 215, 255];
 
     private readonly Stream _output = Console.OpenStandardOutput();
@@ -18,6 +27,9 @@ internal sealed class TerminalRenderer : IDisposable
     private bool _forceFull = true;
     private bool _kittyUsed;
     private bool _entered;
+    private uint _savedOutMode;
+    private uint _savedInMode;
+    private bool _hasSavedConsoleMode;
 
     public bool TrueColor { get; set; } = true;
 
@@ -31,6 +43,15 @@ internal sealed class TerminalRenderer : IDisposable
         }
 
         _entered = true;
+        EnableWindowsVirtualTerminal();
+        try
+        {
+            Console.CursorVisible = false;
+        }
+        catch
+        {
+        }
+
         // 备用屏幕、隐藏光标、关闭自动换行（写最后一格时不会滚屏）。
         WriteRaw("\u001b[?1049h\u001b[?25l\u001b[?7l\u001b[2J\u001b[H");
     }
@@ -51,6 +72,15 @@ internal sealed class TerminalRenderer : IDisposable
 
         builder.Append("\u001b[0m\u001b[2J\u001b[?7h\u001b[?25h\u001b[?1049l");
         WriteRaw(builder.ToString());
+        try
+        {
+            Console.CursorVisible = true;
+        }
+        catch
+        {
+        }
+
+        RestoreWindowsConsoleMode();
     }
 
     /// <summary>
@@ -319,6 +349,103 @@ internal sealed class TerminalRenderer : IDisposable
         _output.Write(bytes, 0, bytes.Length);
         _output.Flush();
     }
+
+    /// <summary>
+    ///     Windows 经典控制台主机（conhost.exe）默认关闭了 ENABLE_VIRTUAL_TERMINAL_PROCESSING，需显式开启，否则所有 \x1b[... 会直接打印成乱码。
+    /// </summary>
+    public static void EnableWindowsVirtualTerminalStatic()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        try
+        {
+            SetConsoleOutputCP(CpUtf8);
+            SetConsoleCP(CpUtf8);
+            var outHandle = GetStdHandle(StdOutputHandle);
+            if (outHandle != nint.Zero && GetConsoleMode(outHandle, out var outMode))
+            {
+                SetConsoleMode(outHandle,
+                    outMode | EnableProcessedOutput | EnableVirtualTerminalProcessing | DisableNewlineAutoReturn);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private void EnableWindowsVirtualTerminal()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        try
+        {
+            SetConsoleOutputCP(CpUtf8);
+            SetConsoleCP(CpUtf8);
+            var outHandle = GetStdHandle(StdOutputHandle);
+            var inHandle = GetStdHandle(StdInputHandle);
+            if (outHandle != nint.Zero && GetConsoleMode(outHandle, out _savedOutMode))
+            {
+                _hasSavedConsoleMode = true;
+                SetConsoleMode(outHandle,
+                    _savedOutMode | EnableProcessedOutput | EnableVirtualTerminalProcessing | DisableNewlineAutoReturn);
+            }
+
+            if (inHandle != nint.Zero && GetConsoleMode(inHandle, out _savedInMode))
+            {
+                SetConsoleMode(inHandle, _savedInMode | EnableVirtualTerminalInput);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private void RestoreWindowsConsoleMode()
+    {
+        if (!OperatingSystem.IsWindows() || !_hasSavedConsoleMode)
+        {
+            return;
+        }
+
+        try
+        {
+            var outHandle = GetStdHandle(StdOutputHandle);
+            var inHandle = GetStdHandle(StdInputHandle);
+            if (outHandle != nint.Zero)
+            {
+                SetConsoleMode(outHandle, _savedOutMode);
+            }
+
+            if (inHandle != nint.Zero && _savedInMode != 0)
+            {
+                SetConsoleMode(inHandle, _savedInMode);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern nint GetStdHandle(int nStdHandle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetConsoleMode(nint hConsoleHandle, out uint lpMode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetConsoleMode(nint hConsoleHandle, uint dwMode);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetConsoleOutputCP(uint wCodePageID);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetConsoleCP(uint wCodePageID);
 
     public void Dispose()
     {
