@@ -15,6 +15,7 @@ internal static class WorkspaceViews
         IReadOnlyList<TerminalPage> pages,
         TerminalPage currentPage,
         TerminalUserProfile profile,
+        TerminalUpdateService updater,
         bool focused,
         Theme theme)
     {
@@ -27,14 +28,24 @@ internal static class WorkspaceViews
         }
 
         var y = inner.Y;
-        canvas.Text(inner.X + 1, y++, "♪ Kugou TUI", theme.AccentBold, inner.W - 2);
+        canvas.Spans(inner.X + 1, y++, inner.W - 2,
+            ("♪ KA Music ", theme.AccentBold),
+            ($"v{updater.CurrentVersion}", theme.FaintStyle));
 
         var userIcon = profile.IsLoggedIn ? "● " : "○ ";
         var userColor = profile.IsLoggedIn ? theme.Playing : theme.Warning;
         canvas.Spans(inner.X + 1, y++, inner.W - 2,
             (userIcon, new CellStyle(userColor)),
             (profile.Name, theme.MutedStyle));
-        y++;
+        if (updater.HasUpdate && !string.IsNullOrEmpty(updater.LatestVersion))
+        {
+            canvas.Text(inner.X + 1, y++, $"↑ 新版 v{updater.LatestVersion} (按U)",
+                new CellStyle(theme.Warning, Attr: TextAttr.Bold), inner.W - 2);
+        }
+        else
+        {
+            y++;
+        }
 
         for (var i = 0; i < pages.Count && y < inner.Bottom; i++)
         {
@@ -277,6 +288,7 @@ internal static class WorkspaceViews
         TerminalAppSettings settings,
         TerminalImageMode effectiveImageMode,
         TerminalPlaybackService playback,
+        TerminalUpdateService updater,
         int selectedIndex,
         bool focused,
         Theme theme)
@@ -300,7 +312,8 @@ internal static class WorkspaceViews
                 settings.ImageMode == TerminalImageMode.Auto
                     ? $"自动（当前：{TerminalCapabilities.DisplayName(effectiveImageMode)}）"
                     : TerminalCapabilities.DisplayName(settings.ImageMode),
-                "Auto / Kitty / iTerm2 / Sixel / 半块字符 / 关闭（快捷键 p）")
+                "Auto / Kitty / iTerm2 / Sixel / 半块字符 / 关闭（快捷键 p）"),
+            ("版本与更新", updater.DisplayValue, updater.HintText)
         };
 
         var y = inner.Y;
@@ -516,6 +529,7 @@ internal static class WorkspaceViews
             ("p", "循环切换终端图片协议（Kitty / iTerm2 / Sixel / 半块 / 关）"),
             ("s / t / l", "随机播放 / 智能过渡 / 歌词模式切换"),
             ("F5 / F6 / L", "扫码登录 / 短信登录 / 退出登录"),
+            ("u / U", "检查 npm 更新 / 发现新版本时一键更新重启"),
             ("/   r   q", "搜索 / 刷新当前页 / 退出程序")
         ];
 

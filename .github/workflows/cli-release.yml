@@ -1,13 +1,19 @@
-name: Build CLI (NativeAOT)
+name: Build and Publish CLI (NativeAOT + npm)
 
 on:
   push:
     tags:
       - 'cli-v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'npm package version when triggered manually (e.g. 0.1.1)'
+        required: false
+        default: '0.1.1'
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   DOTNET_NOLOGO: '1'
@@ -61,7 +67,7 @@ jobs:
           CLEAN_VERSION="${GITHUB_REF_NAME#cli-v}"
           CLEAN_VERSION="${CLEAN_VERSION#v}"
           if [[ -z "$CLEAN_VERSION" || "$CLEAN_VERSION" == "$GITHUB_REF_NAME" ]]; then
-            CLEAN_VERSION="0.1.0"
+            CLEAN_VERSION="${{ inputs.version || '0.1.1' }}"
           fi
 
           dotnet publish ./src/Apps/KaMusic.Cli/KaMusic.Cli.csproj \
@@ -113,3 +119,40 @@ jobs:
         with:
           name: cli-releases-${{ matrix.name }}
           path: ./dist/*
+
+  publish-npm:
+    needs:
+      - build-cli
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download All CLI Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./all_cli_artifacts
+
+      - name: Assemble and Publish npm Packages
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "::warning::未配置 secrets.NPM_TOKEN，跳过自动发布到 npm（请在仓库 Settings -> Secrets and variables -> Actions 中添加 NPM_TOKEN）。"
+            exit 0
+          fi
+
+          CLEAN_VERSION="${GITHUB_REF_NAME#cli-v}"
+          CLEAN_VERSION="${CLEAN_VERSION#v}"
+          if [[ -z "$CLEAN_VERSION" || "$CLEAN_VERSION" == "$GITHUB_REF_NAME" ]]; then
+            CLEAN_VERSION="${{ inputs.version || '0.1.1' }}"
+          fi
+
+          node ./.github/scripts/publish-cli-npm.mjs ./all_cli_artifacts "$CLEAN_VERSION"

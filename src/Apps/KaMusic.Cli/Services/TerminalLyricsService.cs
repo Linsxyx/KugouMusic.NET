@@ -131,13 +131,13 @@ internal sealed class TerminalLyricsService(LyricClient lyricClient)
             return [];
         }
 
-        var elapsed = currentMs - line.StartTime;
+        // KrcParser 输出的 KrcWord.StartTime 已是绝对毫秒时间（行起始 + 字偏移），直接与播放位置比较。
         var words = new List<(string Text, float Progress)>(line.Words.Count);
         foreach (var word in line.Words)
         {
             var progress = word.Duration <= 0
-                ? elapsed >= word.StartTime ? 1f : 0f
-                : (float)Math.Clamp((elapsed - word.StartTime) / word.Duration, 0.0, 1.0);
+                ? currentMs >= word.StartTime ? 1f : 0f
+                : (float)Math.Clamp((currentMs - word.StartTime) / word.Duration, 0.0, 1.0);
             words.Add((word.Text, progress));
         }
 

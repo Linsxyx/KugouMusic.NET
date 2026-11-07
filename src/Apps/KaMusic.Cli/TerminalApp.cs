@@ -16,7 +16,7 @@ internal enum FocusZone
 
 internal sealed class TerminalApp : IAsyncDisposable
 {
-    private const int SettingsHeaderItemCount = 6;
+    private const int SettingsHeaderItemCount = 7;
     private const int SeekStepSeconds = 10;
     private static int SettingsItemCount => SettingsHeaderItemCount + 10;
 
@@ -57,6 +57,7 @@ internal sealed class TerminalApp : IAsyncDisposable
     private readonly Theme _theme = new();
     private readonly VisualizerView _visualizer = new();
     private readonly LoginController _login;
+    private readonly TerminalUpdateService _updater = new();
     private readonly TextField _searchInput = new("输入歌名、歌手或专辑关键词", 64);
     private readonly Dictionary<TerminalPage, int> _savedSelection = [];
     private TerminalInput? _input;
@@ -84,6 +85,8 @@ internal sealed class TerminalApp : IAsyncDisposable
     private bool _isImmersive;
     private bool _exitRequested;
     private bool _dirty = true;
+
+    public bool UpdateRequested { get; private set; }
 
     public TerminalApp()
     {
@@ -163,6 +166,7 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     private async Task InitializeAsync()
     {
+        _ = CheckUpdateInBackgroundAsync(silentWhenLatest: true);
         _profile = await _data.GetUserProfileAsync();
         if (_profile.IsLoggedIn)
         {
@@ -170,6 +174,46 @@ internal sealed class TerminalApp : IAsyncDisposable
         }
 
         await LoadPageAsync(_page);
+    }
+
+    private async Task CheckUpdateInBackgroundAsync(bool silentWhenLatest)
+    {
+        try
+        {
+            if (!silentWhenLatest)
+            {
+                _status = "正在检查 npm (@linsxyx/kamusic) 最新版本...";
+                RequestRender();
+            }
+
+            var (hasUpdate, message) = await _updater.CheckForUpdateAsync();
+            if (hasUpdate || !silentWhenLatest)
+            {
+                _status = message;
+            }
+
+            RequestRender();
+        }
+        catch (Exception ex)
+        {
+            if (!silentWhenLatest)
+            {
+                _status = $"检查更新失败：{ex.Message}";
+                RequestRender();
+            }
+        }
+    }
+
+    private void TriggerCheckOrApplyUpdate()
+    {
+        if (_updater.HasUpdate)
+        {
+            UpdateRequested = true;
+            _exitRequested = true;
+            return;
+        }
+
+        _ = CheckUpdateInBackgroundAsync(silentWhenLatest: false);
     }
 
     private async Task OnLoginCompletedAsync(string nickname)
@@ -509,6 +553,9 @@ internal sealed class TerminalApp : IAsyncDisposable
                 break;
             case ConsoleKey.R:
                 await LoadPageAsync(_page, force: true);
+                break;
+            case ConsoleKey.U:
+                TriggerCheckOrApplyUpdate();
                 break;
             case ConsoleKey.Escape:
                 if (!ReturnFromPlaylist())
@@ -1298,6 +1345,9 @@ internal sealed class TerminalApp : IAsyncDisposable
             case 5:
                 CycleImageMode(direction);
                 break;
+            case 6:
+                TriggerCheckOrApplyUpdate();
+                break;
             default:
                 _playback.SetEqBand(_settingsIndex - SettingsHeaderItemCount, direction);
                 break;
@@ -1401,6 +1451,7 @@ internal sealed class TerminalApp : IAsyncDisposable
                 Pages,
                 _page,
                 _profile,
+                _updater,
                 _focus == FocusZone.Navigation,
                 _theme);
         }
@@ -1440,6 +1491,7 @@ internal sealed class TerminalApp : IAsyncDisposable
                     _settings,
                     EffectiveImageMode(),
                     _playback,
+                    _updater,
                     _settingsIndex,
                     focused,
                     _theme);
