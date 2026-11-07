@@ -279,8 +279,14 @@ internal sealed class TerminalInput : IDisposable
 
     public void Dispose()
     {
-        _cts.Cancel();
-        _cts.Dispose();
+        try
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+        }
+        catch
+        {
+        }
     }
 
     [StructLayout(LayoutKind.Explicit)]

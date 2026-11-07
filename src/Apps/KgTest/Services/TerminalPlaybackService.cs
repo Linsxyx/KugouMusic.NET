@@ -55,9 +55,19 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     public async Task PlayAsync(TerminalSongItem song, IReadOnlyList<TerminalSongItem>? context = null)
     {
+        if (Volatile.Read(ref _disposeState) != 0)
+        {
+            return;
+        }
+
         await _playLock.WaitAsync();
         try
         {
+            if (Volatile.Read(ref _disposeState) != 0)
+            {
+                return;
+            }
+
             if (context is { Count: > 0 })
             {
                 _queue = context.Select(CloneSong).ToList();
@@ -83,10 +93,15 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     public async Task PlayNextAsync()
     {
+        if (Volatile.Read(ref _disposeState) != 0)
+        {
+            return;
+        }
+
         await _playLock.WaitAsync();
         try
         {
-            if (_queue.Count == 0)
+            if (Volatile.Read(ref _disposeState) != 0 || _queue.Count == 0)
             {
                 return;
             }
@@ -102,10 +117,15 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     public async Task PlayPreviousAsync()
     {
+        if (Volatile.Read(ref _disposeState) != 0)
+        {
+            return;
+        }
+
         await _playLock.WaitAsync();
         try
         {
-            if (_queue.Count == 0)
+            if (Volatile.Read(ref _disposeState) != 0 || _queue.Count == 0)
             {
                 return;
             }
@@ -379,7 +399,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        if (requestVersion != _playVersion || !_player.Load(url))
+        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(url))
         {
             StatusMessage = $"音频加载失败：{song.Name}";
             return;
@@ -730,9 +750,9 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
+        Interlocked.Increment(ref _playVersion);
         _player.PlaybackEnded -= HandlePlaybackEnded;
         CancelTransitionWork();
         _player.Dispose();
-        _playLock.Dispose();
     }
 }

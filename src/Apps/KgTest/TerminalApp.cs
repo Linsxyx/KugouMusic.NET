@@ -79,6 +79,8 @@ internal sealed class TerminalApp : IAsyncDisposable
     private bool _searchShowsPlaylists;
     private bool _searchModalOpen;
     private bool _helpModalOpen;
+    private bool _exitConfirmOpen;
+    private bool _exitConfirmSelected = true;
     private bool _isImmersive;
     private bool _exitRequested;
     private bool _dirty = true;
@@ -215,9 +217,16 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     private async Task HandleKeyAsync(ConsoleKeyInfo key)
     {
+        if (_exitConfirmOpen)
+        {
+            HandleExitConfirmKey(key);
+            return;
+        }
+
         if (_helpModalOpen)
         {
             _helpModalOpen = false;
+            _renderer.Invalidate();
             return;
         }
 
@@ -511,7 +520,8 @@ internal sealed class TerminalApp : IAsyncDisposable
             case ConsoleKey.Q:
                 if (!ReturnFromPlaylist())
                 {
-                    _exitRequested = true;
+                    _exitConfirmOpen = true;
+                    _exitConfirmSelected = true;
                 }
 
                 break;
@@ -594,8 +604,85 @@ internal sealed class TerminalApp : IAsyncDisposable
         _searchInput.HandleKey(key);
     }
 
+    private void HandleExitConfirmKey(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
+        {
+            case ConsoleKey.Q:
+            case ConsoleKey.Y:
+                _exitRequested = true;
+                break;
+            case ConsoleKey.Enter:
+            case ConsoleKey.Spacebar:
+                if (_exitConfirmSelected)
+                {
+                    _exitRequested = true;
+                }
+                else
+                {
+                    _exitConfirmOpen = false;
+                    _renderer.Invalidate();
+                }
+
+                break;
+            case ConsoleKey.Escape:
+            case ConsoleKey.N:
+            case ConsoleKey.Backspace:
+                _exitConfirmOpen = false;
+                _renderer.Invalidate();
+                break;
+            case ConsoleKey.LeftArrow:
+            case ConsoleKey.RightArrow:
+            case ConsoleKey.Tab:
+            case ConsoleKey.H:
+            case ConsoleKey.L:
+                _exitConfirmSelected = !_exitConfirmSelected;
+                break;
+        }
+    }
+
     private async Task HandleMouseAsync(MouseEvent mouse)
     {
+        if (_exitConfirmOpen)
+        {
+            if (mouse.Kind is not (MouseKind.LeftDown or MouseKind.LeftDoubleClick or MouseKind.RightDown))
+            {
+                return;
+            }
+
+            if (mouse.Kind == MouseKind.RightDown)
+            {
+                _exitConfirmOpen = false;
+                _renderer.Invalidate();
+                return;
+            }
+
+            var modal = _canvas.Bounds.Center(Math.Min(46, _canvas.Width - 6), 7);
+            if (!modal.Contains(mouse.X, mouse.Y))
+            {
+                _exitConfirmOpen = false;
+                _renderer.Invalidate();
+                return;
+            }
+
+            var btnY = modal.Y + 4;
+            var centerX = modal.X + modal.W / 2;
+            if (mouse.Y == btnY)
+            {
+                if (mouse.X >= centerX - 16 && mouse.X < centerX + 2)
+                {
+                    _exitRequested = true;
+                }
+                else if (mouse.X >= centerX + 4 && mouse.X < centerX + 18)
+                {
+                    _exitConfirmOpen = false;
+                    _renderer.Invalidate();
+                }
+            }
+
+            return;
+        }
+
         if (_helpModalOpen)
         {
             if (mouse.Kind is MouseKind.LeftDown or MouseKind.RightDown)
@@ -1285,6 +1372,11 @@ internal sealed class TerminalApp : IAsyncDisposable
         if (_helpModalOpen)
         {
             WorkspaceViews.RenderHelpModal(_canvas, _theme);
+        }
+
+        if (_exitConfirmOpen)
+        {
+            WorkspaceViews.RenderExitConfirmModal(_canvas, _exitConfirmSelected, _theme);
         }
 
         _renderer.Present(_canvas);

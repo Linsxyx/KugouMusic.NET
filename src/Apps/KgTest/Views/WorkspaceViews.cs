@@ -529,6 +529,35 @@ internal static class WorkspaceViews
         }
     }
 
+    public static void RenderExitConfirmModal(Canvas canvas, bool confirmSelected, Theme theme)
+    {
+        var modal = canvas.Bounds.Center(Math.Min(46, canvas.Width - 6), 7);
+        if (modal.IsEmpty)
+        {
+            return;
+        }
+
+        canvas.ClearImages(modal);
+        canvas.Fill(modal, new CellStyle(theme.Text, theme.PanelBg));
+        canvas.Box(modal, new CellStyle(theme.Warning, theme.PanelBg), "确认退出",
+            new CellStyle(theme.Warning, theme.PanelBg, TextAttr.Bold));
+
+        canvas.TextAligned(modal, modal.Y + 2, "确定要退出 Kugou TUI 播放器吗？",
+            new CellStyle(theme.Text, theme.PanelBg, TextAttr.Bold), 1);
+
+        var yesStyle = confirmSelected
+            ? new CellStyle(theme.Text, theme.SelectionBg, TextAttr.Bold)
+            : new CellStyle(theme.Muted, theme.InputBg);
+        var noStyle = !confirmSelected
+            ? new CellStyle(theme.Text, theme.SelectionBg, TextAttr.Bold)
+            : new CellStyle(theme.Muted, theme.InputBg);
+
+        var btnY = modal.Y + 4;
+        var centerX = modal.X + modal.W / 2;
+        canvas.Text(centerX - 16, btnY, "  确认退出 (q/Enter)  ", yesStyle, 22);
+        canvas.Text(centerX + 4, btnY, "  取消 (Esc)  ", noStyle, 14);
+    }
+
     public static string PageTitle(TerminalPage page) => page switch
     {
         TerminalPage.Daily => "每日推荐",
