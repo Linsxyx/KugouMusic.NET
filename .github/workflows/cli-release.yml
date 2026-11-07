@@ -1,4 +1,4 @@
-name: Build and Release CLI
+name: Build CLI (NativeAOT)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   DOTNET_NOLOGO: '1'
@@ -113,60 +113,3 @@ jobs:
         with:
           name: cli-releases-${{ matrix.name }}
           path: ./dist/*
-
-  release-cli:
-    needs:
-      - build-cli
-    if: startsWith(github.ref, 'refs/tags/cli-v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download All CLI Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./all_cli_artifacts
-
-      - name: Prepare Release Files
-        shell: bash
-        run: |
-          mkdir -p ./release_files
-          find ./all_cli_artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' \) -exec cp {} ./release_files/ \;
-          ls -lah ./release_files
-
-      - name: Generate Release Notes
-        shell: bash
-        run: |
-          cat > RELEASE_NOTES.md <<EOF
-          ## KaMusic.Cli (${GITHUB_REF_NAME}) — NativeAOT 终端播放器
-
-          ### 下载地址
-          - **Windows x64**: [KaMusic.Cli-win-x64.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-win-x64.zip)
-          - **Windows ARM64**: [KaMusic.Cli-win-arm64.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-win-arm64.zip)
-          - **Linux x64**: [KaMusic.Cli-linux-x64.tar.gz](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-linux-x64.tar.gz) · [zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-linux-x64.zip)
-          - **Linux ARM64**: [KaMusic.Cli-linux-arm64.tar.gz](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-linux-arm64.tar.gz) · [zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-linux-arm64.zip)
-          - **macOS Apple Silicon (ARM64)**: [KaMusic.Cli-osx-arm64.tar.gz](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-osx-arm64.tar.gz) · [zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-osx-arm64.zip)
-          - **macOS Intel (x64)**: [KaMusic.Cli-osx-x64.tar.gz](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-osx-x64.tar.gz) · [zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/KaMusic.Cli-osx-x64.zip)
-          EOF
-
-      - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "KaMusic.Cli ${{ github.ref_name }}"
-          draft: false
-          prerelease: false
-          preserve_order: true
-          files: |
-            ./release_files/KaMusic.Cli-win-x64.zip
-            ./release_files/KaMusic.Cli-win-arm64.zip
-            ./release_files/KaMusic.Cli-linux-x64.tar.gz
-            ./release_files/KaMusic.Cli-linux-x64.zip
-            ./release_files/KaMusic.Cli-linux-arm64.tar.gz
-            ./release_files/KaMusic.Cli-linux-arm64.zip
-            ./release_files/KaMusic.Cli-osx-arm64.tar.gz
-            ./release_files/KaMusic.Cli-osx-arm64.zip
-            ./release_files/KaMusic.Cli-osx-x64.tar.gz
-            ./release_files/KaMusic.Cli-osx-x64.zip
-          body_path: RELEASE_NOTES.md
-          token: ${{ secrets.GITHUB_TOKEN }}
