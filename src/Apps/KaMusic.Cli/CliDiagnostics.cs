@@ -297,13 +297,18 @@ internal static class CliDiagnostics
         using (var image = new TerminalImage("preview", bitmap.Copy(), crisp: false))
         {
             var mode = TerminalCapabilities.DetectImageMode();
-            var canvas = new Canvas { ImageMode = mode };
+            var cellPixelSize = TerminalCapabilities.GetCellPixelSize();
+            var canvas = new Canvas
+            {
+                ImageMode = mode,
+                CellAspect = cellPixelSize.Height / (double)cellPixelSize.Width
+            };
             canvas.Reset(80, 24);
             canvas.Image("preview", new Rect(2, 1, 44, 20), image);
             using var renderer = new TerminalRenderer
             {
                 TrueColor = TerminalCapabilities.DetectTrueColor(),
-                CellPixelSize = TerminalCapabilities.GetCellPixelSize()
+                CellPixelSize = cellPixelSize
             };
             renderer.Present(canvas);
             Console.WriteLine();

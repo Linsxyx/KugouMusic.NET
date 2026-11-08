@@ -31,9 +31,13 @@ dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj -- --preview-image 
 | `Auto` | 自动检测 | 根据 `TERM` / `TERM_PROGRAM` / `KITTY_WINDOW_ID` / `WEZTERM_EXECUTABLE` 自动选择 |
 | `Kitty` | Kitty、Ghostty、WezTerm | Kitty Graphics Protocol 高清位图 |
 | `ITerm` | iTerm2、WezTerm | OSC 1337 内联高清位图 |
-| `Sixel` | foot、mlterm、Windows Terminal 等 | Sixel 调色板位图（可用 `KGTEST_CELL_SIZE=10x20` 微调字符格像素尺寸） |
+| `Sixel` | foot、mlterm、Windows Terminal 等 | Sixel 调色板位图 |
 | `Blocks` | 任意支持 UTF-8 与 ANSI 颜色的终端 | `▀` 上下半块字符每格双像素采样；二维码则还原模块矩阵绘制，保证可扫码 |
 | `Off` | 纯文本模式 | 关闭所有图片渲染 |
+
+图片按终端字符格的真实像素比例缩放：Unix 终端通过 `ioctl(TIOCGWINSZ)` 读取窗口像素尺寸换算出字符格大小，
+Kitty / iTerm2 协议再按该比例生成位图，避免图片被横向或纵向拉伸；纯字符块模式同样按真实比例排版。
+Windows 终端无法探测时回退到常见的 1:2 字符格，可用 `KGTEST_CELL_SIZE=10x20` 手动指定。
 
 颜色深度默认自动检测 24-bit TrueColor，在 `Apple_Terminal` 等终端自动降级为 xterm-256 色（可用 `KGTEST_COLOR=truecolor|256` 强制指定）。
 

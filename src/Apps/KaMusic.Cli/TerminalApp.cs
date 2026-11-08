@@ -99,7 +99,9 @@ internal sealed class TerminalApp : IAsyncDisposable
         _images = new ImageCache(RequestRender);
         _login = new LoginController(_clients, _images, RequestRender, OnLoginCompletedAsync);
         _renderer.TrueColor = TerminalCapabilities.DetectTrueColor();
-        _renderer.CellPixelSize = TerminalCapabilities.GetCellPixelSize();
+        var cellPixelSize = TerminalCapabilities.GetCellPixelSize();
+        _renderer.CellPixelSize = cellPixelSize;
+        _canvas.CellAspect = cellPixelSize.Height / (double)cellPixelSize.Width;
         _dispatcher.UnhandledException += ex =>
         {
             _status = ex.Message;

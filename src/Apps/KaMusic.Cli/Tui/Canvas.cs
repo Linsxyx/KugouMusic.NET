@@ -212,9 +212,19 @@ internal sealed class Canvas
     }
 
     /// <summary>
-    ///     计算图片按比例放入区域后的字符格矩形（假设字符格高宽比约为 2:1）。
+    ///     字符格的高宽比（高 ÷ 宽）。默认 2 对应常见的 1:2 字符格，实际由渲染器按终端真实像素尺寸设置。
     /// </summary>
-    public static Rect FitImage(Rect area, double aspect)
+    public double CellAspect { get; set; } = 2.0;
+
+    /// <summary>
+    ///     计算图片按比例放入区域后的字符格矩形。
+    /// </summary>
+    public static Rect FitImage(Rect area, double aspect) => FitImage(area, aspect, 2.0);
+
+    /// <summary>
+    ///     计算图片按比例放入区域后的字符格矩形；cellAspect 为字符格高宽比，决定多少列对应一行。
+    /// </summary>
+    public static Rect FitImage(Rect area, double aspect, double cellAspect)
     {
         if (area.IsEmpty)
         {
@@ -222,12 +232,13 @@ internal sealed class Canvas
         }
 
         var safeAspect = aspect <= 0 ? 1 : aspect;
+        var ratio = cellAspect <= 0 ? 2.0 : cellAspect;
         var rows = area.H;
-        var cols = (int)Math.Round(rows * safeAspect * 2);
+        var cols = Math.Max(1, (int)Math.Round(rows * safeAspect * ratio));
         if (cols > area.W)
         {
             cols = area.W;
-            rows = Math.Max(1, (int)Math.Round(cols / (safeAspect * 2)));
+            rows = Math.Max(1, (int)Math.Round(cols / (safeAspect * ratio)));
         }
 
         return area.Center(cols, rows);
@@ -238,7 +249,7 @@ internal sealed class Canvas
     /// </summary>
     public Rect Image(string slot, Rect area, TerminalImage image)
     {
-        var target = FitImage(area, image.Width / (double)Math.Max(1, image.Height));
+        var target = FitImage(area, image.Width / (double)Math.Max(1, image.Height), CellAspect);
         if (target.IsEmpty)
         {
             return target;
@@ -271,7 +282,7 @@ internal sealed class Canvas
         var modules = image.GetQrModules();
         if (modules == null)
         {
-            var fallback = FitImage(area, image.Width / (double)Math.Max(1, image.Height));
+            var fallback = FitImage(area, image.Width / (double)Math.Max(1, image.Height), CellAspect);
             DrawHalfBlocks(fallback, image);
             return fallback;
         }

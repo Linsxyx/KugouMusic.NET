@@ -395,7 +395,7 @@ internal static class WorkspaceViews
             }
             else
             {
-                var frame = Canvas.FitImage(artBox, 1.0);
+                var frame = Canvas.FitImage(artBox, 1.0, canvas.CellAspect);
                 canvas.Box(frame, theme.FaintStyle);
                 canvas.TextAligned(frame, frame.Y + frame.H / 2, song == null ? "NO TRACK" : "LOADING",
                     theme.FaintStyle, 1);
