@@ -362,6 +362,127 @@ async function isAlreadyPublished(pkgName, version) {
   }
 }
 
+// 生成发布至 npm 的主包完整自述文档（包含安装指南、全平台架构表、终端图片与快捷键说明）。
+function buildMainReadme(pkgName) {
+  return `# ${pkgName} (KA Music CLI)
+
+[![npm version](https://img.shields.io/npm/v/${pkgName}.svg)](https://www.npmjs.com/package/${pkgName})
+[![GitHub](https://img.shields.io/badge/GitHub-KugouMusic.NET-blue.svg)](https://github.com/Linsxyx/KugouMusic.NET)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Linsxyx/KugouMusic.NET/blob/master/LICENSE)
+
+极速、轻量、高颜值的酷狗音乐概念版终端 TUI 播放器。基于 NativeAOT 原生编译分发，跨 Windows / macOS / Linux 全平台支持，**无需安装任何 .NET SDK 或运行库**。
+
+## 安装与启动
+
+### 全局安装（推荐）
+
+\`\`\`bash
+# 全局安装
+npm install -g ${pkgName}
+
+# 启动播放器
+kamusic
+
+# 检查并一键更新到最新版本
+kamusic update
+\`\`\`
+
+### 免安装直接运行
+
+\`\`\`bash
+npx ${pkgName}
+\`\`\`
+
+## 平台与架构支持
+
+本包通过 npm \`optionalDependencies\` 按系统与 CPU 架构自动下载对应的 NativeAOT 原生二进制包，开箱即用：
+
+| 平台 | 架构 | 子包名称 |
+| --- | --- | --- |
+| Windows | x64 | \`${pkgName}-win32-x64\` |
+| Windows | ARM64 | \`${pkgName}-win32-arm64\` |
+| Linux | x64 | \`${pkgName}-linux-x64\` |
+| Linux | ARM64 | \`${pkgName}-linux-arm64\` |
+| macOS | Apple Silicon (arm64) | \`${pkgName}-darwin-arm64\` |
+| macOS | Intel (x64) | \`${pkgName}-darwin-x64\` |
+
+> Linux 说明：音频输出依赖系统 ALSA/PulseAudio/PipeWire 库环境（如 \`libasound2\` 或 \`pulseaudio\`），大多数桌面发行版已默认预装。
+
+## 核心特性
+
+- **多协议终端高清图片渲染**：
+  - 自动检测终端能力，优先采用 **Kitty Graphics Protocol**、**iTerm2 (\`OSC 1337\`)** 或 **Sixel** 输出高清位图。
+  - 在普通终端自动降级为 UTF-8 半块字符（\`▀\`）双像素采样；登录二维码采用专用模块矩阵绘制，确保手机轻松扫码。
+  - 在终端内直接渲染**登录二维码、专辑封面、歌单封面与沉浸大图**，并自动提取主题强调色。
+- **全功能音频体验**：
+  - 支持每日推荐、私人 FM、发现歌单、排行榜、歌曲与歌单搜索、我的收藏歌单。
+  - **KRC 逐字高亮歌词**：支持平滑逐字推进动画。
+  - **沉浸式播放页（按 \`i\` 开启）**：大封面 + 逐字歌词 + 实时音频频谱可视化。
+  - **专业音效**：10 段均衡器（EQ 预设/自定义）与无缝音频智能过渡。
+- **键盘与鼠标双交互**：
+  - 支持完整的键盘快捷键操控（类 Vim 键位 \`j\`/\`k\`、翻页、快进快退）。
+  - 支持终端鼠标点击切换页面、双击播放歌曲、滚轮翻页等交互。
+- **安全与独立会话**：
+  - 与桌面客户端分离存储（\`ApplicationData/kugou/KgTestSession.json\`），互不干扰。
+  - Windows 系统下通过 DPAPI 加密保护登录凭据与 Token。
+
+## 页面导航
+
+| 按键 | 页面 | 说明 |
+| :---: | --- | --- |
+| \`1\` | 每日推荐 | 每日个性化推荐歌曲 |
+| \`2\` | 私人 FM | 私人电台流，支持标记不喜欢（\`d\`） |
+| \`3\` | 发现歌单 | 精选热门与主题歌单 |
+| \`4\` | 排行榜 | 官方各分类热门榜单 |
+| \`5\` | 搜索 | 歌曲与歌单搜索（同一页面按 \`v\` 切换结果类型） |
+| \`6\` | 我的歌单 | 登录账号下的收藏与自建歌单 |
+| \`7\` | 播放队列 | 查看当前待播歌曲列表（\`x\` 移除歌曲） |
+| \`8\` | 设置 | 音频输出、图片渲染协议、均衡器等选项 |
+| \`9\` | 账号与登录 | 支持扫码登录与手机短信验证码登录 |
+
+## 常用快捷键
+
+| 快捷键 | 功能 |
+| --- | --- |
+| \`Space\` | 播放 / 暂停 |
+| \`n\` / \`b\` | 下一首 / 上一首 |
+| \`[\` / \`]\` | 快退 / 快进 10 秒 |
+| \`+\` / \`-\` | 调节音量（设置页内微调参数或 EQ） |
+| \`i\` | 进入 / 退出沉浸式大封面歌词频谱页 |
+| \`s\` | 切换循环 / 随机播放模式 |
+| \`t\` | 开启 / 关闭音频智能无缝过渡 |
+| \`l\` | 切换歌词显示模式 |
+| \`p\` | 循环切换终端图片渲染协议（Kitty / ITerm / Sixel / Blocks / Off） |
+| \`a\` | 将选中歌曲加入“下一首播放” |
+| \`v\` | 在搜索页面切换“歌曲”与“歌单”结果 |
+| \`/\` | 唤出全局快速搜索弹窗 |
+| \`Tab\` / \`←\` / \`→\` | 在左侧导航栏与右侧内容区切换焦点 |
+| \`↑\` / \`↓\` 或 \`j\` / \`k\` | 列表上下移动选择 |
+| \`Enter\` | 播放选中歌曲 / 打开歌单 / 确认操作 |
+| \`Backspace\` / \`Esc\` | 从歌单详情返回 / 关闭弹窗 |
+| \`F5\` / \`F6\` | 扫码登录 / 手机验证码登录 |
+| \`r\` | 刷新当前页面数据 |
+| \`?\` | 打开快捷键帮助弹窗 |
+| \`q\` | 返回上一层或退出程序 |
+
+## 诊断命令
+
+\`\`\`bash
+# 二维码、图片协议与离屏 UI 自动检测
+kamusic --self-test
+
+# 在当前终端预览任意本地或网络图片
+kamusic --preview-image <path-or-url>
+\`\`\`
+
+## 相关链接
+
+- GitHub 源码仓库：[Linsxyx/KugouMusic.NET](https://github.com/Linsxyx/KugouMusic.NET)
+- 问题反馈与建议：[GitHub Issues](https://github.com/Linsxyx/KugouMusic.NET/issues)
+- 桌面客户端（Avalonia GUI）：[Releases 下载页面](https://github.com/Linsxyx/KugouMusic.NET/releases)
+`;
+}
+
 async function main() {
   const artifactsDir = path.resolve(process.argv[2] || "./all_cli_artifacts");
   const version = (process.argv[3] || "0.1.0").replace(/^cli-v/, "").replace(/^v/, "");
@@ -483,7 +604,7 @@ async function main() {
   fs.writeFileSync(path.join(mainDir, "package.json"), JSON.stringify(mainPkgJson, null, 2) + "\n");
   fs.writeFileSync(
     path.join(mainDir, "README.md"),
-    `# ${MAIN_PKG_NAME} (KA Music CLI)\n\n最好用、最轻量的酷狗音乐概念版终端 TUI 播放器（NativeAOT 原生编译，跨 Windows / macOS / Linux 全平台）。\n\n## 安装与启动\n\n\`\`\`bash\n# 全局安装\nnpm install -g ${MAIN_PKG_NAME}\n\n# 启动播放器\nkamusic\n\n# 检查并更新到最新版本\nkamusic update\n\`\`\`\n`
+    buildMainReadme(MAIN_PKG_NAME)
   );
 
   if (await isAlreadyPublished(MAIN_PKG_NAME, version)) {

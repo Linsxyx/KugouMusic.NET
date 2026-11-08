@@ -1,8 +1,31 @@
 # KaMusic.Cli 终端播放器
 
-`KaMusic.Cli` 是仓库内的终端 TUI 播放器，自带差量渲染器与多协议终端图片引擎，使用独立的 `ApplicationData/kugou/KgTestSession.json` 持久化登录态。
+`KaMusic.Cli` 是酷狗音乐概念版终端 TUI 播放器，自带差量渲染器与多协议终端图片引擎，支持沉浸式 KRC 逐字歌词、实时频谱可视化、智能无缝过渡与多账号登录。已发布至 npm（包名：`@linsxyx/kamusic`），全平台 NativeAOT 原生编译分发，无需预装 .NET 运行时。
 
-## 运行
+## 安装与运行
+
+### 方式一：通过 npm 安装（推荐，免 .NET 运行时）
+
+支持 Windows (`x64`/`arm64`)、Linux (`x64`/`arm64`) 与 macOS (`x64`/`arm64`)：
+
+```bash
+# 全局安装
+npm install -g @linsxyx/kamusic
+
+# 启动播放器
+kamusic
+
+# 检查并一键更新到最新版本
+kamusic update
+```
+
+或者无需安装直接运行：
+
+```bash
+npx @linsxyx/kamusic
+```
+
+### 方式二：源码编译运行（开发者，需 .NET 10 SDK）
 
 在仓库根目录执行：
 
@@ -10,15 +33,22 @@
 dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj
 ```
 
-可选诊断/预览命令：
+### 诊断与离屏预览命令
 
 ```bash
 # 运行二维码提取、图片协议编码与离屏 UI 自检
-dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj -- --self-test
+kamusic --self-test
+# 源码方式：dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj -- --self-test
 
 # 在当前终端直接预览本地或远程图片
-dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj -- --preview-image <path-or-url>
+kamusic --preview-image <path-or-url>
+# 源码方式：dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj -- --preview-image <path-or-url>
 ```
+
+## 系统依赖说明 (Linux)
+
+- **音频输出**：基于 BASS 音频库，Linux 环境需具备 ALSA / PulseAudio / PipeWire 库支持（大多数桌面发行版默认自带，若缺少可安装 `libasound2` 或 `pulseaudio`）。
+- **字体与编码**：建议终端使用支持 Unicode 符号的 Nerd Font 字体，并开启 UTF-8 编码。
 
 ## 终端图片显示
 
