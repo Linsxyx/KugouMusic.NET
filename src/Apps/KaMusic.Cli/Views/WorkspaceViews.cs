@@ -185,7 +185,8 @@ internal static class WorkspaceViews
         bool focused,
         bool isLoading,
         ImageCache images,
-        Theme theme)
+        Theme theme,
+        string? emptyMessage = null)
     {
         var border = focused ? new CellStyle(theme.Accent) : theme.BorderStyle;
         var header = string.IsNullOrWhiteSpace(subtitle) ? title : $"{title} · {subtitle}";
@@ -219,9 +220,10 @@ internal static class WorkspaceViews
             var infoW = Math.Max(0, preview.Right - infoX);
             canvas.Text(infoX, preview.Y + 1, current.Name, theme.Bold, infoW);
             canvas.Text(infoX, preview.Y + 2, current.Subtitle, theme.MutedStyle, infoW);
-            canvas.Text(infoX, preview.Y + 3,
-                current.Count > 0 ? $"共 {current.Count} 首 · 按 Enter 打开" : "按 Enter 打开歌单",
-                theme.AccentStyle, infoW);
+            var actionText = current.Kind == TerminalPlaylistKind.Local
+                ? $"共 {current.Count} 首 · Enter 打开 · o 导入音频 · c 新建歌单 · x 删除"
+                : current.Count > 0 ? $"共 {current.Count} 首 · 按 Enter 打开" : "按 Enter 打开歌单";
+            canvas.Text(infoX, preview.Y + 3, actionText, theme.AccentStyle, infoW);
             canvas.HLine(inner.X, preview.Bottom, inner.W, theme.FaintStyle);
             listArea = inner.SkipTop(6);
         }
@@ -251,7 +253,12 @@ internal static class WorkspaceViews
 
         if (playlists.Count == 0)
         {
-            canvas.TextAligned(rowsArea, rowsArea.Y + rowsArea.H / 2, "暂无歌单", theme.MutedStyle, 1);
+            canvas.TextAligned(
+                rowsArea,
+                rowsArea.Y + rowsArea.H / 2,
+                string.IsNullOrWhiteSpace(emptyMessage) ? "暂无歌单" : emptyMessage,
+                theme.MutedStyle,
+                1);
             return;
         }
 
@@ -498,9 +505,57 @@ internal static class WorkspaceViews
             new CellStyle(theme.Muted, theme.PanelBg), modal.W - 4);
     }
 
+    public static void RenderLocalInputModal(Canvas canvas, string title, string hint, TextField input, Theme theme)
+    {
+        var modal = canvas.Bounds.Center(Math.Min(70, canvas.Width - 6), 6);
+        if (modal.IsEmpty)
+        {
+            return;
+        }
+
+        canvas.ClearImages(modal);
+        canvas.Fill(modal, new CellStyle(theme.Text, theme.PanelBg));
+        canvas.Box(modal, new CellStyle(theme.Accent, theme.PanelBg), title,
+            new CellStyle(theme.Accent, theme.PanelBg, TextAttr.Bold));
+        input.Render(canvas, modal.X + 2, modal.Y + 2, modal.W - 4, true, theme);
+        canvas.Text(modal.X + 2, modal.Y + 4, hint,
+            new CellStyle(theme.Muted, theme.PanelBg), modal.W - 4);
+    }
+
+    public static void RenderLoginRequiredModal(Canvas canvas, string? songName, Theme theme)
+    {
+        var modal = canvas.Bounds.Center(Math.Min(58, canvas.Width - 6), 8);
+        if (modal.IsEmpty)
+        {
+            return;
+        }
+
+        canvas.ClearImages(modal);
+        canvas.Fill(modal, new CellStyle(theme.Text, theme.PanelBg));
+        canvas.Box(modal, new CellStyle(theme.Warning, theme.PanelBg), "请先登录",
+            new CellStyle(theme.Warning, theme.PanelBg, TextAttr.Bold));
+
+        var prompt = string.IsNullOrWhiteSpace(songName)
+            ? "需要登录酷狗账号后才能播放在线音乐"
+            : $"需要先登录账号才能播放《{songName}》";
+        canvas.TextAligned(modal, modal.Y + 2, prompt,
+            new CellStyle(theme.Text, theme.PanelBg, TextAttr.Bold), 1);
+        canvas.TextAligned(modal, modal.Y + 3, "（本地音乐页面中的本地音频文件无需登录即可直接播放）",
+            new CellStyle(theme.Muted, theme.PanelBg), 1);
+
+        var btnY = modal.Y + 5;
+        var centerX = modal.X + modal.W / 2;
+        canvas.Text(centerX - 24, btnY, " 扫码登录 (Enter/F5) ",
+            new CellStyle(theme.Text, theme.SelectionBg, TextAttr.Bold), 21);
+        canvas.Text(centerX - 1, btnY, " 短信登录 (F6) ",
+            new CellStyle(theme.Accent, theme.InputBg, TextAttr.Bold), 15);
+        canvas.Text(centerX + 16, btnY, " 取消 (Esc) ",
+            new CellStyle(theme.Muted, theme.InputBg), 12);
+    }
+
     public static void RenderHelpModal(Canvas canvas, Theme theme)
     {
-        var modal = canvas.Bounds.Center(Math.Min(72, canvas.Width - 4), Math.Min(22, canvas.Height - 2));
+        var modal = canvas.Bounds.Center(Math.Min(76, canvas.Width - 4), Math.Min(24, canvas.Height - 2));
         if (modal.IsEmpty)
         {
             return;
@@ -513,15 +568,16 @@ internal static class WorkspaceViews
 
         (string Key, string Desc)[] rows =
         [
-            ("↑ / ↓ 或 j / k", "在列表或导航栏中移动选择"),
+            ("↑ / ↓ / ← / → (h/j/k/l)", "列表上下选择；探索发现页中二维移动卡片焦点"),
+            ("[ / ] 与 , / .", "探索发现页切换子栏目 / 切换歌单分类标签；非探索页快退/快进"),
             ("PgUp / PgDn / Home / End", "翻页 / 跳到首尾"),
-            ("Tab / ← / →", "切换焦点区域（导航栏 ↔ 内容区）；在沉浸页中快退/快进"),
-            ("1 - 9", "直接切换到对应页面"),
-            ("Enter", "播放歌曲 / 打开歌单 / 触发按钮"),
-            ("Backspace / Esc", "从歌单详情返回上一层 / 关闭弹窗"),
+            ("Tab", "切换焦点区域（导航栏 ↔ 内容区）"),
+            ("1 - 9", "直接切换到对应页面（3 探索发现 / 4 本地音乐）"),
+            ("Enter", "播放歌曲 / 打开探索卡片或歌单 / 触发按钮"),
+            ("Backspace / Esc", "从歌单或卡片详情返回上一层 / 关闭弹窗"),
+            ("o / c / x（本地音乐页）", "导入本地文件夹或音频路径 / 新建本地歌单 / 删除歌单或曲目"),
             ("Space", "播放 / 暂停"),
             ("n / b", "下一首 / 上一首"),
-            ("[ / ]", "快退 / 快进 10 秒"),
             ("- / +", "调整音量（设置页中调整 EQ 增益）"),
             ("a / x", "将选中歌曲插入下一首 / 从播放队列移除"),
             ("v", "在搜索页切换“歌曲结果”与“歌单结果”"),
@@ -530,16 +586,16 @@ internal static class WorkspaceViews
             ("s / t / l", "随机播放 / 智能过渡 / 歌词模式切换"),
             ("F5 / F6 / L", "扫码登录 / 短信登录 / 退出登录"),
             ("u / U", "检查 npm 更新 / 发现新版本时一键更新重启"),
-            ("/   r   q", "搜索 / 刷新当前页 / 退出程序")
+            ("/   r   q", "搜索 / 刷新当前页（含本地导入目录） / 退出程序")
         ];
 
         var inner = modal.Inset(3, 2);
         for (var i = 0; i < rows.Length && i < inner.H; i++)
         {
             canvas.Text(inner.X, inner.Y + i, rows[i].Key,
-                new CellStyle(theme.Accent, theme.PanelBg, TextAttr.Bold), 24);
-            canvas.Text(inner.X + 25, inner.Y + i, rows[i].Desc,
-                new CellStyle(theme.Text, theme.PanelBg), inner.W - 25);
+                new CellStyle(theme.Accent, theme.PanelBg, TextAttr.Bold), 26);
+            canvas.Text(inner.X + 27, inner.Y + i, rows[i].Desc,
+                new CellStyle(theme.Text, theme.PanelBg), inner.W - 27);
         }
     }
 
@@ -576,8 +632,8 @@ internal static class WorkspaceViews
     {
         TerminalPage.Daily => "每日推荐",
         TerminalPage.PersonalFm => "私人 FM",
-        TerminalPage.Discover => "发现歌单",
-        TerminalPage.Ranks => "排行榜",
+        TerminalPage.Discover => "探索发现",
+        TerminalPage.LocalMusic => "本地音乐",
         TerminalPage.Search => "搜索",
         TerminalPage.MyPlaylists => "我的歌单",
         TerminalPage.Queue => "播放队列",

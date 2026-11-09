@@ -128,9 +128,134 @@ internal static class CliDiagnostics
             return 1;
         }
 
+        // 5. 验证探索发现卡片页渲染、二维卡片导航与本地音乐库 SQLite 导入逻辑。
+        if (!VerifyExploreAndLocalMusic(tui, cache, theme))
+        {
+            return 1;
+        }
+
         Console.WriteLine(tui.Snapshot());
-        Console.WriteLine($"Self-test OK · Accent=#{coverImage.Accent.R:X2}{coverImage.Accent.G:X2}{coverImage.Accent.B:X2} · EncodedBytes={sb.Length} · SessionSecurity=Verified");
+        Console.WriteLine($"Self-test OK · Accent=#{coverImage.Accent.R:X2}{coverImage.Accent.G:X2}{coverImage.Accent.B:X2} · EncodedBytes={sb.Length} · SessionSecurity=Verified · ExploreAndLocal=Verified");
         return 0;
+    }
+
+    // 验证探索发现卡片网格渲染、二维焦点移动、未登录在线鉴权判断与本地音乐库 SQLite 导入。
+    private static bool VerifyExploreAndLocalMusic(Canvas tui, ImageCache cache, Theme theme)
+    {
+        var exploreState = new ExploreViewState
+        {
+            TopCards =
+            [
+                new TerminalExploreCard
+                {
+                    Id = "topcard:1",
+                    Title = "私人专属好歌",
+                    Subtitle = "懂你的每日推荐",
+                    Badge = "个性推荐 · 20首",
+                    SectionTitle = "官方推荐卡",
+                    Kind = TerminalExploreCardKind.TopCard,
+                    PreviewLines = ["1. 晴天 - 周杰伦", "2. 泡沫 - G.E.M.邓紫棋"]
+                },
+                new TerminalExploreCard
+                {
+                    Id = "topcard:2",
+                    Title = "经典怀旧金曲",
+                    Subtitle = "跨越时光的旋律",
+                    Badge = "岁月留声 · 20首",
+                    SectionTitle = "官方推荐卡",
+                    Kind = TerminalExploreCardKind.TopCard,
+                    PreviewLines = ["1. 海阔天空 - Beyond", "2. 红日 - 李克勤"]
+                }
+            ],
+            FeaturedRankCards =
+            [
+                new TerminalExploreCard
+                {
+                    Id = "rank:8888",
+                    Title = "酷狗TOP500",
+                    Subtitle = "榜单精选",
+                    Badge = "每日更新",
+                    SectionTitle = "榜单精选",
+                    Kind = TerminalExploreCardKind.Rank,
+                    PreviewLines = ["1. 热门单曲 A", "2. 热门单曲 B", "3. 热门单曲 C"]
+                }
+            ]
+        };
+
+        tui.Reset(128, 36);
+        ExploreView.Render(tui, new Rect(0, 0, 100, 32), exploreState, focused: true, isLoading: false, cache, theme);
+        if (exploreState.CardHitBoxes.Count < 3 || exploreState.TabHitBoxes.Count < 4)
+        {
+            Console.Error.WriteLine("ExploreView self-test failed: expected card and tab hitboxes.");
+            return false;
+        }
+
+        var moved = ExploreView.MoveCardSelection(0, dx: 1, dy: 0, count: 3, columns: 2);
+        if (moved != 1)
+        {
+            Console.Error.WriteLine("ExploreView self-test failed: horizontal card movement mismatch.");
+            return false;
+        }
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"kamusic-local-selftest-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var dbPath = Path.Combine(tempRoot, "kugou-player.db");
+            var musicFolder = Path.Combine(tempRoot, "MyLocalTracks");
+            Directory.CreateDirectory(musicFolder);
+            var dummyWav = Path.Combine(musicFolder, "TestSong.wav");
+            var wavBytes = new byte[128];
+            "RIFF"u8.CopyTo(wavBytes.AsSpan(0));
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(4), 120);
+            "WAVEfmt "u8.CopyTo(wavBytes.AsSpan(8));
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(16), 16);
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(20), (short)1);
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(22), (short)1);
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(24), 44100);
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(28), 88200);
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(32), (short)2);
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(34), (short)16);
+            "data"u8.CopyTo(wavBytes.AsSpan(36));
+            BitConverter.TryWriteBytes(wavBytes.AsSpan(40), 84);
+            File.WriteAllBytes(dummyWav, wavBytes);
+
+            var localService = new TerminalLocalMusicService(dbPath);
+            var (importedPlaylist, count) = localService.ImportPathAsync(musicFolder).GetAwaiter().GetResult();
+            var tracks = localService.GetPlaylistTracksAsync(importedPlaylist.LocalPlaylistId).GetAwaiter().GetResult();
+            if (count != 1 || tracks.Count != 1 || !tracks[0].IsLocalFile || tracks[0].RequiresOnlineAuth)
+            {
+                Console.Error.WriteLine("LocalMusic self-test failed: imported folder track validation failed.");
+                return false;
+            }
+
+            var onlineSong = new TerminalSongItem { Name = "Online", Hash = "ABCD1234" };
+            if (!onlineSong.RequiresOnlineAuth || onlineSong.IsLocalFile)
+            {
+                Console.Error.WriteLine("LocalMusic self-test failed: online song auth requirement mismatch.");
+                return false;
+            }
+
+            var coverUri = TerminalLocalMusicService.BuildEmbeddedCoverSource(dummyWav);
+            if (!TerminalLocalMusicService.TryParseEmbeddedCoverSource(coverUri, out var parsedPath) ||
+                !string.Equals(Path.GetFullPath(dummyWav), parsedPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine("LocalMusic self-test failed: embedded cover URI round-trip mismatch.");
+                return false;
+            }
+
+            return true;
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     // 验证 Windows DPAPI 失败/异常时不会将明文 Token 落盘、保留已有文件与内存会话，且警告日志不含 Token。

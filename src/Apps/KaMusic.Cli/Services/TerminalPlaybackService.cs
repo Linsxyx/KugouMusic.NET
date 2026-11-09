@@ -16,6 +16,7 @@ internal sealed class TerminalPlaybackService : IDisposable
     private readonly TerminalSettingsStore _settingsStore;
     private readonly TerminalAppSettings _settings;
     private readonly TerminalVipEntitlementService? _vipEntitlement;
+    private readonly Func<bool> _isAuthenticated;
     private readonly DualTrackAudioPlayer _player = new();
     private readonly ITransitionAnalysisService _transitionAnalysisService = new ManagedBassTransitionAnalysisService();
     private readonly SemaphoreSlim _playLock = new(1, 1);
@@ -40,16 +41,20 @@ internal sealed class TerminalPlaybackService : IDisposable
         TerminalLyricsService lyricsService,
         TerminalSettingsStore settingsStore,
         TerminalAppSettings settings,
-        TerminalVipEntitlementService? vipEntitlement = null)
+        TerminalVipEntitlementService? vipEntitlement = null,
+        Func<bool>? isAuthenticated = null)
     {
         _songClient = songClient;
         _lyricsService = lyricsService;
         _settingsStore = settingsStore;
         _settings = settings;
         _vipEntitlement = vipEntitlement;
+        _isAuthenticated = isAuthenticated ?? (() => true);
         _player.PlaybackEnded += HandlePlaybackEnded;
         ApplySettings();
     }
+
+    public event Action<TerminalSongItem>? LoginRequired;
 
     public string StatusMessage { get; private set; } = "就绪";
 
@@ -57,6 +62,13 @@ internal sealed class TerminalPlaybackService : IDisposable
     {
         if (Volatile.Read(ref _disposeState) != 0)
         {
+            return;
+        }
+
+        if (song.RequiresOnlineAuth && !_isAuthenticated())
+        {
+            StatusMessage = $"请先登录：登录后才能播放在线音乐《{song.Name}》（按 F5 扫码登录 / F6 短信登录）";
+            LoginRequired?.Invoke(song);
             return;
         }
 
@@ -363,11 +375,19 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     public IReadOnlyList<TerminalSongItem> Queue => _queue;
 
+    // 根据歌曲来源（本地文件、远程流或在线酷狗曲目）校验登录状态并加载播放。
     private async Task PlayCurrentCoreAsync()
     {
         var song = CurrentSong;
         if (song == null)
         {
+            return;
+        }
+
+        if (song.RequiresOnlineAuth && !_isAuthenticated())
+        {
+            StatusMessage = $"请先登录：登录后才能播放在线音乐《{song.Name}》（按 F5 扫码登录 / F6 短信登录）";
+            LoginRequired?.Invoke(song);
             return;
         }
 
@@ -379,6 +399,39 @@ internal sealed class TerminalPlaybackService : IDisposable
         song.IsPlaying = true;
         var requestVersion = Interlocked.Increment(ref _playVersion);
         ResetTransitionPipeline(cancelPreparedTrack: true);
+
+        if (song.IsLocalFile && !string.IsNullOrWhiteSpace(song.LocalFilePath))
+        {
+            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(song.LocalFilePath))
+            {
+                StatusMessage = $"本地音频加载失败：{song.Name}";
+                return;
+            }
+
+            _activeSource = song.LocalFilePath;
+            ApplySettings();
+            _player.Play();
+            StatusMessage = $"播放中（本地）：{song.Name}";
+            _ = _lyricsService.LoadSongLyricsAsync(song);
+            return;
+        }
+
+        if (song.IsRemoteStream && !string.IsNullOrWhiteSpace(song.RemoteUrl))
+        {
+            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(song.RemoteUrl))
+            {
+                StatusMessage = $"远程音频加载失败：{song.Name}";
+                return;
+            }
+
+            _activeSource = song.RemoteUrl;
+            ApplySettings();
+            _player.Play();
+            StatusMessage = $"播放中：{song.Name}";
+            _ = _lyricsService.LoadSongLyricsAsync(song);
+            return;
+        }
+
         StatusMessage = $"正在获取播放地址：{song.Name}";
 
         var playData = await _songClient.GetPlayInfoAsync(song.Hash, _settings.MusicQuality);
@@ -409,7 +462,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         ApplySettings();
         _player.Play();
         StatusMessage = $"播放中：{song.Name}";
-        _ = _lyricsService.LoadOnlineLyricsAsync(song.Hash, song.Name);
+        _ = _lyricsService.LoadSongLyricsAsync(song);
     }
 
     private void UpdateTransitionPipeline(PlaybackStateSnapshot snapshot)
@@ -464,25 +517,45 @@ internal sealed class TerminalPlaybackService : IDisposable
         _isPreparingNextTrack = true;
         try
         {
-            var playData = await _songClient.GetPlayInfoAsync(nextSong.Hash, _settings.MusicQuality);
-            var url = playData?.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-            if (requestVersion != _playVersion || string.IsNullOrWhiteSpace(url))
+            string? source;
+            var isLocal = false;
+            if (nextSong.IsLocalFile && !string.IsNullOrWhiteSpace(nextSong.LocalFilePath))
+            {
+                source = nextSong.LocalFilePath;
+                isLocal = true;
+            }
+            else if (nextSong.IsRemoteStream && !string.IsNullOrWhiteSpace(nextSong.RemoteUrl))
+            {
+                source = nextSong.RemoteUrl;
+            }
+            else
+            {
+                if (nextSong.RequiresOnlineAuth && !_isAuthenticated())
+                {
+                    return;
+                }
+
+                var playData = await _songClient.GetPlayInfoAsync(nextSong.Hash, _settings.MusicQuality);
+                source = playData?.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            }
+
+            if (requestVersion != _playVersion || string.IsNullOrWhiteSpace(source))
             {
                 return;
             }
 
-            if (!_player.PrepareNext(url))
+            if (!_player.PrepareNext(source))
             {
                 return;
             }
 
             _preparedNextSong = nextSong;
-            _preparedNextSource = url;
+            _preparedNextSource = source;
             _preparedNextTrack = new PreparedTrack
             {
                 Id = BuildSongTransitionKey(nextSong),
-                Source = url,
-                IsLocal = false,
+                Source = source,
+                IsLocal = isLocal,
                 DurationSeconds = nextSong.DurationSeconds
             };
             StatusMessage = $"已预加载下一首：{nextSong.Name}";
@@ -526,7 +599,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             {
                 Id = BuildSongTransitionKey(currentSong),
                 Source = _activeSource,
-                IsLocal = false,
+                IsLocal = currentSong.IsLocalFile,
                 DurationSeconds = currentSong.DurationSeconds
             };
 
@@ -594,7 +667,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         if (CurrentSong != null)
         {
             CurrentSong.IsPlaying = true;
-            _ = _lyricsService.LoadOnlineLyricsAsync(CurrentSong.Hash, CurrentSong.Name);
+            _ = _lyricsService.LoadSongLyricsAsync(CurrentSong);
         }
 
         _autoTransitionStarted = true;
@@ -692,7 +765,7 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     private static string BuildSongTransitionKey(TerminalSongItem song)
     {
-        return $"remote:{song.Hash}:{song.DurationSeconds:0.###}";
+        return $"{song.PlaybackIdentity}:{song.DurationSeconds:0.###}";
     }
 
     private void ApplySettings()
@@ -722,8 +795,7 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     private static bool SameSong(TerminalSongItem a, TerminalSongItem b)
     {
-        return !string.IsNullOrWhiteSpace(a.Hash) &&
-               string.Equals(a.Hash, b.Hash, StringComparison.OrdinalIgnoreCase);
+        return a.IsSameTrack(b);
     }
 
     private static TerminalSongItem CloneSong(TerminalSongItem song)
@@ -732,6 +804,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         {
             Name = song.Name,
             Singer = song.Singer,
+            AlbumName = song.AlbumName,
             Hash = song.Hash,
             AlbumId = song.AlbumId,
             MixSongId = song.MixSongId,
@@ -739,7 +812,11 @@ internal sealed class TerminalPlaybackService : IDisposable
             Cover = song.Cover,
             DurationSeconds = song.DurationSeconds,
             Source = song.Source,
-            Privilege = song.Privilege
+            Privilege = song.Privilege,
+            LocalFilePath = song.LocalFilePath,
+            RemoteUrl = song.RemoteUrl,
+            LocalSourceType = song.LocalSourceType,
+            LocalTrackId = song.LocalTrackId
         };
     }
 

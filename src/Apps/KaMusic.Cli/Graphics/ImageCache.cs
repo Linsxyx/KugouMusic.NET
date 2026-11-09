@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using ATL;
+using KaMusic.Cli.Services;
 using SkiaSharp;
 
 namespace KaMusic.Cli.Graphics;
@@ -98,14 +100,31 @@ internal sealed class ImageCache : IDisposable
             value = "https:" + value;
         }
 
-        return value.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? value : null;
+        if (value.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
+            value.StartsWith(TerminalLocalMusicService.EmbeddedCoverScheme + "://", StringComparison.OrdinalIgnoreCase))
+        {
+            return value;
+        }
+
+        if (Uri.TryCreate(value, UriKind.Absolute, out var fileUri) && fileUri.IsFile)
+        {
+            return fileUri.LocalPath;
+        }
+
+        return File.Exists(value) ? Path.GetFullPath(value) : null;
     }
 
     private async Task LoadAsync(string url)
     {
         try
         {
-            var bytes = await _http.GetByteArrayAsync(url).ConfigureAwait(false);
+            var bytes = await LoadImageBytesAsync(url).ConfigureAwait(false);
+            if (bytes is null || bytes.Length == 0)
+            {
+                _failed.TryAdd(url, 0);
+                return;
+            }
+
             var bitmap = SKBitmap.Decode(bytes);
             if (bitmap == null)
             {
@@ -137,6 +156,30 @@ internal sealed class ImageCache : IDisposable
         {
             _loading.TryRemove(url, out _);
         }
+    }
+
+    private async Task<byte[]?> LoadImageBytesAsync(string url)
+    {
+        if (TerminalLocalMusicService.TryParseEmbeddedCoverSource(url, out var audioPath))
+        {
+            if (!File.Exists(audioPath))
+            {
+                return null;
+            }
+
+            var track = new Track(audioPath);
+            var picture =
+                track.EmbeddedPictures?.FirstOrDefault(x => x.PicType == PictureInfo.PIC_TYPE.Front && x.PictureData.Length > 0) ??
+                track.EmbeddedPictures?.FirstOrDefault(x => x.PictureData.Length > 0);
+            return picture?.PictureData;
+        }
+
+        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase) && File.Exists(url))
+        {
+            return await File.ReadAllBytesAsync(url).ConfigureAwait(false);
+        }
+
+        return await _http.GetByteArrayAsync(url).ConfigureAwait(false);
     }
 
     private void Store(string key, TerminalImage image)
