@@ -6,6 +6,13 @@ namespace KaMusic.Cli.Services;
 
 internal sealed class TerminalDataService(TerminalKugouClients clients, TerminalLocalMusicService? localMusic = null)
 {
+    private readonly HashSet<string> _likedHashes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, long> _likeHashToFileId = new(StringComparer.OrdinalIgnoreCase);
+    private string _likeListId = "2";
+    private string _likeListCreateId = "";
+    private bool _likeListLoaded;
+    private readonly SemaphoreSlim _likeLock = new(1, 1);
+
     private static readonly (int CardId, string Title, string Badge)[] TopCardDefinitions =
     [
         (1, "私人专属好歌", "个性推荐"),
@@ -17,6 +24,374 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
     ];
 
     public TerminalLocalMusicService LocalMusic { get; } = localMusic ?? new TerminalLocalMusicService();
+
+    // 检查指定 Hash 是否已在“我喜欢”歌单中。
+    public bool IsLiked(string? hash)
+    {
+        if (string.IsNullOrWhiteSpace(hash))
+            return false;
+        lock (_likedHashes)
+        {
+            return _likedHashes.Contains(hash.Trim());
+        }
+    }
+
+    // 异步加载用户的“我喜欢”歌单曲目，构建本地 Hash 与 FileId 映射表。
+    public async Task EnsureLikeListLoadedAsync(bool force = false)
+    {
+        if (!clients.User.IsLoggedIn())
+            return;
+
+        if (_likeListLoaded && !force)
+            return;
+
+        await _likeLock.WaitAsync();
+        try
+        {
+            if (_likeListLoaded && !force)
+                return;
+
+            var playlists = await clients.User.GetPlaylistsAsync(pageSize: 60);
+            if (playlists?.Playlists == null || playlists.Playlists.Count == 0)
+                return;
+
+            var likePlaylist = playlists.Playlists.FirstOrDefault(p => p.IsDefault == 2)
+                ?? playlists.Playlists.FirstOrDefault(p => p.IsDefault == 1)
+                ?? playlists.Playlists.FirstOrDefault(p => p.Name == "我喜欢")
+                ?? playlists.Playlists.FirstOrDefault();
+
+            if (likePlaylist == null)
+                return;
+
+            _likeListId = likePlaylist.ListId.ToString();
+            _likeListCreateId = likePlaylist.ListCreateId;
+
+            var songsResponse = await clients.Playlist.GetSongsAsync(_likeListCreateId, 1, 300);
+            if (songsResponse?.Songs != null)
+            {
+                lock (_likedHashes)
+                {
+                    _likedHashes.Clear();
+                    _likeHashToFileId.Clear();
+                    foreach (var s in songsResponse.Songs)
+                    {
+                        if (!string.IsNullOrWhiteSpace(s.Hash))
+                        {
+                            var h = s.Hash.Trim();
+                            _likedHashes.Add(h);
+                            if (s.FileId > 0)
+                            {
+                                _likeHashToFileId[h] = s.FileId;
+                            }
+                        }
+                    }
+                }
+            }
+
+            _likeListLoaded = true;
+        }
+        catch
+        {
+            // Ignore background like list loading error
+        }
+        finally
+        {
+            _likeLock.Release();
+        }
+    }
+
+    // 获取用户自建及默认在线歌单（用于添加到歌单弹窗）。
+    public async Task<IReadOnlyList<TerminalPlaylistItem>> GetUserCreatedPlaylistsAsync()
+    {
+        if (!clients.User.IsLoggedIn())
+            return [];
+
+        try
+        {
+            await EnsureLikeListLoadedAsync();
+            var response = await clients.User.GetPlaylistsAsync(pageSize: 100);
+            if (response?.Playlists == null)
+                return [];
+
+            return response.Playlists
+                .Where(p => !p.IsCollectedAlbum && p.Type == 0)
+                .OrderBy(p => p.IsDefault == 2 ? 0 : 1)
+                .Select(p => new TerminalPlaylistItem
+                {
+                    Id = p.ListCreateId,
+                    ListId = p.ListId.ToString(),
+                    Name = p.IsDefault == 2 ? "我喜欢" : p.Name,
+                    Subtitle = p.IsDefault switch
+                    {
+                        1 => "默认收藏",
+                        2 => "我喜欢",
+                        _ => $"{p.Count} 首歌曲"
+                    },
+                    Count = p.Count,
+                    Kind = TerminalPlaylistKind.Online
+                })
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    // 将单曲添加到指定的自建/在线歌单中，若目标为「我喜欢」则同步刷新红心收藏状态。
+    public async Task<(bool Success, string Message)> AddSongToPlaylistAsync(TerminalSongItem song, TerminalPlaylistItem playlist)
+    {
+        if (!clients.User.IsLoggedIn())
+        {
+            return (false, "请先登录酷狗账号（按 F5 扫码登录 / F6 短信登录）");
+        }
+
+        if (string.IsNullOrWhiteSpace(song.Hash))
+        {
+            return (false, "该歌曲没有在线音频标识，无法添加到歌单");
+        }
+
+        var normalizedHash = song.Hash.Trim();
+        var isLikePlaylist = playlist.ListId == _likeListId || playlist.Name == "我喜欢" || playlist.Subtitle == "我喜欢";
+
+        try
+        {
+            var mixSongId = string.IsNullOrWhiteSpace(song.MixSongId) ? "0" : song.MixSongId;
+            var addResp = await clients.Playlist.AddSongsAsync(playlist.ListId, [(song.Name, song.Hash, song.AlbumId ?? "", mixSongId)]);
+            if (addResp?.Status == 1)
+            {
+                if (isLikePlaylist)
+                {
+                    lock (_likedHashes)
+                    {
+                        _likedHashes.Add(normalizedHash);
+                    }
+                    song.IsFavorite = true;
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(2000);
+                            await EnsureLikeListLoadedAsync(force: true);
+                        }
+                        catch
+                        {
+                            // 忽略后台刷新异常
+                        }
+                    });
+                }
+
+                return (true, $"已将《{song.Name}》添加到歌单「{playlist.Name}」");
+            }
+
+            var errorText = addResp?.GetExtraString("error") ?? addResp?.GetExtraString("msg");
+            var errMsg = !string.IsNullOrWhiteSpace(errorText)
+                ? errorText
+                : (addResp?.ErrorCode > 0 ? $"添加到歌单失败 (错误码 {addResp.ErrorCode})" : "添加到歌单失败");
+            return (false, errMsg);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"添加到歌单失败：{ex.Message}");
+        }
+    }
+
+    public async Task<(bool Success, bool IsLiked, string Message)> ToggleFavoriteAsync(TerminalSongItem song)
+    {
+        if (!clients.User.IsLoggedIn())
+        {
+            return (false, false, "请先登录酷狗账号（按 F5 扫码登录 / F6 短信登录）");
+        }
+
+        if (string.IsNullOrWhiteSpace(song.Hash))
+        {
+            return (false, false, "该歌曲没有在线音频标识，无法添加到收藏");
+        }
+
+        var normalizedHash = song.Hash.Trim();
+        await EnsureLikeListLoadedAsync();
+
+        bool isCurrentlyLiked;
+        long fileId = 0;
+        lock (_likedHashes)
+        {
+            isCurrentlyLiked = _likedHashes.Contains(normalizedHash);
+            _likeHashToFileId.TryGetValue(normalizedHash, out fileId);
+        }
+
+        try
+        {
+            if (isCurrentlyLiked)
+            {
+                if (fileId > 0)
+                {
+                    var removeResp = await clients.Playlist.RemoveSongsAsync(_likeListId, [fileId]);
+                    if (removeResp?.Status == 1)
+                    {
+                        lock (_likedHashes)
+                        {
+                            _likedHashes.Remove(normalizedHash);
+                            _likeHashToFileId.Remove(normalizedHash);
+                        }
+                        song.IsFavorite = false;
+                        return (true, false, $"已从「我喜欢」移除：《{song.Name}》");
+                    }
+                }
+                else
+                {
+                    await EnsureLikeListLoadedAsync(force: true);
+                    lock (_likedHashes)
+                    {
+                        _likeHashToFileId.TryGetValue(normalizedHash, out fileId);
+                    }
+                    if (fileId > 0)
+                    {
+                        var removeResp = await clients.Playlist.RemoveSongsAsync(_likeListId, [fileId]);
+                        if (removeResp?.Status == 1)
+                        {
+                            lock (_likedHashes)
+                            {
+                                _likedHashes.Remove(normalizedHash);
+                                _likeHashToFileId.Remove(normalizedHash);
+                            }
+                            song.IsFavorite = false;
+                            return (true, false, $"已从「我喜欢」移除：《{song.Name}》");
+                        }
+                    }
+                }
+
+                return (false, true, "移除收藏失败，请稍后重试");
+            }
+            else
+            {
+                var mixSongId = string.IsNullOrWhiteSpace(song.MixSongId) ? "0" : song.MixSongId;
+                var addResp = await clients.Playlist.AddSongsAsync(_likeListId, [(song.Name, song.Hash, song.AlbumId ?? "", mixSongId)]);
+                if (addResp?.Status == 1)
+                {
+                    lock (_likedHashes)
+                    {
+                        _likedHashes.Add(normalizedHash);
+                    }
+                    song.IsFavorite = true;
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await Task.Delay(2000);
+                            await EnsureLikeListLoadedAsync(force: true);
+                        }
+                        catch
+                        {
+                            // Ignore refresh error
+                        }
+                    });
+                    return (true, true, $"已添加到「我喜欢」：《{song.Name}》");
+                }
+
+                return (false, false, "添加到收藏失败");
+            }
+        }
+        catch (Exception ex)
+        {
+            return (false, isCurrentlyLiked, $"收藏操作失败：{ex.Message}");
+        }
+    }
+
+    public async Task<TerminalSingerDetail?> GetSingerDetailAsync(long authorId, string? fallbackName = null)
+    {
+        if (authorId <= 0)
+            return null;
+
+        var name = fallbackName ?? "歌手";
+        string? avatar = null;
+        try
+        {
+            var detailResp = await clients.Artist.GetDetailAsync(authorId.ToString());
+            if (detailResp != null && !string.IsNullOrWhiteSpace(detailResp.Name))
+            {
+                name = detailResp.Name;
+                avatar = detailResp.Cover;
+            }
+        }
+        catch
+        {
+            // Ignore detail fetch error
+        }
+
+        return new TerminalSingerDetail
+        {
+            AuthorId = authorId,
+            Name = name,
+            Avatar = avatar
+        };
+    }
+
+    public async Task<IReadOnlyList<TerminalSongItem>> GetSingerSongsAsync(long authorId, string sort = "hot", int page = 1, int pageSize = 100)
+    {
+        if (authorId <= 0)
+            return [];
+
+        try
+        {
+            var resp = await clients.Artist.GetAudiosAsync(authorId.ToString(), page, pageSize, sort);
+            if (resp?.Songs == null)
+                return [];
+
+            return resp.Songs
+                .Where(s => !string.IsNullOrWhiteSpace(s.Hash))
+                .Select(MapSingerSong)
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    public async Task<IReadOnlyList<TerminalSingerAlbumItem>> GetSingerAlbumsAsync(long authorId, int page = 1, int pageSize = 50)
+    {
+        if (authorId <= 0)
+            return [];
+
+        try
+        {
+            var resp = await clients.Artist.GetAlbumsAsync(authorId.ToString(), page, pageSize, "new");
+            if (resp?.Albums == null)
+                return [];
+
+            return resp.Albums
+                .Where(a => a.AlbumId > 0 && !string.IsNullOrWhiteSpace(a.AlbumName))
+                .Select(a => new TerminalSingerAlbumItem
+                {
+                    AlbumId = a.AlbumId,
+                    Name = a.AlbumName,
+                    PublishDate = a.PublishDate,
+                    Cover = string.IsNullOrWhiteSpace(a.SizableCover) ? a.Cover : a.SizableCover,
+                    Subtitle = string.IsNullOrWhiteSpace(a.PublishDate) ? a.AuthorName : $"{a.PublishDate} · {a.AuthorName}"
+                })
+                .ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    public async Task<IReadOnlyList<SearchAuthorItem>> SearchSingersAsync(string singerName)
+    {
+        if (string.IsNullOrWhiteSpace(singerName))
+            return [];
+
+        try
+        {
+            var results = await clients.Search.SearchAuthorAsync(singerName.Trim(), pageSize: 15);
+            return results ?? [];
+        }
+        catch
+        {
+            return [];
+        }
+    }
     public async Task<IReadOnlyList<TerminalSongItem>> SearchSongsAsync(string keyword)
     {
         var songs = await clients.Search.SearchAsync(keyword);
@@ -395,43 +770,56 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
         }
     }
 
-    private static TerminalSongItem MapSongInfo(SongInfo song)
+    private TerminalSongItem MapSongInfo(SongInfo song)
     {
+        var firstAuthor = song.Singers.FirstOrDefault(s => s.Id > 0);
         return new TerminalSongItem
         {
             Name = NormalizeName(song.Name),
             Singer = string.IsNullOrWhiteSpace(song.Singer) ? JoinSingers(song.Singers) : song.Singer,
+            AuthorId = firstAuthor?.Id ?? 0,
+            Singers = song.Singers,
             Hash = song.Hash,
             AlbumId = song.AlbumId,
+            AlbumName = song.AlbumName,
             Cover = song.Cover,
             DurationSeconds = song.Duration,
-            Source = "搜索"
+            Source = "搜索",
+            IsFavorite = IsLiked(song.Hash)
         };
     }
 
-    private static TerminalSongItem MapDailySong(DailyRecommendSong song)
+    private TerminalSongItem MapDailySong(DailyRecommendSong song)
     {
+        var hash = PreferQualityHash(song.Hash, song.Hash320, song.HashFlac, song.HashHiRes);
+        var firstAuthor = song.Singers.FirstOrDefault(s => s.Id > 0);
         return new TerminalSongItem
         {
             Name = NormalizeName(song.Name),
             Singer = song.SingerName,
-            Hash = PreferQualityHash(song.Hash, song.Hash320, song.HashFlac, song.HashHiRes),
+            AuthorId = firstAuthor?.Id ?? 0,
+            Singers = song.Singers,
+            Hash = hash,
             AlbumId = song.AlbumId,
             MixSongId = song.MixSongId.ToString(),
             AudioId = song.AudioId,
             Cover = song.GetCoverUrl(),
             DurationSeconds = song.Duration,
             Source = "每日推荐",
-            Privilege = song.Privilege
+            Privilege = song.Privilege,
+            IsFavorite = IsLiked(hash)
         };
     }
 
-    private static TerminalSongItem MapPersonalFmSong(PersonalFmSong song)
+    private TerminalSongItem MapPersonalFmSong(PersonalFmSong song)
     {
+        var firstAuthor = song.Singers.FirstOrDefault(s => s.Id > 0);
         return new TerminalSongItem
         {
             Name = NormalizeName(song.Name),
             Singer = song.SingerName,
+            AuthorId = firstAuthor?.Id ?? 0,
+            Singers = song.Singers,
             Hash = song.Hash,
             AlbumId = song.AlbumId,
             MixSongId = song.MixSongId,
@@ -439,40 +827,50 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
             Cover = song.TransParam?.UnionCover,
             DurationSeconds = song.DurationSeconds,
             Source = "私人 FM",
-            Privilege = song.Privilege
+            Privilege = song.Privilege,
+            IsFavorite = IsLiked(song.Hash)
         };
     }
 
-    private static TerminalSongItem MapPlaylistSong(PlaylistSong song)
+    private TerminalSongItem MapPlaylistSong(PlaylistSong song)
     {
+        var firstAuthor = song.Singers.FirstOrDefault(s => s.Id > 0);
         return new TerminalSongItem
         {
             Name = NormalizeName(song.Name),
             Singer = song.Singers.Count > 0 ? JoinSingers(song.Singers) : GuessSinger(song.Name),
+            AuthorId = firstAuthor?.Id ?? 0,
+            Singers = song.Singers,
+            FileId = song.FileId,
             Hash = song.Hash,
             AlbumId = song.AlbumId,
             Cover = song.Cover,
             DurationSeconds = song.DurationMs / 1000.0,
             Source = "歌单",
-            Privilege = song.Privilege
+            Privilege = song.Privilege,
+            IsFavorite = IsLiked(song.Hash)
         };
     }
 
-    private static TerminalSongItem MapRankSong(RankSongItem song)
+    private TerminalSongItem MapRankSong(RankSongItem song)
     {
+        var firstAuthor = song.Singers.FirstOrDefault(s => s.Id > 0);
         return new TerminalSongItem
         {
             Name = NormalizeName(song.Name),
             Singer = song.Singers.Count > 0 ? JoinSingers(song.Singers) : "未知歌手",
+            AuthorId = firstAuthor?.Id ?? 0,
+            Singers = song.Singers,
             Hash = song.Hash,
             AlbumId = song.AlbumId.ToString(),
             Cover = song.TransParam?.UnionCover,
             DurationSeconds = song.DurationMs / 1000.0,
-            Source = "排行榜"
+            Source = "排行榜",
+            IsFavorite = IsLiked(song.Hash)
         };
     }
 
-    private static TerminalSongItem MapTopCardSong(TopCardSong item, string cardTitle)
+    private TerminalSongItem MapTopCardSong(TopCardSong item, string cardTitle)
     {
         var singers = item.Singers
             .Where(s => s.Id > 0 && !string.IsNullOrWhiteSpace(s.Name))
@@ -481,11 +879,14 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
         var singerText = singers.Count > 0
             ? string.Join("、", singers)
             : string.IsNullOrWhiteSpace(item.SingerName) ? "未知歌手" : item.SingerName;
+        var firstAuthor = item.Singers.FirstOrDefault(s => s.Id > 0);
 
         return new TerminalSongItem
         {
             Name = NormalizeName(item.Name),
             Singer = singerText,
+            AuthorId = firstAuthor?.Id ?? 0,
+            Singers = item.Singers,
             AlbumName = item.AlbumName,
             Hash = item.Hash,
             AlbumId = item.AlbumId.ToString(CultureInfo.InvariantCulture),
@@ -493,7 +894,25 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
             AudioId = item.AudioId,
             Cover = item.SizableCover,
             DurationSeconds = item.Duration,
-            Source = cardTitle
+            Source = cardTitle,
+            IsFavorite = IsLiked(item.Hash)
+        };
+    }
+
+    private TerminalSongItem MapSingerSong(SingerSongItem song)
+    {
+        return new TerminalSongItem
+        {
+            Name = NormalizeName(song.Name),
+            Singer = song.SingerName,
+            Hash = song.Hash,
+            AlbumId = song.AlbumId > 0 ? song.AlbumId.ToString() : "",
+            AlbumName = song.AlbumName,
+            Cover = song.TransParam?.UnionCover,
+            DurationSeconds = song.Duration / 1000.0,
+            Source = "歌手单曲",
+            MixSongId = song.AlbumAudioId > 0 ? song.AlbumAudioId.ToString() : "",
+            IsFavorite = IsLiked(song.Hash)
         };
     }
 
@@ -557,17 +976,22 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
         _ => "其他榜单"
     };
 
-    private static TerminalSongItem MapAlbumSong(AlbumSongItem song)
+    private TerminalSongItem MapAlbumSong(AlbumSongItem song)
     {
+        var firstAuthor = song.Singers.FirstOrDefault(s => s.Id > 0);
         return new TerminalSongItem
         {
             Name = NormalizeName(song.Name),
             Singer = string.IsNullOrWhiteSpace(song.Singer) ? JoinSingers(song.Singers) : song.Singer,
+            AuthorId = firstAuthor?.Id ?? 0,
+            Singers = song.Singers,
             Hash = song.Hash,
             AlbumId = song.AlbumId,
+            AlbumName = song.AlbumInfo?.AlbumName ?? "",
             Cover = song.Cover,
             DurationSeconds = song.DurationMs / 1000.0,
-            Source = "专辑"
+            Source = "专辑",
+            IsFavorite = IsLiked(song.Hash)
         };
     }
 

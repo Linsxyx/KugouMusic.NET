@@ -1,4 +1,5 @@
 using KuGou.Net.Abstractions;
+using KuGou.Net.Abstractions.Models;
 using KaMusic.Cli.Graphics;
 
 namespace KaMusic.Cli.Models;
@@ -70,6 +71,10 @@ internal sealed class TerminalSongItem
     public string? LocalSourceType { get; set; }
     public long LocalTrackId { get; set; }
     public bool IsPlaying { get; set; }
+    public long AuthorId { get; set; }
+    public List<SingerLite> Singers { get; set; } = [];
+    public long FileId { get; set; }
+    public bool IsFavorite { get; set; }
 
     public bool IsLocalFile => !string.IsNullOrWhiteSpace(LocalFilePath) && File.Exists(LocalFilePath);
     public bool IsRemoteStream => !string.IsNullOrWhiteSpace(RemoteUrl);
@@ -180,4 +185,41 @@ internal sealed class TerminalAppSettings
     public TerminalLyricMode LyricMode { get; set; } = TerminalLyricMode.Translation;
     public TerminalImageMode ImageMode { get; set; } = TerminalImageMode.Auto;
     public float[] CustomEqGains { get; set; } = new float[10];
+}
+
+internal enum TerminalSingerTab
+{
+    HotSongs,
+    NewSongs,
+    Albums
+}
+
+internal sealed class TerminalSingerAlbumItem
+{
+    public long AlbumId { get; init; }
+    public string Name { get; init; } = "";
+    public string PublishDate { get; init; } = "";
+    public string Cover { get; init; } = "";
+    public int SongCount { get; init; }
+    public string Subtitle { get; init; } = "";
+}
+
+internal sealed class TerminalSingerDetail
+{
+    public long AuthorId { get; init; }
+    public string Name { get; init; } = "";
+    public string? Avatar { get; init; }
+    public int SongCount { get; init; }
+    public int AlbumCount { get; init; }
+    public string Intro { get; init; } = "";
+    public TerminalSingerTab Tab { get; set; } = TerminalSingerTab.HotSongs;
+    public List<TerminalSongItem> HotSongs { get; } = [];
+    public List<TerminalSongItem> NewSongs { get; } = [];
+    public List<TerminalSingerAlbumItem> Albums { get; } = [];
+    public bool HasLoadedHotSongs { get; set; }
+    public bool HasLoadedNewSongs { get; set; }
+    public bool HasLoadedAlbums { get; set; }
+
+    public IReadOnlyList<TerminalSongItem> CurrentSongs =>
+        Tab == TerminalSingerTab.NewSongs ? NewSongs : HotSongs;
 }

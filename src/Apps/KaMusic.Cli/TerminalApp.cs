@@ -78,6 +78,16 @@ internal sealed class TerminalApp : IAsyncDisposable
     private readonly List<TerminalPlaylistItem> _playlists = [];
     private TerminalPlaylistItem? _openedPlaylist;
     private int _playlistReturnIndex;
+    private TerminalSingerDetail? _openedSinger;
+    private int _singerReturnIndex;
+    private bool _openedFromSinger;
+    private bool _singerPickerOpen;
+    private int _singerPickerIndex;
+    private IReadOnlyList<(long Id, string Name)> _singerPickerItems = [];
+    private bool _playlistPickerOpen;
+    private int _playlistPickerIndex;
+    private TerminalSongItem? _playlistPickerTargetSong;
+    private readonly List<TerminalPlaylistItem> _playlistPickerItems = [];
     private TerminalUserProfile _profile = new();
     private string _title = "每日推荐";
     private string _searchKeyword = "";
@@ -199,6 +209,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         if (_profile.IsLoggedIn)
         {
             _ = EnsureDailyVipInBackgroundAsync();
+            _ = _data.EnsureLikeListLoadedAsync();
         }
 
         await LoadPageAsync(_page);
@@ -262,6 +273,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         _status = $"登录成功：{_profile.Name}";
         RequestRender();
         _ = EnsureDailyVipInBackgroundAsync();
+        _ = _data.EnsureLikeListLoadedAsync();
         await LoadPageAsync(TerminalPage.Daily, force: true);
     }
 
@@ -311,6 +323,18 @@ internal sealed class TerminalApp : IAsyncDisposable
         if (_localModalMode != LocalInputModalMode.None)
         {
             await HandleLocalModalKeyAsync(key);
+            return;
+        }
+
+        if (_singerPickerOpen)
+        {
+            await HandleSingerPickerKeyAsync(key);
+            return;
+        }
+
+        if (_playlistPickerOpen)
+        {
+            await HandlePlaylistPickerKeyAsync(key);
             return;
         }
 
@@ -495,7 +519,7 @@ internal sealed class TerminalApp : IAsyncDisposable
 
                 break;
             case ConsoleKey.Backspace:
-                ReturnFromPlaylist();
+                ReturnFromDetail();
                 break;
             case ConsoleKey.Spacebar:
                 _playback.TogglePlayPause();
@@ -507,7 +531,11 @@ internal sealed class TerminalApp : IAsyncDisposable
                 await _playback.PlayPreviousAsync();
                 break;
             case ConsoleKey.Oem4:
-                if (IsExploreCardViewActive())
+                if (_openedSinger != null)
+                {
+                    await CycleSingerTabAsync(-1);
+                }
+                else if (IsExploreCardViewActive())
                 {
                     CycleExploreTab(-1);
                 }
@@ -518,7 +546,11 @@ internal sealed class TerminalApp : IAsyncDisposable
 
                 break;
             case ConsoleKey.Oem6:
-                if (IsExploreCardViewActive())
+                if (_openedSinger != null)
+                {
+                    await CycleSingerTabAsync(1);
+                }
+                else if (IsExploreCardViewActive())
                 {
                     CycleExploreTab(1);
                 }
@@ -529,14 +561,22 @@ internal sealed class TerminalApp : IAsyncDisposable
 
                 break;
             case ConsoleKey.OemComma:
-                if (IsExploreCardViewActive() && _exploreState.ActiveTab == TerminalExploreTab.Playlists)
+                if (_openedSinger != null)
+                {
+                    await CycleSingerTabAsync(-1);
+                }
+                else if (IsExploreCardViewActive() && _exploreState.ActiveTab == TerminalExploreTab.Playlists)
                 {
                     await CycleExploreTagAsync(-1);
                 }
 
                 break;
             case ConsoleKey.OemPeriod:
-                if (IsExploreCardViewActive() && _exploreState.ActiveTab == TerminalExploreTab.Playlists)
+                if (_openedSinger != null)
+                {
+                    await CycleSingerTabAsync(1);
+                }
+                else if (IsExploreCardViewActive() && _exploreState.ActiveTab == TerminalExploreTab.Playlists)
                 {
                     await CycleExploreTagAsync(1);
                 }
@@ -567,10 +607,27 @@ internal sealed class TerminalApp : IAsyncDisposable
 
                 break;
             case ConsoleKey.S:
-                _playback.ToggleShuffle();
+                if (_openedSinger != null)
+                {
+                    await SwitchSingerSortAsync();
+                }
+                else
+                {
+                    _playback.ToggleShuffle();
+                }
+
                 break;
             case ConsoleKey.T:
                 _playback.ToggleSeamlessTransition();
+                break;
+            case ConsoleKey.A:
+                EnqueueNextForCurrentOrSelected();
+                break;
+            case ConsoleKey.F:
+                await OpenAddToPlaylistPickerAsync();
+                break;
+            case ConsoleKey.G:
+                await JumpToSingerAsync();
                 break;
             case ConsoleKey.L:
                 if (key.KeyChar == 'L')
@@ -591,18 +648,17 @@ internal sealed class TerminalApp : IAsyncDisposable
                 _renderer.Invalidate();
                 break;
             case ConsoleKey.V:
-                if (_page == TerminalPage.Search && _openedPlaylist == null)
+                if (_openedSinger != null && _openedPlaylist == null)
+                {
+                    await SetSingerTabAsync(_openedSinger.Tab == TerminalSingerTab.Albums
+                        ? TerminalSingerTab.HotSongs
+                        : TerminalSingerTab.Albums);
+                }
+                else if (_page == TerminalPage.Search && _openedPlaylist == null)
                 {
                     _searchShowsPlaylists = !_searchShowsPlaylists;
                     _showingSongs = !_searchShowsPlaylists;
                     _selectedIndex = 0;
-                }
-
-                break;
-            case ConsoleKey.A:
-                if (SelectedSong() is { } toAdd)
-                {
-                    _playback.EnqueueNext(toAdd);
                 }
 
                 break;
@@ -662,14 +718,14 @@ internal sealed class TerminalApp : IAsyncDisposable
                 TriggerCheckOrApplyUpdate();
                 break;
             case ConsoleKey.Escape:
-                if (!ReturnFromPlaylist())
+                if (!ReturnFromDetail())
                 {
                     _focus = _focus == FocusZone.Content ? FocusZone.Navigation : FocusZone.Content;
                 }
 
                 break;
             case ConsoleKey.Q:
-                if (!ReturnFromPlaylist())
+                if (!ReturnFromDetail())
                 {
                     _exitConfirmOpen = true;
                     _exitConfirmSelected = true;
@@ -728,6 +784,15 @@ internal sealed class TerminalApp : IAsyncDisposable
                 break;
             case ConsoleKey.T:
                 _playback.ToggleSeamlessTransition();
+                break;
+            case ConsoleKey.A:
+                EnqueueNextForCurrentOrSelected();
+                break;
+            case ConsoleKey.F:
+                await OpenAddToPlaylistPickerAsync();
+                break;
+            case ConsoleKey.G:
+                await JumpToSingerAsync();
                 break;
         }
     }
@@ -1092,6 +1157,98 @@ internal sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
+        if (_playlistPickerOpen)
+        {
+            var h = Math.Min(_playlistPickerItems.Count + 4, 16);
+            var modal = _canvas.Bounds.Center(Math.Min(60, _canvas.Width - 6), h);
+            if (!modal.Contains(mouse.X, mouse.Y))
+            {
+                if (mouse.Kind is MouseKind.LeftDown or MouseKind.RightDown)
+                {
+                    _playlistPickerOpen = false;
+                    _renderer.Invalidate();
+                }
+
+                return;
+            }
+
+            var inner = modal.Inset(2, 1);
+            if (mouse.Kind is MouseKind.LeftDown or MouseKind.LeftDoubleClick)
+            {
+                var clickedRow = mouse.Y - inner.Y;
+                var start = WorkspaceViews.ComputeScrollStart(_playlistPickerIndex, _playlistPickerItems.Count, inner.H);
+                var targetIdx = start + clickedRow;
+                if (targetIdx >= 0 && targetIdx < _playlistPickerItems.Count)
+                {
+                    _playlistPickerIndex = targetIdx;
+                    var chosen = _playlistPickerItems[targetIdx];
+                    var song = _playlistPickerTargetSong;
+                    _playlistPickerOpen = false;
+                    _renderer.Invalidate();
+                    if (song != null)
+                    {
+                        await AddSongToPlaylistAsync(song, chosen);
+                    }
+                }
+            }
+            else if (mouse.Kind == MouseKind.WheelUp)
+            {
+                _playlistPickerIndex = Math.Max(0, _playlistPickerIndex - 1);
+                _renderer.Invalidate();
+            }
+            else if (mouse.Kind == MouseKind.WheelDown)
+            {
+                _playlistPickerIndex = Math.Min(_playlistPickerItems.Count - 1, _playlistPickerIndex + 1);
+                _renderer.Invalidate();
+            }
+
+            return;
+        }
+
+        if (_singerPickerOpen)
+        {
+            var h = Math.Min(_singerPickerItems.Count + 4, 14);
+            var modal = _canvas.Bounds.Center(Math.Min(50, _canvas.Width - 6), h);
+            if (!modal.Contains(mouse.X, mouse.Y))
+            {
+                if (mouse.Kind is MouseKind.LeftDown or MouseKind.RightDown)
+                {
+                    _singerPickerOpen = false;
+                    _renderer.Invalidate();
+                }
+
+                return;
+            }
+
+            var inner = modal.Inset(2, 1);
+            if (mouse.Kind is MouseKind.LeftDown or MouseKind.LeftDoubleClick)
+            {
+                var clickedRow = mouse.Y - inner.Y;
+                var start = WorkspaceViews.ComputeScrollStart(_singerPickerIndex, _singerPickerItems.Count, inner.H);
+                var targetIdx = start + clickedRow;
+                if (targetIdx >= 0 && targetIdx < _singerPickerItems.Count)
+                {
+                    _singerPickerIndex = targetIdx;
+                    var chosen = _singerPickerItems[targetIdx];
+                    _singerPickerOpen = false;
+                    _renderer.Invalidate();
+                    await OpenSingerPageAsync(chosen.Id, chosen.Name);
+                }
+            }
+            else if (mouse.Kind == MouseKind.WheelUp)
+            {
+                _singerPickerIndex = Math.Max(0, _singerPickerIndex - 1);
+                _renderer.Invalidate();
+            }
+            else if (mouse.Kind == MouseKind.WheelDown)
+            {
+                _singerPickerIndex = Math.Min(_singerPickerItems.Count - 1, _singerPickerIndex + 1);
+                _renderer.Invalidate();
+            }
+
+            return;
+        }
+
         var bounds = _canvas.Bounds;
         if (_isImmersive)
         {
@@ -1230,6 +1387,45 @@ internal sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
+        if (_openedSinger != null && _openedPlaylist == null)
+        {
+            if (mouse.Y == inner.Y)
+            {
+                if (mouse.X >= inner.X && mouse.X < inner.X + 13)
+                    await SetSingerTabAsync(TerminalSingerTab.HotSongs);
+                else if (mouse.X >= inner.X + 13 && mouse.X < inner.X + 26)
+                    await SetSingerTabAsync(TerminalSingerTab.NewSongs);
+                else if (mouse.X >= inner.X + 26 && mouse.X < inner.X + 39)
+                    await SetSingerTabAsync(TerminalSingerTab.Albums);
+                return;
+            }
+
+            var listArea = inner.SkipTop(4);
+            if (!listArea.Contains(mouse.X, mouse.Y))
+                return;
+
+            var count = CurrentListCount();
+            if (count == 0) return;
+
+            var visible = Math.Max(1, listArea.H);
+            var start = WorkspaceViews.ComputeScrollStart(_selectedIndex, count, visible);
+            var idx = start + (mouse.Y - listArea.Y);
+            if (idx >= 0 && idx < count)
+            {
+                var wasSelected = _selectedIndex == idx;
+                _selectedIndex = idx;
+                if (mouse.Kind == MouseKind.LeftDoubleClick || wasSelected)
+                {
+                    await ActivateSelectionAsync();
+                }
+                else
+                {
+                    RequestRender();
+                }
+            }
+            return;
+        }
+
         if (_showingSongs)
         {
             var listArea = inner.SkipTop(2);
@@ -1248,6 +1444,10 @@ internal sealed class TerminalApp : IAsyncDisposable
                 if (mouse.Kind == MouseKind.LeftDoubleClick || wasSelected)
                 {
                     await ActivateSelectionAsync();
+                }
+                else
+                {
+                    RequestRender();
                 }
             }
 
@@ -1433,6 +1633,10 @@ internal sealed class TerminalApp : IAsyncDisposable
 
         _page = page;
         _openedPlaylist = null;
+        _openedSinger = null;
+        _openedFromSinger = false;
+        _singerPickerOpen = false;
+        _playlistPickerOpen = false;
         _searchShowsPlaylists = false;
         await LoadPageAsync(page);
     }
@@ -1563,6 +1767,36 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     private async Task ActivateSelectionAsync()
     {
+        if (_openedSinger != null && _openedPlaylist == null)
+        {
+            if (_openedSinger.Tab == TerminalSingerTab.Albums)
+            {
+                if (_selectedIndex >= 0 && _selectedIndex < _openedSinger.Albums.Count)
+                {
+                    var album = _openedSinger.Albums[_selectedIndex];
+                    _openedFromSinger = true;
+                    await OpenPlaylistDetailAsync(new TerminalPlaylistItem
+                    {
+                        Id = album.AlbumId.ToString(),
+                        Name = album.Name,
+                        Subtitle = album.Subtitle,
+                        Cover = album.Cover,
+                        Kind = TerminalPlaylistKind.Album
+                    }, _selectedIndex);
+                }
+            }
+            else
+            {
+                var singerSongs = _openedSinger.CurrentSongs;
+                if (_selectedIndex >= 0 && _selectedIndex < singerSongs.Count)
+                {
+                    await _playback.PlayAsync(singerSongs[_selectedIndex], singerSongs);
+                    SyncPlayingFlag();
+                }
+            }
+            return;
+        }
+
         if (_page == TerminalPage.Settings)
         {
             AdjustSetting(1);
@@ -1676,6 +1910,457 @@ internal sealed class TerminalApp : IAsyncDisposable
             : WorkspaceViews.PageTitle(_page);
         _status = "就绪";
         return true;
+    }
+
+    private bool ReturnFromDetail()
+    {
+        if (_playlistPickerOpen)
+        {
+            _playlistPickerOpen = false;
+            RequestRender();
+            return true;
+        }
+
+        if (_singerPickerOpen)
+        {
+            _singerPickerOpen = false;
+            RequestRender();
+            return true;
+        }
+
+        if (_openedPlaylist != null)
+        {
+            if (_openedFromSinger)
+            {
+                _openedPlaylist = null;
+                _openedFromSinger = false;
+                _selectedIndex = Math.Clamp(_playlistReturnIndex, 0, Math.Max(0, (_openedSinger?.Albums.Count ?? 1) - 1));
+                _title = $"歌手 · {_openedSinger?.Name}";
+                _status = $"返回「{_openedSinger?.Name}」歌手主页";
+                RequestRender();
+                return true;
+            }
+
+            return ReturnFromPlaylist();
+        }
+
+        if (_openedSinger != null)
+        {
+            var singerName = _openedSinger.Name;
+            _openedSinger = null;
+            _selectedIndex = _singerReturnIndex;
+            _title = WorkspaceViews.PageTitle(_page);
+            _status = $"已从「{singerName}」返回";
+            RequestRender();
+            return true;
+        }
+
+        return false;
+    }
+
+    private TerminalSongItem? ResolveTargetSong() =>
+        _isImmersive ? _playback.CurrentSong : (SelectedSong() ?? _playback.CurrentSong);
+
+    // 弹出「添加到歌单」对话框，异步获取用户歌单列表供选择。
+    private async Task OpenAddToPlaylistPickerAsync()
+    {
+        var target = ResolveTargetSong();
+        if (target == null)
+        {
+            _status = "未选择歌曲";
+            RequestRender();
+            return;
+        }
+
+        if (!_profile.IsLoggedIn)
+        {
+            ShowLoginPrompt(target.Name);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(target.Hash))
+        {
+            _status = "该歌曲没有在线音频标识，无法添加到歌单";
+            RequestRender();
+            return;
+        }
+
+        _status = "正在加载歌单列表...";
+        RequestRender();
+
+        var playlists = await _data.GetUserCreatedPlaylistsAsync();
+        if (playlists.Count == 0)
+        {
+            _status = "未找到可用歌单，请先在手机或网页端创建歌单";
+            RequestRender();
+            return;
+        }
+
+        _playlistPickerTargetSong = target;
+        _playlistPickerItems.Clear();
+        _playlistPickerItems.AddRange(playlists);
+        _playlistPickerIndex = 0;
+        _playlistPickerOpen = true;
+        _status = $"请选择要将《{target.Name}》添加到的目标歌单";
+        RequestRender();
+    }
+
+    // 处理「添加到歌单」弹窗的快捷键选择与回车确认。
+    private async Task HandlePlaylistPickerKeyAsync(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
+        {
+            case ConsoleKey.Escape:
+            case ConsoleKey.Backspace:
+            case ConsoleKey.Q:
+                _playlistPickerOpen = false;
+                _status = "已取消添加到歌单";
+                RequestRender();
+                break;
+            case ConsoleKey.UpArrow:
+            case ConsoleKey.K:
+                _playlistPickerIndex = Math.Max(0, _playlistPickerIndex - 1);
+                RequestRender();
+                break;
+            case ConsoleKey.DownArrow:
+            case ConsoleKey.J:
+                _playlistPickerIndex = Math.Min(_playlistPickerItems.Count - 1, _playlistPickerIndex + 1);
+                RequestRender();
+                break;
+            case ConsoleKey.Enter:
+                if (_playlistPickerIndex >= 0 && _playlistPickerIndex < _playlistPickerItems.Count && _playlistPickerTargetSong != null)
+                {
+                    var chosen = _playlistPickerItems[_playlistPickerIndex];
+                    var song = _playlistPickerTargetSong;
+                    _playlistPickerOpen = false;
+                    RequestRender();
+                    await AddSongToPlaylistAsync(song, chosen);
+                }
+                break;
+            default:
+                if (key.KeyChar is >= '1' and <= '9')
+                {
+                    var idx = key.KeyChar - '1';
+                    if (idx < _playlistPickerItems.Count && _playlistPickerTargetSong != null)
+                    {
+                        var chosen = _playlistPickerItems[idx];
+                        var song = _playlistPickerTargetSong;
+                        _playlistPickerOpen = false;
+                        RequestRender();
+                        await AddSongToPlaylistAsync(song, chosen);
+                    }
+                }
+                break;
+        }
+    }
+
+    // 执行添加单曲到目标歌单，并在状态栏提示操作结果。
+    private async Task AddSongToPlaylistAsync(TerminalSongItem song, TerminalPlaylistItem playlist)
+    {
+        _status = $"正在将《{song.Name}》添加到「{playlist.Name}」...";
+        RequestRender();
+
+        var (_, message) = await _data.AddSongToPlaylistAsync(song, playlist);
+        _status = message;
+        SyncPlayingFlag();
+        RequestRender();
+    }
+
+    private async Task ToggleFavoriteForCurrentOrSelectedAsync()
+    {
+        var target = ResolveTargetSong();
+        if (target == null)
+        {
+            _status = "未选择歌曲";
+            RequestRender();
+            return;
+        }
+
+        if (!_profile.IsLoggedIn)
+        {
+            ShowLoginPrompt(target.Name);
+            return;
+        }
+
+        var (_, _, message) = await _data.ToggleFavoriteAsync(target);
+        _status = message;
+        SyncPlayingFlag();
+        RequestRender();
+    }
+
+    private void EnqueueNextForCurrentOrSelected()
+    {
+        var target = ResolveTargetSong();
+        if (target == null)
+        {
+            _status = "未选择歌曲";
+            RequestRender();
+            return;
+        }
+
+        _playback.EnqueueNext(target);
+        _status = $"已加入下一首播放：《{target.Name}》";
+        if (_page == TerminalPage.Queue && _openedSinger == null && _openedPlaylist == null)
+        {
+            _songs.Clear();
+            _songs.AddRange(_playback.Queue);
+        }
+
+        RequestRender();
+    }
+
+    private async Task JumpToSingerAsync()
+    {
+        var song = ResolveTargetSong();
+        if (song == null)
+        {
+            _status = "没有正在播放或选中的歌曲";
+            RequestRender();
+            return;
+        }
+
+        if (song.Singers is { Count: > 1 })
+        {
+            _singerPickerItems = song.Singers.Select(s => (s.Id, s.Name)).ToList();
+            _singerPickerIndex = 0;
+            _singerPickerOpen = true;
+            RequestRender();
+            return;
+        }
+
+        var authorId = song.AuthorId;
+        var singerName = song.Singer;
+        if (authorId <= 0 && song.Singers is { Count: 1 } list)
+        {
+            authorId = list[0].Id;
+            singerName = list[0].Name;
+        }
+
+        await OpenSingerPageAsync(authorId, singerName);
+    }
+
+    private async Task OpenSingerPageAsync(long authorId, string singerName)
+    {
+        if (string.IsNullOrWhiteSpace(singerName) && authorId <= 0)
+        {
+            _status = "无法识别歌手信息";
+            RequestRender();
+            return;
+        }
+
+        if (authorId <= 0)
+        {
+            _status = $"正在查找歌手 \"{singerName}\"...";
+            RequestRender();
+            var results = await _data.SearchSingersAsync(singerName);
+            if (results.Count == 0)
+            {
+                _status = $"未找到歌手 \"{singerName}\"";
+                RequestRender();
+                return;
+            }
+
+            if (results.Count > 1)
+            {
+                var exact = results.FirstOrDefault(r => string.Equals(r.Name, singerName, StringComparison.OrdinalIgnoreCase));
+                if (exact == null)
+                {
+                    _singerPickerItems = results.Select(r => (r.AuthorId, r.Name)).ToList();
+                    _singerPickerIndex = 0;
+                    _singerPickerOpen = true;
+                    RequestRender();
+                    return;
+                }
+
+                authorId = exact.AuthorId;
+                singerName = exact.Name;
+            }
+            else
+            {
+                authorId = results[0].AuthorId;
+                singerName = results[0].Name;
+            }
+        }
+
+        _isImmersive = false;
+        _singerReturnIndex = _selectedIndex;
+        _selectedIndex = 0;
+        _isLoading = true;
+        _status = $"正在加载歌手「{singerName}」...";
+        RequestRender();
+
+        var detail = await _data.GetSingerDetailAsync(authorId, singerName);
+        if (detail == null)
+        {
+            _status = "加载歌手失败";
+            _isLoading = false;
+            RequestRender();
+            return;
+        }
+
+        detail.HotSongs.AddRange(await _data.GetSingerSongsAsync(authorId, "hot"));
+        detail.HasLoadedHotSongs = true;
+        _openedSinger = detail;
+        _title = $"歌手 · {detail.Name}";
+        _isLoading = false;
+        SyncPlayingFlag();
+        _status = $"已打开「{detail.Name}」主页 · {detail.HotSongs.Count} 首热门单曲 · s 切换排序 · [ / ] 切换专辑";
+        RequestRender();
+    }
+
+    private async Task SwitchSingerSortAsync()
+    {
+        if (_openedSinger == null)
+            return;
+
+        if (_openedSinger.Tab == TerminalSingerTab.Albums)
+        {
+            await SetSingerTabAsync(TerminalSingerTab.HotSongs);
+            return;
+        }
+
+        if (_openedSinger.Tab == TerminalSingerTab.HotSongs)
+        {
+            _openedSinger.Tab = TerminalSingerTab.NewSongs;
+            if (!_openedSinger.HasLoadedNewSongs)
+            {
+                _isLoading = true;
+                _status = $"正在加载「{_openedSinger.Name}」最新单曲...";
+                RequestRender();
+                _openedSinger.NewSongs.AddRange(await _data.GetSingerSongsAsync(_openedSinger.AuthorId, "new"));
+                _openedSinger.HasLoadedNewSongs = true;
+                _isLoading = false;
+            }
+
+            _selectedIndex = 0;
+            SyncPlayingFlag();
+            _status = $"已切换到「{_openedSinger.Name}」最新单曲 · 共 {_openedSinger.NewSongs.Count} 首";
+        }
+        else
+        {
+            _openedSinger.Tab = TerminalSingerTab.HotSongs;
+            if (!_openedSinger.HasLoadedHotSongs)
+            {
+                _isLoading = true;
+                _status = $"正在加载「{_openedSinger.Name}」热门单曲...";
+                RequestRender();
+                _openedSinger.HotSongs.AddRange(await _data.GetSingerSongsAsync(_openedSinger.AuthorId, "hot"));
+                _openedSinger.HasLoadedHotSongs = true;
+                _isLoading = false;
+            }
+
+            _selectedIndex = 0;
+            SyncPlayingFlag();
+            _status = $"已切换到「{_openedSinger.Name}」热门单曲 · 共 {_openedSinger.HotSongs.Count} 首";
+        }
+
+        RequestRender();
+    }
+
+    private async Task CycleSingerTabAsync(int direction)
+    {
+        if (_openedSinger == null)
+            return;
+
+        var current = (int)_openedSinger.Tab;
+        var next = (current + direction) % 3;
+        if (next < 0) next += 3;
+        await SetSingerTabAsync((TerminalSingerTab)next);
+    }
+
+    private async Task SetSingerTabAsync(TerminalSingerTab tab)
+    {
+        if (_openedSinger == null)
+            return;
+
+        _openedSinger.Tab = tab;
+        _selectedIndex = 0;
+        if (tab == TerminalSingerTab.Albums && !_openedSinger.HasLoadedAlbums)
+        {
+            _isLoading = true;
+            _status = $"正在加载「{_openedSinger.Name}」专辑列表...";
+            RequestRender();
+            _openedSinger.Albums.AddRange(await _data.GetSingerAlbumsAsync(_openedSinger.AuthorId));
+            _openedSinger.HasLoadedAlbums = true;
+            _isLoading = false;
+            _status = $"已加载「{_openedSinger.Name}」专辑共 {_openedSinger.Albums.Count} 张 · Enter 查看曲目 · Backspace 返回";
+        }
+        else if (tab == TerminalSingerTab.NewSongs && !_openedSinger.HasLoadedNewSongs)
+        {
+            _isLoading = true;
+            _status = $"正在加载「{_openedSinger.Name}」最新单曲...";
+            RequestRender();
+            _openedSinger.NewSongs.AddRange(await _data.GetSingerSongsAsync(_openedSinger.AuthorId, "new"));
+            _openedSinger.HasLoadedNewSongs = true;
+            _isLoading = false;
+            _status = $"已加载「{_openedSinger.Name}」最新单曲共 {_openedSinger.NewSongs.Count} 首";
+        }
+        else if (tab == TerminalSingerTab.HotSongs && !_openedSinger.HasLoadedHotSongs)
+        {
+            _isLoading = true;
+            _status = $"正在加载「{_openedSinger.Name}」热门单曲...";
+            RequestRender();
+            _openedSinger.HotSongs.AddRange(await _data.GetSingerSongsAsync(_openedSinger.AuthorId, "hot"));
+            _openedSinger.HasLoadedHotSongs = true;
+            _isLoading = false;
+            _status = $"已加载「{_openedSinger.Name}」热门单曲共 {_openedSinger.HotSongs.Count} 首";
+        }
+
+        SyncPlayingFlag();
+        RequestRender();
+    }
+
+    private async Task HandleSingerPickerKeyAsync(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
+        {
+            case ConsoleKey.Escape:
+            case ConsoleKey.Backspace:
+            case ConsoleKey.Q:
+                _singerPickerOpen = false;
+                RequestRender();
+                break;
+            case ConsoleKey.UpArrow:
+            case ConsoleKey.K:
+                _singerPickerIndex = Math.Max(0, _singerPickerIndex - 1);
+                RequestRender();
+                break;
+            case ConsoleKey.DownArrow:
+            case ConsoleKey.J:
+                _singerPickerIndex = Math.Min(_singerPickerItems.Count - 1, _singerPickerIndex + 1);
+                RequestRender();
+                break;
+            case ConsoleKey.Enter:
+                if (_singerPickerIndex >= 0 && _singerPickerIndex < _singerPickerItems.Count)
+                {
+                    var chosen = _singerPickerItems[_singerPickerIndex];
+                    _singerPickerOpen = false;
+                    await OpenSingerPageAsync(chosen.Id, chosen.Name);
+                }
+                break;
+            default:
+                if (key.KeyChar is >= '1' and <= '9')
+                {
+                    var idx = key.KeyChar - '1';
+                    if (idx < _singerPickerItems.Count)
+                    {
+                        var chosen = _singerPickerItems[idx];
+                        _singerPickerOpen = false;
+                        await OpenSingerPageAsync(chosen.Id, chosen.Name);
+                    }
+                }
+                break;
+        }
+    }
+
+    private void ShowLoginPrompt(string? songName)
+    {
+        _loginPromptSongName = songName;
+        _loginPromptOpen = true;
+        _status = string.IsNullOrWhiteSpace(songName)
+            ? "请先登录酷狗账号（按 F5 扫码登录 / F6 短信登录）"
+            : $"请先登录：登录后才能使用此功能《{songName}》";
+        RequestRender();
     }
 
     private bool IsExploreCardViewActive() =>
@@ -1855,19 +2540,50 @@ internal sealed class TerminalApp : IAsyncDisposable
         _selectedIndex = toEnd ? Math.Max(0, count - 1) : 0;
     }
 
-    private int CurrentListCount() =>
-        IsExploreCardViewActive()
-            ? _exploreState.GetActiveCards().Count
-            : _showingSongs ? _songs.Count : _playlists.Count;
+    private int CurrentListCount()
+    {
+        if (_openedSinger != null && _openedPlaylist == null)
+        {
+            return _openedSinger.Tab == TerminalSingerTab.Albums
+                ? _openedSinger.Albums.Count
+                : _openedSinger.CurrentSongs.Count;
+        }
 
-    private IReadOnlyList<TerminalSongItem> CurrentSongContext() =>
-        _page == TerminalPage.Queue ? _playback.Queue : _songs;
+        if (IsExploreCardViewActive())
+        {
+            return _exploreState.GetActiveCards().Count;
+        }
 
-    private TerminalSongItem? SelectedSong() =>
-        _showingSongs && _selectedIndex >= 0 && _selectedIndex < _songs.Count ? _songs[_selectedIndex] : null;
+        return _showingSongs ? CurrentSongContext().Count : _playlists.Count;
+    }
+
+    private IReadOnlyList<TerminalSongItem> CurrentSongContext()
+    {
+        if (_openedSinger != null && _openedPlaylist == null)
+        {
+            return _openedSinger.CurrentSongs;
+        }
+
+        return _page == TerminalPage.Queue ? _playback.Queue : _songs;
+    }
+
+    private TerminalSongItem? SelectedSong()
+    {
+        if (_openedSinger != null && _openedPlaylist == null)
+        {
+            if (_openedSinger.Tab == TerminalSingerTab.Albums)
+                return null;
+
+            var list = _openedSinger.CurrentSongs;
+            return _selectedIndex >= 0 && _selectedIndex < list.Count ? list[_selectedIndex] : null;
+        }
+
+        var context = CurrentSongContext();
+        return _showingSongs && _selectedIndex >= 0 && _selectedIndex < context.Count ? context[_selectedIndex] : null;
+    }
 
     private TerminalPlaylistItem? SelectedPlaylist() =>
-        !_showingSongs && _selectedIndex >= 0 && _selectedIndex < _playlists.Count ? _playlists[_selectedIndex] : null;
+        !_showingSongs && _openedSinger == null && _selectedIndex >= 0 && _selectedIndex < _playlists.Count ? _playlists[_selectedIndex] : null;
 
     private void AdjustSetting(int direction)
     {
@@ -1930,6 +2646,26 @@ internal sealed class TerminalApp : IAsyncDisposable
         foreach (var song in _songs)
         {
             song.IsPlaying = song.IsSameTrack(current);
+            song.IsFavorite = _data.IsLiked(song.Hash);
+        }
+
+        if (_openedSinger != null)
+        {
+            foreach (var song in _openedSinger.HotSongs)
+            {
+                song.IsPlaying = song.IsSameTrack(current);
+                song.IsFavorite = _data.IsLiked(song.Hash);
+            }
+            foreach (var song in _openedSinger.NewSongs)
+            {
+                song.IsPlaying = song.IsSameTrack(current);
+                song.IsFavorite = _data.IsLiked(song.Hash);
+            }
+        }
+
+        if (current != null)
+        {
+            current.IsFavorite = _data.IsLiked(current.Hash);
         }
     }
 
@@ -1957,6 +2693,16 @@ internal sealed class TerminalApp : IAsyncDisposable
         else
         {
             RenderWorkspace(snapshot, effectiveMode);
+        }
+
+        if (_singerPickerOpen)
+        {
+            WorkspaceViews.RenderSingerPickerModal(_canvas, _singerPickerItems, _singerPickerIndex, _theme);
+        }
+
+        if (_playlistPickerOpen && _playlistPickerTargetSong != null)
+        {
+            WorkspaceViews.RenderPlaylistPickerModal(_canvas, _playlistPickerTargetSong.Name, _playlistPickerItems, _playlistPickerIndex, _theme);
         }
 
         if (_searchModalOpen)
@@ -2076,6 +2822,20 @@ internal sealed class TerminalApp : IAsyncDisposable
             return;
         }
 
+        if (_openedSinger != null && _openedPlaylist == null)
+        {
+            WorkspaceViews.RenderSingerPage(
+                _canvas,
+                area,
+                _openedSinger,
+                _selectedIndex,
+                focused,
+                _isLoading,
+                _images,
+                _theme);
+            return;
+        }
+
         if (_showingSongs)
         {
             WorkspaceViews.RenderSongs(
@@ -2115,7 +2875,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         {
             return _openedPlaylist.Kind == TerminalPlaylistKind.Local
                 ? $"共 {_songs.Count} 首 · Enter 播放 · o 导入音频 · x 移除 · Backspace 返回"
-                : $"共 {_songs.Count} 首 · Enter 播放 · Backspace 返回";
+                : $"共 {_songs.Count} 首 · Enter 播放 · a 下一首 · f 加歌单 · g 歌手 · Backspace 返回";
         }
 
         if (_page == TerminalPage.LocalMusic)
@@ -2132,15 +2892,15 @@ internal sealed class TerminalApp : IAsyncDisposable
 
         if (_page == TerminalPage.Queue)
         {
-            return $"共 {_songs.Count} 首 · x 移除选中";
+            return $"共 {_songs.Count} 首 · a 下一首 · f 加歌单 · g 歌手 · x 移除选中";
         }
 
         if (_page == TerminalPage.PersonalFm)
         {
-            return "Enter 播放 · d 不喜欢并切歌 · r 换一批";
+            return "Enter 播放 · a 下一首 · f 加歌单 · g 歌手 · d 不喜欢并切歌 · r 换一批";
         }
 
-        return _showingSongs ? $"共 {_songs.Count} 首 · Enter 播放 · a 下一首播放" : $"共 {_playlists.Count} 个 · Enter 打开";
+        return _showingSongs ? $"共 {_songs.Count} 首 · Enter 播放 · a 下一首 · f 加歌单 · g 歌手" : $"共 {_playlists.Count} 个 · Enter 打开";
     }
 
     private int GetFrameIntervalMs(PlaybackStateSnapshot snapshot)

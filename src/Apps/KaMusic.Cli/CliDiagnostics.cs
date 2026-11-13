@@ -244,6 +244,40 @@ internal static class CliDiagnostics
                 return false;
             }
 
+            var singerDetail = new TerminalSingerDetail
+            {
+                AuthorId = 12345,
+                Name = "测试歌手",
+                Tab = TerminalSingerTab.HotSongs
+            };
+            singerDetail.HotSongs.Add(new TerminalSongItem
+            {
+                Name = "热门歌曲1",
+                Singer = "测试歌手",
+                Hash = "HASH1",
+                IsFavorite = true
+            });
+            singerDetail.Albums.Add(new TerminalSingerAlbumItem
+            {
+                AlbumId = 888,
+                Name = "测试专辑",
+                PublishDate = "2024-01-01"
+            });
+
+            tui.Reset(100, 30);
+            WorkspaceViews.RenderSingerPage(tui, new Rect(0, 0, 100, 30), singerDetail, 0, true, false, cache, theme);
+            tui.Reset(100, 30);
+            singerDetail.Tab = TerminalSingerTab.Albums;
+            WorkspaceViews.RenderSingerPage(tui, new Rect(0, 0, 100, 30), singerDetail, 0, true, false, cache, theme);
+
+            tui.Reset(100, 30);
+            var testPlaylists = new List<TerminalPlaylistItem>
+            {
+                new() { Name = "我喜欢", ListId = "1", Count = 12, Kind = TerminalPlaylistKind.Online },
+                new() { Name = "轻音乐", ListId = "2", Count = 5, Kind = TerminalPlaylistKind.Online }
+            };
+            WorkspaceViews.RenderPlaylistPickerModal(tui, "测试歌曲", testPlaylists, 0, theme);
+
             return true;
         }
         finally

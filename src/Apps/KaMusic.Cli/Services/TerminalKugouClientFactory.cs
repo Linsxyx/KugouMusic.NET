@@ -21,6 +21,7 @@ internal sealed class TerminalKugouClients
     public required LyricClient Lyric { get; init; }
     public required RankClient Rank { get; init; }
     public required AlbumClient Album { get; init; }
+    public required ArtistClient Artist { get; init; }
 }
 
 internal static class TerminalKugouClientFactory
@@ -39,6 +40,7 @@ internal static class TerminalKugouClientFactory
         var rawRank = new RawRankApi(transport);
         var rawAlbum = new RawAlbumApi(transport);
         var rawSong = new RawSongApi(transport, sessionManager);
+        var rawArtist = new RawArtistApi(transport, sessionManager);
 
         return new TerminalKugouClients
         {
@@ -52,7 +54,8 @@ internal static class TerminalKugouClientFactory
             User = new UserClient(rawUser, sessionManager),
             Lyric = new LyricClient(rawLyric),
             Rank = new RankClient(rawRank),
-            Album = new AlbumClient(rawAlbum)
+            Album = new AlbumClient(rawAlbum),
+            Artist = new ArtistClient(rawArtist, rawSearch, sessionManager)
         };
     }
 }
