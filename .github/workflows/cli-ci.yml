@@ -1,0 +1,54 @@
+name: CLI regression checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/Apps/KaMusic.Cli/**'
+      - 'src/Libraries/SimpleAudio/**'
+      - 'src/Libraries/KuGou.Net/**'
+      - 'Directory.Packages.props'
+      - '.github/workflows/cli-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  self-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-latest
+            rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install native build dependencies
+        if: startsWith(matrix.rid, 'linux-')
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev libsqlite3-dev
+      - name: Publish CLI (NativeAOT)
+        shell: bash
+        run: >-
+          dotnet publish src/Apps/KaMusic.Cli/KaMusic.Cli.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained true
+          -p:PublishAot=true -p:IlcSingleThreaded=true -o ./cli-test
+      - name: Run CLI regression self-test
+        shell: bash
+        run: |
+          if [[ '${{ matrix.rid }}' == win-* ]]; then
+            ./cli-test/KaMusic.Cli.exe --self-test
+          else
+            ./cli-test/KaMusic.Cli --self-test
+          fi

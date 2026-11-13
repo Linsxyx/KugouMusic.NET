@@ -9,9 +9,21 @@
         <!--<PublishAot>true</PublishAot>-->
     </PropertyGroup>
 
+    <!-- Prefer the target RID; use the host OS only for RID-less local builds. -->
+    <PropertyGroup Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux-')) Or ('$(RuntimeIdentifier)' == '' And $([MSBuild]::IsOSPlatform('Linux')))">
+        <UseSystemSqlite>true</UseSystemSqlite>
+        <DefineConstants>$(DefineConstants);KUGOU_SYSTEM_SQLITE</DefineConstants>
+    </PropertyGroup>
+
     <ItemGroup>
+        <PackageReference Include="Microsoft.Data.Sqlite" Condition="'$(UseSystemSqlite)' != 'true'"/>
+        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Condition="'$(UseSystemSqlite)' != 'true'"/>
+        <PackageReference Include="Microsoft.Data.Sqlite.Core" Condition="'$(UseSystemSqlite)' == 'true'"/>
+        <PackageReference Include="SQLitePCLRaw.bundle_sqlite3" Condition="'$(UseSystemSqlite)' == 'true'"/>
+        <PackageReference Include="SQLitePCLRaw.provider.sqlite3" Condition="'$(UseSystemSqlite)' == 'true'"/>
         <PackageReference Include="SkiaSharp"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies"/>
+        <PackageReference Include="z440.atl.core"/>
         <ProjectReference Include="..\..\Libraries\SimpleAudio\SimpleAudio.csproj"/>
         <ProjectReference Include="..\..\Libraries\KuGou.Net\KuGou.Net.csproj"/>
     </ItemGroup>

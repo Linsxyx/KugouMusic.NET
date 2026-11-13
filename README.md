@@ -34,10 +34,10 @@
 
 - 下载地址：[Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)
 - 问题反馈：[Issues](https://github.com/Linsxyx/KugouMusic.NET/issues)
-- 桌面客户端：`KugouAvaloniaPlayer`
-- 终端播放器：`KaMusic.Cli`
+- 桌面客户端：`KugouAvaloniaPlayer`（前往 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases) 下载）
+- 终端播放器：`KaMusic.Cli`（npm 全局安装 `npm i -g @linsxyx/kamusic` 或 `npx @linsxyx/kamusic`）
 - 开发者入口：`KuGou.Net` / `KgWebApi.Net` / `SimpleAudio` / `AvaloniaLyrics`
-- 安卓版正在开发中，[项目地址](https://github.com/umr-xiaomai/kgka_Music_hl)
+- 安卓版，[项目地址](https://github.com/umr-xiaomai/kgka_Music_hl)
 
 ## 为什么值得用
 
@@ -69,6 +69,8 @@ Apple Music风味的滚动歌词，支持在线歌词和本地歌词，歌词浮
 
 ## 下载与平台支持
 
+### 桌面客户端 (Avalonia)
+
 请前往 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases) 下载最新版本。
 
 - Windows x64：`KugouAvaloniaPlayer-win-x64.exe`
@@ -77,6 +79,32 @@ Apple Music风味的滚动歌词，支持在线歌词和本地歌词，歌词浮
 - macOS arm64 安装包：`KugouAvaloniaPlayer-mac-arm64-Setup.pkg`
 - macOS arm64（手动更新包）：`KugouAvaloniaPlayer-mac-arm64.app.zip`
 - macOS x64（手动更新包）：`KugouAvaloniaPlayer-mac-x64.app.zip`
+
+### 终端播放器 (KaMusic.Cli / npm)
+
+无需安装 .NET SDK 或任何运行库，全平台通过 NativeAOT 原生编译并通过 npm 分发：
+
+```bash
+# 全局安装（推荐）
+npm install -g @linsxyx/kamusic
+
+# 启动播放器
+kamusic
+
+# 检查并更新到最新版本
+kamusic update
+```
+
+或者免安装直接运行：
+
+```bash
+npx @linsxyx/kamusic
+```
+
+支持架构：
+- Windows: `x64` / `arm64`
+- Linux: `x64` / `arm64`
+- macOS: Apple Silicon (`arm64`) / Intel (`x64`)
 
 ### Linux SQLite 依赖
 
@@ -225,7 +253,36 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 ## 终端播放器 KaMusic.Cli
 
-`KaMusic.Cli` 是终端 TUI 播放器，目前也把智能过渡功能加上了，想试试的可以克隆仓库运行。详细功能、快捷键和配置说明见 [src/Apps/KaMusic.Cli/README.md](src/Apps/KaMusic.Cli/README.md)。
+`KaMusic.Cli` 是终端 TUI 音乐播放器，已发布至 npm（包名：`@linsxyx/kamusic`），全平台（Windows / macOS / Linux）基于 NativeAOT 原生编译分发。
+
+### 安装与运行
+
+```bash
+# 全局安装（推荐）
+npm install -g @linsxyx/kamusic
+
+# 启动播放器
+kamusic
+
+# 检查并更新到最新版本
+kamusic update
+```
+
+或者免安装直接运行：
+
+```bash
+npx @linsxyx/kamusic
+```
+
+### 核心特性
+
+- **多协议终端高清图片**：支持 Kitty、iTerm2、Sixel 与 UTF-8 半块字符（`▀`）降级渲染，在终端中直接显示登录二维码、专辑封面与歌单封面。
+- **逐字歌词与动感频谱**：支持 KRC 逐字高亮歌词，自带沉浸式播放页（按 `i` 开启，封面 + 歌词 + 实时音频频谱）。
+- **完整音频功能**：每日推荐、私人 FM、发现歌单、排行榜、搜索、我的歌单、10 段均衡器与智能无缝过渡。
+- **键盘与鼠标双交互**：全面支持键盘快捷键，同时支持终端鼠标点击、滚轮滚动与焦点切换。
+- **独立会话持久化**：使用轻量独立的会话存储，Windows 端通过系统 DPAPI 加密保护登录态。
+
+详细功能介绍、终端图片配置与快捷键完整列表请参考 [src/Apps/KaMusic.Cli/README.md](src/Apps/KaMusic.Cli/README.md)。
 
 ## 本地开发
 

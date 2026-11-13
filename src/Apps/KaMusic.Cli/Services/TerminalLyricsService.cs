@@ -1,15 +1,39 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using ATL;
 using KuGou.Net.Adapters.Lyrics;
 using KuGou.Net.Clients;
 using KaMusic.Cli.Models;
 
 namespace KaMusic.Cli.Services;
 
-// 歌词加载与窗口采样：支持原文、翻译、罗马音、双行组合，以及 KRC 逐字高亮进度计算。
+// 歌词加载与窗口采样：支持原文、翻译、罗马音、双行组合，以及 KRC 逐字高亮进度计算与本地音频内嵌/同目录歌词解析。
 
 internal sealed class TerminalLyricsService(LyricClient lyricClient)
 {
+    private const string EmbeddedKugouLyricPrefix = "KUGOU_EMBEDDED_LYRIC:";
+    private static readonly Regex LrcTimestampRegex = new(@"\[(?<m>\d{1,3}):(?<s>\d{1,2})(?:[.:](?<ms>\d{1,3}))?\]", RegexOptions.Compiled);
+
     private KrcLyric? _current;
+
+    public async Task LoadSongLyricsAsync(TerminalSongItem song)
+    {
+        _current = null;
+        if (song.IsLocalFile && !string.IsNullOrWhiteSpace(song.LocalFilePath))
+        {
+            var localLyric = await TryLoadLocalLyricsAsync(song.LocalFilePath);
+            if (localLyric is { Lines.Count: > 0 })
+            {
+                _current = localLyric;
+                return;
+            }
+        }
+
+        var searchHash = song.IsLocalFile || song.IsRemoteStream ? "" : song.Hash;
+        await LoadOnlineLyricsAsync(searchHash, $"{song.Singer} - {song.Name}".Trim(' ', '-'));
+    }
 
     public async Task LoadOnlineLyricsAsync(string hash, string name)
     {
@@ -40,13 +64,204 @@ internal sealed class TerminalLyricsService(LyricClient lyricClient)
             var lyricResult = await lyricClient.GetLyricAsync(id, key, fmt);
             if (!string.IsNullOrEmpty(lyricResult.DecodedContent))
             {
-                _current = KrcParser.Parse(lyricResult.DecodedContent);
+                _current = ParseLyricContent(lyricResult.DecodedContent);
             }
         }
         catch
         {
             _current = null;
         }
+    }
+
+    // 从本地音频同目录的 .krc / .lrc 文件或音频内嵌标签中读取并解析歌词。
+    private static async Task<KrcLyric?> TryLoadLocalLyricsAsync(string audioFilePath)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(audioFilePath);
+            var baseName = Path.GetFileNameWithoutExtension(audioFilePath);
+            if (!string.IsNullOrWhiteSpace(dir) && !string.IsNullOrWhiteSpace(baseName))
+            {
+                var krcPath = Path.Combine(dir, baseName + ".krc");
+                if (File.Exists(krcPath))
+                {
+                    var text = await File.ReadAllTextAsync(krcPath);
+                    var parsed = ParseLyricContent(text);
+                    if (parsed is { Lines.Count: > 0 })
+                    {
+                        return parsed;
+                    }
+                }
+
+                var lrcPath = Path.Combine(dir, baseName + ".lrc");
+                if (File.Exists(lrcPath))
+                {
+                    var text = await File.ReadAllTextAsync(lrcPath);
+                    var parsed = ParseLyricContent(text);
+                    if (parsed is { Lines.Count: > 0 })
+                    {
+                        return parsed;
+                    }
+                }
+            }
+
+            return await Task.Run(() =>
+            {
+                var track = new Track(audioFilePath);
+                if (track.Lyrics is null || track.Lyrics.Count == 0)
+                {
+                    return null;
+                }
+
+                foreach (var lyricsInfo in track.Lyrics)
+                {
+                    if (!string.IsNullOrWhiteSpace(lyricsInfo.UnsynchronizedLyrics))
+                    {
+                        var parsed = ParseEmbeddedRawLyric(lyricsInfo.UnsynchronizedLyrics);
+                        if (parsed is { Lines.Count: > 0 })
+                        {
+                            return parsed;
+                        }
+                    }
+
+                    if (lyricsInfo.SynchronizedLyrics is { Count: > 0 })
+                    {
+                        var krc = new KrcLyric();
+                        foreach (var phrase in lyricsInfo.SynchronizedLyrics.OrderBy(p => p.TimestampStart))
+                        {
+                            krc.Lines.Add(new KrcLine
+                            {
+                                StartTime = phrase.TimestampStart,
+                                Duration = phrase.TimestampEnd > phrase.TimestampStart
+                                    ? phrase.TimestampEnd - phrase.TimestampStart
+                                    : 2500,
+                                Content = phrase.Text ?? ""
+                            });
+                        }
+
+                        if (krc.Lines.Count > 0)
+                        {
+                            return krc;
+                        }
+                    }
+                }
+
+                return null;
+            });
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static KrcLyric? ParseEmbeddedRawLyric(string rawText)
+    {
+        var trimmed = rawText.Trim();
+        if (trimmed.StartsWith(EmbeddedKugouLyricPrefix, StringComparison.Ordinal))
+        {
+            try
+            {
+                var json = Encoding.UTF8.GetString(Convert.FromBase64String(trimmed[EmbeddedKugouLyricPrefix.Length..].Trim()));
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("RawLyricContent", out var contentProp) ||
+                    doc.RootElement.TryGetProperty("rawLyricContent", out contentProp))
+                {
+                    var rawContent = contentProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(rawContent))
+                    {
+                        return ParseLyricContent(rawContent);
+                    }
+                }
+            }
+            catch
+            {
+                // 降级为普通文本解析。
+            }
+        }
+
+        return ParseLyricContent(trimmed);
+    }
+
+    private static KrcLyric? ParseLyricContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        var krc = KrcParser.Parse(content);
+        if (krc.Lines.Count > 0)
+        {
+            return krc;
+        }
+
+        // 标准 LRC 时间轴解析（[mm:ss.xx]）
+        var parsedLines = new List<KrcLine>();
+        foreach (var rawLine in content.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var matches = LrcTimestampRegex.Matches(rawLine);
+            if (matches.Count == 0)
+            {
+                continue;
+            }
+
+            var lastMatch = matches[^1];
+            var text = rawLine[(lastMatch.Index + lastMatch.Length)..].Trim();
+            foreach (Match match in matches)
+            {
+                if (!int.TryParse(match.Groups["m"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes) ||
+                    !int.TryParse(match.Groups["s"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds))
+                {
+                    continue;
+                }
+
+                var msStr = match.Groups["ms"].Value;
+                var millis = msStr.Length switch
+                {
+                    1 => int.Parse(msStr, CultureInfo.InvariantCulture) * 100,
+                    2 => int.Parse(msStr, CultureInfo.InvariantCulture) * 10,
+                    3 => int.Parse(msStr, CultureInfo.InvariantCulture),
+                    _ => 0
+                };
+
+                var startMs = (minutes * 60 + seconds) * 1000 + millis;
+                parsedLines.Add(new KrcLine
+                {
+                    StartTime = startMs,
+                    Duration = 3000,
+                    Content = text
+                });
+            }
+        }
+
+        if (parsedLines.Count == 0)
+        {
+            return null;
+        }
+
+        var ordered = parsedLines.OrderBy(l => l.StartTime).ToList();
+        var merged = new List<KrcLine>(ordered.Count);
+        foreach (var item in ordered)
+        {
+            if (merged.Count > 0 && Math.Abs(merged[^1].StartTime - item.StartTime) <= 20 && !string.IsNullOrWhiteSpace(item.Content))
+            {
+                if (string.IsNullOrWhiteSpace(merged[^1].Translation))
+                {
+                    merged[^1].Translation = item.Content;
+                    continue;
+                }
+            }
+
+            merged.Add(item);
+        }
+
+        for (var i = 0; i < merged.Count - 1; i++)
+        {
+            merged[i].Duration = Math.Max(200, merged[i + 1].StartTime - merged[i].StartTime);
+        }
+
+        return new KrcLyric { Lines = merged };
     }
 
     public IReadOnlyList<string> GetWindow(TimeSpan position, TerminalLyricMode mode)

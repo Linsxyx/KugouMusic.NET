@@ -126,7 +126,13 @@ internal static class TerminalCapabilities
             var size = default(WinSize);
             var mac = OperatingSystem.IsMacOS();
             var request = mac ? MacTiocgWinSz : LinuxTiocgWinSz;
-            var result = mac ? MacIoctl(1, request, ref size) : LinuxIoctl(1, request, ref size);
+            // Darwin ARM64 puts variadic arguments on the stack, unlike Linux ARM64
+            // and macOS x64. Fill x2-x7 so the WinSize pointer occupies that stack slot.
+            var result = mac
+                ? RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                    ? MacArm64Ioctl(1, request, 0, 0, 0, 0, 0, 0, ref size)
+                    : MacIoctl(1, request, ref size)
+                : LinuxIoctl(1, request, ref size);
             if (result != 0 || size.Rows == 0 || size.Cols == 0 || size.XPixel == 0 || size.YPixel == 0)
             {
                 return null;
@@ -210,6 +216,12 @@ internal static class TerminalCapabilities
 
     [DllImport("libSystem.dylib", EntryPoint = "ioctl", SetLastError = true)]
     private static extern int MacIoctl(int fd, nuint request, ref WinSize size);
+
+    // Only call on macOS ARM64. The six padding arguments consume the unused
+    // integer argument registers; ioctl's first variadic argument starts at SP.
+    [DllImport("libSystem.dylib", EntryPoint = "ioctl", SetLastError = true)]
+    private static extern int MacArm64Ioctl(int fd, nuint request,
+        nuint x2, nuint x3, nuint x4, nuint x5, nuint x6, nuint x7, ref WinSize size);
 
     private static string Env(string name) => Environment.GetEnvironmentVariable(name) ?? "";
 }

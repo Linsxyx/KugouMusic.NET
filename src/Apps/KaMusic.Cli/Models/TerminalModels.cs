@@ -1,4 +1,5 @@
 using KuGou.Net.Abstractions;
+using KuGou.Net.Abstractions.Models;
 using KaMusic.Cli.Graphics;
 
 namespace KaMusic.Cli.Models;
@@ -10,7 +11,7 @@ internal enum TerminalPage
     Daily,
     PersonalFm,
     Discover,
-    Ranks,
+    LocalMusic,
     Search,
     MyPlaylists,
     Queue,
@@ -23,7 +24,25 @@ internal enum TerminalPlaylistKind
     Online,
     Album,
     Rank,
-    Discover
+    Discover,
+    TopCard,
+    Local
+}
+
+internal enum TerminalExploreTab
+{
+    Overview,
+    TopCards,
+    Playlists,
+    Ranks
+}
+
+internal enum TerminalExploreCardKind
+{
+    TopCard,
+    Playlist,
+    Rank,
+    Action
 }
 
 internal enum TerminalLyricMode
@@ -38,6 +57,7 @@ internal sealed class TerminalSongItem
 {
     public string Name { get; set; } = "";
     public string Singer { get; set; } = "";
+    public string AlbumName { get; set; } = "";
     public string Hash { get; set; } = "";
     public string AlbumId { get; set; } = "";
     public string MixSongId { get; set; } = "";
@@ -46,7 +66,35 @@ internal sealed class TerminalSongItem
     public double DurationSeconds { get; set; }
     public string Source { get; set; } = "";
     public int Privilege { get; set; }
+    public string? LocalFilePath { get; set; }
+    public string? RemoteUrl { get; set; }
+    public string? LocalSourceType { get; set; }
+    public long LocalTrackId { get; set; }
     public bool IsPlaying { get; set; }
+    public long AuthorId { get; set; }
+    public List<SingerLite> Singers { get; set; } = [];
+    public long FileId { get; set; }
+    public bool IsFavorite { get; set; }
+
+    public bool IsLocalFile => !string.IsNullOrWhiteSpace(LocalFilePath) && File.Exists(LocalFilePath);
+    public bool IsRemoteStream => !string.IsNullOrWhiteSpace(RemoteUrl);
+    public bool RequiresOnlineAuth => !IsLocalFile && !IsRemoteStream;
+
+    public string PlaybackIdentity =>
+        !string.IsNullOrWhiteSpace(LocalFilePath) ? $"local:{LocalFilePath}" :
+        !string.IsNullOrWhiteSpace(RemoteUrl) ? $"remote:{RemoteUrl}" :
+        $"hash:{Hash}";
+
+    public bool IsSameTrack(TerminalSongItem? other)
+    {
+        if (other is null)
+            return false;
+        if (!string.IsNullOrWhiteSpace(LocalFilePath) || !string.IsNullOrWhiteSpace(other.LocalFilePath))
+            return string.Equals(LocalFilePath, other.LocalFilePath, StringComparison.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(RemoteUrl) || !string.IsNullOrWhiteSpace(other.RemoteUrl))
+            return string.Equals(RemoteUrl, other.RemoteUrl, StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrWhiteSpace(Hash) && string.Equals(Hash, other.Hash, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 internal sealed class TerminalPlaylistItem
@@ -59,6 +107,34 @@ internal sealed class TerminalPlaylistItem
     public int Count { get; set; }
     public TerminalPlaylistKind Kind { get; set; }
     public long RankId { get; set; }
+    public long LocalPlaylistId { get; set; }
+    public string? LocalKind { get; set; }
+    public string? SourceRef { get; set; }
+    public IReadOnlyList<string> Previews { get; set; } = [];
+    public IReadOnlyList<TerminalSongItem> PreloadedSongs { get; set; } = [];
+}
+
+internal sealed class TerminalExploreCard
+{
+    public string Id { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Subtitle { get; init; } = "";
+    public string Badge { get; init; } = "";
+    public string SectionTitle { get; init; } = "";
+    public string? Cover { get; init; }
+    public TerminalExploreCardKind Kind { get; init; }
+    public IReadOnlyList<string> PreviewLines { get; init; } = [];
+    public TerminalPlaylistItem? Playlist { get; init; }
+    public IReadOnlyList<TerminalSongItem> PreloadedSongs { get; init; } = [];
+    public TerminalExploreTab? TargetTab { get; init; }
+}
+
+internal sealed class TerminalPlaylistTagItem
+{
+    public int Id { get; init; }
+    public int CategoryId { get; init; }
+    public string Name { get; init; } = "";
+    public string GroupName { get; init; } = "";
 }
 
 internal sealed class TerminalLyricLineView
@@ -109,4 +185,41 @@ internal sealed class TerminalAppSettings
     public TerminalLyricMode LyricMode { get; set; } = TerminalLyricMode.Translation;
     public TerminalImageMode ImageMode { get; set; } = TerminalImageMode.Auto;
     public float[] CustomEqGains { get; set; } = new float[10];
+}
+
+internal enum TerminalSingerTab
+{
+    HotSongs,
+    NewSongs,
+    Albums
+}
+
+internal sealed class TerminalSingerAlbumItem
+{
+    public long AlbumId { get; init; }
+    public string Name { get; init; } = "";
+    public string PublishDate { get; init; } = "";
+    public string Cover { get; init; } = "";
+    public int SongCount { get; init; }
+    public string Subtitle { get; init; } = "";
+}
+
+internal sealed class TerminalSingerDetail
+{
+    public long AuthorId { get; init; }
+    public string Name { get; init; } = "";
+    public string? Avatar { get; init; }
+    public int SongCount { get; init; }
+    public int AlbumCount { get; init; }
+    public string Intro { get; init; } = "";
+    public TerminalSingerTab Tab { get; set; } = TerminalSingerTab.HotSongs;
+    public List<TerminalSongItem> HotSongs { get; } = [];
+    public List<TerminalSongItem> NewSongs { get; } = [];
+    public List<TerminalSingerAlbumItem> Albums { get; } = [];
+    public bool HasLoadedHotSongs { get; set; }
+    public bool HasLoadedNewSongs { get; set; }
+    public bool HasLoadedAlbums { get; set; }
+
+    public IReadOnlyList<TerminalSongItem> CurrentSongs =>
+        Tab == TerminalSingerTab.NewSongs ? NewSongs : HotSongs;
 }
