@@ -26,8 +26,64 @@ internal static class CliDiagnostics
         return RunSelfTest();
     }
 
+    private static bool TestCellGeometry()
+    {
+        // Exercise the native probe too (including the macOS ARM64 ABI path).
+        var original = Environment.GetEnvironmentVariable("KGTEST_CELL_SIZE");
+        try
+        {
+            Environment.SetEnvironmentVariable("KGTEST_CELL_SIZE", null);
+            var detected = TerminalCapabilities.GetCellPixelSize();
+            if (detected.Width <= 0 || detected.Height <= 0)
+            {
+                throw new InvalidOperationException("Invalid detected cell size.");
+            }
+
+            Environment.SetEnvironmentVariable("KGTEST_CELL_SIZE", "8x20");
+            var canvas = new Canvas();
+            using var renderer = new TerminalRenderer();
+            var area = new Rect(0, 0, 40, 20);
+            if (!renderer.UpdateCellPixelSize(canvas, TerminalCapabilities.GetCellPixelSize()) ||
+                canvas.CellAspect != 2.5 || Canvas.FitImage(area, 1, canvas.CellAspect).H != 16 ||
+                renderer.UpdateCellPixelSize(canvas, (8, 20)))
+            {
+                throw new InvalidOperationException("Initial cell geometry mismatch.");
+            }
+
+            // Same terminal rows/columns, different font geometry.
+            Environment.SetEnvironmentVariable("KGTEST_CELL_SIZE", "10X20");
+            if (!renderer.UpdateCellPixelSize(canvas, TerminalCapabilities.GetCellPixelSize()) ||
+                canvas.CellAspect != 2 || Canvas.FitImage(area, 1, canvas.CellAspect).H != 20 ||
+                renderer.CellPixelSize != (10, 20))
+            {
+                throw new InvalidOperationException("Changed cell geometry was not refreshed.");
+            }
+
+            Environment.SetEnvironmentVariable("KGTEST_CELL_SIZE", "0x20");
+            if (TerminalCapabilities.GetCellPixelSize() != detected)
+            {
+                throw new InvalidOperationException("Invalid override did not fall back to detection.");
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Cell geometry self-test failed: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("KGTEST_CELL_SIZE", original);
+        }
+    }
+
     private static int RunSelfTest()
     {
+        if (!TestCellGeometry())
+        {
+            return 1;
+        }
+
         // 1. 构造合成二维码位图并测试模块还原。
         const int modules = 25;
         const int scale = 8;
@@ -456,13 +512,18 @@ internal static class CliDiagnostics
         using (var image = new TerminalImage("preview", bitmap.Copy(), crisp: false))
         {
             var mode = TerminalCapabilities.DetectImageMode();
-            var canvas = new Canvas { ImageMode = mode };
+            var cellPixelSize = TerminalCapabilities.GetCellPixelSize();
+            var canvas = new Canvas
+            {
+                ImageMode = mode,
+                CellAspect = cellPixelSize.Height / (double)cellPixelSize.Width
+            };
             canvas.Reset(80, 24);
             canvas.Image("preview", new Rect(2, 1, 44, 20), image);
             using var renderer = new TerminalRenderer
             {
                 TrueColor = TerminalCapabilities.DetectTrueColor(),
-                CellPixelSize = TerminalCapabilities.GetCellPixelSize()
+                CellPixelSize = cellPixelSize
             };
             renderer.Present(canvas);
             Console.WriteLine();

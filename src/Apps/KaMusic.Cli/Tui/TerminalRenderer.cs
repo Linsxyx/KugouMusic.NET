@@ -38,6 +38,24 @@ internal sealed class TerminalRenderer : IDisposable
 
     public (int Width, int Height) CellPixelSize { get; set; } = (10, 20);
 
+    internal bool UpdateCellPixelSize(Canvas canvas, (int Width, int Height) size)
+    {
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(size));
+        }
+
+        canvas.CellAspect = size.Height / (double)size.Width;
+        if (CellPixelSize == size)
+        {
+            return false;
+        }
+
+        CellPixelSize = size;
+        Invalidate(); // Resend existing images even when their cell rectangles did not change.
+        return true;
+    }
+
     public void Enter()
     {
         if (_entered)
@@ -235,7 +253,11 @@ internal sealed class TerminalRenderer : IDisposable
         }
     }
 
-    private static (int Width, int Height) ProtocolPixelSize(ImagePlacement placement)
+    /// <summary>
+    ///     Kitty / iTerm 协议会把图片拉伸填满 c×r 个字符格，因此传输的像素尺寸必须与字符格的真实像素比例一致；
+    ///     超过传输上限时按比例缩小，由终端放大显示。
+    /// </summary>
+    private (int Width, int Height) ProtocolPixelSize(ImagePlacement placement)
     {
         var image = placement.Image;
         if (image.Crisp)
@@ -243,11 +265,10 @@ internal sealed class TerminalRenderer : IDisposable
             return (image.Width, image.Height);
         }
 
-        // 以 1:2 字符格估算目标像素，限制最大边长以控制传输量。
-        var width = placement.Area.W * 12;
-        var height = placement.Area.H * 24;
+        var width = placement.Area.W * CellPixelSize.Width;
+        var height = placement.Area.H * CellPixelSize.Height;
         var scale = Math.Min(1.0, 720.0 / Math.Max(width, height));
-        return (Math.Max(1, (int)(width * scale)), Math.Max(1, (int)(height * scale)));
+        return (Math.Max(1, (int)Math.Round(width * scale)), Math.Max(1, (int)Math.Round(height * scale)));
     }
 
     private void MoveTo(int x, int y, ref int cursorX, ref int cursorY)

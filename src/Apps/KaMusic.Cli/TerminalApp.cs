@@ -148,7 +148,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         _images = new ImageCache(RequestRender);
         _login = new LoginController(_clients, _images, RequestRender, OnLoginCompletedAsync);
         _renderer.TrueColor = TerminalCapabilities.DetectTrueColor();
-        _renderer.CellPixelSize = TerminalCapabilities.GetCellPixelSize();
+        _renderer.UpdateCellPixelSize(_canvas, TerminalCapabilities.GetCellPixelSize());
         _dispatcher.UnhandledException += ex =>
         {
             _status = ex.Message;
@@ -2756,6 +2756,8 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     private void RenderFrame()
     {
+        // Font/line-spacing changes can leave the row and column counts unchanged.
+        _renderer.UpdateCellPixelSize(_canvas, TerminalCapabilities.GetCellPixelSize());
         var (width, height) = GetConsoleSize();
         var effectiveMode = EffectiveImageMode();
         _canvas.ImageMode = effectiveMode;
