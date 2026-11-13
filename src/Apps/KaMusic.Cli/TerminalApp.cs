@@ -57,6 +57,7 @@ internal sealed class TerminalApp : IAsyncDisposable
     private readonly TerminalDataService _data;
     private readonly TerminalVipEntitlementService _vipEntitlement;
     private readonly TerminalLyricsService _lyrics;
+    private readonly TerminalPersonalFmService _personalFm;
     private readonly TerminalPlaybackService _playback;
     private readonly ImageCache _images;
     private readonly Canvas _canvas = new();
@@ -66,6 +67,12 @@ internal sealed class TerminalApp : IAsyncDisposable
     private readonly LoginController _login;
     private readonly TerminalUpdateService _updater = new();
     private readonly ExploreViewState _exploreState = new();
+    private readonly PersonalFmHitRegions _fmHitRegions = new();
+    private readonly List<TerminalSongItem> _fmPreviewSongs = [];
+    private TerminalPersonalFmMode _fmMode = TerminalPersonalFmMode.Normal;
+    private TerminalPersonalFmSongPoolId _fmSongPoolId = TerminalPersonalFmSongPoolId.Taste;
+    private bool _fmLoading;
+    private int _fmLoadVersion;
     private readonly TextField _searchInput = new("输入歌名、歌手或专辑关键词", 64);
     private readonly TextField _localPathInput = new("输入本地音乐文件夹或音频文件路径（支持 ~ 展开）", 260);
     private readonly TextField _localPlaylistNameInput = new("输入新建本地歌单名称", 64);
@@ -118,13 +125,25 @@ internal sealed class TerminalApp : IAsyncDisposable
         _data = new TerminalDataService(_clients);
         _vipEntitlement = new TerminalVipEntitlementService(_clients);
         _lyrics = new TerminalLyricsService(_clients.Lyric);
+        _personalFm = new TerminalPersonalFmService(_clients, _data.IsLiked);
+        _personalFm.StateChanged += () => _dispatcher.Post(() =>
+        {
+            if (_personalFm.IsActive)
+            {
+                _fmMode = _personalFm.CurrentMode;
+                _fmSongPoolId = _personalFm.CurrentSongPoolId;
+            }
+
+            RequestRender();
+        });
         _playback = new TerminalPlaybackService(
             _clients.Song,
             _lyrics,
             _settingsStore,
             _settings,
             _vipEntitlement,
-            () => _clients.User.IsLoggedIn());
+            () => _clients.User.IsLoggedIn(),
+            _personalFm);
         _playback.LoginRequired += OnPlaybackLoginRequired;
         _images = new ImageCache(RequestRender);
         _login = new LoginController(_clients, _images, RequestRender, OnLoginCompletedAsync);
@@ -512,6 +531,10 @@ internal sealed class TerminalApp : IAsyncDisposable
                 {
                     _focus = FocusZone.Content;
                 }
+                else if (_page == TerminalPage.PersonalFm && _openedPlaylist == null && _openedSinger == null)
+                {
+                    await StartOrTogglePersonalFmAsync();
+                }
                 else
                 {
                     await ActivateSelectionAsync();
@@ -522,7 +545,15 @@ internal sealed class TerminalApp : IAsyncDisposable
                 ReturnFromDetail();
                 break;
             case ConsoleKey.Spacebar:
-                _playback.TogglePlayPause();
+                if (_page == TerminalPage.PersonalFm && !_personalFm.IsActive && _openedPlaylist == null && _openedSinger == null)
+                {
+                    await StartOrTogglePersonalFmAsync();
+                }
+                else
+                {
+                    _playback.TogglePlayPause();
+                }
+
                 break;
             case ConsoleKey.N:
                 await _playback.PlayNextAsync();
@@ -654,11 +685,25 @@ internal sealed class TerminalApp : IAsyncDisposable
                         ? TerminalSingerTab.HotSongs
                         : TerminalSingerTab.Albums);
                 }
+                else if (_page == TerminalPage.PersonalFm && _openedPlaylist == null)
+                {
+                    var nextPool = _fmSongPoolId == TerminalPersonalFmSongPoolId.Taste
+                        ? TerminalPersonalFmSongPoolId.Style
+                        : TerminalPersonalFmSongPoolId.Taste;
+                    await SwitchPersonalFmSongPoolAsync(nextPool);
+                }
                 else if (_page == TerminalPage.Search && _openedPlaylist == null)
                 {
                     _searchShowsPlaylists = !_searchShowsPlaylists;
                     _showingSongs = !_searchShowsPlaylists;
                     _selectedIndex = 0;
+                }
+
+                break;
+            case ConsoleKey.M:
+                if (_page == TerminalPage.PersonalFm && _openedPlaylist == null && _openedSinger == null)
+                {
+                    await SwitchPersonalFmModeAsync(TerminalPersonalFmPresentation.GetNextMode(_fmMode));
                 }
 
                 break;
@@ -673,6 +718,10 @@ internal sealed class TerminalApp : IAsyncDisposable
                 if (_page == TerminalPage.LocalMusic && _openedPlaylist == null)
                 {
                     OpenLocalInputModal(LocalInputModalMode.CreatePlaylist);
+                }
+                else if (_page == TerminalPage.PersonalFm && _openedPlaylist == null && _openedSinger == null)
+                {
+                    await ToggleFavoriteForCurrentOrSelectedAsync();
                 }
 
                 break;
@@ -694,9 +743,7 @@ internal sealed class TerminalApp : IAsyncDisposable
             case ConsoleKey.D:
                 if (_page == TerminalPage.PersonalFm)
                 {
-                    await _data.ReportPersonalFmAsync(_playback.CurrentSong,
-                        (int)_playback.GetSnapshot().Position.TotalSeconds, false, "garbage");
-                    await _playback.PlayNextAsync();
+                    await DislikePersonalFmAsync();
                 }
 
                 break;
@@ -1260,7 +1307,8 @@ internal sealed class TerminalApp : IAsyncDisposable
         var main = bounds.SkipBottom(barHeight);
         var bar = bounds.TakeBottom(barHeight);
         var navWidth = bounds.W >= 88 ? 22 : 0;
-        var sideWidth = bounds.W >= 112 ? Math.Clamp(bounds.W * 28 / 100, 30, 42) : 0;
+        var hideSidePanel = _page == TerminalPage.PersonalFm && _openedPlaylist == null && _openedSinger == null;
+        var sideWidth = !hideSidePanel && bounds.W >= 112 ? Math.Clamp(bounds.W * 28 / 100, 30, 42) : 0;
         var navRect = navWidth > 0 ? main.TakeLeft(navWidth) : Rect.Empty;
         var sideRect = sideWidth > 0 ? main.TakeRight(sideWidth) : Rect.Empty;
         var contentRect = main.SkipLeft(navWidth).SkipRight(sideWidth);
@@ -1342,6 +1390,12 @@ internal sealed class TerminalApp : IAsyncDisposable
         if (_page == TerminalPage.Account)
         {
             await _login.HandleMouseAsync(mouse, area.Inset(2, 1));
+            return;
+        }
+
+        if (_page == TerminalPage.PersonalFm && _openedPlaylist == null && _openedSinger == null)
+        {
+            await HandlePersonalFmMouseAsync(mouse);
             return;
         }
 
@@ -1662,7 +1716,14 @@ internal sealed class TerminalApp : IAsyncDisposable
         _songs.Clear();
         _playlists.Clear();
         _title = WorkspaceViews.PageTitle(page);
-        _showingSongs = page is TerminalPage.Daily or TerminalPage.PersonalFm or TerminalPage.Queue;
+        if (page == TerminalPage.PersonalFm)
+        {
+            _showingSongs = false;
+            await LoadPersonalFmPageAsync(force);
+            return;
+        }
+
+        _showingSongs = page is TerminalPage.Daily or TerminalPage.Queue;
         _status = "正在加载...";
         RequestRender();
 
@@ -1672,9 +1733,6 @@ internal sealed class TerminalApp : IAsyncDisposable
             {
                 case TerminalPage.Daily:
                     _songs.AddRange(await _data.GetDailySongsAsync());
-                    break;
-                case TerminalPage.PersonalFm:
-                    _songs.AddRange(await _data.GetPersonalFmSongsAsync());
                     break;
                 case TerminalPage.Discover:
                     var topCardsTask = _data.GetTopCardsAsync();
@@ -1958,8 +2016,22 @@ internal sealed class TerminalApp : IAsyncDisposable
         return false;
     }
 
-    private TerminalSongItem? ResolveTargetSong() =>
-        _isImmersive ? _playback.CurrentSong : (SelectedSong() ?? _playback.CurrentSong);
+    private TerminalSongItem? ResolveTargetSong()
+    {
+        if (_isImmersive)
+        {
+            return _playback.CurrentSong;
+        }
+
+        if (_page == TerminalPage.PersonalFm && _openedPlaylist == null && _openedSinger == null)
+        {
+            return _personalFm.IsActive
+                ? _personalFm.CurrentSong ?? _playback.CurrentSong
+                : _fmPreviewSongs.FirstOrDefault() ?? _playback.CurrentSong;
+        }
+
+        return SelectedSong() ?? _playback.CurrentSong;
+    }
 
     // 弹出「添加到歌单」对话框，异步获取用户歌单列表供选择。
     private async Task OpenAddToPlaylistPickerAsync()
@@ -2635,6 +2707,8 @@ internal sealed class TerminalApp : IAsyncDisposable
     private void Logout()
     {
         _login.StopPolling();
+        _personalFm.Clear();
+        _fmPreviewSongs.Clear();
         _clients.Login.LogOutAsync();
         _profile = new TerminalUserProfile { IsLoggedIn = false, Name = "未登录" };
         _status = "已退出登录";
@@ -2666,6 +2740,17 @@ internal sealed class TerminalApp : IAsyncDisposable
         if (current != null)
         {
             current.IsFavorite = _data.IsLiked(current.Hash);
+        }
+
+        if (_personalFm.CurrentSong != null)
+        {
+            _personalFm.CurrentSong.IsFavorite = _data.IsLiked(_personalFm.CurrentSong.Hash);
+        }
+
+        foreach (var song in _fmPreviewSongs)
+        {
+            song.IsPlaying = song.IsSameTrack(current);
+            song.IsFavorite = _data.IsLiked(song.Hash);
         }
     }
 
@@ -2751,7 +2836,8 @@ internal sealed class TerminalApp : IAsyncDisposable
         var bar = bounds.TakeBottom(barHeight);
 
         var navWidth = bounds.W >= 88 ? 22 : 0;
-        var sideWidth = bounds.W >= 112 ? Math.Clamp(bounds.W * 28 / 100, 30, 42) : 0;
+        var hideSidePanel = _page == TerminalPage.PersonalFm && _openedPlaylist == null && _openedSinger == null;
+        var sideWidth = !hideSidePanel && bounds.W >= 112 ? Math.Clamp(bounds.W * 28 / 100, 30, 42) : 0;
         var contentRect = main.SkipLeft(navWidth).SkipRight(sideWidth);
 
         if (navWidth > 0)
@@ -2812,6 +2898,28 @@ internal sealed class TerminalApp : IAsyncDisposable
                 _canvas.Box(area, border, "账号与登录 · F5 扫码 · F6 短信 · L 退出登录",
                     focused ? _theme.AccentBold : _theme.Bold);
                 _login.Render(_canvas, area.Inset(2, 1), _profile, _theme, focused);
+                return;
+            case TerminalPage.PersonalFm when _openedPlaylist == null && _openedSinger == null:
+                var snapshot = _playback.GetSnapshot();
+                var fmSongs = _personalFm.IsActive ? _personalFm.GetDisplaySongs(5) : _fmPreviewSongs;
+                var fmState = new PersonalFmViewState
+                {
+                    IsLoggedIn = _profile.IsLoggedIn,
+                    IsLoading = _fmLoading,
+                    IsFmActive = _personalFm.IsActive,
+                    IsPlaying = snapshot.IsPlaying,
+                    IsPaused = snapshot.IsPaused,
+                    SelectedMode = _fmMode,
+                    SelectedSongPoolId = _fmSongPoolId,
+                    CurrentSong = _personalFm.IsActive
+                        ? _personalFm.CurrentSong ?? snapshot.CurrentSong
+                        : _fmPreviewSongs.FirstOrDefault(),
+                    UpcomingSongs = fmSongs.Skip(1).ToList(),
+                    HasHistory = _personalFm.HistoryCount > 0,
+                    Quality = _playback.MusicQuality,
+                    PlaybackSnapshot = snapshot
+                };
+                PersonalFmView.Render(_canvas, area, fmState, _fmHitRegions, focused, _images, _theme);
                 return;
         }
 
@@ -2936,12 +3044,241 @@ internal sealed class TerminalApp : IAsyncDisposable
         return (120, 34);
     }
 
+    // 加载或刷新私人 FM 页面：未激活时拉取预览并在空闲时自动开播；已激活且非强制刷新时直接同步会话状态。
+    private async Task LoadPersonalFmPageAsync(bool force)
+    {
+        if (!_profile.IsLoggedIn)
+        {
+            _fmPreviewSongs.Clear();
+            _fmLoading = false;
+            _status = "登录后开启私人 FM（按 F5 扫码 / F6 短信）";
+            RequestRender();
+            return;
+        }
+
+        if (_personalFm.IsActive && !force)
+        {
+            _fmMode = _personalFm.CurrentMode;
+            _fmSongPoolId = _personalFm.CurrentSongPoolId;
+            _fmLoading = false;
+            _status = $"私人 FM · {TerminalPersonalFmPresentation.GetTitle(_fmMode)}";
+            RequestRender();
+            return;
+        }
+
+        var fmVersion = ++_fmLoadVersion;
+        _fmLoading = true;
+        _status = "正在获取私人 FM 推荐...";
+        RequestRender();
+
+        try
+        {
+            var songs = await _personalFm.FetchPreviewAsync(_fmMode, _fmSongPoolId);
+            if (fmVersion != _fmLoadVersion)
+            {
+                return;
+            }
+
+            _fmPreviewSongs.Clear();
+            _fmPreviewSongs.AddRange(songs);
+
+            if (songs.Count == 0)
+            {
+                _status = "暂时没有新的私人 FM 推荐";
+                return;
+            }
+
+            if (force || _playback.CurrentSong == null || _personalFm.IsActive)
+            {
+                await _playback.StartPersonalFmAsync(songs, _fmMode, _fmSongPoolId, songs[0]);
+                SyncPlayingFlag();
+                _status = $"私人 FM 已就绪：{songs[0].Name}";
+            }
+            else
+            {
+                _status = $"私人 FM 预览已加载：{songs[0].Name}（按 Enter/Space 开始播放）";
+            }
+        }
+        catch (Exception ex)
+        {
+            if (fmVersion == _fmLoadVersion)
+            {
+                _status = $"私人 FM 加载失败：{ex.Message}";
+            }
+        }
+        finally
+        {
+            if (fmVersion == _fmLoadVersion)
+            {
+                _fmLoading = false;
+                RequestRender();
+            }
+        }
+    }
+
+    private async Task StartOrTogglePersonalFmAsync()
+    {
+        if (!_profile.IsLoggedIn)
+        {
+            ShowLoginPrompt("私人 FM");
+            return;
+        }
+
+        if (_personalFm.IsActive)
+        {
+            _playback.TogglePlayPause();
+            return;
+        }
+
+        if (_fmPreviewSongs.Count > 0)
+        {
+            await _playback.StartPersonalFmAsync(_fmPreviewSongs, _fmMode, _fmSongPoolId, _fmPreviewSongs[0]);
+            SyncPlayingFlag();
+            return;
+        }
+
+        await LoadPersonalFmPageAsync(force: true);
+    }
+
+    private async Task DislikePersonalFmAsync()
+    {
+        if (!_personalFm.IsActive)
+        {
+            _status = "请先开始播放私人 FM";
+            RequestRender();
+            return;
+        }
+
+        var dislikedName = _personalFm.CurrentSong?.Name;
+        var ok = await _playback.DislikeCurrentPersonalFmAsync();
+        SyncPlayingFlag();
+        if (ok && !string.IsNullOrWhiteSpace(dislikedName))
+        {
+            _status = $"已标记不喜欢《{dislikedName}》，已切到下一首";
+        }
+
+        RequestRender();
+    }
+
+    private async Task SwitchPersonalFmModeAsync(TerminalPersonalFmMode mode)
+    {
+        if (_fmMode == mode && _personalFm.IsActive)
+        {
+            return;
+        }
+
+        _fmMode = mode;
+        await LoadPersonalFmPageAsync(force: true);
+    }
+
+    private async Task SwitchPersonalFmSongPoolAsync(TerminalPersonalFmSongPoolId songPoolId)
+    {
+        if (_fmSongPoolId == songPoolId && _personalFm.IsActive)
+        {
+            return;
+        }
+
+        _fmSongPoolId = songPoolId;
+        await LoadPersonalFmPageAsync(force: true);
+    }
+
+    private async Task HandlePersonalFmMouseAsync(MouseEvent mouse)
+    {
+        if (mouse.Kind is not (MouseKind.LeftDown or MouseKind.LeftDoubleClick))
+        {
+            return;
+        }
+
+        if (_fmHitRegions.ModeNormalRect.Contains(mouse.X, mouse.Y))
+        {
+            await SwitchPersonalFmModeAsync(TerminalPersonalFmMode.Normal);
+            return;
+        }
+
+        if (_fmHitRegions.ModeSmallRect.Contains(mouse.X, mouse.Y))
+        {
+            await SwitchPersonalFmModeAsync(TerminalPersonalFmMode.Small);
+            return;
+        }
+
+        if (_fmHitRegions.ModePeakRect.Contains(mouse.X, mouse.Y))
+        {
+            await SwitchPersonalFmModeAsync(TerminalPersonalFmMode.Peak);
+            return;
+        }
+
+        if (_fmHitRegions.PoolTasteRect.Contains(mouse.X, mouse.Y))
+        {
+            await SwitchPersonalFmSongPoolAsync(TerminalPersonalFmSongPoolId.Taste);
+            return;
+        }
+
+        if (_fmHitRegions.PoolStyleRect.Contains(mouse.X, mouse.Y))
+        {
+            await SwitchPersonalFmSongPoolAsync(TerminalPersonalFmSongPoolId.Style);
+            return;
+        }
+
+        if (_personalFm.IsActive &&
+            _fmHitRegions.ProgressBarWidth > 0 &&
+            _fmHitRegions.ProgressBarRect.Contains(mouse.X, mouse.Y))
+        {
+            var ratio = (mouse.X - _fmHitRegions.ProgressBarStartX) / (double)Math.Max(1, _fmHitRegions.ProgressBarWidth - 1);
+            _playback.SeekToRatio(ratio);
+            return;
+        }
+
+        if (_fmHitRegions.PreviousButtonRect.Contains(mouse.X, mouse.Y))
+        {
+            await _playback.PlayPreviousAsync();
+            return;
+        }
+
+        if (_fmHitRegions.DislikeButtonRect.Contains(mouse.X, mouse.Y))
+        {
+            await DislikePersonalFmAsync();
+            return;
+        }
+
+        if (_fmHitRegions.PlayPauseButtonRect.Contains(mouse.X, mouse.Y))
+        {
+            await StartOrTogglePersonalFmAsync();
+            return;
+        }
+
+        if (_fmHitRegions.NextButtonRect.Contains(mouse.X, mouse.Y))
+        {
+            if (_personalFm.IsActive)
+            {
+                await _playback.PlayNextAsync();
+            }
+            else
+            {
+                await StartOrTogglePersonalFmAsync();
+            }
+
+            return;
+        }
+
+        if (_fmHitRegions.FavoriteButtonRect.Contains(mouse.X, mouse.Y))
+        {
+            await ToggleFavoriteForCurrentOrSelectedAsync();
+            return;
+        }
+
+        if (_fmHitRegions.RefreshButtonRect.Contains(mouse.X, mouse.Y))
+        {
+            await LoadPersonalFmPageAsync(force: true);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         _input?.Dispose();
         _login.Dispose();
         _images.Dispose();
         _playback.Dispose();
+        _personalFm.Dispose();
         _renderer.Dispose();
         await Task.CompletedTask;
     }

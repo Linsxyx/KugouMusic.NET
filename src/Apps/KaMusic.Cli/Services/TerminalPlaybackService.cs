@@ -16,6 +16,7 @@ internal sealed class TerminalPlaybackService : IDisposable
     private readonly TerminalSettingsStore _settingsStore;
     private readonly TerminalAppSettings _settings;
     private readonly TerminalVipEntitlementService? _vipEntitlement;
+    private readonly TerminalPersonalFmService? _personalFm;
     private readonly Func<bool> _isAuthenticated;
     private readonly DualTrackAudioPlayer _player = new();
     private readonly ITransitionAnalysisService _transitionAnalysisService = new ManagedBassTransitionAnalysisService();
@@ -42,7 +43,8 @@ internal sealed class TerminalPlaybackService : IDisposable
         TerminalSettingsStore settingsStore,
         TerminalAppSettings settings,
         TerminalVipEntitlementService? vipEntitlement = null,
-        Func<bool>? isAuthenticated = null)
+        Func<bool>? isAuthenticated = null,
+        TerminalPersonalFmService? personalFm = null)
     {
         _songClient = songClient;
         _lyricsService = lyricsService;
@@ -50,6 +52,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         _settings = settings;
         _vipEntitlement = vipEntitlement;
         _isAuthenticated = isAuthenticated ?? (() => true);
+        _personalFm = personalFm;
         _player.PlaybackEnded += HandlePlaybackEnded;
         ApplySettings();
     }
@@ -58,7 +61,56 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     public string StatusMessage { get; private set; } = "就绪";
 
-    public async Task PlayAsync(TerminalSongItem song, IReadOnlyList<TerminalSongItem>? context = null)
+    public Task PlayAsync(TerminalSongItem song, IReadOnlyList<TerminalSongItem>? context = null) =>
+        PlayCoreAsync(song, context, isPersonalFm: false);
+
+    public async Task<bool> StartPersonalFmAsync(
+        IReadOnlyList<TerminalSongItem> songs,
+        TerminalPersonalFmMode mode,
+        TerminalPersonalFmSongPoolId songPoolId,
+        TerminalSongItem? startSong = null)
+    {
+        if (_personalFm == null || songs.Count == 0)
+        {
+            return false;
+        }
+
+        var request = await _personalFm.StartAsync(songs, mode, songPoolId, startSong);
+        if (request == null)
+        {
+            return false;
+        }
+
+        await PlayCoreAsync(request.Song, request.ContextList, isPersonalFm: true);
+        return true;
+    }
+
+    public async Task<bool> DislikeCurrentPersonalFmAsync()
+    {
+        if (Volatile.Read(ref _disposeState) != 0 || _personalFm is not { IsActive: true })
+        {
+            return false;
+        }
+
+        var result = await _personalFm.DislikeCurrentAsync();
+        if (!string.IsNullOrWhiteSpace(result.UnavailableMessage))
+        {
+            StatusMessage = result.UnavailableMessage;
+        }
+
+        if (!result.Success || result.PlaybackRequest == null)
+        {
+            return false;
+        }
+
+        await PlayCoreAsync(result.PlaybackRequest.Song, result.PlaybackRequest.ContextList, isPersonalFm: true);
+        return true;
+    }
+
+    private async Task PlayCoreAsync(
+        TerminalSongItem song,
+        IReadOnlyList<TerminalSongItem>? context,
+        bool isPersonalFm)
     {
         if (Volatile.Read(ref _disposeState) != 0)
         {
@@ -70,6 +122,11 @@ internal sealed class TerminalPlaybackService : IDisposable
             StatusMessage = $"请先登录：登录后才能播放在线音乐《{song.Name}》（按 F5 扫码登录 / F6 短信登录）";
             LoginRequired?.Invoke(song);
             return;
+        }
+
+        if (!isPersonalFm)
+        {
+            _personalFm?.Clear();
         }
 
         await _playLock.WaitAsync();
@@ -84,7 +141,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             {
                 _queue = context.Select(CloneSong).ToList();
                 _currentIndex = Math.Max(0, _queue.FindIndex(x => SameSong(x, song)));
-                if (_settings.Shuffle)
+                if (!isPersonalFm && _settings.Shuffle)
                 {
                     ShuffleQueue(song);
                 }
@@ -103,10 +160,30 @@ internal sealed class TerminalPlaybackService : IDisposable
         }
     }
 
-    public async Task PlayNextAsync()
+    public Task PlayNextAsync() => PlayNextInternalAsync(trackFinished: false);
+
+    private async Task PlayNextInternalAsync(bool trackFinished)
     {
         if (Volatile.Read(ref _disposeState) != 0)
         {
+            return;
+        }
+
+        if (_personalFm is { IsActive: true })
+        {
+            var playtimeSeconds = Math.Max(0, (int)Math.Floor(_player.GetPosition().TotalSeconds));
+            var isOverplay = trackFinished || HasCurrentSongReachedTail();
+            var result = await _personalFm.PlayNextAsync(playtimeSeconds, isOverplay, trackFinished);
+            if (!string.IsNullOrWhiteSpace(result.UnavailableMessage))
+            {
+                StatusMessage = result.UnavailableMessage;
+            }
+
+            if (result.Success && result.PlaybackRequest != null)
+            {
+                await PlayCoreAsync(result.PlaybackRequest.Song, result.PlaybackRequest.ContextList, isPersonalFm: true);
+            }
+
             return;
         }
 
@@ -131,6 +208,19 @@ internal sealed class TerminalPlaybackService : IDisposable
     {
         if (Volatile.Read(ref _disposeState) != 0)
         {
+            return;
+        }
+
+        if (_personalFm is { IsActive: true })
+        {
+            var request = await _personalFm.PlayPreviousAsync();
+            if (request == null)
+            {
+                StatusMessage = "已是私人 FM 第一首";
+                return;
+            }
+
+            await PlayCoreAsync(request.Song, request.ContextList, isPersonalFm: true);
             return;
         }
 
@@ -250,6 +340,20 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     public void EnqueueNext(TerminalSongItem song)
     {
+        if (_personalFm is { IsActive: true } && _personalFm.AddToNext(song))
+        {
+            _queue = _personalFm.GetQueueSongs().Select(CloneSong).ToList();
+            _currentIndex = _queue.Count > 0 ? 0 : -1;
+            if (CurrentSong != null)
+            {
+                CurrentSong.IsPlaying = true;
+            }
+
+            ResetTransitionPipeline(cancelPreparedTrack: true);
+            StatusMessage = $"已加入私人 FM 下一首：{song.Name}";
+            return;
+        }
+
         var copy = CloneSong(song);
         if (_queue.Count == 0 || _currentIndex < 0)
         {
@@ -658,10 +762,18 @@ internal sealed class TerminalPlaybackService : IDisposable
             oldSong.IsPlaying = false;
         }
 
-        var nextIndex = _queue.FindIndex(x => SameSong(x, _preparedNextSong));
-        if (nextIndex >= 0)
+        if (_personalFm is { IsActive: true } && _personalFm.AdvanceForAutoTransition(_preparedNextSong))
         {
-            _currentIndex = nextIndex;
+            _queue = _personalFm.GetQueueSongs().Select(CloneSong).ToList();
+            _currentIndex = _queue.Count > 0 ? 0 : -1;
+        }
+        else
+        {
+            var nextIndex = _queue.FindIndex(x => SameSong(x, _preparedNextSong));
+            if (nextIndex >= 0)
+            {
+                _currentIndex = nextIndex;
+            }
         }
 
         if (CurrentSong != null)
@@ -682,6 +794,11 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     private TerminalSongItem? GetUpcomingSong()
     {
+        if (_personalFm is { IsActive: true })
+        {
+            return _personalFm.UpcomingSong;
+        }
+
         if (_queue.Count <= 1 || CurrentSong == null)
         {
             return null;
@@ -689,6 +806,22 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         var nextIndex = (_currentIndex + 1) % _queue.Count;
         return nextIndex == _currentIndex ? null : _queue[nextIndex];
+    }
+
+    private bool HasCurrentSongReachedTail()
+    {
+        var duration = _player.GetDuration();
+        if (duration <= TimeSpan.Zero && CurrentSong?.DurationSeconds > 0)
+        {
+            duration = TimeSpan.FromSeconds(CurrentSong.DurationSeconds);
+        }
+
+        if (duration <= TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        return _player.GetPosition().TotalSeconds >= Math.Max(0, duration.TotalSeconds - 2);
     }
 
     private void ResetTransitionPipeline(bool cancelPreparedTrack)
@@ -790,7 +923,7 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     private void HandlePlaybackEnded()
     {
-        _ = Task.Run(PlayNextAsync);
+        _ = Task.Run(() => PlayNextInternalAsync(trackFinished: true));
     }
 
     private static bool SameSong(TerminalSongItem a, TerminalSongItem b)
@@ -816,7 +949,11 @@ internal sealed class TerminalPlaybackService : IDisposable
             LocalFilePath = song.LocalFilePath,
             RemoteUrl = song.RemoteUrl,
             LocalSourceType = song.LocalSourceType,
-            LocalTrackId = song.LocalTrackId
+            LocalTrackId = song.LocalTrackId,
+            AuthorId = song.AuthorId,
+            Singers = song.Singers,
+            FileId = song.FileId,
+            IsFavorite = song.IsFavorite
         };
     }
 
