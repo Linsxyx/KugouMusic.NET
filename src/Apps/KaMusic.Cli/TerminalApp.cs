@@ -147,7 +147,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         _playback.LoginRequired += OnPlaybackLoginRequired;
         _images = new ImageCache(RequestRender);
         _login = new LoginController(_clients, _images, RequestRender, OnLoginCompletedAsync);
-        _renderer.TrueColor = TerminalCapabilities.DetectTrueColor();
+        _renderer.ColorDepth = TerminalCapabilities.DetectColorDepth();
         _renderer.UpdateCellPixelSize(_canvas, TerminalCapabilities.GetCellPixelSize());
         _dispatcher.UnhandledException += ex =>
         {

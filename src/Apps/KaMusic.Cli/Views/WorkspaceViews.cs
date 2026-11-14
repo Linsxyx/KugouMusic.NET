@@ -553,8 +553,9 @@ internal static class WorkspaceViews
             }
 
             var (label, value, hint) = items[i];
-            canvas.Text(inner.X + 1, y, label,
-                new CellStyle(theme.Text, bg, selected ? TextAttr.Bold : TextAttr.None), 18);
+            DrawRowMarker(canvas, inner.X + 1, y, selected, focused, bg, theme);
+            canvas.Text(inner.X + 3, y, label,
+                new CellStyle(theme.Text, bg, selected ? TextAttr.Bold : TextAttr.None), 17);
             canvas.Text(inner.X + 20, y, $"‹ {value} ›", new CellStyle(theme.Accent, bg, TextAttr.Bold), 28);
             if (inner.W > 52)
             {
@@ -582,13 +583,27 @@ internal static class WorkspaceViews
             }
 
             var gain = playback.EqGains[i];
-            canvas.Text(inner.X + 1, y, $"EQ {i + 1,2} ({eqFreqs[i],5})",
-                new CellStyle(theme.Text, bg, selected ? TextAttr.Bold : TextAttr.None), 18);
+            DrawRowMarker(canvas, inner.X + 1, y, selected, focused, bg, theme);
+            canvas.Text(inner.X + 3, y, $"EQ {i + 1,2} ({eqFreqs[i],5})",
+                new CellStyle(theme.Text, bg, selected ? TextAttr.Bold : TextAttr.None), 17);
             DrawEqSlider(canvas, inner.X + 20, y, Math.Clamp(inner.W - 32, 12, 28), gain, bg, theme);
             canvas.Text(inner.X + 20 + Math.Clamp(inner.W - 32, 12, 28) + 2, y, $"{gain:+0.0;-0.0;0.0} dB",
                 new CellStyle(theme.Accent, bg), 10);
             y++;
         }
+    }
+
+    /// <summary>
+    ///     列表行的选中标记。低色深终端（Linux TTY 等）可能丢弃背景色，只靠背景色无法分辨当前行，
+    ///     因此像歌曲列表一样始终输出一个 ▸ 光标。
+    /// </summary>
+    private static void DrawRowMarker(Canvas canvas, int x, int y, bool selected, bool focused, Rgb? background,
+        Theme theme)
+    {
+        var style = selected
+            ? new CellStyle(focused ? theme.Accent : theme.Muted, background, TextAttr.Bold)
+            : theme.FaintStyle;
+        canvas.Text(x, y, selected ? "▸" : " ", style, 1);
     }
 
     public static void RenderNowPlayingSide(

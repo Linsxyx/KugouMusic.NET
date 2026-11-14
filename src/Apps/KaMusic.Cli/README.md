@@ -70,7 +70,10 @@ Kitty / iTerm2 协议再按该比例生成位图，避免图片被横向或纵�
 Windows 终端无法探测时回退到常见的 1:2 字符格，可用 `KGTEST_CELL_SIZE=10x20` 手动指定。
 运行中会重新检查字符格像素尺寸；调整字体或行距后，即使行列数不变，也会重新布局并发送图片。
 
-颜色深度默认自动检测 24-bit TrueColor，在 `Apple_Terminal` 等终端自动降级为 xterm-256 色（可用 `KGTEST_COLOR=truecolor|256` 强制指定）。
+颜色深度默认自动检测：支持 24-bit TrueColor 的终端输出真彩序列，`Apple_Terminal` 等降级为 xterm-256 色；
+Linux 虚拟终端（`TERM=linux`、`console`、`vt*`、`dumb` 等）只有 16 色，会进一步降级为 ANSI 16 色，否则终端会
+丢弃 256 色/真彩序列，导致选中行的背景色消失。也可用 `KGTEST_COLOR=16|ansi|256|truecolor` 强制指定。
+设置页与列表一样用 `▸` 标记当前条目，因此在纯 16 色终端里也能分辨选中项。
 
 ## 页面
 

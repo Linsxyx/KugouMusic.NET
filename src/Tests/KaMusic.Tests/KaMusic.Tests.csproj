@@ -6,6 +6,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Cell.ImageId 只在未链接进测试工程的 TerminalRenderer 里赋值。 -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +15,11 @@
     <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/KgSession.cs" Link="Session/KgSession.cs" />
     <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/SessionPersistence.cs" Link="Session/SessionPersistence.cs" />
     <Compile Include="../../Apps/KaMusic.Cli/Services/TerminalSessionPersistence.cs" Link="Session/TerminalSessionPersistence.cs" />
+    <!-- 终端颜色深度与 SGR 编码（Linux TTY 只有 16 色）。 -->
+    <Compile Include="../../Apps/KaMusic.Cli/Graphics/TerminalCapabilities.cs" Link="Terminal/TerminalCapabilities.cs" />
+    <Compile Include="../../Apps/KaMusic.Cli/Tui/Ansi.cs" Link="Terminal/Ansi.cs" />
+    <Compile Include="../../Apps/KaMusic.Cli/Tui/TuiPrimitives.cs" Link="Terminal/TuiPrimitives.cs" />
+    <Compile Include="../../Apps/KaMusic.Cli/Tui/Theme.cs" Link="Terminal/Theme.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">
