@@ -19,16 +19,23 @@ internal sealed class TerminalSettingsStore
         PropertyNameCaseInsensitive = true
     });
 
+    private readonly string _settingsPath;
+
+    public TerminalSettingsStore(string? settingsPath = null)
+    {
+        _settingsPath = settingsPath ?? SettingsPath;
+    }
+
     public TerminalAppSettings Load()
     {
         try
         {
-            if (!File.Exists(SettingsPath))
+            if (!File.Exists(_settingsPath))
             {
                 return new TerminalAppSettings();
             }
 
-            var json = File.ReadAllText(SettingsPath);
+            var json = File.ReadAllText(_settingsPath);
             var settings = JsonSerializer.Deserialize(json, JsonContext.TerminalAppSettings) ?? new TerminalAppSettings();
             if (settings.CustomEqGains.Length != 10)
             {
@@ -48,14 +55,14 @@ internal sealed class TerminalSettingsStore
     {
         try
         {
-            var dir = Path.GetDirectoryName(SettingsPath);
+            var dir = Path.GetDirectoryName(_settingsPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
             }
 
             var json = JsonSerializer.Serialize(settings, JsonContext.TerminalAppSettings);
-            File.WriteAllText(SettingsPath, json);
+            File.WriteAllText(_settingsPath, json);
         }
         catch
         {

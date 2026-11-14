@@ -71,7 +71,7 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
             var total = 0;
             for (var page = 1; page <= 200; page++)
             {
-                var songsResponse = await clients.Playlist.GetSongsAsync(_likeListCreateId, page, PlaylistSongPageSize);
+                var songsResponse = await clients.Playlist.GetSongsAsync(_likeListCreateId, page, LikeSongPageSize);
                 var pageSongs = songsResponse?.Songs;
                 if (pageSongs == null || pageSongs.Count == 0)
                 {
@@ -99,7 +99,7 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
                 }
 
                 // “我喜欢”可能有上千首，必须翻到底，否则后续歌曲的喜欢状态会全部显示为未收藏。
-                if (!TerminalPlaylistPaging.HasMoreSongs(page, PlaylistSongPageSize, pageSongs.Count, total))
+                if (!TerminalPlaylistPaging.HasMoreSongs(page, LikeSongPageSize, pageSongs.Count, total))
                 {
                     break;
                 }
@@ -729,6 +729,7 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
     // 拉取歌单的一页歌曲，并返回服务端声明的歌曲总数，调用方据此决定是否继续翻页。
     public async Task<TerminalPlaylistSongsPage> GetPlaylistSongsPageAsync(TerminalPlaylistItem playlist, int page = 1)
     {
+        var pageSize = GetPlaylistSongPageSize(playlist.Kind);
         // 本地歌单与推荐卡片不是分页接口：一次性返回全部，第 2 页开始为空，避免重复追加。
         if (playlist.Kind == TerminalPlaylistKind.TopCard && playlist.PreloadedSongs.Count > 0)
         {
@@ -747,27 +748,35 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
 
         if (playlist.Kind == TerminalPlaylistKind.Rank)
         {
-            var rank = await clients.Rank.GetRankSongsAsync((int)playlist.RankId, page, PlaylistSongPageSize);
+            var rank = await clients.Rank.GetRankSongsAsync((int)playlist.RankId, page, pageSize);
             var rankSongs = rank?.RankSongLists.Select(MapRankSong).ToList() ?? [];
             return new TerminalPlaylistSongsPage(rankSongs, rank?.Total ?? 0);
         }
 
         if (playlist.Kind == TerminalPlaylistKind.Album)
         {
-            var albumSongs = await clients.Album.GetAlbumSongsPageAsync(playlist.Id, page, PlaylistSongPageSize);
+            var albumSongs = await clients.Album.GetAlbumSongsPageAsync(playlist.Id, page, pageSize);
             var songs = albumSongs.Songs?.Select(MapAlbumSong).ToList() ?? [];
             return new TerminalPlaylistSongsPage(songs, albumSongs.Total);
         }
 
-        var response = await clients.Playlist.GetSongsAsync(playlist.Id, page, PlaylistSongPageSize);
+        var response = await clients.Playlist.GetSongsAsync(playlist.Id, page, pageSize);
         var pageSongs = response?.Songs.Select(MapPlaylistSong).ToList() ?? [];
         return new TerminalPlaylistSongsPage(pageSongs, response?.Count ?? 0);
     }
 
-    // 歌单每页条数：服务端单页上限 300，取 300 可让 1598 首的歌单在 6 页内拉完。
-    public const int PlaylistSongPageSize = 300;
+    // 对齐 PC：MyPlaylistsViewModel 歌单 200 / 专辑 50，RankViewModel 榜单 100；
+    // FavoritePlaylistService 的“我喜欢”补页使用 300，不能将其上限套用到其他接口。
+    private const int LikeSongPageSize = 300;
 
-    // 一次性拉取歌单全部歌曲（按歌单原始顺序），最多翻 MaxPlaylistSongPages 页，避免异常数据无限循环。
+    private static int GetPlaylistSongPageSize(TerminalPlaylistKind kind) => kind switch
+    {
+        TerminalPlaylistKind.Album => 50,
+        TerminalPlaylistKind.Rank => 100,
+        _ => 200
+    };
+
+    // 一次性拉取歌单全部歌曲（按歌单原始顺序），最多翻 200 页，避免异常数据无限循环。
     public async Task<IReadOnlyList<TerminalSongItem>> GetAllPlaylistSongsAsync(
         TerminalPlaylistItem playlist,
         IProgress<int>? progress = null,
@@ -789,7 +798,7 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
             all.AddRange(result.Songs);
             progress?.Report(all.Count);
 
-            if (!TerminalPlaylistPaging.HasMoreSongs(page, PlaylistSongPageSize, result.Songs.Count, result.Total))
+            if (!TerminalPlaylistPaging.HasMoreSongs(page, GetPlaylistSongPageSize(playlist.Kind), result.Songs.Count, result.Total))
             {
                 break;
             }

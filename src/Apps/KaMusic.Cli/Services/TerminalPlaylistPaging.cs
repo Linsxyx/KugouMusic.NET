@@ -5,7 +5,8 @@ internal static class TerminalPlaylistPaging
 {
     /// <summary>
     ///     判断当前页之后是否还有歌。服务端会返回歌曲总数（total），有 total 时以 total 为准，
-    ///     否则退化为“本页是否满页”。这修掉了“只按本页条数判断”导致大歌单只加载一页的问题。
+    ///     否则退化为“本页是否满页”。页大小需与实际接口的分页窗口一致；
+    ///     此判定本身不处理服务端截页，也不能证明歌曲已完整聚合。
     /// </summary>
     public static bool HasMoreSongs(int page, int pageSize, int pageCount, int total)
     {
@@ -23,10 +24,10 @@ internal static class TerminalPlaylistPaging
     }
 
     /// <summary>
-    ///     在列表里定位目标歌曲的索引：先按对象引用精确匹配（歌单里同 Hash 的重复歌曲不会串位），
-    ///     再退回按歌曲身份比较。返回 -1 表示未找到。
+    ///     在列表里定位目标歌曲的索引：先匹配对象引用，再匹配复制前后的条目标识（若提供），
+    ///     最后退回按歌曲身份比较。返回 -1 表示未找到。
     /// </summary>
-    public static int ResolveIndex<T>(IReadOnlyList<T> list, T? target, Func<T, T, bool> sameTrack)
+    public static int ResolveIndex<T>(IReadOnlyList<T> list, T? target, Func<T, T, bool> sameTrack, Func<T, T, bool>? sameEntry = null)
         where T : class
     {
         if (target is null)
@@ -37,6 +38,14 @@ internal static class TerminalPlaylistPaging
         for (var i = 0; i < list.Count; i++)
         {
             if (ReferenceEquals(list[i], target))
+            {
+                return i;
+            }
+        }
+
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (sameEntry?.Invoke(list[i], target) == true)
             {
                 return i;
             }

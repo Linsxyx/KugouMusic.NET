@@ -1882,7 +1882,9 @@ internal sealed class TerminalApp : IAsyncDisposable
         var song = SelectedSong();
         if (song != null)
         {
-            await _playback.PlayAsync(song, CurrentSongContext());
+            // 与 PC 队列页一致：选择已有队列项时不传歌单上下文。
+            var isQueuePage = _page == TerminalPage.Queue && _openedPlaylist == null && _openedSinger == null;
+            await _playback.PlayAsync(song, isQueuePage ? null : CurrentSongContext());
             SyncPlayingFlag();
             return;
         }
@@ -2647,7 +2649,7 @@ internal sealed class TerminalApp : IAsyncDisposable
             return _openedSinger.CurrentSongs;
         }
 
-        return _page == TerminalPage.Queue ? _playback.Queue : _songs;
+        return _page == TerminalPage.Queue && _openedPlaylist == null ? _playback.Queue : _songs;
     }
 
     private TerminalSongItem? SelectedSong()

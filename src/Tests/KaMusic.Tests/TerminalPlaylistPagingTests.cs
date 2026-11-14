@@ -11,7 +11,7 @@ public class TerminalPlaylistPagingTests
     [Fact]
     public void HasMoreSongs_UsesTotal_SoLargePlaylistsKeepPaging()
     {
-        // 1598 首的歌单，每页 300：第 1 页只拿到 100 首（服务端限流）时仍应继续翻页。
+        // 仅验证 total 优先的终止条件；短页是假设输入，不代表已验证服务端截页契约。
         Assert.True(TerminalPlaylistPaging.HasMoreSongs(page: 1, pageSize: 300, pageCount: 100, total: 1598));
         Assert.True(TerminalPlaylistPaging.HasMoreSongs(page: 5, pageSize: 300, pageCount: 300, total: 1598));
         Assert.False(TerminalPlaylistPaging.HasMoreSongs(page: 6, pageSize: 300, pageCount: 98, total: 1598));

@@ -55,6 +55,9 @@ internal enum TerminalLyricMode
 
 internal sealed class TerminalSongItem
 {
+    // 歌单中的一次出现，复制到播放队列时保留；不能用 Hash 区分重复条目。
+    internal object QueueIdentity { get; init; } = new();
+
     public string Name { get; set; } = "";
     public string Singer { get; set; } = "";
     public string AlbumName { get; set; } = "";
