@@ -15,10 +15,19 @@ public class AlbumClient(RawAlbumApi rawApi)
 
     public async Task<List<AlbumSongItem>?> GetSongsAsync(string albumId, int page = 1, int pageSize = 30)
     {
+        var response = await GetAlbumSongsPageAsync(albumId, page, pageSize);
+        return response.Songs;
+    }
+
+    /// <summary>
+    ///     拉取专辑的一页歌曲，并保留服务端声明的总歌曲数（用于判断是否还有下一页）。
+    /// </summary>
+    public async Task<AlbumSongResponse> GetAlbumSongsPageAsync(string albumId, int page = 1, int pageSize = 30)
+    {
         var json = await rawApi.GetAlbumSongAsync(albumId, page, pageSize);
 
-        var response = KgApiResponseParser.Parse<AlbumSongResponse>(json, AppJsonContext.Default.AlbumSongResponse);
-        return response?.Songs;
+        return KgApiResponseParser.Parse<AlbumSongResponse>(json, AppJsonContext.Default.AlbumSongResponse)
+               ?? new AlbumSongResponse();
     }
 
     public Task<JsonElement> GetAlbumRawAsync(string albumIds, string? fields = null)

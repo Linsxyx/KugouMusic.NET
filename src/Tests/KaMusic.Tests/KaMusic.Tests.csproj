@@ -13,6 +13,8 @@
     <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/KgSession.cs" Link="Session/KgSession.cs" />
     <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/SessionPersistence.cs" Link="Session/SessionPersistence.cs" />
     <Compile Include="../../Apps/KaMusic.Cli/Services/TerminalSessionPersistence.cs" Link="Session/TerminalSessionPersistence.cs" />
+    <!-- 歌单分页与播放队列顺序的纯逻辑（不依赖网络/音频）。 -->
+    <Compile Include="../../Apps/KaMusic.Cli/Services/TerminalPlaylistPaging.cs" Link="Playlist/TerminalPlaylistPaging.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">

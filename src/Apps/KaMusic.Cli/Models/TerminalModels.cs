@@ -114,6 +114,9 @@ internal sealed class TerminalPlaylistItem
     public IReadOnlyList<TerminalSongItem> PreloadedSongs { get; set; } = [];
 }
 
+// 歌单某一页的歌曲与其服务端声明的总歌曲数（0 表示服务端未提供）。
+internal sealed record TerminalPlaylistSongsPage(IReadOnlyList<TerminalSongItem> Songs, int Total);
+
 internal sealed class TerminalExploreCard
 {
     public string Id { get; init; } = "";
