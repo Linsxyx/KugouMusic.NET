@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using KaMusic.Cli.Graphics;
 using KaMusic.Cli.Models;
 using KaMusic.Cli.Services;
@@ -77,9 +78,119 @@ internal static class CliDiagnostics
         }
     }
 
+    // 验证颜色深度探测与 SGR 编码：Linux 虚拟终端（TERM=linux）只支持 16 色，若继续输出 256/真彩序列，
+    // 选中行的背景色会被终端直接丢弃，设置页里就无法分辨当前选中的条目。
+    private static bool TestColorDepth()
+    {
+        string[] names = ["KGTEST_COLOR", "TERM", "COLORTERM", "TERM_PROGRAM", "WT_SESSION"];
+        var originals = new string?[names.Length];
+        for (var i = 0; i < names.Length; i++)
+        {
+            originals[i] = Environment.GetEnvironmentVariable(names[i]);
+        }
+
+        try
+        {
+            static void Set(string name, string? value) => Environment.SetEnvironmentVariable(name, value);
+
+            // 显式覆盖优先，用于强制降级检查。
+            Set("KGTEST_COLOR", "16");
+            if (TerminalCapabilities.DetectColorDepth() != TerminalColorDepth.Ansi16)
+            {
+                throw new InvalidOperationException("KGTEST_COLOR=16 did not select ANSI 16 colors.");
+            }
+
+            Set("KGTEST_COLOR", "256");
+            if (TerminalCapabilities.DetectColorDepth() != TerminalColorDepth.Ansi256)
+            {
+                throw new InvalidOperationException("KGTEST_COLOR=256 did not select xterm-256 colors.");
+            }
+
+            Set("KGTEST_COLOR", "truecolor");
+            if (TerminalCapabilities.DetectColorDepth() != TerminalColorDepth.TrueColor)
+            {
+                throw new InvalidOperationException("KGTEST_COLOR=truecolor did not select true color.");
+            }
+
+            Set("KGTEST_COLOR", null);
+            Set("COLORTERM", null);
+            Set("TERM_PROGRAM", null);
+            Set("WT_SESSION", null);
+            if (!OperatingSystem.IsWindows())
+            {
+                // 内核虚拟终端与只会 256 色的终端。
+                Set("TERM", "linux");
+                if (TerminalCapabilities.DetectColorDepth() != TerminalColorDepth.Ansi16)
+                {
+                    throw new InvalidOperationException("TERM=linux was not downgraded to ANSI 16 colors.");
+                }
+
+                Set("TERM", "xterm-256color");
+                if (TerminalCapabilities.DetectColorDepth() != TerminalColorDepth.Ansi256)
+                {
+                    throw new InvalidOperationException("TERM=xterm-256color was not detected as 256 colors.");
+                }
+
+                Set("TERM", "xterm-kitty");
+                if (TerminalCapabilities.DetectColorDepth() != TerminalColorDepth.TrueColor)
+                {
+                    throw new InvalidOperationException("TERM=xterm-kitty was not detected as true color.");
+                }
+            }
+
+            // 16 色终端只允许 30-37/90-97 与 40-47/100-107，扩展序列会被丢弃。
+            var theme = new Theme();
+            var selected = new CellStyle(theme.Text, theme.SelectionBg, TextAttr.Bold);
+            var builder = new StringBuilder();
+            Ansi.AppendSgr(builder, selected, TerminalColorDepth.Ansi16);
+            if (builder.ToString() != "\u001b[0;1;97;44m")
+            {
+                throw new InvalidOperationException($"Unexpected ANSI 16 SGR sequence: {builder}");
+            }
+
+            builder.Clear();
+            Ansi.AppendSgr(builder, selected, TerminalColorDepth.Ansi256);
+            if (!builder.ToString().Contains(";48;5;", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Unexpected xterm-256 SGR sequence: {builder}");
+            }
+
+            builder.Clear();
+            Ansi.AppendSgr(builder, selected, TerminalColorDepth.TrueColor);
+            if (!builder.ToString().Contains(";48;2;30;58;95", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Unexpected true color SGR sequence: {builder}");
+            }
+
+            if (Ansi.ToAnsi16(theme.SelectionBg) == Ansi.ToAnsi16(theme.PanelBg))
+            {
+                throw new InvalidOperationException("Selection and panel backgrounds collapse to one ANSI 16 index.");
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Color depth self-test failed: {ex.Message}");
+            return false;
+        }
+        finally
+        {
+            for (var i = 0; i < names.Length; i++)
+            {
+                Environment.SetEnvironmentVariable(names[i], originals[i]);
+            }
+        }
+    }
+
     private static int RunSelfTest()
     {
         if (!TestCellGeometry())
+        {
+            return 1;
+        }
+
+        if (!TestColorDepth())
         {
             return 1;
         }
@@ -522,7 +633,7 @@ internal static class CliDiagnostics
             canvas.Image("preview", new Rect(2, 1, 44, 20), image);
             using var renderer = new TerminalRenderer
             {
-                TrueColor = TerminalCapabilities.DetectTrueColor(),
+                ColorDepth = TerminalCapabilities.DetectColorDepth(),
                 CellPixelSize = cellPixelSize
             };
             renderer.Present(canvas);

@@ -37,6 +37,9 @@ jobs:
       - name: Test CLI services
         run: dotnet test src/Tests/KaMusic.Cli.Tests/KaMusic.Cli.Tests.csproj -c Release
 
+      - name: Test terminal colors, paging and session persistence
+        run: dotnet test src/Tests/KaMusic.Tests/KaMusic.Tests.csproj -c Release --filter 'FullyQualifiedName~Terminal'
+
       - name: Run CLI self-test
         run: dotnet run --project src/Apps/KaMusic.Cli/KaMusic.Cli.csproj -c Release --no-build -- --self-test
 

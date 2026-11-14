@@ -15,6 +15,16 @@ internal enum TerminalImageMode
     Off
 }
 
+/// <summary>
+///     终端支持的 ANSI 颜色深度。Linux 虚拟终端（TERM=linux）与 vt100/console 等只有 16 色。
+/// </summary>
+internal enum TerminalColorDepth
+{
+    Ansi16,
+    Ansi256,
+    TrueColor
+}
+
 internal static class TerminalCapabilities
 {
     /// <summary>
@@ -60,41 +70,64 @@ internal static class TerminalCapabilities
     }
 
     /// <summary>
-    ///     是否支持 24 位真彩色；不支持时 UI 会降级到 256 色。
+    ///     推断终端可用的颜色深度。真彩色不可用时降级到 xterm-256 色；Linux 虚拟终端等只有 16 色的环境
+    ///     必须降到 ANSI 16 色，否则 38;5;n / 48;2;r;g;b 会被终端直接丢弃，选中行的背景色随之消失。
     /// </summary>
-    public static bool DetectTrueColor()
+    public static TerminalColorDepth DetectColorDepth()
     {
-        var forced = Env("KGTEST_COLOR").ToLowerInvariant();
-        if (forced is "256" or "ansi256")
+        var forced = Env("KGTEST_COLOR").Trim().ToLowerInvariant();
+        switch (forced)
         {
-            return false;
+            case "16":
+            case "ansi":
+            case "ansi16":
+                return TerminalColorDepth.Ansi16;
+            case "256":
+            case "ansi256":
+                return TerminalColorDepth.Ansi256;
+            case "truecolor":
+            case "24bit":
+                return TerminalColorDepth.TrueColor;
         }
 
-        if (forced is "truecolor" or "24bit")
-        {
-            return true;
-        }
-
-        var colorTerm = Env("COLORTERM").ToLowerInvariant();
+        var colorTerm = Env("COLORTERM").Trim().ToLowerInvariant();
         if (colorTerm is "truecolor" or "24bit")
         {
-            return true;
+            return TerminalColorDepth.TrueColor;
         }
 
-        var program = Env("TERM_PROGRAM").ToLowerInvariant();
+        var program = Env("TERM_PROGRAM").ToLowerInvariant().Trim();
+        if (OperatingSystem.IsWindows() || !string.IsNullOrEmpty(Env("WT_SESSION")) ||
+            program is "iterm.app" or "wezterm" or "ghostty" or "vscode")
+        {
+            return TerminalColorDepth.TrueColor;
+        }
+
+        var term = Env("TERM").Trim().ToLowerInvariant();
         if (program == "apple_terminal")
         {
-            return false;
+            return TerminalColorDepth.Ansi256;
         }
 
-        if (OperatingSystem.IsWindows() || !string.IsNullOrEmpty(Env("WT_SESSION")))
+        if (term.Contains("kitty") || term.Contains("direct") || term.Contains("truecolor"))
         {
-            return true;
+            return TerminalColorDepth.TrueColor;
         }
 
-        var term = Env("TERM").ToLowerInvariant();
-        return program is "iterm.app" or "wezterm" or "ghostty" or "vscode" || term.Contains("kitty") ||
-               term.Contains("direct") || term.Contains("truecolor");
+        if (term.Contains("256"))
+        {
+            return TerminalColorDepth.Ansi256;
+        }
+
+        // 内核虚拟终端与只支持 8/16 色的老式终端/多路复用器。
+        if (term.StartsWith("linux", StringComparison.Ordinal) || term.StartsWith("console", StringComparison.Ordinal) ||
+            term.StartsWith("vt", StringComparison.Ordinal) || term.StartsWith("screen", StringComparison.Ordinal) ||
+            term.StartsWith("tmux", StringComparison.Ordinal) || term == "dumb")
+        {
+            return TerminalColorDepth.Ansi16;
+        }
+
+        return TerminalColorDepth.Ansi256;
     }
 
     /// <summary>

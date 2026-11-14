@@ -19,8 +19,6 @@ internal sealed class TerminalRenderer : IDisposable
     private const uint EnableVirtualTerminalInput = 0x0200;
     private const uint CpUtf8 = 65001;
 
-    private static readonly int[] CubeLevels = [0, 95, 135, 175, 215, 255];
-
     private readonly Stream _output = Console.OpenStandardOutput();
     private readonly StringBuilder _buffer = new(64 * 1024);
     private readonly Dictionary<int, ImagePlacement> _shown = [];
@@ -34,7 +32,10 @@ internal sealed class TerminalRenderer : IDisposable
     private uint _savedInMode;
     private bool _hasSavedConsoleMode;
 
-    public bool TrueColor { get; set; } = true;
+    /// <summary>
+    ///     终端实际支持的颜色深度。Linux 虚拟终端只支持 16 色，写成 256/真彩序列会被丢弃。
+    /// </summary>
+    public TerminalColorDepth ColorDepth { get; set; } = TerminalColorDepth.TrueColor;
 
     public (int Width, int Height) CellPixelSize { get; set; } = (10, 20);
 
@@ -291,51 +292,7 @@ internal sealed class TerminalRenderer : IDisposable
         }
 
         active = style;
-        _buffer.Append("\u001b[0");
-        if (style.Attr.HasFlag(TextAttr.Bold))
-        {
-            _buffer.Append(";1");
-        }
-
-        if (style.Attr.HasFlag(TextAttr.Dim))
-        {
-            _buffer.Append(";2");
-        }
-
-        if (style.Attr.HasFlag(TextAttr.Italic))
-        {
-            _buffer.Append(";3");
-        }
-
-        if (style.Attr.HasFlag(TextAttr.Underline))
-        {
-            _buffer.Append(";4");
-        }
-
-        if (style.Fg is { } fg)
-        {
-            AppendColor(38, fg);
-        }
-
-        if (style.Bg is { } bg)
-        {
-            AppendColor(48, bg);
-        }
-
-        _buffer.Append('m');
-    }
-
-    private void AppendColor(int prefix, Rgb color)
-    {
-        if (TrueColor)
-        {
-            _buffer.Append(';').Append(prefix).Append(";2;").Append(color.R).Append(';').Append(color.G).Append(';')
-                .Append(color.B);
-        }
-        else
-        {
-            _buffer.Append(';').Append(prefix).Append(";5;").Append(To256(color));
-        }
+        Ansi.AppendSgr(_buffer, style, ColorDepth);
     }
 
     private void AppendRune(int rune)
@@ -349,31 +306,6 @@ internal sealed class TerminalRenderer : IDisposable
             _buffer.Append(char.ConvertFromUtf32(rune));
         }
     }
-
-    /// <summary>
-    ///     将 RGB 映射到 xterm 256 色（6×6×6 色立方或灰阶中更接近者）。
-    /// </summary>
-    private static int To256(Rgb color)
-    {
-        static int CubeIndex(int v) => v < 48 ? 0 : v < 115 ? 1 : Math.Min(5, (v - 35) / 40);
-
-        var ri = CubeIndex(color.R);
-        var gi = CubeIndex(color.G);
-        var bi = CubeIndex(color.B);
-        var cubeR = CubeLevels[ri];
-        var cubeG = CubeLevels[gi];
-        var cubeB = CubeLevels[bi];
-
-        var average = (color.R + color.G + color.B) / 3;
-        var grayIndex = average > 238 ? 23 : Math.Max(0, (average - 3) / 10);
-        var grayValue = 8 + grayIndex * 10;
-
-        var cubeDistance = Sq(color.R - cubeR) + Sq(color.G - cubeG) + Sq(color.B - cubeB);
-        var grayDistance = Sq(color.R - grayValue) + Sq(color.G - grayValue) + Sq(color.B - grayValue);
-        return grayDistance < cubeDistance ? 232 + grayIndex : 16 + ri * 36 + gi * 6 + bi;
-    }
-
-    private static int Sq(int v) => v * v;
 
     private void WriteRaw(string text)
     {
