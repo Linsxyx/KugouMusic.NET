@@ -276,6 +276,18 @@ public class KugouWindow : Window
 
             grip.PointerPressed += OnResizeGripPointerPressed;
             _cleanupActions.Add(() => grip.PointerPressed -= OnResizeGripPointerPressed);
+
+            // 根节点是带 RowDefinitions 的 Grid 时，手柄必须横跨所有行，
+            // 否则会默认落在第 0 行（如 MainWindow 的 44px 标题栏行），
+            // 导致底边/左右边缩放手柄错位到窗口顶部。
+            if (root is Grid gridRoot)
+            {
+                grip.SetValue(Grid.RowProperty, 0);
+                grip.SetValue(Grid.RowSpanProperty, Math.Max(1, gridRoot.RowDefinitions.Count));
+                grip.SetValue(Grid.ColumnProperty, 0);
+                grip.SetValue(Grid.ColumnSpanProperty, Math.Max(1, gridRoot.ColumnDefinitions.Count));
+            }
+
             root.Children.Add(grip);
         }
     }

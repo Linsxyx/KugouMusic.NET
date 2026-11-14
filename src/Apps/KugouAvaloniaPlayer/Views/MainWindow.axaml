@@ -191,10 +191,16 @@
         <Style Selector="suki|SukiSideMenuItem[IsSelected=True] /template/ TextBlock#PART_Header">
             <Setter Property="FontWeight" Value="Bold" />
         </Style>
+        <!-- MaximizeIcon: Windows/Linux only — swap icon when maximized -->
         <Style Selector="localControls|KugouWindow[WindowState=Maximized] PathIcon#MaximizeIcon">
             <Setter Property="Data" Value="{x:Static suki:Icons.WindowRestore}" />
         </Style>
+        <!-- Windows/Linux: hide the maximize button while in FullScreen -->
         <Style Selector="localControls|KugouWindow[WindowState=FullScreen] Button#MaximizeButton">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <!-- macOS green zoom dot: hide when in FullScreen (system handles that state) -->
+        <Style Selector="localControls|KugouWindow[WindowState=FullScreen] Button#MacZoomButton">
             <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="localControls|KugouWindow[WindowState=FullScreen] PathIcon#FullScreenIcon">
@@ -223,32 +229,58 @@
             <suki:SukiDialogHost x:Name="DialogHost" Manager="{Binding DialogManager}" />
         </suki:SukiMainHost.Hosts>
 
-    <Grid Name="MainGrid">
+    <Grid Name="MainGrid" RowDefinitions="44,*">
+        <!-- ── 顶部贯通统一标题栏（全宽，macOS 红绿灯在左，搜索与操作在右） ── -->
         <Grid Name="TitleBar"
-              ColumnDefinitions="48,*,Auto"
-              Height="36"
-              Margin="216,0,0,0"
+              Grid.Row="0"
+              ColumnDefinitions="Auto,*,Auto"
+              Height="44"
+              Margin="0"
               Background="Transparent"
               VerticalAlignment="Top"
               IsVisible="{Binding !NowPlaying.IsOpen}"
               ZIndex="20"
               chrome:WindowDecorationProperties.ElementRole="TitleBar">
+
+            <!-- 🔴🟡🟢 macOS 红绿灯窗口控制 -->
+            <StackPanel Name="MacTrafficLights"
+                        Grid.Column="0"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        Margin="18,0,0,0"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsMacOS}"
+                        chrome:WindowDecorationProperties.ElementRole="User">
+                <Button Classes="MacTrafficLight MacClose"
+                        Command="{Binding RequestWindowCloseCommand}"
+                        ToolTip.Tip="关闭" />
+                <Button Classes="MacTrafficLight MacMinimize"
+                        Command="{Binding RequestWindowMinimizeCommand}"
+                        ToolTip.Tip="最小化" />
+                <Button Name="MacZoomButton"
+                        Classes="MacTrafficLight MacZoom"
+                        Command="{Binding RequestWindowToggleMaximizeCommand}"
+                        ToolTip.Tip="缩放/最大化" />
+            </StackPanel>
+
+            <!-- 标题栏中心拖拽区域 -->
             <Border Grid.Column="1"
                     Background="Transparent"
                     chrome:WindowDecorationProperties.ElementRole="TitleBar" />
 
+            <!-- 右侧功能与窗口控制区域 -->
             <StackPanel Grid.Column="2"
                         Orientation="Horizontal"
-                        Spacing="7"
-                        Margin="0,12,12,0"
+                        Spacing="8"
+                        Margin="0,0,16,0"
                         VerticalAlignment="Center"
                         chrome:WindowDecorationProperties.ElementRole="User">
                 
                 <TextBox Text="{Binding SearchKeyword}"
                          PlaceholderText="输入歌曲、歌手、歌单或专辑..."
-                         CornerRadius="15"
-                         Height="34"
-                         Width="260"
+                         CornerRadius="14"
+                         Height="28"
+                         Width="230"
                          FontSize="12"
                          VerticalContentAlignment="Center">
                     <TextBox.KeyBindings>
@@ -258,31 +290,43 @@
                         <PathIcon Data="{x:Static suki:Icons.Search}"
                                   Width="12"
                                   Height="12"
+                                  Margin="6,0,0,0"
                                   Foreground="{DynamicResource SukiLowText}" />
                     </TextBox.InnerLeftContent>
                 </TextBox>
                 <Button Classes="WindowControlsButton"
+                        Width="28"
+                        Height="28"
+                        Padding="0"
                         Command="{Binding NavigateToUserCommand}"
                         ToolTip.Tip="设置"
                         chrome:WindowDecorationProperties.ElementRole="User">
                     <Svg Classes="ThemeSvgIcon"
                          Path="/Assets/gear-svgrepo-com.svg"
-                         Width="18"
-                         Height="18"
+                         Width="16"
+                         Height="16"
                          VerticalAlignment="Center" />
                 </Button>
+                <!-- 全屏按钮（macOS 下由原生绿色缩放点负责全屏，此处仅在 Windows/Linux 显示） -->
                 <Button Classes="WindowControlsButton"
+                        Width="28"
+                        Height="28"
+                        Padding="0"
                         Command="{Binding RequestWindowToggleFullScreenCommand}"
                         ToolTip.Tip="全屏"
+                        IsVisible="{Binding !IsMacOS}"
                         chrome:WindowDecorationProperties.ElementRole="User">
                     <PathIcon Name="FullScreenIcon"
                               Data="{x:Static suki:Icons.WindowFullScreen}"
                               Width="12"
                               Height="12" />
                 </Button>
+
+                <!-- ── Windows / Linux 专用窗口控制按钮（macOS 隐藏）── -->
                 <Button Classes="WindowControlsButton"
                         Command="{Binding RequestWindowMinimizeCommand}"
                         ToolTip.Tip="最小化"
+                        IsVisible="{Binding !IsMacOS}"
                         chrome:WindowDecorationProperties.ElementRole="User">
                     <PathIcon Data="{x:Static suki:Icons.WindowMinimize}"
                               Width="12"
@@ -293,6 +337,7 @@
                         Classes="WindowControlsButton"
                         Command="{Binding RequestWindowToggleMaximizeCommand}"
                         ToolTip.Tip="最大化/还原"
+                        IsVisible="{Binding !IsMacOS}"
                         chrome:WindowDecorationProperties.ElementRole="User">
                     <PathIcon Name="MaximizeIcon"
                               Data="{x:Static suki:Icons.WindowMaximize}"
@@ -302,6 +347,7 @@
                 <Button Classes="WindowControlsButton Close"
                         Command="{Binding RequestWindowCloseCommand}"
                         ToolTip.Tip="关闭"
+                        IsVisible="{Binding !IsMacOS}"
                         chrome:WindowDecorationProperties.ElementRole="User">
                     <PathIcon Data="{x:Static suki:Icons.WindowClose}"
                               Width="12"
@@ -311,6 +357,7 @@
         </Grid>
 
         <localControls:KugouSideMenu
+            Grid.Row="1"
             ItemsSource="{Binding Pages}"
             SelectedItem="{Binding SelectedMenuPage}"
             UseCustomContent="True"
@@ -456,8 +503,9 @@
             </localControls:KugouSideMenu.FooterContent>
         </localControls:KugouSideMenu>
 
-        <localControls:BottomPlaybackControl />
-        <views:NowPlayingView DataContext="{Binding NowPlaying}"
+        <localControls:BottomPlaybackControl Grid.RowSpan="2" />
+        <views:NowPlayingView Grid.RowSpan="2"
+                              DataContext="{Binding NowPlaying}"
                               ZIndex="300" />
 
     </Grid>
