@@ -23,6 +23,10 @@ internal sealed class TerminalPlaybackService : IDisposable
     private readonly SemaphoreSlim _playLock = new(1, 1);
     private readonly Random _random = new();
     private List<TerminalSongItem> _queue = [];
+
+    // 歌单原始顺序（未被随机播放打乱），用于关闭随机播放时恢复顺序。
+    private List<TerminalSongItem> _queueDefaultOrder = [];
+    private bool _isPersonalFmQueue;
     private TransitionProfile? _pendingTransitionProfile;
     private TerminalSongItem? _pendingTransitionSong;
     private PreparedTrack? _preparedNextTrack;
@@ -137,19 +141,51 @@ internal sealed class TerminalPlaybackService : IDisposable
                 return;
             }
 
+            // 队列页选择只改变当前项；不能把随机后的队列当成新的歌单原序。
+            if (ReferenceEquals(context, _queue))
+            {
+                context = null;
+            }
+
             if (context is { Count: > 0 })
             {
                 _queue = context.Select(CloneSong).ToList();
-                _currentIndex = Math.Max(0, _queue.FindIndex(x => SameSong(x, song)));
+                // 与 PC PlaybackQueueManager 一样，两种顺序共享同一批队列条目。
+                _queueDefaultOrder = _queue.ToList();
+                _isPersonalFmQueue = isPersonalFm;
+
+                // 先用对象引用精确定位（歌单里可能存在 Hash 相同的重复曲目），再退回按身份匹配。
+                var index = ResolveSongIndex(context, song);
+                _currentIndex = index >= 0 ? index : 0;
                 if (!isPersonalFm && _settings.Shuffle)
                 {
-                    ShuffleQueue(song);
+                    ShuffleQueue(_queue[_currentIndex]);
                 }
             }
-            else if (_queue.Count == 0 || _currentIndex < 0)
+            else if (_queue.Count == 0)
             {
                 _queue = [CloneSong(song)];
+                _queueDefaultOrder = _queue.ToList();
                 _currentIndex = 0;
+                _isPersonalFmQueue = isPersonalFm;
+            }
+            else
+            {
+                // 没有上下文时不要沿用旧队列：否则会把上一次（可能是每日推荐/私人 FM）的队列
+                // 当成当前歌单继续播放，表现为“播放列表混入推荐音乐”。
+                var existingIndex = ResolveSongIndex(_queue, song);
+                if (existingIndex < 0)
+                {
+                    _queue = [CloneSong(song)];
+                    _queueDefaultOrder = _queue.ToList();
+                    _currentIndex = 0;
+                    _isPersonalFmQueue = isPersonalFm;
+                }
+                else
+                {
+                    _currentIndex = existingIndex;
+                    _isPersonalFmQueue = isPersonalFm;
+                }
             }
 
             await PlayCurrentCoreAsync();
@@ -330,6 +366,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         ResetTransitionPipeline(cancelPreparedTrack: true);
         var removed = _queue[index];
         _queue.RemoveAt(index);
+        _queueDefaultOrder.Remove(removed);
         if (index < _currentIndex)
         {
             _currentIndex--;
@@ -343,6 +380,8 @@ internal sealed class TerminalPlaybackService : IDisposable
         if (_personalFm is { IsActive: true } && _personalFm.AddToNext(song))
         {
             _queue = _personalFm.GetQueueSongs().Select(CloneSong).ToList();
+            _queueDefaultOrder = _queue.ToList();
+            _isPersonalFmQueue = true;
             _currentIndex = _queue.Count > 0 ? 0 : -1;
             if (CurrentSong != null)
             {
@@ -354,15 +393,22 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        var copy = CloneSong(song);
-        if (_queue.Count == 0 || _currentIndex < 0)
+        var current = CurrentSong;
+        // PC 的 AddToNext 会移动已存在的歌曲，而不是再追加一份。
+        // 队列内操作优先按引用定位，避免移动同 Hash 的另一条记录。
+        var existingIndex = ResolveSongIndex(_queue, song);
+        var entry = existingIndex >= 0 ? _queue[existingIndex] : CloneSong(song);
+        if (existingIndex >= 0)
         {
-            _queue.Add(copy);
+            _queue.RemoveAt(existingIndex);
+            _queueDefaultOrder.Remove(entry);
         }
-        else
-        {
-            _queue.Insert(Math.Min(_queue.Count, _currentIndex + 1), copy);
-        }
+
+        var playIndex = current == null ? -1 : _queue.IndexOf(current);
+        var originalIndex = current == null ? -1 : _queueDefaultOrder.IndexOf(current);
+        _queue.Insert(playIndex >= 0 ? playIndex + 1 : _queue.Count, entry);
+        _queueDefaultOrder.Insert(originalIndex >= 0 ? originalIndex + 1 : _queueDefaultOrder.Count, entry);
+        _currentIndex = current == null ? -1 : _queue.IndexOf(current);
 
         ResetTransitionPipeline(cancelPreparedTrack: true);
         StatusMessage = $"已加入下一首：{song.Name}";
@@ -373,13 +419,23 @@ internal sealed class TerminalPlaybackService : IDisposable
         _settings.Shuffle = !_settings.Shuffle;
         ResetTransitionPipeline(cancelPreparedTrack: true);
         var current = CurrentSong;
-        if (_settings.Shuffle && current != null)
+        if (_settings.Shuffle && !_isPersonalFmQueue && current != null)
         {
             ShuffleQueue(current);
         }
+        else if (!_settings.Shuffle && !_isPersonalFmQueue && _queueDefaultOrder.Count == _queue.Count)
+        {
+            // 关闭随机播放：回到歌单原始顺序，并重新定位当前歌曲。
+            var index = ResolveSongIndex(_queueDefaultOrder, current);
+            if (index >= 0)
+            {
+                _queue = _queueDefaultOrder.ToList();
+                _currentIndex = index;
+            }
+        }
         else if (current != null)
         {
-            _currentIndex = Math.Max(0, _queue.FindIndex(x => SameSong(x, current)));
+            _currentIndex = _queue.IndexOf(current);
         }
 
         _settingsStore.Save(_settings);
@@ -765,11 +821,13 @@ internal sealed class TerminalPlaybackService : IDisposable
         if (_personalFm is { IsActive: true } && _personalFm.AdvanceForAutoTransition(_preparedNextSong))
         {
             _queue = _personalFm.GetQueueSongs().Select(CloneSong).ToList();
+            _queueDefaultOrder = _queue.ToList();
+            _isPersonalFmQueue = true;
             _currentIndex = _queue.Count > 0 ? 0 : -1;
         }
         else
         {
-            var nextIndex = _queue.FindIndex(x => SameSong(x, _preparedNextSong));
+            var nextIndex = ResolveSongIndex(_queue, _preparedNextSong);
             if (nextIndex >= 0)
             {
                 _currentIndex = nextIndex;
@@ -910,14 +968,8 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     private void ShuffleQueue(TerminalSongItem current)
     {
-        var rest = _queue.Where(x => !SameSong(x, current)).ToList();
-        for (var i = rest.Count - 1; i > 0; i--)
-        {
-            var j = _random.Next(i + 1);
-            (rest[i], rest[j]) = (rest[j], rest[i]);
-        }
-
-        _queue = [current, .. rest];
+        var index = ResolveSongIndex(_queue, current);
+        _queue = TerminalPlaylistPaging.ShuffleKeepingCurrent(_queue, index, _random);
         _currentIndex = 0;
     }
 
@@ -931,10 +983,16 @@ internal sealed class TerminalPlaybackService : IDisposable
         return a.IsSameTrack(b);
     }
 
+    private static int ResolveSongIndex(IReadOnlyList<TerminalSongItem> songs, TerminalSongItem? song) =>
+        TerminalPlaylistPaging.ResolveIndex(songs, song,
+            static (left, right) => left.IsSameTrack(right),
+            static (left, right) => ReferenceEquals(left.QueueIdentity, right.QueueIdentity));
+
     private static TerminalSongItem CloneSong(TerminalSongItem song)
     {
         return new TerminalSongItem
         {
+            QueueIdentity = song.QueueIdentity,
             Name = song.Name,
             Singer = song.Singer,
             AlbumName = song.AlbumName,

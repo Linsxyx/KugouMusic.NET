@@ -1882,7 +1882,9 @@ internal sealed class TerminalApp : IAsyncDisposable
         var song = SelectedSong();
         if (song != null)
         {
-            await _playback.PlayAsync(song, CurrentSongContext());
+            // 与 PC 队列页一致：选择已有队列项时不传歌单上下文。
+            var isQueuePage = _page == TerminalPage.Queue && _openedPlaylist == null && _openedSinger == null;
+            await _playback.PlayAsync(song, isQueuePage ? null : CurrentSongContext());
             SyncPlayingFlag();
             return;
         }
@@ -1911,12 +1913,23 @@ internal sealed class TerminalApp : IAsyncDisposable
 
         try
         {
-            _songs.AddRange(await _data.GetPlaylistSongsAsync(playlist));
+            // 大歌单（如「我喜欢」1598 首）必须按服务端总歌曲数逐页翻到底，并按歌单原始顺序追加。
+            var loadedSongs = await _data.GetAllPlaylistSongsAsync(
+                playlist,
+                new Progress<int>(count =>
+                {
+                    if (version == _loadVersion)
+                    {
+                        _status = $"正在打开《{playlist.Name}》... 已加载 {count} 首";
+                        RequestRender();
+                    }
+                }));
             if (version != _loadVersion)
             {
                 return;
             }
 
+            _songs.AddRange(loadedSongs);
             SyncPlayingFlag();
             _status = _songs.Count > 0
                 ? playlist.Kind == TerminalPlaylistKind.Local
@@ -2636,7 +2649,7 @@ internal sealed class TerminalApp : IAsyncDisposable
             return _openedSinger.CurrentSongs;
         }
 
-        return _page == TerminalPage.Queue ? _playback.Queue : _songs;
+        return _page == TerminalPage.Queue && _openedPlaylist == null ? _playback.Queue : _songs;
     }
 
     private TerminalSongItem? SelectedSong()

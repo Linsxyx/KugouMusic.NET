@@ -66,25 +66,57 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
             _likeListId = likePlaylist.ListId.ToString();
             _likeListCreateId = likePlaylist.ListCreateId;
 
-            var songsResponse = await clients.Playlist.GetSongsAsync(_likeListCreateId, 1, 300);
-            if (songsResponse?.Songs != null)
+            var likedHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var likeHashToFileId = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var total = 0;
+            for (var page = 1; page <= 200; page++)
             {
-                lock (_likedHashes)
+                var songsResponse = await clients.Playlist.GetSongsAsync(_likeListCreateId, page, LikeSongPageSize);
+                var pageSongs = songsResponse?.Songs;
+                if (pageSongs == null || pageSongs.Count == 0)
                 {
-                    _likedHashes.Clear();
-                    _likeHashToFileId.Clear();
-                    foreach (var s in songsResponse.Songs)
+                    break;
+                }
+
+                foreach (var s in pageSongs)
+                {
+                    if (string.IsNullOrWhiteSpace(s.Hash))
                     {
-                        if (!string.IsNullOrWhiteSpace(s.Hash))
-                        {
-                            var h = s.Hash.Trim();
-                            _likedHashes.Add(h);
-                            if (s.FileId > 0)
-                            {
-                                _likeHashToFileId[h] = s.FileId;
-                            }
-                        }
+                        continue;
                     }
+
+                    var h = s.Hash.Trim();
+                    likedHashes.Add(h);
+                    if (s.FileId > 0)
+                    {
+                        likeHashToFileId[h] = s.FileId;
+                    }
+                }
+
+                if (songsResponse!.Count > 0)
+                {
+                    total = songsResponse.Count;
+                }
+
+                // “我喜欢”可能有上千首，必须翻到底，否则后续歌曲的喜欢状态会全部显示为未收藏。
+                if (!TerminalPlaylistPaging.HasMoreSongs(page, LikeSongPageSize, pageSongs.Count, total))
+                {
+                    break;
+                }
+            }
+
+            lock (_likedHashes)
+            {
+                _likedHashes.Clear();
+                _likeHashToFileId.Clear();
+                foreach (var hash in likedHashes)
+                {
+                    _likedHashes.Add(hash);
+                }
+
+                foreach (var pair in likeHashToFileId)
+                {
+                    _likeHashToFileId[pair.Key] = pair.Value;
                 }
             }
 
@@ -691,32 +723,88 @@ internal sealed class TerminalDataService(TerminalKugouClients clients, Terminal
         }).ToList() ?? [];
     }
 
-    public async Task<IReadOnlyList<TerminalSongItem>> GetPlaylistSongsAsync(TerminalPlaylistItem playlist, int page = 1)
+    public async Task<IReadOnlyList<TerminalSongItem>> GetPlaylistSongsAsync(TerminalPlaylistItem playlist, int page = 1) =>
+        (await GetPlaylistSongsPageAsync(playlist, page)).Songs;
+
+    // 拉取歌单的一页歌曲，并返回服务端声明的歌曲总数，调用方据此决定是否继续翻页。
+    public async Task<TerminalPlaylistSongsPage> GetPlaylistSongsPageAsync(TerminalPlaylistItem playlist, int page = 1)
     {
+        var pageSize = GetPlaylistSongPageSize(playlist.Kind);
+        // 本地歌单与推荐卡片不是分页接口：一次性返回全部，第 2 页开始为空，避免重复追加。
         if (playlist.Kind == TerminalPlaylistKind.TopCard && playlist.PreloadedSongs.Count > 0)
         {
-            return playlist.PreloadedSongs;
+            return page == 1
+                ? new TerminalPlaylistSongsPage(playlist.PreloadedSongs, playlist.PreloadedSongs.Count)
+                : new TerminalPlaylistSongsPage([], 0);
         }
 
         if (playlist.Kind == TerminalPlaylistKind.Local)
         {
-            return await LocalMusic.GetPlaylistTracksAsync(playlist.LocalPlaylistId, playlist.Name);
+            var tracks = await LocalMusic.GetPlaylistTracksAsync(playlist.LocalPlaylistId, playlist.Name);
+            return page == 1
+                ? new TerminalPlaylistSongsPage(tracks, tracks.Count)
+                : new TerminalPlaylistSongsPage([], 0);
         }
 
         if (playlist.Kind == TerminalPlaylistKind.Rank)
         {
-            var rank = await clients.Rank.GetRankSongsAsync((int)playlist.RankId, page, 100);
-            return rank?.RankSongLists.Select(MapRankSong).ToList() ?? [];
+            var rank = await clients.Rank.GetRankSongsAsync((int)playlist.RankId, page, pageSize);
+            var rankSongs = rank?.RankSongLists.Select(MapRankSong).ToList() ?? [];
+            return new TerminalPlaylistSongsPage(rankSongs, rank?.Total ?? 0);
         }
 
         if (playlist.Kind == TerminalPlaylistKind.Album)
         {
-            var albumSongs = await clients.Album.GetSongsAsync(playlist.Id, page, 100);
-            return albumSongs?.Select(MapAlbumSong).ToList() ?? [];
+            var albumSongs = await clients.Album.GetAlbumSongsPageAsync(playlist.Id, page, pageSize);
+            var songs = albumSongs.Songs?.Select(MapAlbumSong).ToList() ?? [];
+            return new TerminalPlaylistSongsPage(songs, albumSongs.Total);
         }
 
-        var response = await clients.Playlist.GetSongsAsync(playlist.Id, page, 100);
-        return response?.Songs.Select(MapPlaylistSong).ToList() ?? [];
+        var response = await clients.Playlist.GetSongsAsync(playlist.Id, page, pageSize);
+        var pageSongs = response?.Songs.Select(MapPlaylistSong).ToList() ?? [];
+        return new TerminalPlaylistSongsPage(pageSongs, response?.Count ?? 0);
+    }
+
+    // 对齐 PC：MyPlaylistsViewModel 歌单 200 / 专辑 50，RankViewModel 榜单 100；
+    // FavoritePlaylistService 的“我喜欢”补页使用 300，不能将其上限套用到其他接口。
+    private const int LikeSongPageSize = 300;
+
+    private static int GetPlaylistSongPageSize(TerminalPlaylistKind kind) => kind switch
+    {
+        TerminalPlaylistKind.Album => 50,
+        TerminalPlaylistKind.Rank => 100,
+        _ => 200
+    };
+
+    // 一次性拉取歌单全部歌曲（按歌单原始顺序），最多翻 200 页，避免异常数据无限循环。
+    public async Task<IReadOnlyList<TerminalSongItem>> GetAllPlaylistSongsAsync(
+        TerminalPlaylistItem playlist,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        const int maxPages = 200;
+
+        var all = new List<TerminalSongItem>();
+        for (var page = 1; page <= maxPages; page++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var result = await GetPlaylistSongsPageAsync(playlist, page);
+            if (result.Songs.Count == 0)
+            {
+                break;
+            }
+
+            all.AddRange(result.Songs);
+            progress?.Report(all.Count);
+
+            if (!TerminalPlaylistPaging.HasMoreSongs(page, GetPlaylistSongPageSize(playlist.Kind), result.Songs.Count, result.Total))
+            {
+                break;
+            }
+        }
+
+        return all;
     }
 
     public async Task<string> GetUserDisplayNameAsync()

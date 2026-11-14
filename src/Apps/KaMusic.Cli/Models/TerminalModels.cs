@@ -55,6 +55,9 @@ internal enum TerminalLyricMode
 
 internal sealed class TerminalSongItem
 {
+    // 歌单中的一次出现，复制到播放队列时保留；不能用 Hash 区分重复条目。
+    internal object QueueIdentity { get; init; } = new();
+
     public string Name { get; set; } = "";
     public string Singer { get; set; } = "";
     public string AlbumName { get; set; } = "";
@@ -113,6 +116,9 @@ internal sealed class TerminalPlaylistItem
     public IReadOnlyList<string> Previews { get; set; } = [];
     public IReadOnlyList<TerminalSongItem> PreloadedSongs { get; set; } = [];
 }
+
+// 歌单某一页的歌曲与其服务端声明的总歌曲数（0 表示服务端未提供）。
+internal sealed record TerminalPlaylistSongsPage(IReadOnlyList<TerminalSongItem> Songs, int Total);
 
 internal sealed class TerminalExploreCard
 {

@@ -16,6 +16,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="KaMusic.Cli.Tests" />
         <PackageReference Include="Microsoft.Data.Sqlite" Condition="'$(UseSystemSqlite)' != 'true'"/>
         <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Condition="'$(UseSystemSqlite)' != 'true'"/>
         <PackageReference Include="Microsoft.Data.Sqlite.Core" Condition="'$(UseSystemSqlite)' == 'true'"/>

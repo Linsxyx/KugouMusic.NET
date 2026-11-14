@@ -15,6 +15,8 @@
     <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/KgSession.cs" Link="Session/KgSession.cs" />
     <Compile Include="../../Libraries/KuGou.Net/Protocol/Session/SessionPersistence.cs" Link="Session/SessionPersistence.cs" />
     <Compile Include="../../Apps/KaMusic.Cli/Services/TerminalSessionPersistence.cs" Link="Session/TerminalSessionPersistence.cs" />
+    <!-- 歌单分页与播放队列顺序的纯逻辑（不依赖网络/音频）。 -->
+    <Compile Include="../../Apps/KaMusic.Cli/Services/TerminalPlaylistPaging.cs" Link="Playlist/TerminalPlaylistPaging.cs" />
     <!-- 终端颜色深度与 SGR 编码（Linux TTY 只有 16 色）。 -->
     <Compile Include="../../Apps/KaMusic.Cli/Graphics/TerminalCapabilities.cs" Link="Terminal/TerminalCapabilities.cs" />
     <Compile Include="../../Apps/KaMusic.Cli/Tui/Ansi.cs" Link="Terminal/Ansi.cs" />
