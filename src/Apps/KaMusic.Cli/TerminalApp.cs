@@ -87,6 +87,9 @@ internal sealed class TerminalApp : IAsyncDisposable
     private int _playlistReturnIndex;
     private TerminalSingerDetail? _openedSinger;
     private int _singerReturnIndex;
+    private TerminalPlaylistItem? _singerReturnPlaylist;
+    private TerminalSingerDetail? _singerReturnSinger;
+    private bool _singerReturnFromSinger;
     private bool _openedFromSinger;
     private bool _singerPickerOpen;
     private int _singerPickerIndex;
@@ -1689,6 +1692,9 @@ internal sealed class TerminalApp : IAsyncDisposable
         _openedPlaylist = null;
         _openedSinger = null;
         _openedFromSinger = false;
+        _singerReturnPlaylist = null;
+        _singerReturnSinger = null;
+        _singerReturnFromSinger = false;
         _singerPickerOpen = false;
         _playlistPickerOpen = false;
         _searchShowsPlaylists = false;
@@ -2018,9 +2024,18 @@ internal sealed class TerminalApp : IAsyncDisposable
         if (_openedSinger != null)
         {
             var singerName = _openedSinger.Name;
-            _openedSinger = null;
+            _openedSinger = _singerReturnSinger;
+            _openedPlaylist = _singerReturnPlaylist;
+            _openedFromSinger = _singerReturnFromSinger;
+            _singerReturnSinger = null;
+            _singerReturnPlaylist = null;
+            _singerReturnFromSinger = false;
             _selectedIndex = _singerReturnIndex;
-            _title = WorkspaceViews.PageTitle(_page);
+            _title = _openedPlaylist != null
+                ? _openedPlaylist.Name
+                : _openedSinger != null
+                    ? $"歌手 · {_openedSinger.Name}"
+                    : WorkspaceViews.PageTitle(_page);
             _status = $"已从「{singerName}」返回";
             RequestRender();
             return true;
@@ -2268,8 +2283,6 @@ internal sealed class TerminalApp : IAsyncDisposable
         }
 
         _isImmersive = false;
-        _singerReturnIndex = _selectedIndex;
-        _selectedIndex = 0;
         _isLoading = true;
         _status = $"正在加载歌手「{singerName}」...";
         RequestRender();
@@ -2285,6 +2298,13 @@ internal sealed class TerminalApp : IAsyncDisposable
 
         detail.HotSongs.AddRange(await _data.GetSingerSongsAsync(authorId, "hot"));
         detail.HasLoadedHotSongs = true;
+        _singerReturnIndex = _selectedIndex;
+        _singerReturnPlaylist = _openedPlaylist;
+        _singerReturnSinger = _openedSinger;
+        _singerReturnFromSinger = _openedFromSinger;
+        _openedPlaylist = null;
+        _openedFromSinger = false;
+        _selectedIndex = 0;
         _openedSinger = detail;
         _title = $"歌手 · {detail.Name}";
         _isLoading = false;
@@ -2449,7 +2469,7 @@ internal sealed class TerminalApp : IAsyncDisposable
     }
 
     private bool IsExploreCardViewActive() =>
-        _page == TerminalPage.Discover && _openedPlaylist == null;
+        _page == TerminalPage.Discover && _openedPlaylist == null && _openedSinger == null;
 
     private void MoveExploreCard(int dx, int dy)
     {
