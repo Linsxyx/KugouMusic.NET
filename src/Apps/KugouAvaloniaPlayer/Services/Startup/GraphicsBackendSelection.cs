@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using AvaloniaSilkEffects;
 using AvaloniaSilkEffects.Gpu;
+using KugouAvaloniaPlayer.Models;
 using Serilog;
 
 namespace KugouAvaloniaPlayer.Services.Startup;
@@ -10,7 +11,8 @@ namespace KugouAvaloniaPlayer.Services.Startup;
 /// Chooses the compositor's graphics API at startup: Metal (macOS) or Vulkan (Windows, Linux) first, so the
 /// effect themes can render natively, and the previous OpenGL / ANGLE / EGL / GLX stack otherwise.
 /// OpenGL effects only render on an OpenGL-family compositor, so when native effects fail at runtime the choice is
-/// remembered and the next launch starts on OpenGL again. <c>AVALONIA_SILK_EFFECTS_BACKEND=opengl</c> forces it.
+/// remembered and the next launch starts on OpenGL again. <c>AVALONIA_SILK_EFFECTS_BACKEND=opengl</c> forces it,
+/// and so does the "使用 OpenGL 渲染" setting (<see cref="AppSettings.PreferOpenGlRendering"/>).
 /// </summary>
 internal static class GraphicsBackendSelection
 {
@@ -22,7 +24,14 @@ internal static class GraphicsBackendSelection
 
     public static void Initialize()
     {
-        if (File.Exists(MarkerPath))
+        // User opt-in from settings: native drivers can crash inside the process (e.g. igvk64.dll access violation),
+        // which the runtime fallback marker below cannot catch.
+        if (SettingsManager.ReadPreferOpenGlRenderingEarly())
+        {
+            Log.Information("设置中已启用 OpenGL 渲染，本次跳过 Vulkan / Metal");
+            SilkEffectControl.BackendPreference = EffectGpuBackendPreference.OpenGl;
+        }
+        else if (File.Exists(MarkerPath))
         {
             Log.Information("上次原生 GPU 特效初始化失败，本次使用 OpenGL 渲染（删除 {Marker} 可重新尝试）", MarkerPath);
             SilkEffectControl.BackendPreference = EffectGpuBackendPreference.OpenGl;

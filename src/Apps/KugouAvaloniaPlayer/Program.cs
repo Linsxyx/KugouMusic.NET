@@ -18,7 +18,6 @@ internal sealed class Program
     {
         CrashReporting.ConfigureLogging();
         CrashReporting.RegisterGlobalHandlers();
-        GraphicsBackendSelection.Initialize();
 
         var launchResult = StartupCoordinator.TryAcquireOrForward(args);
         if (launchResult == StartupInstanceLaunchResult.ForwardedToPrimary)
@@ -26,6 +25,8 @@ internal sealed class Program
             Log.CloseAndFlush();
             return;
         }
+
+        GraphicsBackendSelection.Initialize();
 
 #if KUGOU_WINDOWS
         WindowsAppIdentity.Register();

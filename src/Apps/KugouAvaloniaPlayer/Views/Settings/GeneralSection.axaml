@@ -24,6 +24,17 @@
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
+        <TextBlock Classes="GroupHeader" Text="渲染" />
+        <localControls:SettingsCard>
+            <localControls:SettingsRow ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Classes="RowTitle" Text="使用 OpenGL 渲染" />
+                    <TextBlock Classes="RowHint" Text="跳过 Vulkan / Metal。重启软件后生效。" TextWrapping="Wrap" />
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" IsChecked="{Binding PreferOpenGlRendering, Mode=TwoWay}" />
+            </localControls:SettingsRow>
+        </localControls:SettingsCard>
+
         <TextBlock Classes="GroupHeader" Text="诊断" />
         <localControls:SettingsCard>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">

@@ -72,6 +72,8 @@ public partial class SettingViewModel : PageViewModelBase
 
     [ObservableProperty] public partial bool LinuxUseFullWindowDecorations { get; set; }
 
+    [ObservableProperty] public partial bool PreferOpenGlRendering { get; set; }
+
     [ObservableProperty] public partial UiScaleOption SelectedUiScaleOption { get; set; } = UiScale.Options[0];
 
     [ObservableProperty]
@@ -227,6 +229,7 @@ public partial class SettingViewModel : PageViewModelBase
             AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
             SelectedAppFontFamily = AppFontService.FormatGlobalFontSelection(LyricFontFamilyOptions);
             SelectedUiScaleOption = UiScale.FindOption(SettingsManager.Settings.UiScale);
+            PreferOpenGlRendering = SettingsManager.Settings.PreferOpenGlRendering;
 #if KUGOU_LINUX
             LinuxUseFullWindowDecorations = SettingsManager.Settings.LinuxUseFullWindowDecorations;
 #endif
@@ -634,6 +637,15 @@ public partial class SettingViewModel : PageViewModelBase
         SettingsManager.Settings.UiScale = value.Value;
         SettingsManager.Save();
         _mainWindowService.ApplyUiScale();
+    }
+
+    // 渲染后端在 Avalonia 初始化前确定，这里只持久化，重启后由 GraphicsBackendSelection 读取生效。
+    partial void OnPreferOpenGlRenderingChanged(bool value)
+    {
+        if (_isApplyingSettingsSnapshot) return;
+
+        SettingsManager.Settings.PreferOpenGlRendering = value;
+        SettingsManager.Save();
     }
 
 #if KUGOU_LINUX
@@ -1149,6 +1161,7 @@ public partial class SettingViewModel : PageViewModelBase
             AutoCheckUpdate = SettingsManager.Settings.AutoCheckUpdate;
             SelectedAppFontFamily = AppFontService.FormatGlobalFontSelection(LyricFontFamilyOptions);
             SelectedUiScaleOption = UiScale.FindOption(SettingsManager.Settings.UiScale);
+            PreferOpenGlRendering = SettingsManager.Settings.PreferOpenGlRendering;
             UseCustomBackgroundImage = SettingsManager.Settings.UseCustomBackgroundImage;
             CustomBackgroundImagePath = SettingsManager.Settings.CustomBackgroundImagePath;
             CustomBackgroundImageOpacity = Math.Clamp(SettingsManager.Settings.CustomBackgroundImageOpacity, 0.1, 1.0);
