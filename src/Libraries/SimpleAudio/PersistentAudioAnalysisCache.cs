@@ -269,20 +269,31 @@ internal static class PersistentAudioAnalysisCache
     private static bool TryCreateLocalIdentity(string source, bool isLocal, int schemaVersion, out SourceIdentity identity)
     {
         identity = default;
-        if (string.IsNullOrWhiteSpace(source) ||
-            (!isLocal && source.StartsWith("http", StringComparison.OrdinalIgnoreCase)))
+        if (string.IsNullOrWhiteSpace(source))
         {
             return false;
         }
 
+        var effectiveSource = source;
+        if (!isLocal && RemoteAudioCache.IsHttpUrl(source))
+        {
+            if (!RemoteAudioCache.TryGetCachedFilePath(source, out effectiveSource))
+            {
+                var remoteIdentity = $"{schemaVersion}|remote|{RemoteAudioCache.ComputeCacheKey(source)}";
+                var remoteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(remoteIdentity)));
+                identity = new SourceIdentity(remoteIdentity, 0, 0, remoteIdentity, remoteHash);
+                return true;
+            }
+        }
+
         try
         {
-            if (!File.Exists(source))
+            if (!File.Exists(effectiveSource))
             {
                 return false;
             }
 
-            var fullPath = Path.GetFullPath(source);
+            var fullPath = Path.GetFullPath(effectiveSource);
             var fileInfo = new FileInfo(fullPath);
             var lastWriteTimeUtcTicks = fileInfo.LastWriteTimeUtc.Ticks;
             var memoryKey = $"{schemaVersion}|{fullPath}|{fileInfo.Length}|{lastWriteTimeUtcTicks}";

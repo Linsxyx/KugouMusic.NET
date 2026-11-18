@@ -12,6 +12,7 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
     private const double OutroWindowSec = 12.0;
     private const double TailScanWindowSec = 40.0;
     private const int MaxPooledSampleBufferLength = 16 * 1024;
+    private const int MaxAnalysisCacheEntries = 64;
     private readonly ConcurrentDictionary<string, Lazy<Task<TrackAnalysisSnapshot>>> _analysisCache = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<TransitionProfile> AnalyzeAsync(PreparedTrack current, PreparedTrack next, CancellationToken ct = default)
@@ -191,6 +192,11 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
 
         var cacheKey = PersistentAudioAnalysisCache.GetTrackAnalysisMemoryKey(track.Source, track.IsLocal)
                        ?? track.Source;
+        if (_analysisCache.Count > MaxAnalysisCacheEntries)
+        {
+            _analysisCache.Clear();
+        }
+
         var lazy = _analysisCache.GetOrAdd(cacheKey, _ => new Lazy<Task<TrackAnalysisSnapshot>>(
             () => AnalyzeTrackInternalAsync(track, ct), LazyThreadSafetyMode.ExecutionAndPublication));
 
@@ -213,11 +219,23 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
             return cached;
         }
 
+        var effectiveSource = track.Source;
+        var effectiveIsLocal = track.IsLocal;
+        if (!effectiveIsLocal && RemoteAudioCache.IsHttpUrl(effectiveSource))
+        {
+            var resolved = await RemoteAudioCache.ResolveOrDownloadAsync(effectiveSource, cancellationToken: ct).ConfigureAwait(false);
+            if (!string.Equals(resolved, effectiveSource, StringComparison.Ordinal) && File.Exists(resolved))
+            {
+                effectiveSource = resolved;
+                effectiveIsLocal = true;
+            }
+        }
+
         var analysis = await Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();
             var flags = BassFlags.Decode | BassFlags.Float | BassFlags.Prescan;
-            var handle = CreateDecodeStream(track.Source, track.IsLocal, flags);
+            var handle = CreateDecodeStream(effectiveSource, effectiveIsLocal, flags);
             if (handle == 0)
             {
                 return TrackAnalysisSnapshot.Empty;
@@ -284,6 +302,15 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
 
     private static int CreateDecodeStream(string source, bool isLocal, BassFlags flags)
     {
+        if (RemoteAudioCache.TryGetCachedFilePath(source, out var cachedPath))
+        {
+            var cachedStream = Bass.CreateStream(cachedPath, 0, 0, flags);
+            if (cachedStream != 0)
+            {
+                return cachedStream;
+            }
+        }
+
         if (!isLocal && source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             return Bass.CreateStream(source, 0, flags, null, IntPtr.Zero);

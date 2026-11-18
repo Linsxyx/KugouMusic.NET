@@ -147,6 +147,31 @@ public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : I
                 ? Player.PrepareNext(source, normalizationGain)
                 : Player.Load(source, normalizationGain);
 
+        try
+        {
+            var cachedPath = await RemoteAudioCache
+                .ResolveOrDownloadAsync(source, _remoteAudioClient, cancellationToken)
+                .ConfigureAwait(false);
+            if (!string.Equals(cachedPath, source, StringComparison.Ordinal) && File.Exists(cachedPath))
+            {
+                var loadedFromCache = prepareOnly
+                    ? Player.PrepareNext(cachedPath, normalizationGain)
+                    : Player.Load(cachedPath, normalizationGain);
+                if (loadedFromCache)
+                {
+                    return true;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException)
+        {
+            logger.LogDebug(ex, "远程音频缓存落盘失败，尝试流式加载: {Source}", source);
+        }
+
         HttpResponseMessage? response = null;
         try
         {

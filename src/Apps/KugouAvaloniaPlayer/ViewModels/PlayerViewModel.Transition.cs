@@ -129,16 +129,10 @@ public partial class PlayerViewModel
                 !sourceInfo.Success || string.IsNullOrWhiteSpace(sourceInfo.Source))
                 return;
 
-            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
-                sourceInfo.Source,
-                sourceInfo.IsLocal,
-                nextSong.DurationSeconds,
-                linkedCts.Token);
-
             if (!await _playbackCoordinator.PrepareNextAsync(
                     sourceInfo.Source,
                     nextSong.Name,
-                    normalizationGain,
+                    normalizationGain: 1.0f,
                     GetAudioLoadTimeout(sourceInfo.IsLocal),
                     linkedCts.Token))
             {
@@ -146,16 +140,25 @@ public partial class PlayerViewModel
                 return;
             }
 
+            var preparedSource = _player.PreparedSource ?? sourceInfo.Source;
+            var preparedIsLocal = sourceInfo.IsLocal ||
+                                  (!RemoteAudioCache.IsHttpUrl(preparedSource) && File.Exists(preparedSource));
+            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
+                preparedSource,
+                preparedIsLocal,
+                nextSong.DurationSeconds,
+                linkedCts.Token);
+            _player.SetPreparedNormalizationGain(normalizationGain);
             _prepareFailureSongKey = null;
             _preparedNextSong = nextSong;
-            _preparedNextSource = sourceInfo.Source;
+            _preparedNextSource = preparedSource;
             _preparedNextIsLocal = sourceInfo.IsLocal;
             PreparedNextCover = nextSong.Cover;
             _preparedNextTrack = new PreparedTrack
             {
                 Id = nextSongKey,
-                Source = sourceInfo.Source,
-                IsLocal = sourceInfo.IsLocal,
+                Source = preparedSource,
+                IsLocal = preparedIsLocal,
                 DurationSeconds = nextSong.DurationSeconds
             };
         }
@@ -199,12 +202,14 @@ public partial class PlayerViewModel
             var transitionCts = EnsureTransitionCancellation();
             using var linkedCts =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, transitionCts.Token);
+            var currentIsLocal = (!string.IsNullOrWhiteSpace(currentSong.LocalFilePath) &&
+                                  File.Exists(currentSong.LocalFilePath)) ||
+                                 (!RemoteAudioCache.IsHttpUrl(currentSource) && File.Exists(currentSource));
             var currentTrack = new PreparedTrack
             {
                 Id = BuildSongTransitionKey(currentSong),
                 Source = currentSource,
-                IsLocal = !string.IsNullOrWhiteSpace(currentSong.LocalFilePath) &&
-                          File.Exists(currentSong.LocalFilePath),
+                IsLocal = currentIsLocal,
                 DurationSeconds = TotalDurationSeconds,
                 TailMetrics = BuildTailPlaybackMetrics()
             };

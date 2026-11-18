@@ -1,5 +1,6 @@
 using KuGou.Net.Abstractions;
 using KuGou.Net.Clients;
+using KuGou.Net.Infrastructure.Http;
 using KaMusic.Cli.Models;
 using SimpleAudio;
 
@@ -20,6 +21,10 @@ internal sealed class TerminalPlaybackService : IDisposable
     private readonly Func<bool> _isAuthenticated;
     private readonly DualTrackAudioPlayer _player = new();
     private readonly ITransitionAnalysisService _transitionAnalysisService = new ManagedBassTransitionAnalysisService();
+    private readonly HttpClient _remoteAudioClient = new(KgPrimaryHandler.Create())
+    {
+        Timeout = TimeSpan.FromSeconds(45)
+    };
     private readonly SemaphoreSlim _playLock = new(1, 1);
     private readonly Random _random = new();
     private List<TerminalSongItem> _queue = [];
@@ -578,13 +583,16 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         if (song.IsRemoteStream && !string.IsNullOrWhiteSpace(song.RemoteUrl))
         {
-            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(song.RemoteUrl))
+            var resolvedRemote = await RemoteAudioCache
+                .ResolveOrDownloadAsync(song.RemoteUrl, _remoteAudioClient)
+                .ConfigureAwait(false);
+            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(resolvedRemote))
             {
                 StatusMessage = $"远程音频加载失败：{song.Name}";
                 return;
             }
 
-            _activeSource = song.RemoteUrl;
+            _activeSource = resolvedRemote;
             ApplySettings();
             _player.Play();
             StatusMessage = $"播放中：{song.Name}";
@@ -612,13 +620,16 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(url))
+        var resolvedUrl = await RemoteAudioCache
+            .ResolveOrDownloadAsync(url, _remoteAudioClient)
+            .ConfigureAwait(false);
+        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(resolvedUrl))
         {
             StatusMessage = $"音频加载失败：{song.Name}";
             return;
         }
 
-        _activeSource = url;
+        _activeSource = resolvedUrl;
         ApplySettings();
         _player.Play();
         StatusMessage = $"播放中：{song.Name}";
@@ -704,6 +715,24 @@ internal sealed class TerminalPlaybackService : IDisposable
                 return;
             }
 
+            if (!isLocal && RemoteAudioCache.IsHttpUrl(source))
+            {
+                var cts = EnsureTransitionCancellation();
+                var resolved = await RemoteAudioCache
+                    .ResolveOrDownloadAsync(source, _remoteAudioClient, cts.Token)
+                    .ConfigureAwait(false);
+                if (requestVersion != _playVersion || cts.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                if (!string.Equals(resolved, source, StringComparison.Ordinal) && File.Exists(resolved))
+                {
+                    source = resolved;
+                    isLocal = true;
+                }
+            }
+
             if (!_player.PrepareNext(source))
             {
                 return;
@@ -755,11 +784,12 @@ internal sealed class TerminalPlaybackService : IDisposable
         try
         {
             var cts = EnsureTransitionCancellation();
+            var currentIsLocal = currentSong.IsLocalFile || (!RemoteAudioCache.IsHttpUrl(_activeSource) && File.Exists(_activeSource));
             var currentTrack = new PreparedTrack
             {
                 Id = BuildSongTransitionKey(currentSong),
                 Source = _activeSource,
-                IsLocal = currentSong.IsLocalFile,
+                IsLocal = currentIsLocal,
                 DurationSeconds = currentSong.DurationSeconds
             };
 
@@ -1025,6 +1055,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         Interlocked.Increment(ref _playVersion);
         _player.PlaybackEnded -= HandlePlaybackEnded;
         CancelTransitionWork();
+        _remoteAudioClient.Dispose();
         _player.Dispose();
     }
 }

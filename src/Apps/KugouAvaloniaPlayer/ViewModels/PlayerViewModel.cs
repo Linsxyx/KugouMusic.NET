@@ -331,15 +331,11 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
 
             if (requestVersion != _playRequestVersion || currentLoadCts.IsCancellationRequested) return;
 
-            var normalizationGain =
-                await _audioEffectsService.ResolveNormalizationGainAsync(sourceInfo.Source, sourceInfo.IsLocal, song.DurationSeconds,
-                    currentLoadCts.Token);
-
             var loadSuccess =
                 await _playbackCoordinator.LoadAsync(
                     sourceInfo.Source,
                     song.Name,
-                    normalizationGain,
+                    normalizationGain: 1.0f,
                     GetAudioLoadTimeout(sourceInfo.IsLocal),
                     currentLoadCts.Token);
 
@@ -350,6 +346,14 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
                     _player.Stop();
                     return;
                 }
+
+                var normalizationGain =
+                    await _audioEffectsService.ResolveNormalizationGainAsync(
+                        _player.ActiveSource ?? sourceInfo.Source,
+                        sourceInfo.IsLocal,
+                        song.DurationSeconds,
+                        currentLoadCts.Token);
+                _player.SetActiveNormalizationGain(normalizationGain);
 
                 _consecutiveFailures = 0;
                 _player.SetVolume(MusicVolume);

@@ -230,6 +230,12 @@ public sealed class DualTrackAudioPlayer : IDisposable
         _activeDeck.SetNormalizationGain(GetEffectiveNormalizationGain(_activeDeck));
     }
 
+    public void SetPreparedNormalizationGain(float gain)
+    {
+        SetStoredNormalizationGain(_standbyDeck, gain);
+        _standbyDeck.SetNormalizationGain(GetEffectiveNormalizationGain(_standbyDeck));
+    }
+
     public void SetPosition(TimeSpan time)
     {
         _activeDeck.SetPosition(time);

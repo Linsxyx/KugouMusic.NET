@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Concurrent;
 using ManagedBass;
 using ManagedBass.Loud;
@@ -11,6 +12,7 @@ public static class TrackVolumeNormalizer
     internal const float MinNormalizationGain = 0f;
     internal const float MaxNormalizationGain = 4.0f;
     private const int MeasurementReadBufferLength = 16 * 1024;
+    private const int MaxGainCacheEntries = 128;
     private static readonly float MaxTruePeakLinear = MathF.Pow(10f, TargetTruePeakDbtp / 20f);
     private static readonly ConcurrentDictionary<string, Lazy<Task<float>>> GainCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -27,6 +29,11 @@ public static class TrackVolumeNormalizer
 
         var cacheKey = PersistentAudioAnalysisCache.GetNormalizationGainMemoryKey(source, isLocal)
                        ?? source;
+        if (GainCache.Count > MaxGainCacheEntries)
+        {
+            GainCache.Clear();
+        }
+
         var lazy = GainCache.GetOrAdd(cacheKey, _ => new Lazy<Task<float>>(
             () => EstimateGainInternalAsync(source, isLocal, durationSeconds, cancellationToken),
             LazyThreadSafetyMode.ExecutionAndPublication));
@@ -47,7 +54,7 @@ public static class TrackVolumeNormalizer
         }
     }
 
-    private static Task<float> EstimateGainInternalAsync(
+    private static async Task<float> EstimateGainInternalAsync(
         string source,
         bool isLocal,
         double durationSeconds,
@@ -56,14 +63,27 @@ public static class TrackVolumeNormalizer
         cancellationToken.ThrowIfCancellationRequested();
         if (PersistentAudioAnalysisCache.TryLoadNormalizationGain(source, isLocal, out var cachedGain))
         {
-            return Task.FromResult(cachedGain);
+            return cachedGain;
         }
 
-        return Task.Run(() =>
+        var effectiveSource = source;
+        var effectiveIsLocal = isLocal;
+        if (!effectiveIsLocal && RemoteAudioCache.IsHttpUrl(effectiveSource))
+        {
+            var resolved = await RemoteAudioCache.ResolveOrDownloadAsync(effectiveSource, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            if (!string.Equals(resolved, effectiveSource, StringComparison.Ordinal) && File.Exists(resolved))
+            {
+                effectiveSource = resolved;
+                effectiveIsLocal = true;
+            }
+        }
+
+        return await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var handle = CreateDecodeStream(source, isLocal, BassFlags.Decode | BassFlags.Float | BassFlags.Prescan);
+            var handle = CreateDecodeStream(effectiveSource, effectiveIsLocal, BassFlags.Decode | BassFlags.Float | BassFlags.Prescan);
             if (handle == 0)
             {
                 return 1.0f;
@@ -115,7 +135,7 @@ public static class TrackVolumeNormalizer
 
                 Bass.StreamFree(handle);
             }
-        }, cancellationToken);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     private static float CalculateGainFromLufs(float integratedLufs)
@@ -143,20 +163,36 @@ public static class TrackVolumeNormalizer
 
     private static void DrainDecodeStream(int handle, CancellationToken cancellationToken)
     {
-        var buffer = new float[MeasurementReadBufferLength];
-        while (true)
+        var buffer = ArrayPool<float>.Shared.Rent(MeasurementReadBufferLength);
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var bytesRead = Bass.ChannelGetData(handle, buffer, buffer.Length * sizeof(float) | (int)DataFlags.Float);
-            if (bytesRead <= 0)
+            while (true)
             {
-                break;
+                cancellationToken.ThrowIfCancellationRequested();
+                var bytesRead = Bass.ChannelGetData(handle, buffer, MeasurementReadBufferLength * sizeof(float) | (int)DataFlags.Float);
+                if (bytesRead <= 0)
+                {
+                    break;
+                }
             }
+        }
+        finally
+        {
+            ArrayPool<float>.Shared.Return(buffer);
         }
     }
 
     private static int CreateDecodeStream(string source, bool isLocal, BassFlags flags)
     {
+        if (RemoteAudioCache.TryGetCachedFilePath(source, out var cachedPath))
+        {
+            var cachedStream = Bass.CreateStream(cachedPath, 0, 0, flags);
+            if (cachedStream != 0)
+            {
+                return cachedStream;
+            }
+        }
+
         if (!isLocal && source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             return Bass.CreateStream(source, 0, flags, null, IntPtr.Zero);

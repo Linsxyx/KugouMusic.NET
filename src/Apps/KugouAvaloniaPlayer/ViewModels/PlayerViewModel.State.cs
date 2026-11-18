@@ -350,15 +350,10 @@ public partial class PlayerViewModel
             _playbackTimer.Stop();
             _player.Stop();
 
-            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
-                sourceInfo.Source,
-                sourceInfo.IsLocal,
-                currentSong.DurationSeconds,
-                currentLoadCts.Token);
             var loadSuccess = await _playbackCoordinator.LoadAsync(
                 sourceInfo.Source,
                 currentSong.Name,
-                normalizationGain,
+                normalizationGain: 1.0f,
                 GetAudioLoadTimeout(sourceInfo.IsLocal),
                 currentLoadCts.Token);
             if (!loadSuccess)
@@ -372,6 +367,13 @@ public partial class PlayerViewModel
                     .Queue();
                 return false;
             }
+
+            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
+                _player.ActiveSource ?? sourceInfo.Source,
+                sourceInfo.IsLocal,
+                currentSong.DurationSeconds,
+                currentLoadCts.Token);
+            _player.SetActiveNormalizationGain(normalizationGain);
 
             MusicQuality = quality;
             _player.SetVolume(MusicVolume);

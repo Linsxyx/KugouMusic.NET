@@ -101,8 +101,27 @@ public partial class SimpleAudioPlayer : IDisposable
 
     private static int CreateSourceStream(string source, BassFlags sourceFlags)
     {
+        if (RemoteAudioCache.TryGetCachedFilePath(source, out var cachedPath))
+        {
+            var localStream = Bass.CreateStream(cachedPath, 0, 0, sourceFlags);
+            if (localStream != 0)
+            {
+                return localStream;
+            }
+        }
+
         if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
+            var resolved = RemoteAudioCache.ResolveOrDownloadAsync(source).GetAwaiter().GetResult();
+            if (!string.Equals(resolved, source, StringComparison.Ordinal) && File.Exists(resolved))
+            {
+                var cachedStream = Bass.CreateStream(resolved, 0, 0, sourceFlags);
+                if (cachedStream != 0)
+                {
+                    return cachedStream;
+                }
+            }
+
             for (var attempt = 1; attempt <= RemoteStreamLoadAttempts; attempt++)
             {
                 var stream = Bass.CreateStream(source, 0, sourceFlags, null, IntPtr.Zero);
