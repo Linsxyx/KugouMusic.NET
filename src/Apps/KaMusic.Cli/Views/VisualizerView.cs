@@ -16,7 +16,7 @@ internal sealed class VisualizerView
         var bounds = canvas.Bounds;
         var song = snapshot.CurrentSong;
         var cover = images.Get(song?.Cover);
-        var accent = cover?.Accent ?? theme.Accent;
+        var accent = cover != null ? theme.AdaptAccent(cover.RawAccent) : theme.Accent;
 
         var header = bounds.TakeTop(3);
         var footer = bounds.TakeBottom(4);
@@ -77,13 +77,16 @@ internal sealed class VisualizerView
         var totalWidth = barCount * 2 - 1;
         var startX = area.X + Math.Max(0, (area.W - totalWidth) / 2);
 
+        var spectrumEnd = theme.IsLight ? new Rgb(219, 39, 119) : new Rgb(255, 120, 180);
+        var peakTarget = theme.IsLight ? theme.Text : new Rgb(255, 255, 255);
+
         for (var row = 0; row < chartHeight; row++)
         {
             var levelFromBottom = chartHeight - row;
             var threshold = levelFromBottom / (float)chartHeight;
-            var color = accent.Mix(new Rgb(255, 120, 180), (levelFromBottom - 1f) / Math.Max(1, chartHeight - 1));
+            var color = accent.Mix(spectrumEnd, (levelFromBottom - 1f) / Math.Max(1, chartHeight - 1));
             var barStyle = new CellStyle(color);
-            var peakStyle = new CellStyle(color.Mix(new Rgb(255, 255, 255), 0.35f));
+            var peakStyle = new CellStyle(color.Mix(peakTarget, 0.35f));
 
             for (var i = 0; i < barCount; i++)
             {

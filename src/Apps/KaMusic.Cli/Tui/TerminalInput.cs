@@ -172,6 +172,10 @@ internal sealed class TerminalInput : IDisposable
                 {
                     ParseUnixEscapeSequence();
                 }
+                else if ((first.Modifiers & ConsoleModifiers.Alt) != 0 && first.KeyChar == ']' && Console.KeyAvailable)
+                {
+                    ConsumeUnixOscSequence();
+                }
                 else
                 {
                     _keys.Enqueue(first);
@@ -188,6 +192,12 @@ internal sealed class TerminalInput : IDisposable
     private void ParseUnixEscapeSequence()
     {
         var second = Console.ReadKey(true);
+        if (second.KeyChar == ']')
+        {
+            ConsumeUnixOscSequence();
+            return;
+        }
+
         if (second.KeyChar != '[' || !Console.KeyAvailable)
         {
             _keys.Enqueue(new ConsoleKeyInfo('\u001b', ConsoleKey.Escape, false, false, false));
@@ -259,6 +269,28 @@ internal sealed class TerminalInput : IDisposable
         if (mapped != ConsoleKey.None)
         {
             _keys.Enqueue(new ConsoleKeyInfo('\0', mapped, false, false, false));
+        }
+    }
+
+    private void ConsumeUnixOscSequence()
+    {
+        for (var i = 0; i < 128 && !_cts.IsCancellationRequested; i++)
+        {
+            if (!Console.KeyAvailable)
+            {
+                Thread.Sleep(2);
+                if (!Console.KeyAvailable)
+                {
+                    break;
+                }
+            }
+
+            var k = Console.ReadKey(true);
+            var ch = k.Key == ConsoleKey.Escape ? '\u001b' : k.KeyChar;
+            if (ch is '\u0007' or '\\')
+            {
+                break;
+            }
         }
     }
 

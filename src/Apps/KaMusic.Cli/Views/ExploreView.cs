@@ -417,7 +417,7 @@ internal static class ExploreView
         // 第 3~4 行：预览歌曲列表或说明
         for (var i = 0; i < Math.Min(2, card.PreviewLines.Count) && i + 2 < inner.H; i++)
         {
-            var lineStyle = new CellStyle(i == 0 && selected ? theme.Text : theme.Faint, bg);
+            var lineStyle = new CellStyle(i == 0 && selected ? theme.Text : selected ? theme.Muted : theme.Faint, bg);
             canvas.Text(textX, inner.Y + 2 + i, card.PreviewLines[i], lineStyle, textW);
         }
     }

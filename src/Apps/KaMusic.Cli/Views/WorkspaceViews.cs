@@ -425,7 +425,7 @@ internal static class WorkspaceViews
             if (sourceW > 0)
             {
                 col += timeW + 1;
-                canvas.Text(col, y, song.Source, new CellStyle(theme.Faint, bg), sourceW);
+                canvas.Text(col, y, song.Source, new CellStyle(selected ? theme.Muted : theme.Faint, bg), sourceW);
             }
         }
     }
@@ -513,6 +513,7 @@ internal static class WorkspaceViews
         Rect area,
         TerminalAppSettings settings,
         TerminalImageMode effectiveImageMode,
+        TerminalThemeKind effectiveThemeKind,
         TerminalPlaybackService playback,
         TerminalUpdateService updater,
         int selectedIndex,
@@ -539,6 +540,11 @@ internal static class WorkspaceViews
                     ? $"自动（当前：{TerminalCapabilities.DisplayName(effectiveImageMode)}）"
                     : TerminalCapabilities.DisplayName(settings.ImageMode),
                 "Auto / Kitty / iTerm2 / Sixel / 半块字符 / 关闭（快捷键 p）"),
+            ("主题配色",
+                settings.ThemeMode == TerminalThemeMode.Auto
+                    ? $"自动（当前：{TerminalCapabilities.DisplayName(effectiveThemeKind)}）"
+                    : TerminalCapabilities.DisplayName(settings.ThemeMode),
+                "自动探测终端背景 / 深色 / 浅色"),
             ("版本与更新", updater.DisplayValue, updater.HintText)
         };
 
@@ -623,7 +629,7 @@ internal static class WorkspaceViews
 
         var song = snapshot.CurrentSong;
         var cover = images.Get(song?.Cover);
-        var accent = cover?.Accent ?? theme.Accent;
+        var accent = cover != null ? theme.AdaptAccent(cover.RawAccent) : theme.Accent;
         var y = inner.Y;
 
         if (canvas.ImageMode != TerminalImageMode.Off && inner.H >= 15)

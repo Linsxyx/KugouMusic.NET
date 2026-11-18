@@ -10,7 +10,7 @@ namespace KaMusic.Tests;
 public sealed class TerminalColorTests
 {
     private static readonly string[] EnvNames =
-        ["KGTEST_COLOR", "TERM", "COLORTERM", "TERM_PROGRAM", "WT_SESSION"];
+        ["KGTEST_COLOR", "KGTEST_THEME", "COLORFGBG", "TERM", "COLORTERM", "TERM_PROGRAM", "WT_SESSION"];
 
     private static string Sgr(CellStyle style, TerminalColorDepth depth)
     {
@@ -164,5 +164,95 @@ public sealed class TerminalColorTests
         });
 
         Assert.Equal(expected, actual.ToString());
+    }
+
+    [Fact]
+    public void LightTheme_MaintainsReadableHierarchyAndDistinctSurfaces()
+    {
+        var light = Theme.Light;
+
+        Assert.True(light.IsLight);
+        Assert.True(light.Text.Luminance < light.Muted.Luminance);
+        Assert.True(light.Muted.Luminance < light.Faint.Luminance);
+        Assert.True(light.Faint.Luminance < light.Border.Luminance);
+        Assert.True(light.Accent.Luminance < 0.42f);
+        Assert.True(light.Playing.Luminance < 0.42f);
+        Assert.True(light.Warning.Luminance < 0.42f);
+        Assert.True(light.Error.Luminance < 0.42f);
+
+        Assert.NotEqual(Ansi.To256(light.SelectionBg), Ansi.To256(light.SelectionDimBg));
+        Assert.NotEqual(Ansi.To256(light.SelectionBg), Ansi.To256(light.PanelBg));
+
+        var sgr = Sgr(new CellStyle(light.Text, light.SelectionBg, TextAttr.Bold), TerminalColorDepth.Ansi16);
+        Assert.False(sgr.Contains(";5;", StringComparison.Ordinal));
+        Assert.False(sgr.Contains(";2;", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AdaptAccent_PreservesContrastForLightAndDarkThemes()
+    {
+        var veryBrightCover = new Rgb(250, 240, 190);
+        var veryDarkCover = new Rgb(20, 30, 70);
+
+        var adaptedForLight = Theme.Light.AdaptAccent(veryBrightCover);
+        var adaptedForDark = Theme.Dark.AdaptAccent(veryDarkCover);
+
+        Assert.True(adaptedForLight.Luminance < 0.45f);
+        Assert.True(adaptedForDark.Luminance > 0.35f);
+
+        Assert.True(Theme.Light.ContrastFg(new Rgb(220, 235, 255)).Luminance < 0.2f);
+        Assert.True(Theme.Light.ContrastFg(Theme.Light.Accent).Luminance > 0.8f);
+    }
+
+    [Theory]
+    [InlineData("\u001b]11;rgb:fdfd/f6f6/e3e3\u001b\\", 253, 246, 227)]
+    [InlineData("\u001b]11;rgba:fdfd/f6f6/e3e3/ffff\u001b\\", 253, 246, 227)]
+    [InlineData("\u001b]11;rgb:ff/ff/ff\u0007", 255, 255, 255)]
+    [InlineData("\u001b]11;rgb:1616/1919/1f1f\u001b\\", 22, 25, 31)]
+    [InlineData("\u001b]11;#1e1e2e\u0007", 30, 30, 46)]
+    public void TryParseOsc11Background_ParsesStandardReplies(string reply, byte r, byte g, byte b)
+    {
+        Assert.True(TerminalCapabilities.TryParseOsc11Background(reply, out var color));
+        Assert.Equal(new Rgb(r, g, b), color);
+    }
+
+    [Theory]
+    [InlineData("0;15", "Light")]
+    [InlineData("0;7", "Light")]
+    [InlineData("0;default;15", "Light")]
+    [InlineData("15;0", "Dark")]
+    [InlineData("7;0", "Dark")]
+    public void TryParseColorFgBg_DetectsLightAndDark(string value, string expected)
+    {
+        Assert.True(TerminalCapabilities.TryParseColorFgBg(value, out var kind));
+        Assert.Equal(expected, kind.ToString());
+    }
+
+    [Fact]
+    public void DetectThemeKind_UsesOverrideOsc11AndColorFgBgInOrder()
+    {
+        var fromOverride = WithEnvironment(() =>
+        {
+            Environment.SetEnvironmentVariable("KGTEST_THEME", "light");
+            Environment.SetEnvironmentVariable("COLORFGBG", "15;0");
+            return TerminalCapabilities.DetectThemeKind(probeOsc11: true, () => "\u001b]11;rgb:0000/0000/0000\u0007");
+        });
+        Assert.Equal(TerminalThemeKind.Light, fromOverride);
+
+        var fromOsc11 = WithEnvironment(() =>
+        {
+            Environment.SetEnvironmentVariable("KGTEST_THEME", null);
+            Environment.SetEnvironmentVariable("COLORFGBG", "15;0");
+            return TerminalCapabilities.DetectThemeKind(probeOsc11: true, () => "\u001b]11;rgb:fdfd/f6f6/e3e3\u001b\\");
+        });
+        Assert.Equal(TerminalThemeKind.Light, fromOsc11);
+
+        var fromColorFgBg = WithEnvironment(() =>
+        {
+            Environment.SetEnvironmentVariable("KGTEST_THEME", null);
+            Environment.SetEnvironmentVariable("COLORFGBG", "0;15");
+            return TerminalCapabilities.DetectThemeKind(probeOsc11: true, () => null);
+        });
+        Assert.Equal(TerminalThemeKind.Light, fromColorFgBg);
     }
 }

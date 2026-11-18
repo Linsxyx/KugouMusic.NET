@@ -17,7 +17,8 @@ internal sealed class TerminalImage : IDisposable
         Key = key;
         Bitmap = bitmap;
         Crisp = crisp;
-        Accent = ComputeAccent(bitmap);
+        RawAccent = ComputeRawAccent(bitmap);
+        Accent = Theme.Dark.AdaptAccent(RawAccent);
     }
 
     public string Key { get; }
@@ -34,7 +35,12 @@ internal sealed class TerminalImage : IDisposable
     public int Height => Bitmap.Height;
 
     /// <summary>
-    ///     图片的主色调，用于沉浸页的强调色。
+    ///     图片提取的原始主色调，可传入 Theme.AdaptAccent 按当前深/浅色背景调校。
+    /// </summary>
+    public Rgb RawAccent { get; }
+
+    /// <summary>
+    ///     图片的主色调，默认已针对深色背景提亮。
     /// </summary>
     public Rgb Accent { get; }
 
@@ -113,7 +119,7 @@ internal sealed class TerminalImage : IDisposable
         return _qrModules;
     }
 
-    private static Rgb ComputeAccent(SKBitmap bitmap)
+    private static Rgb ComputeRawAccent(SKBitmap bitmap)
     {
         try
         {
@@ -140,9 +146,7 @@ internal sealed class TerminalImage : IDisposable
                 }
             }
 
-            var accent = new Rgb((byte)(r / weightSum), (byte)(g / weightSum), (byte)(b / weightSum));
-            // 保证在深色背景上可读。
-            return accent.Luminance < 0.45f ? accent.Mix(new Rgb(255, 255, 255), 0.45f - accent.Luminance + 0.15f) : accent;
+            return new Rgb((byte)(r / weightSum), (byte)(g / weightSum), (byte)(b / weightSum));
         }
         catch
         {

@@ -190,6 +190,7 @@ internal sealed class TerminalAppSettings
     public bool Shuffle { get; set; }
     public TerminalLyricMode LyricMode { get; set; } = TerminalLyricMode.Translation;
     public TerminalImageMode ImageMode { get; set; } = TerminalImageMode.Auto;
+    public TerminalThemeMode ThemeMode { get; set; } = TerminalThemeMode.Auto;
     public float[] CustomEqGains { get; set; } = new float[10];
 }
 

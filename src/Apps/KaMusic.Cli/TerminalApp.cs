@@ -23,7 +23,7 @@ internal enum LocalInputModalMode
 
 internal sealed class TerminalApp : IAsyncDisposable
 {
-    private const int SettingsHeaderItemCount = 7;
+    private const int SettingsHeaderItemCount = 8;
     private const int SeekStepSeconds = 10;
     private static int SettingsItemCount => SettingsHeaderItemCount + 10;
 
@@ -50,6 +50,13 @@ internal sealed class TerminalApp : IAsyncDisposable
         TerminalImageMode.Off
     ];
 
+    private static readonly TerminalThemeMode[] ThemeModes =
+    [
+        TerminalThemeMode.Auto,
+        TerminalThemeMode.Dark,
+        TerminalThemeMode.Light
+    ];
+
     private readonly UiDispatcher _dispatcher = new();
     private readonly TerminalSettingsStore _settingsStore = new();
     private readonly TerminalAppSettings _settings;
@@ -62,7 +69,8 @@ internal sealed class TerminalApp : IAsyncDisposable
     private readonly ImageCache _images;
     private readonly Canvas _canvas = new();
     private readonly TerminalRenderer _renderer = new();
-    private readonly Theme _theme = new();
+    private TerminalThemeKind _detectedThemeKind = TerminalThemeKind.Dark;
+    private Theme _theme = Theme.Dark;
     private readonly VisualizerView _visualizer = new();
     private readonly LoginController _login;
     private readonly TerminalUpdateService _updater = new();
@@ -152,6 +160,8 @@ internal sealed class TerminalApp : IAsyncDisposable
         _login = new LoginController(_clients, _images, RequestRender, OnLoginCompletedAsync);
         _renderer.ColorDepth = TerminalCapabilities.DetectColorDepth();
         _renderer.UpdateCellPixelSize(_canvas, TerminalCapabilities.GetCellPixelSize());
+        _detectedThemeKind = TerminalCapabilities.DetectThemeKind(probeOsc11: false);
+        ApplyTheme();
         _dispatcher.UnhandledException += ex =>
         {
             _status = ex.Message;
@@ -172,6 +182,8 @@ internal sealed class TerminalApp : IAsyncDisposable
         var previousContext = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(_dispatcher);
         _renderer.Enter();
+        _detectedThemeKind = TerminalCapabilities.DetectThemeKind();
+        ApplyTheme();
         _input = new TerminalInput(_dispatcher.Wake);
         try
         {
@@ -2713,12 +2725,39 @@ internal sealed class TerminalApp : IAsyncDisposable
                 CycleImageMode(direction);
                 break;
             case 6:
+                CycleThemeMode(direction);
+                break;
+            case 7:
                 TriggerCheckOrApplyUpdate();
                 break;
             default:
                 _playback.SetEqBand(_settingsIndex - SettingsHeaderItemCount, direction);
                 break;
         }
+    }
+
+    private void CycleThemeMode(int direction = 1)
+    {
+        var idx = Array.IndexOf(ThemeModes, _settings.ThemeMode);
+        idx = (idx + direction + ThemeModes.Length) % ThemeModes.Length;
+        _settings.ThemeMode = ThemeModes[idx];
+        _settingsStore.Save(_settings);
+        ApplyTheme();
+        _renderer.Invalidate();
+        _status = $"主题配色：{TerminalCapabilities.DisplayName(_settings.ThemeMode)}（当前生效：{TerminalCapabilities.DisplayName(EffectiveThemeKind())}）";
+    }
+
+    private TerminalThemeKind EffectiveThemeKind() =>
+        _settings.ThemeMode switch
+        {
+            TerminalThemeMode.Dark => TerminalThemeKind.Dark,
+            TerminalThemeMode.Light => TerminalThemeKind.Light,
+            _ => _detectedThemeKind
+        };
+
+    private void ApplyTheme()
+    {
+        _theme = Theme.For(EffectiveThemeKind());
     }
 
     private void CycleImageMode(int direction = 1)
@@ -2922,6 +2961,7 @@ internal sealed class TerminalApp : IAsyncDisposable
                     area,
                     _settings,
                     EffectiveImageMode(),
+                    EffectiveThemeKind(),
                     _playback,
                     _updater,
                     _settingsIndex,

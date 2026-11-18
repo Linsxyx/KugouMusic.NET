@@ -72,7 +72,7 @@ internal static class PersonalFmView
         hitRegions.Reset();
         var song = state.CurrentSong;
         var cover = images.Get(song?.Cover);
-        var accent = cover?.Accent ?? theme.Accent;
+        var accent = cover != null ? theme.AdaptAccent(cover.RawAccent) : theme.Accent;
 
         var borderStyle = focused ? new CellStyle(accent) : theme.BorderStyle;
         var titleText = $"♫ 私人 FM · {TerminalPersonalFmPresentation.GetTitle(state.SelectedMode)}";
@@ -214,7 +214,8 @@ internal static class PersonalFmView
 
         // 2. 歌曲标题 + 歌手 + 红心标记
         var heart = song.IsFavorite ? " ♥" : " ♡";
-        var heartStyle = song.IsFavorite ? new CellStyle(new Rgb(255, 95, 125), Attr: TextAttr.Bold) : theme.MutedStyle;
+        var heartColor = theme.IsLight ? Rgb.FromHex(0xE11D48) : new Rgb(255, 95, 125);
+        var heartStyle = song.IsFavorite ? new CellStyle(heartColor, Attr: TextAttr.Bold) : theme.MutedStyle;
         var titleMaxW = Math.Max(6, card.W - 3);
         var clippedTitle = TextWidth.Truncate(song.Name, titleMaxW);
         var titleSpanW = TextWidth.Of(clippedTitle) + TextWidth.Of(heart);
@@ -366,7 +367,7 @@ internal static class PersonalFmView
             }
 
             var style = primary
-                ? new CellStyle(theme.PanelBg, accent, TextAttr.Bold)
+                ? new CellStyle(theme.ContrastFg(accent), accent, TextAttr.Bold)
                 : enabled
                     ? new CellStyle(theme.Text)
                     : theme.FaintStyle;
@@ -430,7 +431,7 @@ internal static class PersonalFmView
         var text = active ? $"[{label}]" : $" {label} ";
         var w = TextWidth.Of(text);
         var style = active
-            ? new CellStyle(theme.PanelBg, accent, TextAttr.Bold)
+            ? new CellStyle(theme.ContrastFg(accent), accent, TextAttr.Bold)
             : theme.MutedStyle;
         canvas.Text(x, y, text, style, w);
         return new Rect(x, y, w, 1);
