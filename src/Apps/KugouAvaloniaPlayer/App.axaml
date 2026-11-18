@@ -30,6 +30,7 @@
         <StyleInclude Source="avares://AvaloniaLyrics/Themes/AvaloniaLyrics.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SongListStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/MediaCardStyles.axaml" />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/MacTrafficLightStyles.axaml" />
     </Application.Styles>
 
     <Application.Resources>
