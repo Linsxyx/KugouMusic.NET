@@ -35,12 +35,6 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Border.PortraitModeButton">
-            <Setter Property="Background" Value="#30FFFFFF" />
-        </Style>
-        <Style Selector="Border.PortraitModeButton.active">
-            <Setter Property="Background" Value="#5AFFFFFF" />
-        </Style>
         <Style Selector="Border.NowPlayingMoreFlyoutCard">
             <Setter Property="Background" Value="#F0222227" />
             <Setter Property="CornerRadius" Value="18" />
@@ -176,16 +170,23 @@
                 ToolTip.Tip="写真模式"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
-                Margin="40,84,0,0">
-            <Border Classes="PortraitModeButton"
+                Padding="0"
+                Margin="40,94,0,0">
+            <!-- 与 NowPlayingView 中的关闭按钮同尺寸 (45x36)，位于其正下方 8px：40 外边距 + 10 行边距 + 36 高 + 8 间距 = 94 -->
+            <Border Classes="NowPlayingGlass"
                     Classes.active="{Binding IsPortraitModeEnabled}"
-                    CornerRadius="20"
-                    Padding="10,4">
-                <Svg Path="/Assets/portrait-mode.svg"
-                     Css="path { stroke: white; fill: none; } circle { stroke: white; fill: none; }"
-                     Width="25"
-                     Height="25"
-                     Opacity="0.9" />
+                    Width="45"
+                    Height="36">
+                <Panel>
+                    <Border Classes="NowPlayingGlassHighlight" />
+                    <Svg Path="/Assets/portrait-mode.svg"
+                         Css="path { stroke: white; fill: none; } circle { stroke: white; fill: none; }"
+                         Width="22"
+                         Height="22"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         Opacity="0.9" />
+                </Panel>
             </Border>
         </Button>
 

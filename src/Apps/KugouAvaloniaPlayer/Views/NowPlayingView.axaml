@@ -152,11 +152,19 @@
                 <StackPanel Orientation="Horizontal"
                             Spacing="12"
                             HorizontalAlignment="Left">
+                    <!-- 尺寸需与主题选择器 (Trigger 34 + 上下边框 1 = 高 36, 圆角 18) 和写真模式按钮 (45x36) 保持一致 -->
                     <Button Cursor="Hand"
                             Command="{Binding CloseCommand}"
-                            Classes="Basic">
-                        <Border Background="#30FFFFFF" CornerRadius="20" Padding="15,8">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronDown}" Foreground="White" Width="15" Height="15" />
+                            Classes="Basic"
+                            Padding="0"
+                            Margin="0"
+                            VerticalAlignment="Top">
+                        <Border Classes="NowPlayingGlass" Width="45" Height="36">
+                            <Panel>
+                                <Border Classes="NowPlayingGlassHighlight" />
+                                <PathIcon Data="{x:Static suki:Icons.ChevronDown}" Foreground="White" Width="15" Height="15"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Panel>
                         </Border>
                     </Button>
                 </StackPanel>

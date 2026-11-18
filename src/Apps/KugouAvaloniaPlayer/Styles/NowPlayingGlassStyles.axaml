@@ -1,0 +1,54 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <!-- 播放页顶部按钮共用的毛玻璃材质（关闭、主题切换、写真模式）。
+         Avalonia 无法对窗口内内容做背景模糊，这里用半透明白色渐变 + 上亮下暗的描边 + 顶部反光模拟玻璃质感。 -->
+    <Style Selector="Border.NowPlayingGlass">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="ClipToBounds" Value="True" />
+        <Setter Property="BoxShadow" Value="0 8 24 0 #33000000" />
+        <Setter Property="BorderBrush">
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#66FFFFFF" Offset="0" />
+                <GradientStop Color="#1FFFFFFF" Offset="0.5" />
+                <GradientStop Color="#33FFFFFF" Offset="1" />
+            </LinearGradientBrush>
+        </Setter>
+        <Setter Property="Background">
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#38FFFFFF" Offset="0" />
+                <GradientStop Color="#22FFFFFF" Offset="1" />
+            </LinearGradientBrush>
+        </Setter>
+    </Style>
+
+    <!-- 悬停 / 激活态：整体提亮一档 -->
+    <Style Selector="Button:pointerover > Border.NowPlayingGlass, Border.NowPlayingGlass.active">
+        <Setter Property="Background">
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#55FFFFFF" Offset="0" />
+                <GradientStop Color="#36FFFFFF" Offset="1" />
+            </LinearGradientBrush>
+        </Setter>
+    </Style>
+    <Style Selector="Button:pressed > Border.NowPlayingGlass">
+        <Setter Property="Background">
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Color="#2AFFFFFF" Offset="0" />
+                <GradientStop Color="#1AFFFFFF" Offset="1" />
+            </LinearGradientBrush>
+        </Setter>
+    </Style>
+
+    <!-- 玻璃顶部反光层，放在 NowPlayingGlass 内部的 Panel 中 -->
+    <Style Selector="Border.NowPlayingGlassHighlight">
+        <Setter Property="Height" Value="16" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="Background">
+            <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#1AFFFFFF" Offset="0" />
+                <GradientStop Color="#00FFFFFF" Offset="1" />
+            </LinearGradientBrush>
+        </Setter>
+    </Style>
+</Styles>

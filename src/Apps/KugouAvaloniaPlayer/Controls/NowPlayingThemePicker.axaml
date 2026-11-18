@@ -38,7 +38,7 @@
             <Setter Property="Foreground" Value="#FFE5B96B" />
         </Style>
         <Style Selector="Button.ThemePickerButton:pointerover, Button.ThemePickerButton:focus-visible">
-            <Setter Property="Background" Value="#20FFFFFF" />
+            <Setter Property="Background" Value="#1FFFFFFF" />
         </Style>
         <Style Selector="Button.ThemePickerButton:pressed">
             <Setter Property="Background" Value="#36E5B96B" />
@@ -69,10 +69,25 @@
         <Style Selector="controls|NowPlayingThemePicker:expanded PathIcon#Chevron">
             <Setter Property="RenderTransform" Value="rotate(180deg)" />
         </Style>
+        <Style Selector="Border#GlassTint">
+            <Setter Property="Background" Value="#00101218" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.24" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="controls|NowPlayingThemePicker:expanded Border#GlassTint">
+            <Setter Property="Background" Value="#99101218" />
+        </Style>
     </UserControl.Styles>
 
-    <Border Background="#F0181922" BorderBrush="#55E5B96B" BorderThickness="1"
-            CornerRadius="18" ClipToBounds="True" BoxShadow="0 8 28 0 #40000000">
+    <!-- 毛玻璃外观：材质定义在 Styles/NowPlayingGlassStyles.axaml，与关闭/写真模式按钮共用；
+         展开后叠加深色染色层保证列表文字可读 -->
+    <Border Classes="NowPlayingGlass">
+        <Panel>
+            <Border x:Name="GlassTint" IsHitTestVisible="False" />
+            <Border Classes="NowPlayingGlassHighlight" />
         <StackPanel>
             <Button x:Name="Trigger" Classes="ThemePickerButton" Height="34"
                     Click="OnTriggerClick" AutomationProperties.Name="选择播放主题">
@@ -87,11 +102,12 @@
             </Button>
             <Border x:Name="PickerBody" Height="0" ClipToBounds="True" IsEnabled="False">
                 <StackPanel Margin="6,0,6,8" VerticalAlignment="Top">
-                    <Border Height="1" Background="#18FFFFFF" Margin="8,0,8,0" />
+                    <Border Height="1" Background="#26FFFFFF" Margin="8,0,8,0" />
                     <TextBlock Text="播放主题" FontSize="10" Foreground="#80FFFFFF" Margin="12,8,0,6" />
                     <StackPanel x:Name="Options" Spacing="2" />
                 </StackPanel>
             </Border>
         </StackPanel>
+        </Panel>
     </Border>
 </UserControl>
