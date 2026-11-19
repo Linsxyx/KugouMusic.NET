@@ -16,6 +16,32 @@ public static class TrackVolumeNormalizer
     private static readonly float MaxTruePeakLinear = MathF.Pow(10f, TargetTruePeakDbtp / 20f);
     private static readonly ConcurrentDictionary<string, Lazy<Task<float>>> GainCache = new(StringComparer.OrdinalIgnoreCase);
 
+    public static bool TryGetCachedGain(string source, bool isLocal, out float gain)
+    {
+        gain = 1.0f;
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return false;
+        }
+
+        if (!isLocal && RemoteAudioCache.IsKnownLiveStream(source))
+        {
+            return true;
+        }
+
+        var cacheKey = PersistentAudioAnalysisCache.GetNormalizationGainMemoryKey(source, isLocal)
+                       ?? source;
+        if (GainCache.TryGetValue(cacheKey, out var lazy) &&
+            lazy.IsValueCreated &&
+            lazy.Value.IsCompletedSuccessfully)
+        {
+            gain = lazy.Value.Result;
+            return true;
+        }
+
+        return PersistentAudioAnalysisCache.TryLoadNormalizationGain(source, isLocal, out gain);
+    }
+
     public static Task<float> EstimateGainAsync(
         string source,
         bool isLocal,
@@ -23,6 +49,11 @@ public static class TrackVolumeNormalizer
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(source))
+        {
+            return Task.FromResult(1.0f);
+        }
+
+        if (!isLocal && RemoteAudioCache.IsKnownLiveStream(source))
         {
             return Task.FromResult(1.0f);
         }
@@ -61,6 +92,11 @@ public static class TrackVolumeNormalizer
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (!isLocal && RemoteAudioCache.IsKnownLiveStream(source))
+        {
+            return 1.0f;
+        }
+
         if (PersistentAudioAnalysisCache.TryLoadNormalizationGain(source, isLocal, out var cachedGain))
         {
             return cachedGain;
@@ -70,13 +106,16 @@ public static class TrackVolumeNormalizer
         var effectiveIsLocal = isLocal;
         if (!effectiveIsLocal && RemoteAudioCache.IsHttpUrl(effectiveSource))
         {
-            var resolved = await RemoteAudioCache.ResolveOrDownloadAsync(effectiveSource, cancellationToken: cancellationToken)
+            var resolved = await RemoteAudioCache
+                .ResolveCompletedFileAsync(effectiveSource, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
-            if (!string.Equals(resolved, effectiveSource, StringComparison.Ordinal) && File.Exists(resolved))
+            if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
             {
-                effectiveSource = resolved;
-                effectiveIsLocal = true;
+                return 1.0f;
             }
+
+            effectiveSource = resolved;
+            effectiveIsLocal = true;
         }
 
         return await Task.Run(() =>

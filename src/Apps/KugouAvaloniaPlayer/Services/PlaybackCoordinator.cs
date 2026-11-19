@@ -22,11 +22,19 @@ public interface IPlaybackCoordinator : IDisposable
 public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : IPlaybackCoordinator
 {
     private readonly SemaphoreSlim _streamLoadGate = new(1, 1);
-    private readonly HttpClient _remoteAudioClient = new(KgPrimaryHandler.Create())
-    {
-        Timeout = Timeout.InfiniteTimeSpan
-    };
+    private readonly HttpClient _remoteAudioClient = CreateRemoteAudioClient();
     private int _streamLoadOperationVersion;
+
+    private static HttpClient CreateRemoteAudioClient()
+    {
+        var handler = KgPrimaryHandler.Create();
+        handler.MaxResponseDrainSize = 0;
+        handler.ResponseDrainTimeout = TimeSpan.Zero;
+        return new HttpClient(handler)
+        {
+            Timeout = Timeout.InfiniteTimeSpan
+        };
+    }
 
     public DualTrackAudioPlayer Player { get; } = new();
 
@@ -149,62 +157,19 @@ public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : I
 
         try
         {
-            var cachedPath = await RemoteAudioCache
-                .ResolveOrDownloadAsync(source, _remoteAudioClient, cancellationToken)
+            using var playbackSource = await RemoteAudioCache
+                .OpenPlaybackSourceAsync(source, _remoteAudioClient, cancellationToken)
                 .ConfigureAwait(false);
-            if (!string.Equals(cachedPath, source, StringComparison.Ordinal) && File.Exists(cachedPath))
-            {
-                var loadedFromCache = prepareOnly
-                    ? Player.PrepareNext(cachedPath, normalizationGain)
-                    : Player.Load(cachedPath, normalizationGain);
-                if (loadedFromCache)
-                {
-                    return true;
-                }
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException)
-        {
-            logger.LogDebug(ex, "远程音频缓存落盘失败，尝试流式加载: {Source}", source);
-        }
-
-        HttpResponseMessage? response = null;
-        try
-        {
-            response = await _remoteAudioClient.GetAsync(
-                source,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-
-            var inputStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            var contentLength = response.Content.Headers.ContentLength ?? 0;
             var loaded = prepareOnly
-                ? Player.PrepareNext(
-                    inputStream,
-                    contentLength,
-                    source,
-                    response,
-                    normalizationGain)
-                : Player.Load(
-                    inputStream,
-                    contentLength,
-                    source,
-                    response,
-                    normalizationGain);
-
+                ? Player.PrepareNext(playbackSource, normalizationGain)
+                : Player.Load(playbackSource, normalizationGain);
             if (loaded)
             {
-                response = null;
                 return true;
             }
 
             logger.LogWarning(
-                ".NET 音频流无法交给 BASS，回退 BASS 直连: {Source}, Detail={Detail}",
+                ".NET 渐进式音频流无法交给 BASS，回退 BASS 直连: {Source}, Detail={Detail}",
                 source,
                 Player.LastErrorDetail);
         }
@@ -214,11 +179,7 @@ public sealed class PlaybackCoordinator(ILogger<PlaybackCoordinator> logger) : I
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException)
         {
-            logger.LogWarning(ex, ".NET 音频流建立失败，回退 BASS 直连: {Source}", source);
-        }
-        finally
-        {
-            response?.Dispose();
+            logger.LogWarning(ex, ".NET 渐进式音频流建立失败，回退 BASS 直连: {Source}", source);
         }
 
         cancellationToken.ThrowIfCancellationRequested();

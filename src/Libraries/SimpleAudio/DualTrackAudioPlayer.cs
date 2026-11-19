@@ -29,6 +29,8 @@ public sealed class DualTrackAudioPlayer : IDisposable
     private bool _volumeNormalizationEnabled;
     private string? _activeSource;
     private string? _preparedSource;
+    private bool _activeIsLiveStream;
+    private bool _preparedIsLiveStream;
 
     public DualTrackAudioPlayer()
     {
@@ -62,6 +64,10 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
     public string? PreparedSource => _preparedSource;
 
+    public bool IsActiveLiveStream => _activeIsLiveStream;
+
+    public bool IsPreparedLiveStream => _preparedIsLiveStream;
+
     public string? LastErrorDetail { get; private set; }
 
     public bool Load(string url, float normalizationGain = 1.0f)
@@ -76,15 +82,28 @@ public sealed class DualTrackAudioPlayer : IDisposable
         return SwitchToPrepared();
     }
 
+    public bool Load(RemoteAudioPlaybackSource playbackSource, float normalizationGain = 1.0f)
+    {
+        AbortCrossfade();
+        if (!PrepareNext(playbackSource, normalizationGain))
+        {
+            return false;
+        }
+
+        _activeDeck.Stop();
+        return SwitchToPrepared();
+    }
+
     public bool Load(
         Stream inputStream,
         long contentLength,
         string sourceDescription,
         IDisposable? owner = null,
-        float normalizationGain = 1.0f)
+        float normalizationGain = 1.0f,
+        bool useUnbuffered = false)
     {
         AbortCrossfade();
-        if (!PrepareNext(inputStream, contentLength, sourceDescription, owner, normalizationGain))
+        if (!PrepareNext(inputStream, contentLength, sourceDescription, owner, normalizationGain, useUnbuffered))
             return false;
 
         _activeDeck.Stop();
@@ -102,11 +121,36 @@ public sealed class DualTrackAudioPlayer : IDisposable
         {
             SetStoredNormalizationGain(_standbyDeck, 1.0f);
             _preparedSource = null;
+            _preparedIsLiveStream = false;
             LastErrorDetail = _standbyDeck.LastErrorDetail ?? $"预加载音频失败: source={url}";
             return false;
         }
 
         _preparedSource = url;
+        _preparedIsLiveStream = RemoteAudioCache.IsKnownLiveStream(url);
+        return true;
+    }
+
+    public bool PrepareNext(RemoteAudioPlaybackSource playbackSource, float normalizationGain = 1.0f)
+    {
+        ArgumentNullException.ThrowIfNull(playbackSource);
+
+        LastErrorDetail = null;
+        _standbyDeck.Stop();
+        SetStoredNormalizationGain(_standbyDeck, normalizationGain);
+        ApplyDeckSettings(_standbyDeck);
+
+        if (!_standbyDeck.Load(playbackSource))
+        {
+            SetStoredNormalizationGain(_standbyDeck, 1.0f);
+            _preparedSource = null;
+            _preparedIsLiveStream = false;
+            LastErrorDetail = _standbyDeck.LastErrorDetail ?? $"预加载音频失败: source={playbackSource.SourceDescription}";
+            return false;
+        }
+
+        _preparedSource = playbackSource.SourceDescription;
+        _preparedIsLiveStream = playbackSource.IsLiveStream;
         return true;
     }
 
@@ -115,22 +159,25 @@ public sealed class DualTrackAudioPlayer : IDisposable
         long contentLength,
         string sourceDescription,
         IDisposable? owner = null,
-        float normalizationGain = 1.0f)
+        float normalizationGain = 1.0f,
+        bool useUnbuffered = false)
     {
         LastErrorDetail = null;
         _standbyDeck.Stop();
         SetStoredNormalizationGain(_standbyDeck, normalizationGain);
         ApplyDeckSettings(_standbyDeck);
 
-        if (!_standbyDeck.Load(inputStream, contentLength, sourceDescription, owner))
+        if (!_standbyDeck.Load(inputStream, contentLength, sourceDescription, owner, useUnbuffered))
         {
             SetStoredNormalizationGain(_standbyDeck, 1.0f);
             _preparedSource = null;
+            _preparedIsLiveStream = false;
             LastErrorDetail = _standbyDeck.LastErrorDetail ?? $"预加载音频失败: source={sourceDescription}";
             return false;
         }
 
         _preparedSource = sourceDescription;
+        _preparedIsLiveStream = !useUnbuffered && contentLength <= 0;
         return true;
     }
 
@@ -145,7 +192,9 @@ public sealed class DualTrackAudioPlayer : IDisposable
         SwapDecks();
         ApplyDeckSettings(_activeDeck);
         _activeSource = _preparedSource;
+        _activeIsLiveStream = _preparedIsLiveStream;
         _preparedSource = null;
+        _preparedIsLiveStream = false;
         LastErrorDetail = null;
         return true;
     }
@@ -156,6 +205,7 @@ public sealed class DualTrackAudioPlayer : IDisposable
         SetStoredNormalizationGain(_standbyDeck, 1.0f);
         _standbyDeck.SetNormalizationGain(1.0f);
         _preparedSource = null;
+        _preparedIsLiveStream = false;
         LastErrorDetail = null;
     }
 
@@ -180,6 +230,8 @@ public sealed class DualTrackAudioPlayer : IDisposable
         SetStoredNormalizationGain(_standbyDeck, 1.0f);
         _activeSource = null;
         _preparedSource = null;
+        _activeIsLiveStream = false;
+        _preparedIsLiveStream = false;
         LastErrorDetail = null;
     }
 
@@ -346,7 +398,9 @@ public sealed class DualTrackAudioPlayer : IDisposable
             _standbyDeck = outgoingDeck;
             _fadingDeck = outgoingDeck;
             _activeSource = incomingSource;
+            _activeIsLiveStream = _preparedIsLiveStream;
             _preparedSource = null;
+            _preparedIsLiveStream = false;
             _crossfadeProgress = 0f;
             IsCrossfading = true;
             _crossfadeCancellation = new CancellationTokenSource();

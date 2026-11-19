@@ -15,16 +15,54 @@ public partial class SimpleAudioPlayer : IDisposable
         return LoadCore(url, sourceFlags => CreateSourceStream(url, sourceFlags));
     }
 
-    public bool Load(Stream inputStream, long contentLength, string sourceDescription, IDisposable? owner = null)
+    public bool Load(
+        Stream inputStream,
+        long contentLength,
+        string sourceDescription,
+        IDisposable? owner = null,
+        bool useUnbuffered = false)
     {
         ArgumentNullException.ThrowIfNull(inputStream);
 
         var managedSource = new ManagedStreamSource(inputStream, contentLength, owner);
+        var streamSystem = useUnbuffered ? StreamSystem.NoBuffer : StreamSystem.Buffer;
+        var extraFlags = !useUnbuffered && contentLength <= 0
+            ? BassFlags.StreamDownloadBlocks
+            : BassFlags.Default;
         var loaded = LoadCore(sourceDescription, sourceFlags =>
-            Bass.CreateStream(StreamSystem.Buffer, sourceFlags, managedSource.CreateProcedures(), IntPtr.Zero),
+            Bass.CreateStream(streamSystem, sourceFlags | extraFlags, managedSource.CreateProcedures(), IntPtr.Zero),
             managedSource);
         if (!loaded)
             managedSource.Dispose();
+
+        return loaded;
+    }
+
+    public bool Load(RemoteAudioPlaybackSource playbackSource)
+    {
+        ArgumentNullException.ThrowIfNull(playbackSource);
+
+        if (!string.IsNullOrWhiteSpace(playbackSource.LocalFilePath))
+        {
+            return Load(playbackSource.LocalFilePath);
+        }
+
+        if (playbackSource.Stream == null)
+        {
+            LastErrorDetail = $"远程播放源为空: {playbackSource.SourceDescription}";
+            return false;
+        }
+
+        var loaded = Load(
+            playbackSource.Stream,
+            playbackSource.ContentLength,
+            playbackSource.SourceDescription,
+            playbackSource.Owner,
+            playbackSource.UseUnbufferedStream);
+        if (loaded)
+        {
+            playbackSource.MarkDetached();
+        }
 
         return loaded;
     }
@@ -112,19 +150,12 @@ public partial class SimpleAudioPlayer : IDisposable
 
         if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
-            var resolved = RemoteAudioCache.ResolveOrDownloadAsync(source).GetAwaiter().GetResult();
-            if (!string.Equals(resolved, source, StringComparison.Ordinal) && File.Exists(resolved))
-            {
-                var cachedStream = Bass.CreateStream(resolved, 0, 0, sourceFlags);
-                if (cachedStream != 0)
-                {
-                    return cachedStream;
-                }
-            }
-
+            var remoteFlags = RemoteAudioCache.IsKnownLiveStream(source)
+                ? sourceFlags | BassFlags.StreamDownloadBlocks
+                : sourceFlags;
             for (var attempt = 1; attempt <= RemoteStreamLoadAttempts; attempt++)
             {
-                var stream = Bass.CreateStream(source, 0, sourceFlags, null, IntPtr.Zero);
+                var stream = Bass.CreateStream(source, 0, remoteFlags, null, IntPtr.Zero);
                 if (stream != 0)
                     return stream;
 
@@ -171,6 +202,12 @@ public partial class SimpleAudioPlayer : IDisposable
             SourceStream = 0;
             streamSourceOwner = StreamSourceOwner;
             StreamSourceOwner = null;
+
+            // 先唤醒可能阻塞在 Read 回调里的自定义流，避免 Bass.StreamFree 等待解码线程卡住。
+            if (streamSourceOwner is IAbortableStreamSource abortable)
+            {
+                abortable.Abort();
+            }
 
             if (stream != 0)
             {

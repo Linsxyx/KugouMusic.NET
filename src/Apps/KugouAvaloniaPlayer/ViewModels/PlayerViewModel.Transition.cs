@@ -143,12 +143,11 @@ public partial class PlayerViewModel
             var preparedSource = _player.PreparedSource ?? sourceInfo.Source;
             var preparedIsLocal = sourceInfo.IsLocal ||
                                   (!RemoteAudioCache.IsHttpUrl(preparedSource) && File.Exists(preparedSource));
-            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
+            var hasCachedGain = _audioEffectsService.TryGetCachedNormalizationGain(
                 preparedSource,
                 preparedIsLocal,
-                nextSong.DurationSeconds,
-                linkedCts.Token);
-            _player.SetPreparedNormalizationGain(normalizationGain);
+                out var cachedGain);
+            _player.SetPreparedNormalizationGain(cachedGain);
             _prepareFailureSongKey = null;
             _preparedNextSong = nextSong;
             _preparedNextSource = preparedSource;
@@ -161,6 +160,17 @@ public partial class PlayerViewModel
                 IsLocal = preparedIsLocal,
                 DurationSeconds = nextSong.DurationSeconds
             };
+
+            if (!hasCachedGain && !_player.IsPreparedLiveStream)
+            {
+                _ = ApplyPreparedNormalizationInBackgroundAsync(
+                    requestVersion,
+                    nextSong,
+                    preparedSource,
+                    preparedIsLocal,
+                    nextSong.DurationSeconds,
+                    transitionCts.Token);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -176,12 +186,45 @@ public partial class PlayerViewModel
         }
     }
 
+    private async Task ApplyPreparedNormalizationInBackgroundAsync(
+        int requestVersion,
+        SongItem nextSong,
+        string source,
+        bool isLocal,
+        double durationSeconds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var gain = await _audioEffectsService.ResolveNormalizationGainAsync(
+                source,
+                isLocal,
+                durationSeconds,
+                cancellationToken);
+            if (requestVersion != _playRequestVersion ||
+                cancellationToken.IsCancellationRequested ||
+                _autoTransitionStarted ||
+                _preparedNextSong != nextSong)
+                return;
+
+            _player.SetPreparedNormalizationGain(gain);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "后台应用预加载歌曲音量平衡失败");
+        }
+    }
+
     private async Task EnsureTransitionAnalysisAsync(int requestVersion, CancellationToken cancellationToken)
     {
         var preparedNextTrack = _preparedNextTrack;
         var preparedNextSong = _preparedNextSong;
-        if (_autoTransitionStarted || _isAnalyzingTransition || _player.IsCrossfading || preparedNextTrack == null ||
-            preparedNextSong == null)
+        if (_autoTransitionStarted || _isAnalyzingTransition || _player.IsCrossfading ||
+            _player.IsActiveLiveStream || _player.IsPreparedLiveStream ||
+            preparedNextTrack == null || preparedNextSong == null)
             return;
 
         var nextSongKey = BuildSongTransitionKey(preparedNextSong);

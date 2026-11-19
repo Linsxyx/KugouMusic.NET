@@ -214,6 +214,11 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
     private async Task<TrackAnalysisSnapshot> AnalyzeTrackInternalAsync(PreparedTrack track, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+        if (!track.IsLocal && RemoteAudioCache.IsKnownLiveStream(track.Source))
+        {
+            return TrackAnalysisSnapshot.Empty;
+        }
+
         if (PersistentAudioAnalysisCache.TryLoadTrackAnalysis(track.Source, track.IsLocal, out var cached))
         {
             return cached;
@@ -223,12 +228,16 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         var effectiveIsLocal = track.IsLocal;
         if (!effectiveIsLocal && RemoteAudioCache.IsHttpUrl(effectiveSource))
         {
-            var resolved = await RemoteAudioCache.ResolveOrDownloadAsync(effectiveSource, cancellationToken: ct).ConfigureAwait(false);
-            if (!string.Equals(resolved, effectiveSource, StringComparison.Ordinal) && File.Exists(resolved))
+            var resolved = await RemoteAudioCache
+                .ResolveCompletedFileAsync(effectiveSource, cancellationToken: ct)
+                .ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(resolved) || !File.Exists(resolved))
             {
-                effectiveSource = resolved;
-                effectiveIsLocal = true;
+                return TrackAnalysisSnapshot.Empty;
             }
+
+            effectiveSource = resolved;
+            effectiveIsLocal = true;
         }
 
         var analysis = await Task.Run(() =>

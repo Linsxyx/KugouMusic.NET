@@ -347,13 +347,12 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
                     return;
                 }
 
-                var normalizationGain =
-                    await _audioEffectsService.ResolveNormalizationGainAsync(
-                        _player.ActiveSource ?? sourceInfo.Source,
-                        sourceInfo.IsLocal,
-                        song.DurationSeconds,
-                        currentLoadCts.Token);
-                _player.SetActiveNormalizationGain(normalizationGain);
+                var activeSource = _player.ActiveSource ?? sourceInfo.Source;
+                var hasCachedGain = _audioEffectsService.TryGetCachedNormalizationGain(
+                    activeSource,
+                    sourceInfo.IsLocal,
+                    out var cachedGain);
+                _player.SetActiveNormalizationGain(cachedGain);
 
                 _consecutiveFailures = 0;
                 _player.SetVolume(MusicVolume);
@@ -363,7 +362,21 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
                     song.DurationSeconds > 0 ? song.DurationSeconds : _player.GetDuration().TotalSeconds;
                 _playbackTimer.Start();
                 _ = _historyService.RecordPlayedAsync(song);
-                _ = EnsurePreparedNextTrackAsync(requestVersion, currentLoadCts.Token);
+
+                if (!hasCachedGain && !_player.IsActiveLiveStream)
+                {
+                    _ = ApplyActiveNormalizationInBackgroundAsync(
+                        requestVersion,
+                        activeSource,
+                        sourceInfo.IsLocal,
+                        song.DurationSeconds,
+                        currentLoadCts.Token);
+                }
+
+                if (!_player.IsActiveLiveStream)
+                {
+                    _ = EnsurePreparedNextTrackAsync(requestVersion, currentLoadCts.Token);
+                }
             }
             else
             {
@@ -382,6 +395,34 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
         finally
         {
             _playSongLock.Release();
+        }
+    }
+
+    private async Task ApplyActiveNormalizationInBackgroundAsync(
+        int requestVersion,
+        string source,
+        bool isLocal,
+        double durationSeconds,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var gain = await _audioEffectsService.ResolveNormalizationGainAsync(
+                source,
+                isLocal,
+                durationSeconds,
+                cancellationToken);
+            if (requestVersion != _playRequestVersion || cancellationToken.IsCancellationRequested)
+                return;
+
+            _player.SetActiveNormalizationGain(gain);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "后台应用当前歌曲音量平衡失败");
         }
     }
 

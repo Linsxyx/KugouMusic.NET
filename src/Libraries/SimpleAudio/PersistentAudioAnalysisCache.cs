@@ -274,26 +274,29 @@ internal static class PersistentAudioAnalysisCache
             return false;
         }
 
-        var effectiveSource = source;
         if (!isLocal && RemoteAudioCache.IsHttpUrl(source))
         {
-            if (!RemoteAudioCache.TryGetCachedFilePath(source, out effectiveSource))
-            {
-                var remoteIdentity = $"{schemaVersion}|remote|{RemoteAudioCache.ComputeCacheKey(source)}";
-                var remoteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(remoteIdentity)));
-                identity = new SourceIdentity(remoteIdentity, 0, 0, remoteIdentity, remoteHash);
-                return true;
-            }
-        }
-
-        try
-        {
-            if (!File.Exists(effectiveSource))
+            if (RemoteAudioCache.IsKnownLiveStream(source))
             {
                 return false;
             }
 
-            var fullPath = Path.GetFullPath(effectiveSource);
+            return TryCreateRemoteStableIdentity(RemoteAudioCache.ComputeCacheKey(source), schemaVersion, out identity);
+        }
+
+        try
+        {
+            if (!File.Exists(source))
+            {
+                return false;
+            }
+
+            var fullPath = Path.GetFullPath(source);
+            if (RemoteAudioCache.TryGetStableCacheKeyForTempFile(fullPath, out var stableKey))
+            {
+                return TryCreateRemoteStableIdentity(stableKey, schemaVersion, out identity);
+            }
+
             var fileInfo = new FileInfo(fullPath);
             var lastWriteTimeUtcTicks = fileInfo.LastWriteTimeUtc.Ticks;
             var memoryKey = $"{schemaVersion}|{fullPath}|{fileInfo.Length}|{lastWriteTimeUtcTicks}";
@@ -305,6 +308,14 @@ internal static class PersistentAudioAnalysisCache
         {
             return false;
         }
+    }
+
+    private static bool TryCreateRemoteStableIdentity(string stableKey, int schemaVersion, out SourceIdentity identity)
+    {
+        var remoteIdentity = $"{schemaVersion}|remote|{stableKey}";
+        var remoteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(remoteIdentity)));
+        identity = new SourceIdentity(remoteIdentity, 0, 0, remoteIdentity, remoteHash);
+        return true;
     }
 
     private static string ResolveLocalCacheRoot()

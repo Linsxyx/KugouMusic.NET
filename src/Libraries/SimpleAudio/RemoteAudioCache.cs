@@ -1,84 +1,265 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace SimpleAudio;
 
-// 远程音频临时文件缓存：将 HTTP 音频流落盘到固定上限的临时目录，供播放、预加载、过渡分析与响度测量共享同一份本地文件，避免 BASS 在内存中保存多份完整网络缓冲。
+// 远程音频渐进式缓存与分流器：
+// - 有限点播文件：收到响应头与首块数据即返回磁盘支撑的渐进流（StreamSystem.NoBuffer），后台单连接顺序落盘并共享给预加载、过渡分析与响度测量。
+// - 持续/未知长度流：不落盘、不等结束，直接返回流式源（StreamSystem.Buffer + StreamDownloadBlocks）并标记跳过全量分析。
 
 public static class RemoteAudioCache
 {
     private const int MaxCachedFiles = 6;
     private const long MaxCachedBytes = 256L * 1024 * 1024;
-    private const int CopyBufferSize = 81920;
+    private const int MaxKnownLiveStreamEntries = 128;
 
-    private static readonly string CacheDirectory = Path.Combine(
+    internal static readonly string CacheDirectory = Path.Combine(
         ResolveCacheRoot(),
         "kugou",
         "simple-audio-cache",
         "remote-streams");
 
     private static readonly HttpClient DefaultHttpClient = CreateDefaultHttpClient();
-    private static readonly ConcurrentDictionary<string, InflightDownload> Inflight = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, ProgressiveDownloadSession> Inflight = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, CompletedCacheEntry> CompletedFiles = new(StringComparer.Ordinal);
+    private static readonly ConcurrentDictionary<string, byte> KnownLiveStreams = new(StringComparer.Ordinal);
     private static readonly Lock TrimGate = new();
     private static int _cleanupRegistered;
 
-    // 解析音频源：若已存在对应远程缓存文件或本身为本地文件则直接返回，否则通过 HTTP 流式下载到临时缓存文件后返回本地路径。
-    public static async Task<string> ResolveOrDownloadAsync(
+    // 打开远程音频播放源：已缓存直接返回本地文件；未缓存有限文件收到首块即返回渐进流；未知长度或超大流直接返回持续流。
+    public static async Task<RemoteAudioPlaybackSource> OpenPlaybackSourceAsync(
         string source,
         HttpClient? httpClient = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(source) || !IsHttpUrl(source))
         {
-            return source;
+            return RemoteAudioPlaybackSource.FromLocalFile(source);
         }
 
         EnsureCleanupRegistered();
 
-        if (TryGetCachedFilePath(source, out var existingPath))
+        if (TryGetCachedFilePath(source, out var cachedPath))
         {
-            return existingPath;
+            return RemoteAudioPlaybackSource.FromLocalFile(cachedPath);
         }
 
         var cacheKey = ComputeCacheKey(source);
+        var client = httpClient ?? DefaultHttpClient;
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (TryGetCachedFilePath(source, out existingPath))
+            if (TryGetCachedFilePath(source, out cachedPath))
             {
-                return existingPath;
+                return RemoteAudioPlaybackSource.FromLocalFile(cachedPath);
             }
 
-            var inflight = Inflight.GetOrAdd(
-                cacheKey,
-                _ => new InflightDownload(source, httpClient ?? DefaultHttpClient));
+            if (Inflight.TryGetValue(cacheKey, out var existingSession) && existingSession.TryAcquireLease())
+            {
+                try
+                {
+                    var ready = await existingSession.WaitForInitialDataAsync(cancellationToken).ConfigureAwait(false);
+                    if (ready && File.Exists(existingSession.FilePath))
+                    {
+                        var stream = new ProgressiveRemoteAudioStream(existingSession);
+                        return RemoteAudioPlaybackSource.FromProgressiveStream(source, stream);
+                    }
+
+                    existingSession.ReleaseLease();
+                }
+                catch
+                {
+                    existingSession.ReleaseLease();
+                    throw;
+                }
+            }
+
+            HttpResponseMessage? response = null;
+            Stream? responseStream = null;
+            ProgressiveDownloadSession? createdSession = null;
+            var ownershipTransferred = false;
 
             try
             {
-                var path = await inflight.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+                response = await client
+                    .GetAsync(source, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                var contentLength = response.Content.Headers.ContentLength;
+                responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+
+                // 无 Content-Length 或超过单文件上限视为持续流/超大流：不落盘、不等结束，直接边收边播。
+                if (contentLength is not > 0 || contentLength.Value > MaxCachedBytes)
                 {
-                    return path;
+                    MarkKnownLiveStream(cacheKey);
+                    ownershipTransferred = true;
+                    return RemoteAudioPlaybackSource.FromLiveStream(source, responseStream, response);
                 }
 
-                return source;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch
-            {
-                if (Inflight.TryGetValue(cacheKey, out var current) && ReferenceEquals(current, inflight))
+                KnownLiveStreams.TryRemove(cacheKey, out _);
+
+                var supportsRange = !response.Headers.AcceptRanges.Any(
+                    static value => string.Equals(value, "none", StringComparison.OrdinalIgnoreCase));
+                Directory.CreateDirectory(CacheDirectory);
+                var filePath = BuildSessionFilePath(source, cacheKey);
+
+                createdSession = new ProgressiveDownloadSession(
+                    cacheKey,
+                    source,
+                    filePath,
+                    contentLength.Value,
+                    supportsRange,
+                    client,
+                    response,
+                    responseStream,
+                    OnSessionFinished);
+
+                // 响应与响应流所有权已移交给 createdSession。
+                response = null;
+                responseStream = null;
+
+                if (!Inflight.TryAdd(cacheKey, createdSession))
                 {
-                    Inflight.TryRemove(cacheKey, out _);
+                    // 并发已有其他线程启动了同一首曲目的下载会话，释放本次冗余会话并重试复用。
+                    createdSession.DisposeBeforeStart();
+                    TryDeleteFile(filePath);
+                    createdSession = null;
+                    continue;
                 }
 
-                return source;
+                createdSession.Start();
+                var initialReady = await createdSession.WaitForInitialDataAsync(cancellationToken).ConfigureAwait(false);
+                if (!initialReady || !File.Exists(createdSession.FilePath))
+                {
+                    throw new IOException($"远程音频初始缓冲失败: {source}");
+                }
+
+                var progressiveStream = new ProgressiveRemoteAudioStream(createdSession);
+                ownershipTransferred = true;
+                return RemoteAudioPlaybackSource.FromProgressiveStream(source, progressiveStream);
+            }
+            finally
+            {
+                if (!ownershipTransferred)
+                {
+                    if (createdSession != null)
+                    {
+                        createdSession.ReleaseLease();
+                    }
+
+                    if (responseStream != null)
+                    {
+                        try
+                        {
+                            responseStream.Dispose();
+                        }
+                        catch
+                        {
+                        }
+                    }
+
+                    if (response != null)
+                    {
+                        try
+                        {
+                            response.Dispose();
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
             }
         }
+    }
+
+    // 供过渡分析与响度测量复用：等待完整本地缓存文件就绪；若为持续/未知长度流则返回 null，避免对其执行全量解码。
+    public static async Task<string?> ResolveCompletedFileAsync(
+        string source,
+        HttpClient? httpClient = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return null;
+        }
+
+        if (!IsHttpUrl(source))
+        {
+            return File.Exists(source) ? source : null;
+        }
+
+        EnsureCleanupRegistered();
+
+        if (IsKnownLiveStream(source))
+        {
+            return null;
+        }
+
+        if (TryGetCachedFilePath(source, out var cachedPath))
+        {
+            return cachedPath;
+        }
+
+        var cacheKey = ComputeCacheKey(source);
+        if (Inflight.TryGetValue(cacheKey, out var existingSession) && existingSession.TryAcquireLease())
+        {
+            try
+            {
+                var completedPath = await existingSession.WaitForCompletionAsync(cancellationToken).ConfigureAwait(false);
+                return !string.IsNullOrWhiteSpace(completedPath) && File.Exists(completedPath)
+                    ? completedPath
+                    : null;
+            }
+            finally
+            {
+                existingSession.ReleaseLease();
+            }
+        }
+
+        // 若尚未有人开始下载，通过同一套入口探测并下载；持续流会立即返回 IsLiveStream=true 并关闭，不阻塞。
+        using var playbackSource = await OpenPlaybackSourceAsync(source, httpClient, cancellationToken).ConfigureAwait(false);
+        if (!string.IsNullOrWhiteSpace(playbackSource.LocalFilePath) && File.Exists(playbackSource.LocalFilePath))
+        {
+            return playbackSource.LocalFilePath;
+        }
+
+        if (playbackSource.IsLiveStream)
+        {
+            return null;
+        }
+
+        if (Inflight.TryGetValue(cacheKey, out var startedSession) && startedSession.TryAcquireLease())
+        {
+            try
+            {
+                var completedPath = await startedSession.WaitForCompletionAsync(cancellationToken).ConfigureAwait(false);
+                return !string.IsNullOrWhiteSpace(completedPath) && File.Exists(completedPath)
+                    ? completedPath
+                    : null;
+            }
+            finally
+            {
+                startedSession.ReleaseLease();
+            }
+        }
+
+        return TryGetCachedFilePath(source, out cachedPath) ? cachedPath : null;
+    }
+
+    public static bool IsKnownLiveStream(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source) || !IsHttpUrl(source))
+        {
+            return false;
+        }
+
+        return KnownLiveStreams.ContainsKey(ComputeCacheKey(source));
     }
 
     public static bool TryGetCachedFilePath(string? source, out string localPath)
@@ -100,17 +281,71 @@ public static class RemoteAudioCache
             return false;
         }
 
+        var cacheKey = ComputeCacheKey(source);
+        if (!CompletedFiles.TryGetValue(cacheKey, out var entry))
+        {
+            return false;
+        }
+
         try
         {
-            var path = GetTargetFilePath(source);
-            var info = new FileInfo(path);
+            var info = new FileInfo(entry.FilePath);
             if (!info.Exists || info.Length <= 0)
+            {
+                CompletedFiles.TryRemove(cacheKey, out _);
+                return false;
+            }
+
+            entry.Touch();
+            TouchFile(info);
+            localPath = info.FullName;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // 识别位于临时远程缓存目录下的文件并提取跨进程稳定的 SHA256 键，供持久化分析缓存复用。
+    internal static bool TryGetStableCacheKeyForTempFile(string fullPath, out string stableKey)
+    {
+        stableKey = string.Empty;
+        if (string.IsNullOrWhiteSpace(fullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var directory = Path.GetDirectoryName(fullPath);
+            var cacheDir = Path.GetFullPath(CacheDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (string.IsNullOrEmpty(directory) ||
+                !string.Equals(
+                    Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    cacheDir,
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            TouchFile(info);
-            localPath = info.FullName;
+            var fileName = Path.GetFileNameWithoutExtension(fullPath);
+            var separator = fileName.IndexOf('_');
+            var candidate = separator > 0 ? fileName[..separator] : fileName;
+            if (candidate.Length != 64)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < candidate.Length; i++)
+            {
+                if (!Uri.IsHexDigit(candidate[i]))
+                {
+                    return false;
+                }
+            }
+
+            stableKey = candidate;
             return true;
         }
         catch
@@ -130,6 +365,7 @@ public static class RemoteAudioCache
     {
         lock (TrimGate)
         {
+            CompletedFiles.Clear();
             try
             {
                 if (!Directory.Exists(CacheDirectory))
@@ -139,14 +375,7 @@ public static class RemoteAudioCache
 
                 foreach (var file in Directory.EnumerateFiles(CacheDirectory))
                 {
-                    try
-                    {
-                        File.Delete(file);
-                    }
-                    catch
-                    {
-                        // Best-effort cleanup; active stream files on Windows may still be open.
-                    }
+                    TryDeleteFile(file);
                 }
             }
             catch
@@ -156,75 +385,45 @@ public static class RemoteAudioCache
         }
     }
 
-    private static async Task<string?> DownloadToCacheAsync(string cacheKey, string url, HttpClient client)
+    private static void OnSessionFinished(ProgressiveDownloadSession session, bool succeeded)
     {
-        string? tempPath = null;
-        try
+        if (Inflight.TryGetValue(session.CacheKey, out var current) && ReferenceEquals(current, session))
         {
-            Directory.CreateDirectory(CacheDirectory);
-            var targetPath = GetTargetFilePath(url, cacheKey);
-            if (File.Exists(targetPath) && new FileInfo(targetPath).Length > 0)
-            {
-                TouchFile(new FileInfo(targetPath));
-                return targetPath;
-            }
-
-            tempPath = Path.Combine(CacheDirectory, $"{cacheKey}.{Guid.NewGuid():N}.part");
-            using var response = await client
-                .GetAsync(url, HttpCompletionOption.ResponseHeadersRead)
-                .ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-
-            await using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-            await using (var fileStream = new FileStream(
-                             tempPath,
-                             FileMode.Create,
-                             FileAccess.Write,
-                             FileShare.Read,
-                             CopyBufferSize,
-                             FileOptions.Asynchronous | FileOptions.SequentialScan))
-            {
-                await responseStream.CopyToAsync(fileStream, CopyBufferSize).ConfigureAwait(false);
-                await fileStream.FlushAsync().ConfigureAwait(false);
-            }
-
-            var tempInfo = new FileInfo(tempPath);
-            if (!tempInfo.Exists || tempInfo.Length <= 0)
-            {
-                TryDeleteFile(tempPath);
-                return null;
-            }
-
-            try
-            {
-                File.Move(tempPath, targetPath, overwrite: true);
-                tempPath = null;
-            }
-            catch
-            {
-                if (File.Exists(targetPath) && new FileInfo(targetPath).Length > 0)
-                {
-                    TryDeleteFile(tempPath);
-                    tempPath = null;
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            TrimCache(excludePath: targetPath);
-            return targetPath;
+            Inflight.TryRemove(session.CacheKey, out _);
         }
-        finally
+
+        if (succeeded && File.Exists(session.FilePath))
         {
-            if (tempPath != null)
-            {
-                TryDeleteFile(tempPath);
-            }
+            var entry = new CompletedCacheEntry(session.CacheKey, session.FilePath, session.TotalLength);
+            CompletedFiles.AddOrUpdate(
+                session.CacheKey,
+                entry,
+                (_, previous) =>
+                {
+                    if (!string.Equals(previous.FilePath, session.FilePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        TryDeleteFile(previous.FilePath);
+                    }
 
-            Inflight.TryRemove(cacheKey, out _);
+                    return entry;
+                });
+
+            TrimCache(excludePath: session.FilePath);
         }
+        else if (!session.HasActiveLeases)
+        {
+            TryDeleteFile(session.FilePath);
+        }
+    }
+
+    private static void MarkKnownLiveStream(string cacheKey)
+    {
+        if (KnownLiveStreams.Count > MaxKnownLiveStreamEntries)
+        {
+            KnownLiveStreams.Clear();
+        }
+
+        KnownLiveStreams[cacheKey] = 0;
     }
 
     private static void TrimCache(string? excludePath = null)
@@ -239,51 +438,65 @@ public static class RemoteAudioCache
                     return;
                 }
 
-                var now = DateTime.UtcNow;
-                foreach (var part in dir.EnumerateFiles("*.part"))
+                var activeFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var session in Inflight.Values)
                 {
-                    if (now - part.LastWriteTimeUtc > TimeSpan.FromMinutes(10))
+                    activeFiles.Add(session.FilePath);
+                }
+
+                var completedByPath = new Dictionary<string, CompletedCacheEntry>(StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in CompletedFiles.Values)
+                {
+                    completedByPath[entry.FilePath] = entry;
+                }
+
+                // 清理已失联的孤立临时文件（如取消后残留的半截文件）。
+                foreach (var file in dir.EnumerateFiles())
+                {
+                    if (!activeFiles.Contains(file.FullName) && !completedByPath.ContainsKey(file.FullName))
                     {
-                        TryDeleteFile(part.FullName);
+                        TryDeleteFile(file.FullName);
                     }
                 }
 
-                var files = dir
-                    .EnumerateFiles()
-                    .Where(static f => !f.Name.EndsWith(".part", StringComparison.OrdinalIgnoreCase))
-                    .OrderByDescending(static f => f.LastWriteTimeUtc)
+                var entries = CompletedFiles.Values
+                    .OrderByDescending(static e => e.LastAccessedUtcTicks)
                     .ToList();
 
-                var totalBytes = files.Sum(static f => f.Length);
-                if (files.Count <= MaxCachedFiles && totalBytes <= MaxCachedBytes)
+                var totalBytes = entries.Sum(static e => e.Length);
+                if (entries.Count <= MaxCachedFiles && totalBytes <= MaxCachedBytes)
                 {
                     return;
                 }
 
-                for (var i = files.Count - 1; i >= 0; i--)
+                for (var i = entries.Count - 1; i >= 0; i--)
                 {
-                    if (files.Count <= MaxCachedFiles && totalBytes <= MaxCachedBytes)
+                    if (entries.Count <= MaxCachedFiles && totalBytes <= MaxCachedBytes)
                     {
                         break;
                     }
 
-                    var file = files[i];
+                    var entry = entries[i];
                     if (!string.IsNullOrEmpty(excludePath) &&
-                        string.Equals(file.FullName, excludePath, StringComparison.OrdinalIgnoreCase))
+                        string.Equals(entry.FilePath, excludePath, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
 
-                    var length = file.Length;
                     try
                     {
-                        file.Delete();
-                        files.RemoveAt(i);
-                        totalBytes -= length;
+                        if (File.Exists(entry.FilePath))
+                        {
+                            File.Delete(entry.FilePath);
+                        }
+
+                        CompletedFiles.TryRemove(entry.CacheKey, out _);
+                        entries.RemoveAt(i);
+                        totalBytes -= entry.Length;
                     }
                     catch
                     {
-                        // File is currently in use by an active or standby deck; skip it.
+                        // 文件可能正被播放器或分析器占用，保留等待下次清理。
                     }
                 }
             }
@@ -294,11 +507,10 @@ public static class RemoteAudioCache
         }
     }
 
-    private static string GetTargetFilePath(string url, string? cacheKey = null)
+    private static string BuildSessionFilePath(string url, string cacheKey)
     {
-        var key = cacheKey ?? ComputeCacheKey(url);
         var ext = ExtractAudioExtension(url);
-        return Path.Combine(CacheDirectory, key + ext);
+        return Path.Combine(CacheDirectory, $"{cacheKey}_{Guid.NewGuid():N}{ext}");
     }
 
     internal static string ComputeCacheKey(string url)
@@ -404,7 +616,8 @@ public static class RemoteAudioCache
             return;
         }
 
-        TrimCache();
+        // 启动时清理上次进程异常退出可能残留的临时文件。
+        CleanupAll();
         AppDomain.CurrentDomain.ProcessExit += static (_, _) => CleanupAll();
     }
 
@@ -412,13 +625,16 @@ public static class RemoteAudioCache
     {
         var handler = new SocketsHttpHandler
         {
-            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
             ConnectTimeout = TimeSpan.FromSeconds(10),
-            PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            MaxResponseDrainSize = 0,
+            ResponseDrainTimeout = TimeSpan.Zero
         };
         var client = new HttpClient(handler)
         {
-            Timeout = TimeSpan.FromSeconds(45)
+            // 不设全局固定 Timeout，避免持续音频流或大文件慢速下载在 45s 后被强行掐断；单次请求超时由调用方 CancellationToken 控制。
+            Timeout = Timeout.InfiniteTimeSpan
         };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 KaMusic/1.0");
         return client;
@@ -432,14 +648,21 @@ public static class RemoteAudioCache
             : localAppData;
     }
 
-    private sealed class InflightDownload
+    private sealed class CompletedCacheEntry(string cacheKey, string filePath, long length)
     {
-        public InflightDownload(string url, HttpClient client)
-        {
-            var key = ComputeCacheKey(url);
-            Task = System.Threading.Tasks.Task.Run(() => DownloadToCacheAsync(key, url, client));
-        }
+        private long _lastAccessedUtcTicks = DateTime.UtcNow.Ticks;
 
-        public Task<string?> Task { get; }
+        public string CacheKey { get; } = cacheKey;
+
+        public string FilePath { get; } = filePath;
+
+        public long Length { get; } = length;
+
+        public long LastAccessedUtcTicks => Volatile.Read(ref _lastAccessedUtcTicks);
+
+        public void Touch()
+        {
+            Volatile.Write(ref _lastAccessedUtcTicks, DateTime.UtcNow.Ticks);
+        }
     }
 }

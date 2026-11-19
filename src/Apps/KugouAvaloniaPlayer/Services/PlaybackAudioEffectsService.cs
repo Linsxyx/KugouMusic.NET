@@ -50,10 +50,21 @@ public sealed class PlaybackAudioEffectsService(
         _player.SetActiveNormalizationGain(1.0f);
     }
 
+    public bool IsVolumeNormalizationEnabled => _isVolumeNormalizationEnabled;
+
+    public bool TryGetCachedNormalizationGain(string source, bool isLocal, out float gain)
+    {
+        gain = 1.0f;
+        if (!_isVolumeNormalizationEnabled || string.IsNullOrWhiteSpace(source))
+            return true;
+
+        return TrackVolumeNormalizer.TryGetCachedGain(source, isLocal, out gain);
+    }
+
     public async Task RefreshCurrentTrackNormalizationAsync(SongItem? currentSong)
     {
         var source = _player.ActiveSource;
-        if (!_isVolumeNormalizationEnabled || currentSong == null || string.IsNullOrWhiteSpace(source))
+        if (!_isVolumeNormalizationEnabled || _player.IsActiveLiveStream || currentSong == null || string.IsNullOrWhiteSpace(source))
             return;
 
         try
@@ -77,7 +88,7 @@ public sealed class PlaybackAudioEffectsService(
         double durationSeconds,
         CancellationToken cancellationToken)
     {
-        if (!_isVolumeNormalizationEnabled || string.IsNullOrWhiteSpace(source))
+        if (!_isVolumeNormalizationEnabled || string.IsNullOrWhiteSpace(source) || (!isLocal && RemoteAudioCache.IsKnownLiveStream(source)))
             return 1.0f;
 
         try

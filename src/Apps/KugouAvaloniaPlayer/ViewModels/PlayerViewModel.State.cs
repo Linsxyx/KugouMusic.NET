@@ -48,7 +48,11 @@ public partial class PlayerViewModel
             ResetTransitionPipeline(false);
         }
 
-        if (!IsSeamlessTransitionEnabled || _player.IsCrossfading || IsSwitchingQuality)
+        if (!IsSeamlessTransitionEnabled ||
+            _player.IsCrossfading ||
+            _player.IsActiveLiveStream ||
+            TotalDurationSeconds <= 0 ||
+            IsSwitchingQuality)
             return;
 
         var requestVersion = _playRequestVersion;
@@ -368,12 +372,12 @@ public partial class PlayerViewModel
                 return false;
             }
 
-            var normalizationGain = await _audioEffectsService.ResolveNormalizationGainAsync(
-                _player.ActiveSource ?? sourceInfo.Source,
+            var activeSource = _player.ActiveSource ?? sourceInfo.Source;
+            var hasCachedGain = _audioEffectsService.TryGetCachedNormalizationGain(
+                activeSource,
                 sourceInfo.IsLocal,
-                currentSong.DurationSeconds,
-                currentLoadCts.Token);
-            _player.SetActiveNormalizationGain(normalizationGain);
+                out var cachedGain);
+            _player.SetActiveNormalizationGain(cachedGain);
 
             MusicQuality = quality;
             _player.SetVolume(MusicVolume);
@@ -395,6 +399,16 @@ public partial class PlayerViewModel
             else
             {
                 IsPlayingAudio = false;
+            }
+
+            if (!hasCachedGain && !_player.IsActiveLiveStream)
+            {
+                _ = ApplyActiveNormalizationInBackgroundAsync(
+                    _playRequestVersion,
+                    activeSource,
+                    sourceInfo.IsLocal,
+                    currentSong.DurationSeconds,
+                    currentLoadCts.Token);
             }
 
             return true;

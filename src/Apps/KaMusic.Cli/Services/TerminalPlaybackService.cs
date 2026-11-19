@@ -12,6 +12,7 @@ internal sealed class TerminalPlaybackService : IDisposable
     private const double FallbackMixDurationSec = 6.8;
     private const double FallbackMixEntrySec = 4.6;
     private const double PreloadWindowSec = 18.0;
+    private static readonly TimeSpan RemoteInitialLoadTimeout = TimeSpan.FromSeconds(30);
     private readonly SongClient _songClient;
     private readonly TerminalLyricsService _lyricsService;
     private readonly TerminalSettingsStore _settingsStore;
@@ -21,11 +22,19 @@ internal sealed class TerminalPlaybackService : IDisposable
     private readonly Func<bool> _isAuthenticated;
     private readonly DualTrackAudioPlayer _player = new();
     private readonly ITransitionAnalysisService _transitionAnalysisService = new ManagedBassTransitionAnalysisService();
-    private readonly HttpClient _remoteAudioClient = new(KgPrimaryHandler.Create())
-    {
-        Timeout = TimeSpan.FromSeconds(45)
-    };
+    private readonly HttpClient _remoteAudioClient = CreateRemoteAudioClient();
     private readonly SemaphoreSlim _playLock = new(1, 1);
+
+    private static HttpClient CreateRemoteAudioClient()
+    {
+        var handler = KgPrimaryHandler.Create();
+        handler.MaxResponseDrainSize = 0;
+        handler.ResponseDrainTimeout = TimeSpan.Zero;
+        return new HttpClient(handler)
+        {
+            Timeout = Timeout.InfiniteTimeSpan
+        };
+    }
     private readonly Random _random = new();
     private List<TerminalSongItem> _queue = [];
 
@@ -38,6 +47,7 @@ internal sealed class TerminalPlaybackService : IDisposable
     private TerminalSongItem? _preparedNextSong;
     private string? _preparedNextSource;
     private string? _activeSource;
+    private CancellationTokenSource? _loadCancellation;
     private CancellationTokenSource? _transitionCancellation;
     private int _currentIndex = -1;
     private int _disposeState;
@@ -563,6 +573,7 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         song.IsPlaying = true;
         var requestVersion = Interlocked.Increment(ref _playVersion);
+        var loadCts = ResetLoadCancellation();
         ResetTransitionPipeline(cancelPreparedTrack: true);
 
         if (song.IsLocalFile && !string.IsNullOrWhiteSpace(song.LocalFilePath))
@@ -583,16 +594,13 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         if (song.IsRemoteStream && !string.IsNullOrWhiteSpace(song.RemoteUrl))
         {
-            var resolvedRemote = await RemoteAudioCache
-                .ResolveOrDownloadAsync(song.RemoteUrl, _remoteAudioClient)
-                .ConfigureAwait(false);
-            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(resolvedRemote))
+            if (!await LoadRemoteAudioAsync(song.RemoteUrl, requestVersion, loadCts.Token).ConfigureAwait(false))
             {
                 StatusMessage = $"远程音频加载失败：{song.Name}";
                 return;
             }
 
-            _activeSource = resolvedRemote;
+            _activeSource = _player.ActiveSource ?? song.RemoteUrl;
             ApplySettings();
             _player.Play();
             StatusMessage = $"播放中：{song.Name}";
@@ -620,20 +628,59 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        var resolvedUrl = await RemoteAudioCache
-            .ResolveOrDownloadAsync(url, _remoteAudioClient)
-            .ConfigureAwait(false);
-        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(resolvedUrl))
+        if (!await LoadRemoteAudioAsync(url, requestVersion, loadCts.Token).ConfigureAwait(false))
         {
             StatusMessage = $"音频加载失败：{song.Name}";
             return;
         }
 
-        _activeSource = resolvedUrl;
+        _activeSource = _player.ActiveSource ?? url;
         ApplySettings();
         _player.Play();
         StatusMessage = $"播放中：{song.Name}";
         _ = _lyricsService.LoadSongLyricsAsync(song);
+    }
+
+    // 渐进式打开远程音频：命中本地缓存直接播放；未命中有限文件收到首块即出声；持续流走小块缓冲。
+    private async Task<bool> LoadRemoteAudioAsync(string url, int requestVersion, CancellationToken cancellationToken)
+    {
+        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion)
+        {
+            return false;
+        }
+
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(RemoteInitialLoadTimeout);
+            using var playbackSource = await RemoteAudioCache
+                .OpenPlaybackSourceAsync(url, _remoteAudioClient, timeoutCts.Token)
+                .ConfigureAwait(false);
+            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || timeoutCts.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            if (_player.Load(playbackSource))
+            {
+                return true;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch
+        {
+            // 渐进式流打开失败时回退至 BASS 原生直连。
+        }
+
+        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        return _player.Load(url);
     }
 
     private void UpdateTransitionPipeline(PlaybackStateSnapshot snapshot)
@@ -641,6 +688,8 @@ internal sealed class TerminalPlaybackService : IDisposable
         if (!_settings.EnableSeamlessTransition ||
             _player.IsStopped ||
             _player.IsCrossfading ||
+            _player.IsActiveLiveStream ||
+            snapshot.Duration <= TimeSpan.Zero ||
             _queue.Count <= 1 ||
             CurrentSong == null)
         {
@@ -718,22 +767,25 @@ internal sealed class TerminalPlaybackService : IDisposable
             if (!isLocal && RemoteAudioCache.IsHttpUrl(source))
             {
                 var cts = EnsureTransitionCancellation();
-                var resolved = await RemoteAudioCache
-                    .ResolveOrDownloadAsync(source, _remoteAudioClient, cts.Token)
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+                timeoutCts.CancelAfter(RemoteInitialLoadTimeout);
+                using var playbackSource = await RemoteAudioCache
+                    .OpenPlaybackSourceAsync(source, _remoteAudioClient, timeoutCts.Token)
                     .ConfigureAwait(false);
                 if (requestVersion != _playVersion || cts.IsCancellationRequested)
                 {
                     return;
                 }
 
-                if (!string.Equals(resolved, source, StringComparison.Ordinal) && File.Exists(resolved))
+                if (!_player.PrepareNext(playbackSource))
                 {
-                    source = resolved;
-                    isLocal = true;
+                    return;
                 }
-            }
 
-            if (!_player.PrepareNext(source))
+                source = _player.PreparedSource ?? playbackSource.SourceDescription;
+                isLocal = !RemoteAudioCache.IsHttpUrl(source) && File.Exists(source);
+            }
+            else if (!_player.PrepareNext(source))
             {
                 return;
             }
@@ -767,6 +819,8 @@ internal sealed class TerminalPlaybackService : IDisposable
         if (_autoTransitionStarted ||
             _isAnalyzingTransition ||
             _player.IsCrossfading ||
+            _player.IsActiveLiveStream ||
+            _player.IsPreparedLiveStream ||
             currentSong == null ||
             nextSong == null ||
             nextTrack == null ||
@@ -930,6 +984,34 @@ internal sealed class TerminalPlaybackService : IDisposable
         }
     }
 
+    private CancellationTokenSource ResetLoadCancellation()
+    {
+        CancelLoadWork();
+        var cts = new CancellationTokenSource();
+        _loadCancellation = cts;
+        return cts;
+    }
+
+    private void CancelLoadWork()
+    {
+        var cts = Interlocked.Exchange(ref _loadCancellation, null);
+        if (cts == null)
+        {
+            return;
+        }
+
+        try
+        {
+            cts.Cancel();
+        }
+        catch
+        {
+            // Ignore cancellation races.
+        }
+
+        cts.Dispose();
+    }
+
     private CancellationTokenSource EnsureTransitionCancellation()
     {
         if (_transitionCancellation == null || _transitionCancellation.IsCancellationRequested)
@@ -1054,6 +1136,7 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         Interlocked.Increment(ref _playVersion);
         _player.PlaybackEnded -= HandlePlaybackEnded;
+        CancelLoadWork();
         CancelTransitionWork();
         _remoteAudioClient.Dispose();
         _player.Dispose();
