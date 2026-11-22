@@ -150,6 +150,10 @@ public partial class SimpleAudioPlayer : IDisposable
                     _state.SourceChannelLayoutName = opened.SourceLayoutName;
                     _state.OutputChannelLayoutName = opened.OutputLayoutName;
                     _state.ReloadableSourcePath = reloadableSourcePath;
+#if DEBUG
+                    Console.WriteLine(
+                        $"[Audio Channel] path={sourceDescription}, source={opened.SourceLayoutName}({opened.SourceChannels}ch), output={opened.OutputLayoutName}({opened.OutputChannels}ch), deviceSpeakers={deviceSpeakers}, mode={_state.ChannelMode}");
+#endif
                 }
             }
         }
