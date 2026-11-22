@@ -313,6 +313,7 @@
         <localControls:KugouSideMenu
             ItemsSource="{Binding Pages}"
             SelectedItem="{Binding SelectedMenuPage}"
+            ItemReclickedCommand="{Binding ReclickMenuPageCommand}"
             UseCustomContent="True"
             Content="{Binding ActivePage}"
             IsSearchEnabled="False">

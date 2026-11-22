@@ -222,6 +222,12 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 
 完整版本历史请查看 [Releases](https://github.com/Linsxyx/KugouMusic.NET/releases)。
 
+### v4.3.0
+- 优化导航栏相关交互
+- 支持更多音频格式，增强多声道支持
+- 修复部分页面显示效果
+- 修复部分已知问题
+
 ### v4.2.0
 - 播放页新增两个仿Folia播放器的播放主题
 - 修复排行榜获取失败
@@ -232,12 +238,6 @@ xattr -dr com.apple.quarantine /Applications/KugouAvaloniaPlayer.app
 ### v4.1.0
 - 修复linux-arm64 无法正常使用
 - 修复部分已知问题
-
-### v4.0.0
-- 全新播放主题
-- 桌面歌词记忆位置与锁定效果
-- 修复部分页面显示效果
-- 更换全新图标
 
 ## 开发者入口
 

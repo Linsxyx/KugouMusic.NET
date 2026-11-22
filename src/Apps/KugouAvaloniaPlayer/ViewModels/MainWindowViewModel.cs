@@ -421,12 +421,20 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
         ActivePage = page;
         _isUpdatingActivePageFromNavigation = false;
 
-        if (!Pages.Contains(page))
+        _isUpdatingSelectedMenuPageFromNavigation = true;
+        SelectedMenuPage = Pages.Contains(page) ? page : null;
+        _isUpdatingSelectedMenuPageFromNavigation = false;
+
+        UpdateSidebarSelection();
+    }
+
+    [RelayCommand]
+    private void ReclickMenuPage(PageViewModelBase? page)
+    {
+        if (page == null)
             return;
 
-        _isUpdatingSelectedMenuPageFromNavigation = true;
-        SelectedMenuPage = page;
-        _isUpdatingSelectedMenuPageFromNavigation = false;
+        NavigateToPage(page);
     }
 
     private void NavigateToPage(PageViewModelBase page)
@@ -690,7 +698,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private void UpdateSidebarSelection()
     {
-        var selected = PlaylistsViewModel.SelectedPlaylist;
+        var selected = ReferenceEquals(ActivePage, PlaylistsViewModel)
+            ? PlaylistsViewModel.SelectedPlaylist
+            : null;
 
         foreach (var item in SidebarCreatedPlaylists)
             item.IsSelected = IsSameItem(selected, item);
