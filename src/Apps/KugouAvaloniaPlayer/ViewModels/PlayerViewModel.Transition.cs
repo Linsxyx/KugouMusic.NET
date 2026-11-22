@@ -316,6 +316,7 @@ public partial class PlayerViewModel
 
         CurrentPlayingSong = _preparedNextSong;
         CurrentPlayingSong.IsPlaying = true;
+        RefreshActiveChannelBadge();
         IsLiked = _favoriteService.IsLiked(CurrentPlayingSong.Hash);
         ClearLyricsForPendingSongSwitch();
         CurrentPositionSeconds = 0;

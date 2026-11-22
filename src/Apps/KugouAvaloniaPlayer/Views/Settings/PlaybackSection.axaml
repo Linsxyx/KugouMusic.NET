@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" x:Class="KugouAvaloniaPlayer.Views.Settings.PlaybackSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:models="using:KugouAvaloniaPlayer.Models" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" x:Class="KugouAvaloniaPlayer.Views.Settings.PlaybackSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <TextBlock Classes="GroupHeader" Text="输出" />
         <localControls:SettingsCard>
@@ -24,6 +24,24 @@
                         <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="16" Height="16" />
                     </Button>
                 </StackPanel>
+            </localControls:SettingsRow>
+            <localControls:SettingsRow ColumnDefinitions="*,Auto">
+                <StackPanel>
+                    <TextBlock Classes="RowTitle" Text="多声道适配" />
+                    <TextBlock Classes="RowHint" Text="{Binding CurrentDeviceChannelSummary}" />
+                </StackPanel>
+                <ComboBox Grid.Column="1" MinWidth="170" ItemsSource="{Binding AudioChannelModeOptions}" SelectedItem="{Binding SelectedAudioChannelMode}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="models:AudioChannelModeOption">
+                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                    <ComboBox.SelectionBoxItemTemplate>
+                        <DataTemplate DataType="models:AudioChannelModeOption">
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ComboBox.SelectionBoxItemTemplate>
+                </ComboBox>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>

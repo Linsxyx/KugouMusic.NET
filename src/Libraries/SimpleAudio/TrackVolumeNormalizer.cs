@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using ManagedBass;
 using ManagedBass.Loud;
+using SimpleAudio.Codecs;
 
 namespace SimpleAudio;
 
@@ -122,12 +123,16 @@ public static class TrackVolumeNormalizer
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var handle = CreateDecodeStream(effectiveSource, effectiveIsLocal, BassFlags.Decode | BassFlags.Float | BassFlags.Prescan);
-            if (handle == 0)
+            using var opened = BassStreamOpener.OpenForAnalysis(
+                effectiveSource,
+                effectiveIsLocal,
+                BassFlags.Decode | BassFlags.Float | BassFlags.Prescan);
+            if (!opened.IsSuccess)
             {
                 return 1.0f;
             }
 
+            var handle = opened.Handle;
             var loudHandle = 0;
             try
             {
@@ -171,8 +176,6 @@ public static class TrackVolumeNormalizer
                 {
                     BassLoud.Stop(loudHandle);
                 }
-
-                Bass.StreamFree(handle);
             }
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -219,32 +222,6 @@ public static class TrackVolumeNormalizer
         {
             ArrayPool<float>.Shared.Return(buffer);
         }
-    }
-
-    private static int CreateDecodeStream(string source, bool isLocal, BassFlags flags)
-    {
-        if (RemoteAudioCache.TryGetCachedFilePath(source, out var cachedPath))
-        {
-            var cachedStream = Bass.CreateStream(cachedPath, 0, 0, flags);
-            if (cachedStream != 0)
-            {
-                return cachedStream;
-            }
-        }
-
-        if (!isLocal && source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            return Bass.CreateStream(source, 0, flags, null, IntPtr.Zero);
-        }
-
-        if (File.Exists(source))
-        {
-            return Bass.CreateStream(source, 0, 0, flags);
-        }
-
-        return source.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? Bass.CreateStream(source, 0, flags, null, IntPtr.Zero)
-            : 0;
     }
 
     private static double GetDurationSeconds(int handle)

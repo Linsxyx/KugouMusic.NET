@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Buffers;
 using ManagedBass;
 using ManagedBass.Fx;
+using SimpleAudio.Codecs;
 
 namespace SimpleAudio;
 
@@ -244,95 +245,63 @@ public sealed class ManagedBassTransitionAnalysisService : ITransitionAnalysisSe
         {
             ct.ThrowIfCancellationRequested();
             var flags = BassFlags.Decode | BassFlags.Float | BassFlags.Prescan;
-            var handle = CreateDecodeStream(effectiveSource, effectiveIsLocal, flags);
-            if (handle == 0)
+            using var opened = BassStreamOpener.OpenForAnalysis(effectiveSource, effectiveIsLocal, flags);
+            if (!opened.IsSuccess)
             {
                 return TrackAnalysisSnapshot.Empty;
             }
 
-            try
+            var handle = opened.Handle;
+            Bass.ChannelGetInfo(handle, out var info);
+            var sampleRate = info.Frequency > 0 ? info.Frequency : 44100;
+            var channels = Math.Max(1, info.Channels);
+            var duration = GetDurationSeconds(handle);
+            var effectiveDuration = duration > 0 ? duration : track.DurationSeconds;
+
+            var bpm = EstimateBpm(handle, effectiveDuration);
+            var startRms = ReadWindowRms(handle, 0, Math.Min(IntroWindowSec, effectiveDuration), sampleRate, channels);
+            var introWindowSec = Math.Min(IntroWindowSec, effectiveDuration);
+            var startBrightness = ReadWindowBrightness(handle, 0, introWindowSec, sampleRate);
+            var introSilence = EstimateEdgeSilence(handle, 0, introWindowSec, sampleRate, channels, scanFromTail: false, out var introAvailable, out var introActivityRatio);
+
+            var tailStart = Math.Max(0, effectiveDuration - OutroWindowSec);
+            var tailWindowSec = Math.Min(OutroWindowSec, effectiveDuration);
+            var endRms = ReadWindowRms(handle, tailStart, tailWindowSec, sampleRate, channels);
+            var endBrightness = ReadWindowBrightness(handle, tailStart, tailWindowSec, sampleRate);
+            var tailSilence = EstimateEdgeSilence(handle, tailStart, tailWindowSec, sampleRate, channels, scanFromTail: true, out var tailAvailable, out var tailActivityRatio);
+            var tailScanStart = Math.Max(0, effectiveDuration - TailScanWindowSec);
+            var tailScanSec = Math.Min(TailScanWindowSec, effectiveDuration);
+            var invalidTailSec = EstimateInvalidTail(handle, tailScanStart, tailScanSec, sampleRate, channels);
+            var dynamicWindowSec = Clamp(10.0 + invalidTailSec * 0.55, 8.0, 24.0);
+            var startDynamicRms = ReadWindowRms(handle, 0, Math.Min(dynamicWindowSec, effectiveDuration), sampleRate, channels);
+            var endDynamicSourceSec = Math.Max(0, tailScanSec - invalidTailSec);
+            var endDynamicWindowSec = Math.Min(dynamicWindowSec, Math.Max(endDynamicSourceSec, Math.Min(OutroWindowSec, effectiveDuration)));
+            var endDynamicStart = Math.Max(0, effectiveDuration - invalidTailSec - endDynamicWindowSec);
+            var endDynamicRms = ReadWindowRms(handle, endDynamicStart, endDynamicWindowSec, sampleRate, channels);
+
+            return new TrackAnalysisSnapshot
             {
-                Bass.ChannelGetInfo(handle, out var info);
-                var sampleRate = info.Frequency > 0 ? info.Frequency : 44100;
-                var channels = Math.Max(1, info.Channels);
-                var duration = GetDurationSeconds(handle);
-                var effectiveDuration = duration > 0 ? duration : track.DurationSeconds;
-
-                var bpm = EstimateBpm(handle, effectiveDuration);
-                var startRms = ReadWindowRms(handle, 0, Math.Min(IntroWindowSec, effectiveDuration), sampleRate, channels);
-                var introWindowSec = Math.Min(IntroWindowSec, effectiveDuration);
-                var startBrightness = ReadWindowBrightness(handle, 0, introWindowSec, sampleRate);
-                var introSilence = EstimateEdgeSilence(handle, 0, introWindowSec, sampleRate, channels, scanFromTail: false, out var introAvailable, out var introActivityRatio);
-
-                var tailStart = Math.Max(0, effectiveDuration - OutroWindowSec);
-                var tailWindowSec = Math.Min(OutroWindowSec, effectiveDuration);
-                var endRms = ReadWindowRms(handle, tailStart, tailWindowSec, sampleRate, channels);
-                var endBrightness = ReadWindowBrightness(handle, tailStart, tailWindowSec, sampleRate);
-                var tailSilence = EstimateEdgeSilence(handle, tailStart, tailWindowSec, sampleRate, channels, scanFromTail: true, out var tailAvailable, out var tailActivityRatio);
-                var tailScanStart = Math.Max(0, effectiveDuration - TailScanWindowSec);
-                var tailScanSec = Math.Min(TailScanWindowSec, effectiveDuration);
-                var invalidTailSec = EstimateInvalidTail(handle, tailScanStart, tailScanSec, sampleRate, channels);
-                var dynamicWindowSec = Clamp(10.0 + invalidTailSec * 0.55, 8.0, 24.0);
-                var startDynamicRms = ReadWindowRms(handle, 0, Math.Min(dynamicWindowSec, effectiveDuration), sampleRate, channels);
-                var endDynamicSourceSec = Math.Max(0, tailScanSec - invalidTailSec);
-                var endDynamicWindowSec = Math.Min(dynamicWindowSec, Math.Max(endDynamicSourceSec, Math.Min(OutroWindowSec, effectiveDuration)));
-                var endDynamicStart = Math.Max(0, effectiveDuration - invalidTailSec - endDynamicWindowSec);
-                var endDynamicRms = ReadWindowRms(handle, endDynamicStart, endDynamicWindowSec, sampleRate, channels);
-
-                return new TrackAnalysisSnapshot
-                {
-                    DurationSeconds = effectiveDuration,
-                    Bpm = bpm,
-                    StartRms = startRms,
-                    EndRms = endRms,
-                    StartBrightness = startBrightness,
-                    EndBrightness = endBrightness,
-                    StartDynamicRms = startDynamicRms,
-                    EndDynamicRms = endDynamicRms,
-                    DynamicWindowSec = dynamicWindowSec,
-                    IntroSilenceSec = introSilence,
-                    IntroActivityRatio = introActivityRatio,
-                    TailSilenceSec = tailSilence,
-                    InvalidTailSec = invalidTailSec,
-                    TailActivityRatio = tailActivityRatio,
-                    TailWindowAvailable = tailAvailable,
-                    IsReliable = startRms > 0 || bpm > 0 || tailAvailable || introAvailable
-                };
-            }
-            finally
-            {
-                Bass.StreamFree(handle);
-            }
+                DurationSeconds = effectiveDuration,
+                Bpm = bpm,
+                StartRms = startRms,
+                EndRms = endRms,
+                StartBrightness = startBrightness,
+                EndBrightness = endBrightness,
+                StartDynamicRms = startDynamicRms,
+                EndDynamicRms = endDynamicRms,
+                DynamicWindowSec = dynamicWindowSec,
+                IntroSilenceSec = introSilence,
+                IntroActivityRatio = introActivityRatio,
+                TailSilenceSec = tailSilence,
+                InvalidTailSec = invalidTailSec,
+                TailActivityRatio = tailActivityRatio,
+                TailWindowAvailable = tailAvailable,
+                IsReliable = startRms > 0 || bpm > 0 || tailAvailable || introAvailable
+            };
         }, ct).ConfigureAwait(false);
 
         PersistentAudioAnalysisCache.SaveTrackAnalysis(track.Source, track.IsLocal, analysis);
         return analysis;
-    }
-
-    private static int CreateDecodeStream(string source, bool isLocal, BassFlags flags)
-    {
-        if (RemoteAudioCache.TryGetCachedFilePath(source, out var cachedPath))
-        {
-            var cachedStream = Bass.CreateStream(cachedPath, 0, 0, flags);
-            if (cachedStream != 0)
-            {
-                return cachedStream;
-            }
-        }
-
-        if (!isLocal && source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            return Bass.CreateStream(source, 0, flags, null, IntPtr.Zero);
-        }
-
-        if (File.Exists(source))
-        {
-            return Bass.CreateStream(source, 0, 0, flags);
-        }
-
-        return source.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? Bass.CreateStream(source, 0, flags, null, IntPtr.Zero)
-            : 0;
     }
 
     private static double GetDurationSeconds(int handle)

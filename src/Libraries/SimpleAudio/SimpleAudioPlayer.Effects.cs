@@ -232,7 +232,7 @@ public partial class SimpleAudioPlayer
 
         Bass.ChannelGetInfo(Stream, out var info);
         var hasStereoWidth = StereoWidth > 0.001f && info.Channels == 2;
-        var hasReverb = ReverbAmount > 0.001f;
+        var hasReverb = ReverbAmount > 0.001f && info.Channels <= 2;
         var hasChorus = ChorusMix > 0.001f && info.Channels == 2;
         var hasEcho = EchoMix > 0.001f;
 

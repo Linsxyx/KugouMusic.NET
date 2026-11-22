@@ -30,6 +30,13 @@ public partial class SimpleAudioPlayer
         public int Stream { get; set; }
         public int SourceStream { get; set; }
         public IDisposable? StreamSourceOwner { get; set; }
+        public AudioChannelMode ChannelMode { get; set; } = AudioChannelMode.Auto;
+        public AudioChannelLayout? SourceChannelLayout { get; set; }
+        public int SourceChannelCount { get; set; }
+        public int OutputChannelCount { get; set; }
+        public string SourceChannelLayoutName { get; set; } = string.Empty;
+        public string OutputChannelLayoutName { get; set; } = string.Empty;
+        public string? ReloadableSourcePath { get; set; }
         public bool SurroundEnabled { get; set; }
         public float VolumeNormalizationGain { get; set; } = 1.0f;
         public float UserVolume { get; set; } = 1.0f;

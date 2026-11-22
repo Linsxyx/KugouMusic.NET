@@ -1,18 +1,20 @@
 using ManagedBass;
 using ManagedBass.Fx;
+using SimpleAudio.Codecs;
 
 namespace SimpleAudio;
 
 public partial class SimpleAudioPlayer : IDisposable
 {
-    private const int RemoteStreamLoadAttempts = 3;
-    private const int RemoteStreamRetryDelayMilliseconds = 300;
-
     public string? LastErrorDetail { get; private set; }
 
     public bool Load(string url)
     {
-        return LoadCore(url, sourceFlags => CreateSourceStream(url, sourceFlags));
+        var loaded = LoadCore(
+            url,
+            (sourceFlags, deviceSpeakers) => BassStreamOpener.OpenPathOrUrl(url, sourceFlags, deviceSpeakers, _state.ChannelMode),
+            reloadableSourcePath: url);
+        return loaded;
     }
 
     public bool Load(
@@ -24,16 +26,39 @@ public partial class SimpleAudioPlayer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(inputStream);
 
-        var managedSource = new ManagedStreamSource(inputStream, contentLength, owner);
-        var streamSystem = useUnbuffered ? StreamSystem.NoBuffer : StreamSystem.Buffer;
-        var extraFlags = !useUnbuffered && contentLength <= 0
-            ? BassFlags.StreamDownloadBlocks
-            : BassFlags.Default;
-        var loaded = LoadCore(sourceDescription, sourceFlags =>
-            Bass.CreateStream(streamSystem, sourceFlags | extraFlags, managedSource.CreateProcedures(), IntPtr.Zero),
-            managedSource);
-        if (!loaded)
-            managedSource.Dispose();
+        var openerInvoked = false;
+        var reloadablePath = RemoteAudioCache.TryGetCachedFilePath(sourceDescription, out var cached)
+            ? cached
+            : File.Exists(sourceDescription)
+                ? sourceDescription
+                : sourceDescription.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                    ? sourceDescription
+                    : null;
+
+        var loaded = LoadCore(
+            sourceDescription,
+            (sourceFlags, deviceSpeakers) =>
+            {
+                openerInvoked = true;
+                return BassStreamOpener.OpenStream(
+                    inputStream,
+                    contentLength,
+                    sourceFlags,
+                    owner,
+                    useUnbuffered,
+                    deviceSpeakers,
+                    _state.ChannelMode);
+            },
+            reloadableSourcePath: reloadablePath);
+
+        if (!openerInvoked)
+        {
+            try { inputStream.Dispose(); } catch { }
+            if (!ReferenceEquals(owner, inputStream))
+            {
+                try { owner?.Dispose(); } catch { }
+            }
+        }
 
         return loaded;
     }
@@ -67,17 +92,26 @@ public partial class SimpleAudioPlayer : IDisposable
         return loaded;
     }
 
+    public void SetChannelMode(AudioChannelMode mode)
+    {
+        if (_state.ChannelMode == mode)
+            return;
+
+        _state.ChannelMode = mode;
+        TryReloadCurrentSourceForChannelAdaptation();
+    }
+
     private bool LoadCore(
         string sourceDescription,
-        Func<BassFlags, int> createSourceStream,
-        IDisposable? streamSourceOwner = null)
+        Func<BassFlags, int, OpenedBassStream> openSourceStream,
+        string? reloadableSourcePath = null)
     {
         Stop();
         LastErrorDetail = null;
 
         var flags = BassFlags.Default | BassFlags.Float;
         var sourceFlags = flags | BassFlags.Decode;
-        var sourceStream = 0;
+        string? openError = null;
         lock (BassDeviceGate)
         {
             if (!TryInitializeOutputDevice(_preferredOutputDeviceId, out _))
@@ -90,26 +124,42 @@ public partial class SimpleAudioPlayer : IDisposable
                 }
             }
 
-            sourceStream = createSourceStream(sourceFlags);
+            var deviceSpeakers = Bass.GetInfo(out var bassInfo) && bassInfo.SpeakerCount > 0
+                ? bassInfo.SpeakerCount
+                : 2;
 
-            if (sourceStream != 0)
+            using var opened = openSourceStream(sourceFlags, deviceSpeakers);
+            openError = opened.Error;
+
+            if (opened.IsSuccess)
             {
-                Stream = BassFx.TempoCreate(sourceStream, flags | BassFlags.FxFreeSource);
-                if (Stream == 0)
-                    Bass.StreamFree(sourceStream);
+                var tempoStream = BassFx.TempoCreate(opened.Handle, flags | BassFlags.FxFreeSource);
+                if (tempoStream == 0)
+                {
+                    openError = $"BASS_FX TempoCreate 失败(ch={opened.OutputChannels}): {Bass.LastError}";
+                }
                 else
                 {
+                    var (sourceStream, owner) = opened.Detach();
+                    Stream = tempoStream;
                     SourceStream = sourceStream;
-                    StreamSourceOwner = streamSourceOwner;
+                    StreamSourceOwner = owner;
+                    _state.SourceChannelLayout = opened.SourceLayout;
+                    _state.SourceChannelCount = opened.SourceChannels;
+                    _state.OutputChannelCount = opened.OutputChannels;
+                    _state.SourceChannelLayoutName = opened.SourceLayoutName;
+                    _state.OutputChannelLayoutName = opened.OutputLayoutName;
+                    _state.ReloadableSourcePath = reloadableSourcePath;
                 }
             }
         }
 
         if (Stream == 0)
         {
+            var detailSuffix = string.IsNullOrWhiteSpace(openError) ? string.Empty : $", detail={openError}";
             LastErrorDetail =
-                $"BASS CreateStream 失败: path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}";
-            Console.WriteLine($"[BASS CreateStream Error] path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}");
+                $"BASS CreateStream 失败: path={sourceDescription}, extension={Path.GetExtension(sourceDescription)}, error={Bass.LastError}{detailSuffix}";
+            Console.WriteLine($"[BASS CreateStream Error] {LastErrorDetail}");
             return false;
         }
 
@@ -137,38 +187,42 @@ public partial class SimpleAudioPlayer : IDisposable
         return true;
     }
 
-    private static int CreateSourceStream(string source, BassFlags sourceFlags)
+    // 切换设备或声道策略后，仅当当前在播多声道曲目且目标布局变化时无缝重载并恢复进度。
+    private bool TryReloadCurrentSourceForChannelAdaptation()
     {
-        if (RemoteAudioCache.TryGetCachedFilePath(source, out var cachedPath))
+        if (Stream == 0 || _state.SourceChannelCount <= 2)
+            return false;
+
+        var reloadSource = _state.ReloadableSourcePath;
+        if (string.IsNullOrWhiteSpace(reloadSource))
+            return false;
+
+        if (!File.Exists(reloadSource) && !RemoteAudioCache.TryGetCachedFilePath(reloadSource, out reloadSource))
+            return false;
+
+        var newSpeakers = GetCurrentOutputDeviceSpeakerCount();
+        var sourceLayout = _state.SourceChannelLayout
+                           ?? AudioChannelLayout.FromStandardChannelCount(_state.SourceChannelCount);
+        var nextTarget = AudioChannelLayout.ResolveTargetLayout(sourceLayout, newSpeakers, _state.ChannelMode);
+        if (nextTarget.Channels == _state.OutputChannelCount)
+            return false;
+
+        var wasPlaying = IsPlaying;
+        var savedPosition = GetPosition();
+        if (!Load(reloadSource))
+            return false;
+
+        if (savedPosition > TimeSpan.Zero)
         {
-            var localStream = Bass.CreateStream(cachedPath, 0, 0, sourceFlags);
-            if (localStream != 0)
-            {
-                return localStream;
-            }
+            SetPosition(savedPosition);
         }
 
-        if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        if (wasPlaying)
         {
-            var remoteFlags = RemoteAudioCache.IsKnownLiveStream(source)
-                ? sourceFlags | BassFlags.StreamDownloadBlocks
-                : sourceFlags;
-            for (var attempt = 1; attempt <= RemoteStreamLoadAttempts; attempt++)
-            {
-                var stream = Bass.CreateStream(source, 0, remoteFlags, null, IntPtr.Zero);
-                if (stream != 0)
-                    return stream;
-
-                if (attempt < RemoteStreamLoadAttempts)
-                    Thread.Sleep(RemoteStreamRetryDelayMilliseconds * attempt);
-            }
-
-            return 0;
+            Play();
         }
 
-        return File.Exists(source)
-            ? Bass.CreateStream(source, 0, 0, sourceFlags)
-            : 0;
+        return true;
     }
 
     public void Play()
@@ -219,6 +273,12 @@ public partial class SimpleAudioPlayer : IDisposable
 
         streamSourceOwner?.Dispose();
 
+        _state.SourceChannelLayout = null;
+        _state.SourceChannelCount = 0;
+        _state.OutputChannelCount = 0;
+        _state.SourceChannelLayoutName = string.Empty;
+        _state.OutputChannelLayoutName = string.Empty;
+        _state.ReloadableSourcePath = null;
         TransitionGain = 1.0f;
         TransitionToneDepth = 0f;
     }
@@ -249,6 +309,7 @@ public partial class SimpleAudioPlayer : IDisposable
 
     public bool SetOutputDevice(int deviceId)
     {
+        var switched = false;
         lock (BassDeviceGate)
         {
             if (!TryInitializeOutputDevice(deviceId, out var actualDeviceId))
@@ -271,14 +332,23 @@ public partial class SimpleAudioPlayer : IDisposable
             if (Bass.ChannelSetDevice(Stream, actualDeviceId))
             {
                 UpdateActualVolume();
-                return true;
+                switched = true;
             }
-
-            Console.WriteLine($"[BASS ChannelSetDevice Error] device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}");
-            LastErrorDetail =
-                $"BASS ChannelSetDevice 失败: device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}";
-            return false;
+            else
+            {
+                Console.WriteLine($"[BASS ChannelSetDevice Error] device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}");
+                LastErrorDetail =
+                    $"BASS ChannelSetDevice 失败: device={deviceId}, actualDevice={actualDeviceId}, error={Bass.LastError}";
+                return false;
+            }
         }
+
+        if (switched)
+        {
+            TryReloadCurrentSourceForChannelAdaptation();
+        }
+
+        return switched;
     }
 
     public void SetVolume(float volume)

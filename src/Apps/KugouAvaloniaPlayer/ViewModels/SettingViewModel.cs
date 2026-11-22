@@ -168,6 +168,11 @@ public partial class SettingViewModel : PageViewModelBase
 
     [ObservableProperty] public partial AudioOutputDevice? SelectedOutputDevice { get; set; }
 
+    [ObservableProperty] public partial AudioChannelModeOption SelectedAudioChannelMode { get; set; } =
+        AudioChannelModeOption.Options[0];
+
+    [ObservableProperty] public partial string CurrentDeviceChannelSummary { get; set; } = string.Empty;
+
     [ObservableProperty] public partial string PlayPageSelectedLyricAlignment { get; set; } = LyricAlignmentCenter;
 
     [ObservableProperty] public partial string PlayPageSelectedLyricColorMode { get; set; } = LyricColorModeDefault;
@@ -247,6 +252,8 @@ public partial class SettingViewModel : PageViewModelBase
             EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
             UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
             RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
+            SelectedAudioChannelMode = AudioChannelModeOption.Find(SettingsManager.Settings.AudioChannelMode);
+            RefreshDeviceChannelSummary();
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
             EnableNativeDesktopLyrics = SettingsManager.Settings.EnableNativeDesktopLyrics;
             WaylandDesktopLyricOverFullscreen = SettingsManager.Settings.WaylandDesktopLyricOverFullscreen;
@@ -348,6 +355,7 @@ public partial class SettingViewModel : PageViewModelBase
     public string[] AppFontFamilyOptions { get; }
 
     public UiScaleOption[] UiScaleOptions => UiScale.Options;
+    public AudioChannelModeOption[] AudioChannelModeOptions => AudioChannelModeOption.Options;
     public GlobalShortcutItemViewModel[] ShortcutItems { get; }
     public ObservableCollection<ReleaseNoteItemViewModel> RecentReleaseNotes { get; } = [];
     public ObservableCollection<AudioOutputDevice> OutputDeviceOptions { get; } = [];
@@ -759,6 +767,7 @@ public partial class SettingViewModel : PageViewModelBase
             _lastAppliedOutputDeviceId = value.DeviceId;
             SettingsManager.Settings.AudioOutputDeviceId = value.DeviceId;
             SettingsManager.Save();
+            RefreshDeviceChannelSummary();
             return;
         }
 
@@ -768,9 +777,32 @@ public partial class SettingViewModel : PageViewModelBase
             _lastAppliedOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
             SettingsManager.Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
             SettingsManager.Save();
+            RefreshDeviceChannelSummary();
         }
 
         SelectOutputDeviceSilently(_lastAppliedOutputDeviceId);
+    }
+
+    partial void OnSelectedAudioChannelModeChanged(AudioChannelModeOption value)
+    {
+        if (_isApplyingSettingsSnapshot || value == null) return;
+
+        SettingsManager.Settings.AudioChannelMode = value.Mode;
+        SettingsManager.Save();
+        Player.SetChannelMode(value.Mode);
+        RefreshDeviceChannelSummary();
+    }
+
+    private void RefreshDeviceChannelSummary()
+    {
+        var speakers = SimpleAudioPlayer.GetCurrentOutputDeviceSpeakerCount();
+        var mode = SelectedAudioChannelMode?.Mode ?? SettingsManager.Settings.AudioChannelMode;
+        CurrentDeviceChannelSummary = mode switch
+        {
+            AudioChannelMode.ForceStereo => $"当前输出设备支持 {speakers} 声道，多声道曲目将统一混音为立体声输出。",
+            AudioChannelMode.Passthrough => $"当前输出设备支持 {speakers} 声道，优先保留多声道原样直出（最高 7.1）。",
+            _ => $"当前输出设备支持 {speakers} 声道，多声道曲目将自动适配设备拓扑。"
+        };
     }
 
     partial void OnUseLightweightNowPlayingLyricScrollChanged(bool value)
@@ -1090,10 +1122,12 @@ public partial class SettingViewModel : PageViewModelBase
             SettingsManager.Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
             SettingsManager.Save();
             ApplySavedOutputDevice();
+            RefreshDeviceChannelSummary();
             return;
         }
 
         OutputDeviceStatus = "输出设备列表已刷新。";
+        RefreshDeviceChannelSummary();
     }
 
     [RelayCommand]
@@ -1175,6 +1209,8 @@ public partial class SettingViewModel : PageViewModelBase
             EnableNowPlayingVisualizer = SettingsManager.Settings.EnableNowPlayingVisualizer;
             UseLightweightNowPlayingLyricScroll = SettingsManager.Settings.UseLightweightNowPlayingLyricScroll;
             RefreshOutputDeviceOptions(SettingsManager.Settings.AudioOutputDeviceId);
+            SelectedAudioChannelMode = AudioChannelModeOption.Find(SettingsManager.Settings.AudioChannelMode);
+            RefreshDeviceChannelSummary();
             DesktopLyricDoubleLineEnabled = SettingsManager.Settings.DesktopLyricDoubleLineEnabled;
             EnableNativeDesktopLyrics = SettingsManager.Settings.EnableNativeDesktopLyrics;
             WaylandDesktopLyricOverFullscreen = SettingsManager.Settings.WaylandDesktopLyricOverFullscreen;
@@ -1213,7 +1249,9 @@ public partial class SettingViewModel : PageViewModelBase
         Player.SetVolumeNormalizationEnabled(EnableVolumeNormalization);
         Player.SetSeamlessTransitionEnabled(EnableSeamlessTransition);
         Player.SetNowPlayingVisualizerEnabled(EnableNowPlayingVisualizer);
+        Player.SetChannelMode(SelectedAudioChannelMode.Mode);
         ApplySavedOutputDevice();
+        RefreshDeviceChannelSummary();
         _eqSettingsViewModel.ReloadFromSettings();
 
         var shortcutApplyResult = _globalShortcutService.TryApplySettings(SettingsManager.Settings.GlobalShortcuts);

@@ -70,6 +70,23 @@ public sealed class DualTrackAudioPlayer : IDisposable
 
     public string? LastErrorDetail { get; private set; }
 
+    public AudioChannelMode ChannelMode => _activeDeck.ChannelMode;
+
+    public int SourceChannelCount => _activeDeck.SourceChannelCount;
+
+    public int OutputChannelCount => _activeDeck.OutputChannelCount;
+
+    public string SourceChannelLayoutName => _activeDeck.SourceChannelLayoutName;
+
+    public string OutputChannelLayoutName => _activeDeck.OutputChannelLayoutName;
+
+    public void SetChannelMode(AudioChannelMode mode)
+    {
+        _activeDeck.SetChannelMode(mode);
+        _standbyDeck.SetChannelMode(mode);
+        _fadingDeck?.SetChannelMode(mode);
+    }
+
     public bool Load(string url, float normalizationGain = 1.0f)
     {
         AbortCrossfade();

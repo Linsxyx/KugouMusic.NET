@@ -285,6 +285,29 @@ public partial class SimpleAudioPlayer
 
     public bool IsStalled => Stream != 0 && Bass.ChannelIsActive(Stream) == PlaybackState.Stalled;
 
+    public AudioChannelMode ChannelMode => _state.ChannelMode;
+
+    public int SourceChannelCount => _state.SourceChannelCount;
+
+    public int OutputChannelCount => _state.OutputChannelCount;
+
+    public string SourceChannelLayoutName => _state.SourceChannelLayoutName;
+
+    public string OutputChannelLayoutName => _state.OutputChannelLayoutName;
+
+    public static int GetCurrentOutputDeviceSpeakerCount()
+    {
+        lock (BassDeviceGate)
+        {
+            if (Bass.GetInfo(out var info) && info.SpeakerCount > 0)
+            {
+                return info.SpeakerCount;
+            }
+
+            return 2;
+        }
+    }
+
     internal static bool TryInitializeOutputDevice(int requestedDeviceId, out int actualDeviceId)
     {
         actualDeviceId = requestedDeviceId;

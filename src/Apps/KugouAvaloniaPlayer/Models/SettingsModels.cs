@@ -1,8 +1,31 @@
 using System.Collections.Generic;
 using KuGou.Net.Abstractions;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
+using SimpleAudio;
 
 namespace KugouAvaloniaPlayer.Models;
+
+// 多声道输出适配模式下拉选项。
+public sealed record AudioChannelModeOption(AudioChannelMode Mode, string Label)
+{
+    public static AudioChannelModeOption[] Options { get; } =
+    [
+        new(AudioChannelMode.Auto, "自动适配设备"),
+        new(AudioChannelMode.ForceStereo, "强制立体声 (2.0)"),
+        new(AudioChannelMode.Passthrough, "多声道直出")
+    ];
+
+    public static AudioChannelModeOption Find(AudioChannelMode mode)
+    {
+        foreach (var option in Options)
+        {
+            if (option.Mode == mode)
+                return option;
+        }
+
+        return Options[0];
+    }
+}
 
 public enum PlayMode
 {
@@ -219,6 +242,8 @@ public class AppSettings
     public string TaskbarLyricsPlayedColor { get; set; } = "#FF268EEB";
 
     public int AudioOutputDeviceId { get; set; } = SystemDefaultAudioOutputDeviceId;
+
+    public AudioChannelMode AudioChannelMode { get; set; } = AudioChannelMode.Auto;
 
     public float MusicVolume { get; set; } = 0.8f;
 

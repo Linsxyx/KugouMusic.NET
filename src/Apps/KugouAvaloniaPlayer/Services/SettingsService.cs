@@ -11,6 +11,7 @@ using SimpleAudio;
 namespace KugouAvaloniaPlayer.Services;
 
 [JsonSerializable(typeof(GlobalShortcutSettings))]
+[JsonSerializable(typeof(AudioChannelMode))]
 [JsonSerializable(typeof(PlayMode))]
 [JsonSerializable(typeof(LyricAlignmentOption))]
 [JsonSerializable(typeof(DesktopLyricLayoutMode))]
@@ -178,6 +179,8 @@ public static class SettingsManager
         Settings.PlaybackSpeed = Math.Clamp(Settings.PlaybackSpeed, 0.5f, 2.0f);
         if (!SimpleAudioPlayer.IsOutputDeviceAvailable(Settings.AudioOutputDeviceId))
             Settings.AudioOutputDeviceId = AppSettings.SystemDefaultAudioOutputDeviceId;
+        if (!Enum.IsDefined(Settings.AudioChannelMode))
+            Settings.AudioChannelMode = AudioChannelMode.Auto;
         Settings.CustomEqGains = NormalizeCustomEqGains(Settings.CustomEqGains);
     }
 
