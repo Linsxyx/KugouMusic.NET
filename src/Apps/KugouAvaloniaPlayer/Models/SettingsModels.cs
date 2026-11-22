@@ -208,8 +208,8 @@ public class AppSettings
     public string? LastJellyfinServerFingerprint { get; set; }
     public bool AutoCheckUpdate { get; set; } = true;
     public bool LinuxUseFullWindowDecorations { get; set; }
-    /// <summary>强制合成器使用 OpenGL 系列后端（跳过 Vulkan / Metal），重启后生效；启动时由 GraphicsBackendSelection 提前读取。</summary>
-    public bool PreferOpenGlRendering { get; set; }
+    /// <summary>强制合成器使用 OpenGL 系列后端（跳过 Vulkan / Metal），默认开启，重启后生效；启动时由 GraphicsBackendSelection 提前读取。</summary>
+    public bool PreferOpenGlRendering { get; set; } = true;
     public bool UseCustomBackgroundImage { get; set; }
     public string? CustomBackgroundImagePath { get; set; }
     public double CustomBackgroundImageOpacity { get; set; } = 0.35;

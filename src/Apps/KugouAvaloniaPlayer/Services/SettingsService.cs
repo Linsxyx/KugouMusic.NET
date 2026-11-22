@@ -76,7 +76,7 @@ public static class SettingsManager
 
     /// <summary>
     /// 在 Avalonia 初始化前读取“使用 OpenGL 渲染”开关。只解析这一个字段，不走完整的 <see cref="Load"/>
-    /// （后者会探测音频输出设备等）。读取失败时返回 false。
+    /// （后者会探测音频输出设备等）。未配置或读取失败时返回默认值 true。
     /// </summary>
     public static bool ReadPreferOpenGlRenderingEarly()
     {
@@ -86,17 +86,24 @@ public static class SettingsManager
             if (string.IsNullOrWhiteSpace(json) && File.Exists(SettingsPath))
                 json = File.ReadAllText(SettingsPath);
             if (string.IsNullOrWhiteSpace(json))
-                return false;
+                return true;
 
             using var document = JsonDocument.Parse(json);
-            return document.RootElement.ValueKind == JsonValueKind.Object
-                   && document.RootElement.TryGetProperty(nameof(AppSettings.PreferOpenGlRendering), out var value)
-                   && value.ValueKind == JsonValueKind.True;
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty(nameof(AppSettings.PreferOpenGlRendering), out var value))
+            {
+                if (value.ValueKind == JsonValueKind.False)
+                    return false;
+                if (value.ValueKind == JsonValueKind.True)
+                    return true;
+            }
+
+            return true;
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "启动时读取 OpenGL 渲染设置失败，按默认后端启动。");
-            return false;
+            Log.Warning(ex, "启动时读取 OpenGL 渲染设置失败，按默认 OpenGL 后端启动。");
+            return true;
         }
     }
 

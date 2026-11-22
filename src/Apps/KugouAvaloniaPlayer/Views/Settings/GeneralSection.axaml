@@ -29,7 +29,7 @@
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="使用 OpenGL 渲染" />
-                    <TextBlock Classes="RowHint" Text="跳过 Vulkan / Metal。重启软件后生效。" TextWrapping="Wrap" />
+                    <TextBlock Classes="RowHint" Text="默认开启以提升兼容性；关闭后将优先使用 Vulkan / Metal 渲染。重启软件后生效。" TextWrapping="Wrap" />
                 </StackPanel>
                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding PreferOpenGlRendering, Mode=TwoWay}" />
             </localControls:SettingsRow>
