@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using KaMusic.Cli.Models;
+using SimpleAudio;
 
 namespace KaMusic.Cli.Services;
 
@@ -43,6 +44,11 @@ internal sealed class TerminalSettingsStore
             }
 
             settings.Volume = Math.Clamp(settings.Volume, 0f, 1f);
+            if (!Enum.IsDefined(settings.AudioChannelMode))
+            {
+                settings.AudioChannelMode = AudioChannelMode.Auto;
+            }
+
             return settings;
         }
         catch
@@ -71,6 +77,7 @@ internal sealed class TerminalSettingsStore
     }
 }
 
+[JsonSerializable(typeof(AudioChannelMode))]
 [JsonSerializable(typeof(TerminalAppSettings))]
 internal partial class TerminalSettingsJsonContext : JsonSerializerContext
 {

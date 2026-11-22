@@ -2,6 +2,7 @@ using KaMusic.Cli.Graphics;
 using KaMusic.Cli.Models;
 using KaMusic.Cli.Services;
 using KaMusic.Cli.Tui;
+using SimpleAudio;
 
 namespace KaMusic.Cli.Views;
 
@@ -531,6 +532,9 @@ internal static class WorkspaceViews
         var items = new (string Label, string Value, string Hint)[]
         {
             ("音质选择", playback.MusicQuality, "128 / 320 / flac / hires"),
+            ("多声道适配",
+                TerminalPlaybackService.FormatChannelMode(settings.AudioChannelMode),
+                $"当前设备 {SimpleAudioPlayer.GetCurrentOutputDeviceSpeakerCount()} 声道 · 自动 / 耳机3D / 强制2.0 / 直出"),
             ("环绕音效", settings.EnableSurround ? "开启" : "关闭", "立体声空间增强"),
             ("智能无缝过渡", settings.EnableSeamlessTransition ? "开启" : "关闭", "自动分析拍点与交叉混音"),
             ("随机播放", settings.Shuffle ? "开启" : "关闭", "快捷键 s"),

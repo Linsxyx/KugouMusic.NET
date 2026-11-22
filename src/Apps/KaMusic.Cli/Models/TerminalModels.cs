@@ -1,6 +1,7 @@
 using KuGou.Net.Abstractions;
 using KuGou.Net.Abstractions.Models;
 using KaMusic.Cli.Graphics;
+using SimpleAudio;
 
 namespace KaMusic.Cli.Models;
 
@@ -169,6 +170,7 @@ internal sealed class PlaybackStateSnapshot
     public bool IsPaused { get; init; }
     public bool IsShuffle { get; init; }
     public bool EnableSurround { get; init; }
+    public AudioChannelMode AudioChannelMode { get; init; }
     public bool EnableSeamlessTransition { get; init; }
     public bool IsCrossfading { get; init; }
     public float Volume { get; init; }
@@ -184,6 +186,7 @@ internal sealed class PlaybackStateSnapshot
 internal sealed class TerminalAppSettings
 {
     public string MusicQuality { get; set; } = AudioQuality.HiRes;
+    public AudioChannelMode AudioChannelMode { get; set; } = AudioChannelMode.Auto;
     public float Volume { get; set; } = 0.8f;
     public bool EnableSurround { get; set; }
     public bool EnableSeamlessTransition { get; set; }

@@ -475,6 +475,34 @@ internal sealed class TerminalPlaybackService : IDisposable
         _settingsStore.Save(_settings);
     }
 
+    private static readonly AudioChannelMode[] ChannelModes =
+    [
+        AudioChannelMode.Auto,
+        AudioChannelMode.HeadphoneSpatial,
+        AudioChannelMode.ForceStereo,
+        AudioChannelMode.Passthrough
+    ];
+
+    public static string FormatChannelMode(AudioChannelMode mode) => mode switch
+    {
+        AudioChannelMode.HeadphoneSpatial => "耳机空间环绕 (3D)",
+        AudioChannelMode.ForceStereo => "强制立体声 (2.0)",
+        AudioChannelMode.Passthrough => "多声道直出",
+        _ => "自动适配设备"
+    };
+
+    public void CycleChannelMode(int direction = 1)
+    {
+        var idx = Array.IndexOf(ChannelModes, _settings.AudioChannelMode);
+        if (idx < 0) idx = 0;
+        var step = direction >= 0 ? 1 : -1;
+        idx = (idx + step + ChannelModes.Length) % ChannelModes.Length;
+        _settings.AudioChannelMode = ChannelModes[idx];
+        _player.SetChannelMode(_settings.AudioChannelMode);
+        StatusMessage = $"多声道适配：{FormatChannelMode(_settings.AudioChannelMode)}";
+        _settingsStore.Save(_settings);
+    }
+
     public void CycleQuality()
     {
         _settings.MusicQuality = AudioQuality.GetNext(_settings.MusicQuality);
@@ -525,6 +553,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             IsPaused = _player.IsPaused,
             IsShuffle = _settings.Shuffle,
             EnableSurround = _settings.EnableSurround,
+            AudioChannelMode = _settings.AudioChannelMode,
             EnableSeamlessTransition = _settings.EnableSeamlessTransition,
             IsCrossfading = _player.IsCrossfading,
             Volume = _settings.Volume,
@@ -542,6 +571,8 @@ internal sealed class TerminalPlaybackService : IDisposable
     }
 
     public string MusicQuality => _settings.MusicQuality;
+
+    public AudioChannelMode AudioChannelMode => _settings.AudioChannelMode;
 
     public float[] EqGains => _settings.CustomEqGains;
 
@@ -1110,6 +1141,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         _player.SetVolume(_settings.Volume);
         _player.SetEQ(_settings.CustomEqGains);
         _player.SetSurround(_settings.EnableSurround);
+        _player.SetChannelMode(_settings.AudioChannelMode);
     }
 
     private void ShuffleQueue(TerminalSongItem current)

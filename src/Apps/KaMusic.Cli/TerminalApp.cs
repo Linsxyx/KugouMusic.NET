@@ -23,7 +23,7 @@ internal enum LocalInputModalMode
 
 internal sealed class TerminalApp : IAsyncDisposable
 {
-    private const int SettingsHeaderItemCount = 8;
+    private const int SettingsHeaderItemCount = 9;
     private const int SeekStepSeconds = 10;
     private static int SettingsItemCount => SettingsHeaderItemCount + 10;
 
@@ -2803,24 +2803,27 @@ internal sealed class TerminalApp : IAsyncDisposable
                 _playback.CycleQuality();
                 break;
             case 1:
-                _playback.ToggleSurround();
+                _playback.CycleChannelMode(direction);
                 break;
             case 2:
-                _playback.ToggleSeamlessTransition();
+                _playback.ToggleSurround();
                 break;
             case 3:
-                _playback.ToggleShuffle();
+                _playback.ToggleSeamlessTransition();
                 break;
             case 4:
-                _playback.CycleLyricMode();
+                _playback.ToggleShuffle();
                 break;
             case 5:
-                CycleImageMode(direction);
+                _playback.CycleLyricMode();
                 break;
             case 6:
-                CycleThemeMode(direction);
+                CycleImageMode(direction);
                 break;
             case 7:
+                CycleThemeMode(direction);
+                break;
+            case 8:
                 TriggerCheckOrApplyUpdate();
                 break;
             default:
