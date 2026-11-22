@@ -33,8 +33,8 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
     private readonly DpapiTransformDelegate _dpapiTransform;
     private readonly Action<string> _warningLogger;
 
-    public TerminalSessionPersistence()
-        : this(DefaultSessionPath, DefaultLegacySessionPath, OperatingSystem.IsWindows, TryDpapiTransform, DefaultLogWarning)
+    public TerminalSessionPersistence(Action<string>? warningLogger = null)
+        : this(DefaultSessionPath, DefaultLegacySessionPath, OperatingSystem.IsWindows, TryDpapiTransform, warningLogger)
     {
     }
 
@@ -196,7 +196,6 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
 
     private static void DefaultLogWarning(string message)
     {
-        CliLog.Warn("Session", message);
         Trace.TraceWarning(message);
     }
 

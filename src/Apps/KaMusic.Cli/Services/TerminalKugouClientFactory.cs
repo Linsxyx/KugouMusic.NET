@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using KuGou.Net.Clients;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Protocol.Raw;
@@ -27,7 +28,12 @@ internal static class TerminalKugouClientFactory
 {
     public static TerminalKugouClients Create()
     {
-        var (transport, sessionManager) = KgHttpClientFactory.CreateWithSession(new TerminalSessionPersistence());
+        var sessionPersistence = new TerminalSessionPersistence(warningLogger: message =>
+        {
+            CliLog.Warn("Session", message);
+            Trace.TraceWarning(message);
+        });
+        var (transport, sessionManager) = KgHttpClientFactory.CreateWithSession(sessionPersistence);
 
         var rawLogin = new RawLoginApi(transport, sessionManager, CliLog.CreateLogger<RawLoginApi>());
         var rawDevice = new RawDeviceApi(transport, sessionManager, CliLog.CreateLogger<RawDeviceApi>());
