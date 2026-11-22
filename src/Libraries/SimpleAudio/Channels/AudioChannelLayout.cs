@@ -1,11 +1,12 @@
 namespace SimpleAudio;
 
-// 多声道输出适配策略：自动跟随设备扬声器数、强制立体声或原样直出。
+// 多声道输出适配策略：自动跟随设备扬声器数、强制立体声、原样直出或耳机双耳 3D 空间环绕。
 public enum AudioChannelMode
 {
     Auto = 0,
     ForceStereo = 1,
-    Passthrough = 2
+    Passthrough = 2,
+    HeadphoneSpatial = 3
 }
 
 internal enum AudioChannelRole
@@ -43,6 +44,12 @@ internal sealed class AudioChannelLayout
         "2.0",
         MaskStereo,
         [AudioChannelRole.FrontLeft, AudioChannelRole.FrontRight]);
+
+    public static AudioChannelLayout HeadphoneSpatial3D { get; } = new(
+        "3D",
+        MaskStereo,
+        [AudioChannelRole.FrontLeft, AudioChannelRole.FrontRight],
+        isBinauralSpatial: true);
 
     public static AudioChannelLayout Quad { get; } = new(
         "4.0",
@@ -83,13 +90,82 @@ internal sealed class AudioChannelLayout
     public string Name { get; }
     public uint WaveChannelMask { get; }
     public AudioChannelRole[] Roles { get; }
+    public bool IsDiscrete { get; }
+    public bool IsBinauralSpatial { get; }
     public int Channels => Roles.Length;
 
-    public AudioChannelLayout(string name, uint waveChannelMask, AudioChannelRole[] roles)
+    public AudioChannelLayout(
+        string name,
+        uint waveChannelMask,
+        AudioChannelRole[] roles,
+        bool isDiscrete = false,
+        bool isBinauralSpatial = false)
     {
         Name = name;
         WaveChannelMask = waveChannelMask;
         Roles = roles;
+        IsDiscrete = isDiscrete;
+        IsBinauralSpatial = isBinauralSpatial;
+    }
+
+    // 根据 WAVE_FORMAT_EXTENSIBLE 的 dwChannelMask 位掩码精确解析声道角色顺序。
+    public static AudioChannelLayout FromWaveChannelMask(int channels, uint channelMask)
+    {
+        if (channelMask == 0)
+            return CreateDiscretePairs(channels);
+
+        if (channelMask == MaskStereo && channels == 2) return Stereo;
+        if (channelMask == MaskQuad && channels == 4) return Quad;
+        if (channelMask == Mask51 && channels == 6) return Surround51;
+        if (channelMask == Mask71 && channels == 8) return Surround71;
+
+        var roles = new List<AudioChannelRole>(channels);
+        var maskBits = new (uint Bit, AudioChannelRole Role)[]
+        {
+            (0x0000_0001, AudioChannelRole.FrontLeft),
+            (0x0000_0002, AudioChannelRole.FrontRight),
+            (0x0000_0004, AudioChannelRole.FrontCenter),
+            (0x0000_0008, AudioChannelRole.Lfe),
+            (0x0000_0010, AudioChannelRole.BackLeft),
+            (0x0000_0020, AudioChannelRole.BackRight),
+            (0x0000_0200, AudioChannelRole.SideLeft),
+            (0x0000_0400, AudioChannelRole.SideRight),
+            (0x0000_1000, AudioChannelRole.TopFrontLeft),
+            (0x0000_4000, AudioChannelRole.TopFrontRight),
+            (0x0000_8000, AudioChannelRole.TopBackLeft),
+            (0x0002_0000, AudioChannelRole.TopBackRight)
+        };
+
+        foreach (var (bit, role) in maskBits)
+        {
+            if ((channelMask & bit) != 0 && roles.Count < channels)
+            {
+                roles.Add(role);
+            }
+        }
+
+        if (roles.Count != channels)
+        {
+            return FromStandardChannelCount(channels);
+        }
+
+        return new AudioChannelLayout($"{channels}ch", channelMask, [.. roles]);
+    }
+
+    // 无声道掩码的离散多轨 WAV（例如 TDM8 PCM WAV）：按交错立体声对保留全部声道，绝不误将第 4 声道当作 LFE 丢弃。
+    public static AudioChannelLayout CreateDiscretePairs(int channels)
+    {
+        var count = Math.Max(1, channels);
+        if (count == 1) return Mono;
+        if (count == 2) return Stereo;
+
+        var roles = new AudioChannelRole[count];
+        for (var i = 0; i < count; i++)
+        {
+            roles[i] = (i & 1) == 0 ? AudioChannelRole.FrontLeft : AudioChannelRole.FrontRight;
+        }
+
+        return new AudioChannelLayout($"TDM {count}ch", 0, roles, isDiscrete: true);
     }
 
     // 根据标准 SMPTE / WAVE 声道数推导布局（适用于 FLAC/AAC/WAV/DSD/OGG 等常见格式）。
@@ -203,6 +279,11 @@ internal sealed class AudioChannelLayout
         var safeMax = Math.Max(2, maxSupportedChannels);
         var effectiveDeviceSpeakers = deviceSpeakers <= 0 ? 2 : deviceSpeakers;
 
+        if (mode == AudioChannelMode.HeadphoneSpatial)
+        {
+            return source.Channels <= 2 ? source : HeadphoneSpatial3D;
+        }
+
         if (mode == AudioChannelMode.ForceStereo)
         {
             return source.Channels <= 2 ? source : Stereo;
@@ -210,7 +291,12 @@ internal sealed class AudioChannelLayout
 
         if (mode == AudioChannelMode.Passthrough)
         {
-            if (source.Channels <= safeMax)
+            if (source.Channels <= safeMax && !source.IsDiscrete)
+            {
+                return source;
+            }
+
+            if (source.Channels <= safeMax && source.IsDiscrete)
             {
                 return source;
             }
@@ -238,7 +324,7 @@ internal sealed class AudioChannelLayout
 
     public bool HasSameRoleOrder(AudioChannelLayout other)
     {
-        if (Channels != other.Channels)
+        if (Channels != other.Channels || IsBinauralSpatial != other.IsBinauralSpatial)
         {
             return false;
         }

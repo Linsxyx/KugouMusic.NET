@@ -145,15 +145,12 @@ public partial class SimpleAudioPlayer : IDisposable
                     SourceStream = sourceStream;
                     StreamSourceOwner = owner;
                     _state.SourceChannelLayout = opened.SourceLayout;
+                    _state.OutputChannelLayout = opened.TargetLayout;
                     _state.SourceChannelCount = opened.SourceChannels;
                     _state.OutputChannelCount = opened.OutputChannels;
                     _state.SourceChannelLayoutName = opened.SourceLayoutName;
                     _state.OutputChannelLayoutName = opened.OutputLayoutName;
                     _state.ReloadableSourcePath = reloadableSourcePath;
-#if DEBUG
-                    Console.WriteLine(
-                        $"[Audio Channel] path={sourceDescription}, source={opened.SourceLayoutName}({opened.SourceChannels}ch), output={opened.OutputLayoutName}({opened.OutputChannels}ch), deviceSpeakers={deviceSpeakers}, mode={_state.ChannelMode}");
-#endif
                 }
             }
         }
@@ -208,7 +205,7 @@ public partial class SimpleAudioPlayer : IDisposable
         var sourceLayout = _state.SourceChannelLayout
                            ?? AudioChannelLayout.FromStandardChannelCount(_state.SourceChannelCount);
         var nextTarget = AudioChannelLayout.ResolveTargetLayout(sourceLayout, newSpeakers, _state.ChannelMode);
-        if (nextTarget.Channels == _state.OutputChannelCount)
+        if (_state.OutputChannelLayout != null && _state.OutputChannelLayout.HasSameRoleOrder(nextTarget))
             return false;
 
         var wasPlaying = IsPlaying;
@@ -278,6 +275,7 @@ public partial class SimpleAudioPlayer : IDisposable
         streamSourceOwner?.Dispose();
 
         _state.SourceChannelLayout = null;
+        _state.OutputChannelLayout = null;
         _state.SourceChannelCount = 0;
         _state.OutputChannelCount = 0;
         _state.SourceChannelLayoutName = string.Empty;

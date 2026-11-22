@@ -12,7 +12,7 @@ internal sealed class Av3aPcmWaveStream : Stream, IAbortableStreamSource
     private readonly Stream _input;
     private readonly Av3aMp4Track _track;
     private readonly Av3aNativeDecoder _decoder;
-    private readonly ChannelMixMatrix _mixMatrix;
+    private readonly IAudioChannelRenderer _renderer;
     private readonly byte[] _header;
     private readonly byte[] _firstPacket;
     private readonly byte[] _packetBuffer;
@@ -71,7 +71,7 @@ internal sealed class Av3aPcmWaveStream : Stream, IAbortableStreamSource
                 channelMode,
                 maxSupportedChannels);
 
-            _mixMatrix = ChannelMixMatrix.Build(SourceLayout, TargetLayout);
+            _renderer = ChannelMixMatrix.CreateRenderer(SourceLayout, TargetLayout, (int)info.SampleRate);
             _outputChannels = TargetLayout.Channels;
             _outputFrameBytes = _outputChannels * sizeof(float);
             _outputFrameSamples = new float[checked(_samplesPerFrame * _outputChannels)];
@@ -220,10 +220,11 @@ internal sealed class Av3aPcmWaveStream : Stream, IAbortableStreamSource
             return;
         }
 
-        // 随机跳转（向前大跳或向后跳）：重置原生解码器，回退 PrerollFrames 帧预热内部状态后输出目标帧。
+        // 随机跳转（向前大跳或向后跳）：重置原生解码器与空间渲染器延迟线，回退 PrerollFrames 帧预热内部状态后输出目标帧。
         var startFrame = Math.Max(0, targetFrameIndex - _prerollFrames);
         var seedSize = _track.ReadPacket(_input, startFrame, _packetBuffer);
         _decoder.Reset(_packetBuffer.AsSpan(0, seedSize));
+        _renderer.Reset();
         _cachedFrameIndex = -1;
         _nextDecoderFrameIndex = startFrame;
 
@@ -246,7 +247,7 @@ internal sealed class Av3aPcmWaveStream : Stream, IAbortableStreamSource
     {
         var size = _track.ReadPacket(_input, frameIndex, _packetBuffer);
         var pcm = _decoder.Decode(_packetBuffer.AsSpan(0, size));
-        _mixMatrix.ConvertInt16(pcm, _outputFrameSamples);
+        _renderer.RenderInt16(pcm, _outputFrameSamples);
         _cachedFrameIndex = frameIndex;
         _nextDecoderFrameIndex = frameIndex + 1;
     }

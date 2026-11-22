@@ -316,19 +316,6 @@
                         </StackPanel>
                     </Button>
                     
-                    <Border IsVisible="{Binding Player.HasMultiChannelBadge}"
-                            ToolTip.Tip="{Binding Player.ActiveChannelBadgeToolTip}"
-                            VerticalAlignment="Center"
-                            Padding="8,3"
-                            CornerRadius="8"
-                            Background="{DynamicResource SukiPrimaryColorLow}">
-                        <TextBlock Text="{Binding Player.ActiveChannelBadge}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SukiPrimaryColor}"
-                                   VerticalAlignment="Center" />
-                    </Border>
-
                     <ComboBox Classes="QualityCombo"
                               ItemsSource="{Binding Player.QualityOptions}"
                               SelectedItem="{Binding Player.QualitySelection}"

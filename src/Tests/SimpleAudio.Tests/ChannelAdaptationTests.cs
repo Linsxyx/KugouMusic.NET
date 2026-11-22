@@ -114,6 +114,52 @@ public class ChannelMixMatrixTests
         var target = AudioChannelLayout.ResolveTargetLayout(source, deviceSpeakers, mode);
         Assert.Equal(expectedCh, target.Channels);
     }
+
+    [Fact]
+    public void BinauralSpatialRenderer_SideLeftImpulseArrivesEarlierAndLouderInLeftEar()
+    {
+        var renderer = new BinauralSpatialRenderer(AudioChannelLayout.Surround71, sampleRate: 48000);
+        const int frames = 256;
+        var input = new float[frames * 8];
+        // 在第 10 帧给 SideLeft（索引 6）注入单位脉冲
+        input[10 * 8 + 6] = 1.0f;
+
+        var output = new float[frames * 2];
+        renderer.RenderFloat(input, output);
+
+        var peakIdxL = 0;
+        var peakValL = 0f;
+        var peakIdxR = 0;
+        var peakValR = 0f;
+
+        for (var f = 0; f < frames; f++)
+        {
+            var l = MathF.Abs(output[f * 2]);
+            var r = MathF.Abs(output[f * 2 + 1]);
+            if (l > peakValL) { peakValL = l; peakIdxL = f; }
+            if (r > peakValR) { peakValR = r; peakIdxR = f; }
+        }
+
+        // 左耳应比右耳更强（ILD），且早到达约 20~35 采样（~0.42~0.73ms ITD）
+        Assert.True(peakValL > peakValR * 1.4f, $"Expected strong ILD: L={peakValL:F4}, R={peakValR:F4}");
+        var itdSamples = peakIdxR - peakIdxL;
+        Assert.InRange(itdSamples, 15, 40);
+    }
+
+    [Fact]
+    public void DiscreteTdm8Layout_PreservesChannel3WithoutDroppingAsLfe()
+    {
+        var tdm8 = AudioChannelLayout.CreateDiscretePairs(8);
+        Assert.True(tdm8.IsDiscrete);
+        Assert.Equal("TDM 8ch", tdm8.Name);
+
+        var matrix = ChannelMixMatrix.Build(tdm8, AudioChannelLayout.Stereo);
+        var ch3Only = new float[] { 0f, 0f, 0f, 1.0f, 0f, 0f, 0f, 0f };
+        var stereo = new float[2];
+        matrix.ConvertFloat(ch3Only, stereo);
+        Assert.Equal(0f, stereo[0]);
+        Assert.True(stereo[1] > 0.4f, "TDM8 第 4 声道（c3）不应被误当作 LFE 丢弃");
+    }
 }
 
 [Collection("BASS")]
@@ -213,6 +259,82 @@ public class BassChannelAdapterTests
             finally
             {
                 Bass.StreamFree(tempo);
+            }
+        }
+        finally
+        {
+            Bass.Free();
+        }
+    }
+
+    [Fact]
+    public void LocalMultiChannelWaveSamples_Tdm8And51And71AdaptAndRender3D()
+    {
+        const string tdm8Path = "/Users/xiong/Music/tdm8.wav";
+        const string wav51Path = "/Users/xiong/Music/Nums_5dot1_24_48000.wav";
+        const string wav71Path = "/Users/xiong/Music/Nums_7dot1_24_48000.wav";
+
+        if (!File.Exists(tdm8Path) && !File.Exists(wav51Path) && !File.Exists(wav71Path))
+            return;
+
+        Assert.True(Bass.Init(0), Bass.LastError.ToString());
+        try
+        {
+            if (File.Exists(tdm8Path))
+            {
+                using var openedLinear = BassStreamOpener.OpenPathOrUrl(
+                    tdm8Path,
+                    BassFlags.Decode | BassFlags.Float,
+                    deviceSpeakers: 2,
+                    AudioChannelMode.Auto);
+                Assert.True(openedLinear.IsSuccess, openedLinear.Error);
+                Assert.Equal(8, openedLinear.SourceChannels);
+                Assert.Equal(2, openedLinear.OutputChannels);
+                Assert.Equal("TDM 8ch", openedLinear.SourceLayoutName);
+                Assert.Equal("2.0", openedLinear.OutputLayoutName);
+
+                var dur = Bass.ChannelBytes2Seconds(openedLinear.Handle, Bass.ChannelGetLength(openedLinear.Handle));
+                Assert.InRange(dur, 60.0, 61.0);
+
+                var buf = new float[4096];
+                Assert.True(Bass.ChannelSetPosition(openedLinear.Handle, Bass.ChannelSeconds2Bytes(openedLinear.Handle, 15.0)));
+                Assert.Equal(buf.Length * 4, Bass.ChannelGetData(openedLinear.Handle, buf, buf.Length * 4));
+                Assert.Contains(buf, static s => MathF.Abs(s) > 0.05f);
+
+                using var opened3d = BassStreamOpener.OpenPathOrUrl(
+                    tdm8Path,
+                    BassFlags.Decode | BassFlags.Float,
+                    deviceSpeakers: 2,
+                    AudioChannelMode.HeadphoneSpatial);
+                Assert.True(opened3d.IsSuccess, opened3d.Error);
+                Assert.Equal("TDM 8ch", opened3d.SourceLayoutName);
+                Assert.Equal("3D", opened3d.OutputLayoutName);
+                Assert.True(Bass.ChannelSetPosition(opened3d.Handle, Bass.ChannelSeconds2Bytes(opened3d.Handle, 15.0)));
+                Assert.Equal(buf.Length * 4, Bass.ChannelGetData(opened3d.Handle, buf, buf.Length * 4));
+                Assert.Contains(buf, static s => MathF.Abs(s) > 0.05f);
+            }
+
+            foreach (var (path, expectedName) in new[] { (wav51Path, "5.1"), (wav71Path, "7.1") })
+            {
+                if (!File.Exists(path)) continue;
+
+                using var opened3d = BassStreamOpener.OpenPathOrUrl(
+                    path,
+                    BassFlags.Decode | BassFlags.Float,
+                    deviceSpeakers: 2,
+                    AudioChannelMode.HeadphoneSpatial);
+                Assert.True(opened3d.IsSuccess, opened3d.Error);
+                Assert.Equal(expectedName, opened3d.SourceLayoutName);
+                Assert.Equal("3D", opened3d.OutputLayoutName);
+
+                // Nums_5dot1 / Nums_7dot1 在 t=1s(FL), 2s(FR), 3s(FC), 4s(LFE), 5s(BL), 6s(BR) 依次播报各声道
+                var oneSec = new float[48000 * 2];
+                for (var sec = 1; sec <= 6; sec++)
+                {
+                    Assert.True(Bass.ChannelSetPosition(opened3d.Handle, Bass.ChannelSeconds2Bytes(opened3d.Handle, sec)));
+                    Assert.True(Bass.ChannelGetData(opened3d.Handle, oneSec, oneSec.Length * 4) > 0);
+                    Assert.Contains(oneSec, static s => MathF.Abs(s) > 0.02f);
+                }
             }
         }
         finally

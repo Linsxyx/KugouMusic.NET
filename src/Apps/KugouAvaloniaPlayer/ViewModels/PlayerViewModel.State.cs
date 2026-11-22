@@ -287,50 +287,12 @@ public partial class PlayerViewModel
 
     public bool SetOutputDevice(int deviceId)
     {
-        var ok = _player.SetOutputDevice(deviceId);
-        if (ok)
-        {
-            RefreshActiveChannelBadge();
-        }
-
-        return ok;
+        return _player.SetOutputDevice(deviceId);
     }
 
     public void SetChannelMode(AudioChannelMode mode)
     {
         _player.SetChannelMode(mode);
-        RefreshActiveChannelBadge();
-    }
-
-    // 仅在播放多声道曲目（>2 声道）时更新声道适配徽标，避免普通立体声占据播放栏空间。
-    internal void RefreshActiveChannelBadge()
-    {
-        var sourceCh = _player.SourceChannelCount;
-        var outputCh = _player.OutputChannelCount;
-        if (sourceCh <= 2 || outputCh <= 0)
-        {
-            ActiveChannelBadge = string.Empty;
-            ActiveChannelBadgeToolTip = string.Empty;
-            return;
-        }
-
-        var sourceName = string.IsNullOrWhiteSpace(_player.SourceChannelLayoutName)
-            ? $"{sourceCh}ch"
-            : _player.SourceChannelLayoutName;
-        var outputName = string.IsNullOrWhiteSpace(_player.OutputChannelLayoutName)
-            ? $"{outputCh}ch"
-            : _player.OutputChannelLayoutName;
-
-        if (sourceCh == outputCh)
-        {
-            ActiveChannelBadge = outputName;
-            ActiveChannelBadgeToolTip = $"多声道 {sourceName}（{sourceCh} 声道）原样直出";
-        }
-        else
-        {
-            ActiveChannelBadge = $"{sourceName} → {outputName}";
-            ActiveChannelBadgeToolTip = $"多声道源 {sourceName}（{sourceCh} 声道）已自动适配为 {outputName}（{outputCh} 声道）输出";
-        }
     }
 
     public async Task<bool> SwitchQualityAsync(string? quality)

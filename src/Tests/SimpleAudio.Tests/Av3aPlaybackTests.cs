@@ -157,7 +157,26 @@ public class Av3aPlaybackTests(ITestOutputHelper output)
             var tempAfter = Directory.GetFiles(Path.GetTempPath(), "simpleaudio-av3a-*.pcm");
             Assert.Equal(tempBefore.Length, tempAfter.Length);
 
-            // 2. 5.1 / 7.1 硬件设备自适配验证（含 BassFx.TempoCreate）
+            // 2. 耳机双耳 3D 空间环绕验证（7.1.4 -> 3D）
+            using (var opened3d = BassStreamOpener.OpenPathOrUrl(
+                       SamplePath,
+                       BassFlags.Decode | BassFlags.Float,
+                       deviceSpeakers: 2,
+                       AudioChannelMode.HeadphoneSpatial))
+            {
+                Assert.True(opened3d.IsSuccess, opened3d.Error);
+                Assert.Equal(12, opened3d.SourceChannels);
+                Assert.Equal(2, opened3d.OutputChannels);
+                Assert.Equal("7.1.4", opened3d.SourceLayoutName);
+                Assert.Equal("3D", opened3d.OutputLayoutName);
+
+                Assert.True(Bass.ChannelSetPosition(opened3d.Handle, Bass.ChannelSeconds2Bytes(opened3d.Handle, 15.0)));
+                var buf3d = new float[4096];
+                Assert.Equal(buf3d.Length * 4, Bass.ChannelGetData(opened3d.Handle, buf3d, buf3d.Length * 4));
+                Assert.Contains(buf3d, static s => MathF.Abs(s) > 0.001f);
+            }
+
+            // 3. 5.1 / 7.1 硬件设备自适配验证（含 BassFx.TempoCreate）
             foreach (var (speakers, expectedCh, expectedName) in new[] { (6, 6, "5.1"), (8, 8, "7.1") })
             {
                 using var opened = BassStreamOpener.OpenPathOrUrl(

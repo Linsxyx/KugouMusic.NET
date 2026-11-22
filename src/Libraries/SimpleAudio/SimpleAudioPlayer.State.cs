@@ -32,6 +32,7 @@ public partial class SimpleAudioPlayer
         public IDisposable? StreamSourceOwner { get; set; }
         public AudioChannelMode ChannelMode { get; set; } = AudioChannelMode.Auto;
         public AudioChannelLayout? SourceChannelLayout { get; set; }
+        public AudioChannelLayout? OutputChannelLayout { get; set; }
         public int SourceChannelCount { get; set; }
         public int OutputChannelCount { get; set; }
         public string SourceChannelLayoutName { get; set; } = string.Empty;

@@ -11,6 +11,7 @@ public sealed record AudioChannelModeOption(AudioChannelMode Mode, string Label)
     public static AudioChannelModeOption[] Options { get; } =
     [
         new(AudioChannelMode.Auto, "自动适配设备"),
+        new(AudioChannelMode.HeadphoneSpatial, "耳机空间环绕 (3D)"),
         new(AudioChannelMode.ForceStereo, "强制立体声 (2.0)"),
         new(AudioChannelMode.Passthrough, "多声道直出")
     ];

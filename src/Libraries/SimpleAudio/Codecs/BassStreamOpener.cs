@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using ManagedBass;
 using SimpleAudio.Codecs.Av3a;
 
@@ -139,8 +140,9 @@ internal static class BassStreamOpener
         int maxSupportedChannels = DefaultMaxSupportedChannels)
     {
         var externalOwner = ReferenceEquals(owner, inputStream) ? null : owner;
+        AudioChannelLayout? probedSourceLayout = null;
 
-        // 1. 仅对可寻址流（如 ProgressiveRemoteAudioStream / FileStream）执行廉价 12B 魔数预检，避免干扰实时直播流。
+        // 1. 仅对可寻址流（如 ProgressiveRemoteAudioStream / FileStream）执行廉价魔数预检，避免干扰实时直播流。
         if (inputStream.CanSeek)
         {
             var custom = TryOpenWithCustomCodecs(
@@ -162,6 +164,8 @@ internal static class BassStreamOpener
                 DisposeSafely(inputStream, externalOwner);
                 return OpenedBassStream.Failure(codecError);
             }
+
+            probedSourceLayout = TryProbeWavChannelLayout(inputStream);
         }
 
         // 2. 普通格式交由 BASS 原生解码。
@@ -184,14 +188,15 @@ internal static class BassStreamOpener
             return OpenedBassStream.Failure(err);
         }
 
-        // 3. 若 BASS 解出的普通格式（如 5.1 FLAC / 7.1 AAC）超出输出设备声道能力，自动套上按需矩阵适配层。
+        // 3. 若 BASS 解出的普通格式（如 5.1 FLAC / 7.1 AAC / TDM8 WAV）超出设备能力或启用耳机 3D 环绕，自动套上按需适配层。
         return AdaptRawHandleIfNeeded(
             rawHandle,
             managedSource,
             sourceFlags,
             deviceSpeakers,
             channelMode,
-            maxSupportedChannels);
+            maxSupportedChannels,
+            probedSourceLayout);
     }
 
     // 供响度归一化、过渡分析等纯后台分析模块使用：支持本地文件、缓存文件、AV3A 与多声道统一适配。
@@ -230,6 +235,7 @@ internal static class BassStreamOpener
         int maxSupportedChannels)
     {
         FileStream? probeStream = null;
+        AudioChannelLayout? probedSourceLayout = null;
         try
         {
             probeStream = new FileStream(
@@ -262,6 +268,8 @@ internal static class BassStreamOpener
                     return OpenedBassStream.Failure(codecError);
                 }
             }
+
+            probedSourceLayout = TryProbeWavChannelLayout(probeStream);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -284,7 +292,8 @@ internal static class BassStreamOpener
             sourceFlags,
             deviceSpeakers,
             channelMode,
-            maxSupportedChannels);
+            maxSupportedChannels,
+            probedSourceLayout);
     }
 
     private static bool MightMatchAnyCustomCodec(Stream seekableInput)
@@ -382,14 +391,104 @@ internal static class BassStreamOpener
         return null;
     }
 
-    // 检查 BASS 原生流声道数；若超出设备能力或用户策略，自动包装一层零落盘按需矩阵适配流。
+    // 探测 RIFF/WAVE 的 fmt 块：区分带精确 dwChannelMask 的 5.1/7.1 与无掩码的离散多轨（如 TDM8 WAV）。
+    private static AudioChannelLayout? TryProbeWavChannelLayout(Stream seekableInput)
+    {
+        var originalPos = seekableInput.Position;
+        try
+        {
+            Span<byte> riff = stackalloc byte[12];
+            seekableInput.Position = 0;
+            if (!TryReadExactly(seekableInput, riff) ||
+                !riff[..4].SequenceEqual("RIFF"u8) ||
+                !riff[8..12].SequenceEqual("WAVE"u8))
+            {
+                return null;
+            }
+
+            Span<byte> chunkHeader = stackalloc byte[8];
+            Span<byte> fmtBody = stackalloc byte[40];
+            var fileLength = seekableInput.Length;
+            var chunksScanned = 0;
+
+            while (seekableInput.Position + 8 <= fileLength && chunksScanned++ < 16)
+            {
+                if (!TryReadExactly(seekableInput, chunkHeader))
+                    break;
+
+                var chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(chunkHeader[4..8]);
+                var payloadStart = seekableInput.Position;
+
+                if (chunkHeader[..4].SequenceEqual("fmt "u8) && chunkSize >= 16)
+                {
+                    var toRead = (int)Math.Min(fmtBody.Length, chunkSize);
+                    if (!TryReadExactly(seekableInput, fmtBody[..toRead]))
+                        return null;
+
+                    var formatTag = BinaryPrimitives.ReadUInt16LittleEndian(fmtBody[..2]);
+                    var channels = BinaryPrimitives.ReadUInt16LittleEndian(fmtBody.Slice(2, 2));
+                    if (channels <= 2)
+                        return null;
+
+                    if (formatTag == 0xFFFE && toRead >= 24)
+                    {
+                        var channelMask = BinaryPrimitives.ReadUInt32LittleEndian(fmtBody.Slice(20, 4));
+                        return AudioChannelLayout.FromWaveChannelMask(channels, channelMask);
+                    }
+
+                    if (formatTag is 1 or 3)
+                    {
+                        // 非 EXTENSIBLE 的多声道 PCM/Float WAV（如 TDM8）无扬声器掩码，按离散立体声对完整保留全部声道。
+                        return AudioChannelLayout.CreateDiscretePairs(channels);
+                    }
+
+                    return null;
+                }
+
+                var nextOffset = payloadStart + chunkSize + (chunkSize & 1);
+                if (nextOffset <= payloadStart || nextOffset > fileLength)
+                    break;
+
+                seekableInput.Position = nextOffset;
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            if (seekableInput.CanSeek)
+                seekableInput.Position = originalPos;
+        }
+    }
+
+    private static bool TryReadExactly(Stream input, Span<byte> buffer)
+    {
+        var read = 0;
+        while (read < buffer.Length)
+        {
+            var n = input.Read(buffer[read..]);
+            if (n == 0)
+                return false;
+
+            read += n;
+        }
+
+        return true;
+    }
+
+    // 检查 BASS 原生流声道数；若超出设备能力或启用耳机 3D 环绕，自动包装一层零落盘按需适配流。
     private static OpenedBassStream AdaptRawHandleIfNeeded(
         int rawHandle,
         IDisposable? rawOwner,
         BassFlags sourceFlags,
         int deviceSpeakers,
         AudioChannelMode channelMode,
-        int maxSupportedChannels)
+        int maxSupportedChannels,
+        AudioChannelLayout? probedSourceLayout = null)
     {
         if (!Bass.ChannelGetInfo(rawHandle, out var info))
         {
@@ -397,7 +496,9 @@ internal static class BassStreamOpener
             return OpenedBassStream.Success(rawHandle, rawOwner, fallbackLayout, fallbackLayout);
         }
 
-        var sourceLayout = AudioChannelLayout.FromStandardChannelCount(info.Channels);
+        var sourceLayout = probedSourceLayout != null && probedSourceLayout.Channels == info.Channels
+            ? probedSourceLayout
+            : AudioChannelLayout.FromStandardChannelCount(info.Channels);
         var targetLayout = AudioChannelLayout.ResolveTargetLayout(
             sourceLayout,
             deviceSpeakers,

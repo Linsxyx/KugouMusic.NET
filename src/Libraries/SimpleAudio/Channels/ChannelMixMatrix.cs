@@ -1,7 +1,7 @@
 namespace SimpleAudio;
 
 // 通用多声道声学混音矩阵，支持任意源声道拓扑向目标设备声道拓扑的能量归一化折叠。
-internal sealed class ChannelMixMatrix
+internal sealed class ChannelMixMatrix : IAudioChannelRenderer
 {
     private const float CenterGain = 0.70710678f;   // -3 dB (sqrt(0.5))
     private const float SurroundGain = 0.70710678f; // -3 dB
@@ -32,6 +32,24 @@ internal sealed class ChannelMixMatrix
 
     public float GetWeight(int targetChannel, int sourceChannel) =>
         _floatWeights[targetChannel * SourceChannels + sourceChannel];
+
+    // 统一工厂：根据目标布局决定采用双耳 3D 空间渲染器还是线性声学混音矩阵。
+    public static IAudioChannelRenderer CreateRenderer(
+        AudioChannelLayout source,
+        AudioChannelLayout target,
+        int sampleRate)
+    {
+        if (target.IsBinauralSpatial && source.Channels > 2)
+        {
+            return new BinauralSpatialRenderer(source, sampleRate);
+        }
+
+        return Build(source, target);
+    }
+
+    public void RenderInt16(ReadOnlySpan<short> input, Span<float> output) => ConvertInt16(input, output);
+    public void RenderFloat(ReadOnlySpan<float> input, Span<float> output) => ConvertFloat(input, output);
+    public void Reset() { }
 
     // 根据源布局与目标布局自动构建声学混音矩阵，并按能量（RMS）归一化防止音量塌陷。
     public static ChannelMixMatrix Build(AudioChannelLayout source, AudioChannelLayout target)

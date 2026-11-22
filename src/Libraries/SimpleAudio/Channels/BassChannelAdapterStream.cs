@@ -12,7 +12,7 @@ internal sealed class BassChannelAdapterStream : Stream, IAbortableStreamSource
     private readonly object _gate = new();
     private readonly int _rawHandle;
     private readonly IDisposable? _rawOwner;
-    private readonly ChannelMixMatrix _matrix;
+    private readonly IAudioChannelRenderer _renderer;
     private readonly byte[] _header;
     private readonly long _pcmDataLength;
     private readonly int _sourceFrameBytes;
@@ -37,7 +37,7 @@ internal sealed class BassChannelAdapterStream : Stream, IAbortableStreamSource
     {
         _rawHandle = rawHandle;
         _rawOwner = rawOwner;
-        _matrix = ChannelMixMatrix.Build(sourceLayout, targetLayout);
+        _renderer = ChannelMixMatrix.CreateRenderer(sourceLayout, targetLayout, sampleRate);
         _sourceFrameBytes = sourceLayout.Channels * sizeof(float);
         _targetFrameBytes = targetLayout.Channels * sizeof(float);
 
@@ -160,6 +160,7 @@ internal sealed class BassChannelAdapterStream : Stream, IAbortableStreamSource
 
         _bufferedBytes = 0;
         _bufferedOffset = 0;
+        _renderer.Reset();
 
         if (!Bass.ChannelSetPosition(_rawHandle, rawBytePos, PositionFlags.Bytes))
         {
@@ -197,9 +198,9 @@ internal sealed class BassChannelAdapterStream : Stream, IAbortableStreamSource
             return false;
         }
 
-        var srcSamples = framesRead * _matrix.SourceChannels;
-        var dstSamples = framesRead * _matrix.TargetChannels;
-        _matrix.ConvertFloat(_sourceBuffer.AsSpan(0, srcSamples), _targetBuffer.AsSpan(0, dstSamples));
+        var srcSamples = framesRead * _renderer.SourceChannels;
+        var dstSamples = framesRead * _renderer.TargetChannels;
+        _renderer.RenderFloat(_sourceBuffer.AsSpan(0, srcSamples), _targetBuffer.AsSpan(0, dstSamples));
         _bufferedBytes = dstSamples * sizeof(float);
         return true;
     }

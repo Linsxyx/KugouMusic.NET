@@ -162,15 +162,6 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
     public partial string QualitySelection { get; set; } = AudioQuality.Default;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasMultiChannelBadge))]
-    public partial string ActiveChannelBadge { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string ActiveChannelBadgeToolTip { get; set; } = string.Empty;
-
-    public bool HasMultiChannelBadge => !string.IsNullOrWhiteSpace(ActiveChannelBadge);
-
-    [ObservableProperty]
     public partial double TotalDurationSeconds { get; set; }
 
     private CancellationTokenSource? _transitionWorkCancellation;
@@ -368,18 +359,6 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
                 _player.SetVolume(MusicVolume);
                 _player.Play();
                 IsPlayingAudio = true;
-                RefreshActiveChannelBadge();
-#if DEBUG
-                _logger.LogInformation(
-                    "[Audio Channel] 歌曲={SongName}, 源声道={SourceLayout}({SourceChannels}ch) -> 输出声道={OutputLayout}({OutputChannels}ch), 设备扬声器={DeviceSpeakers}ch, 模式={ChannelMode}",
-                    song.Name,
-                    _player.SourceChannelLayoutName,
-                    _player.SourceChannelCount,
-                    _player.OutputChannelLayoutName,
-                    _player.OutputChannelCount,
-                    SimpleAudioPlayer.GetCurrentOutputDeviceSpeakerCount(),
-                    _player.ChannelMode);
-#endif
                 TotalDurationSeconds =
                     song.DurationSeconds > 0 ? song.DurationSeconds : _player.GetDuration().TotalSeconds;
                 _playbackTimer.Start();

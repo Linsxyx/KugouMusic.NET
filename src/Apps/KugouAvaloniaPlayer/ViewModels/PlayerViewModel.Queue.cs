@@ -310,8 +310,6 @@ public partial class PlayerViewModel
         _playbackCoordinator.InvalidatePendingLoads();
         _player.Stop();
         IsPlayingAudio = false;
-        ActiveChannelBadge = string.Empty;
-        ActiveChannelBadgeToolTip = string.Empty;
         CurrentLyricLine = null;
         CurrentLyricIndex = -1;
         NextLyricLine = null;

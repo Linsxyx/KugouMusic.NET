@@ -799,8 +799,11 @@ public partial class SettingViewModel : PageViewModelBase
         var mode = SelectedAudioChannelMode?.Mode ?? SettingsManager.Settings.AudioChannelMode;
         CurrentDeviceChannelSummary = mode switch
         {
+            AudioChannelMode.HeadphoneSpatial => $"当前输出设备支持 {speakers} 声道，多声道曲目将通过双耳 HRTF 虚拟环绕渲染出 3D 方位感。",
             AudioChannelMode.ForceStereo => $"当前输出设备支持 {speakers} 声道，多声道曲目将统一混音为立体声输出。",
-            AudioChannelMode.Passthrough => $"当前输出设备支持 {speakers} 声道，优先保留多声道原样直出（最高 7.1）。",
+            AudioChannelMode.Passthrough => speakers <= 2
+                ? $"当前输出设备仅报告 {speakers} 声道，直出模式可能导致部分驱动截断额外声道（耳机推荐改用“耳机空间环绕”）。"
+                : $"当前输出设备支持 {speakers} 声道，优先保留多声道原样直出（最高 7.1）。",
             _ => $"当前输出设备支持 {speakers} 声道，多声道曲目将自动适配设备拓扑。"
         };
     }
