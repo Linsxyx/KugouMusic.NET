@@ -2,7 +2,6 @@ using KuGou.Net.Clients;
 using KuGou.Net.Infrastructure.Http;
 using KuGou.Net.Protocol.Raw;
 using KuGou.Net.Protocol.Session;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KaMusic.Cli.Services;
 
@@ -30,11 +29,11 @@ internal static class TerminalKugouClientFactory
     {
         var (transport, sessionManager) = KgHttpClientFactory.CreateWithSession(new TerminalSessionPersistence());
 
-        var rawLogin = new RawLoginApi(transport, sessionManager, NullLogger<RawLoginApi>.Instance);
-        var rawDevice = new RawDeviceApi(transport, sessionManager, NullLogger<RawDeviceApi>.Instance);
+        var rawLogin = new RawLoginApi(transport, sessionManager, CliLog.CreateLogger<RawLoginApi>());
+        var rawDevice = new RawDeviceApi(transport, sessionManager, CliLog.CreateLogger<RawDeviceApi>());
         var rawSearch = new RawSearchApi(transport);
         var rawUser = new RawUserApi(transport);
-        var rawPlaylist = new RawPlaylistApi(transport, NullLogger<RawPlaylistApi>.Instance);
+        var rawPlaylist = new RawPlaylistApi(transport, CliLog.CreateLogger<RawPlaylistApi>());
         var rawLyric = new RawLyricApi(transport);
         var rawDiscovery = new RawDiscoveryApi(transport);
         var rawRank = new RawRankApi(transport);
@@ -45,8 +44,8 @@ internal static class TerminalKugouClientFactory
         return new TerminalKugouClients
         {
             SessionManager = sessionManager,
-            Login = new LoginClient(rawLogin, sessionManager, NullLogger<LoginClient>.Instance),
-            Device = new RegisterClient(rawDevice, sessionManager, NullLogger<RegisterClient>.Instance),
+            Login = new LoginClient(rawLogin, sessionManager, CliLog.CreateLogger<LoginClient>()),
+            Device = new RegisterClient(rawDevice, sessionManager, CliLog.CreateLogger<RegisterClient>()),
             Recommend = new RecommendClient(rawDiscovery, sessionManager),
             Search = new SearchClient(rawSearch, sessionManager),
             Song = new SongClient(rawSong),

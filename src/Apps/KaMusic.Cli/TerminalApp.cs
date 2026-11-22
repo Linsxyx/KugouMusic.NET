@@ -164,6 +164,7 @@ internal sealed class TerminalApp : IAsyncDisposable
         ApplyTheme();
         _dispatcher.UnhandledException += ex =>
         {
+            CliLog.Error("UiDispatcher", $"UI 回调未处理异常 page={_page}", ex);
             _status = ex.Message;
             _dirty = true;
         };
@@ -179,54 +180,107 @@ internal sealed class TerminalApp : IAsyncDisposable
 
     public Task RunAsync()
     {
+        const long slowTickThresholdMs = 1000;
+        const long stallWarnThresholdMs = 10_000;
+        const long stallRepeatIntervalMs = 30_000;
+
         var previousContext = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(_dispatcher);
         _renderer.Enter();
         _detectedThemeKind = TerminalCapabilities.DetectThemeKind();
         ApplyTheme();
         _input = new TerminalInput(_dispatcher.Wake);
+
+        var loopPhase = "Init";
+        var lastHeartbeatTick = Environment.TickCount64;
+        var lastStallWarnTick = 0L;
+        var stalled = false;
+        using var watchdog = new Timer(_ =>
+        {
+            var nowTick = Environment.TickCount64;
+            var elapsed = nowTick - Volatile.Read(ref lastHeartbeatTick);
+            if (elapsed >= stallWarnThresholdMs)
+            {
+                if (!stalled || nowTick - lastStallWarnTick >= stallRepeatIntervalMs)
+                {
+                    stalled = true;
+                    lastStallWarnTick = nowTick;
+                    CliLog.Warn(
+                        "MainLoop",
+                        $"主循环疑似卡死 elapsed={elapsed}ms phase={Volatile.Read(ref loopPhase)} page={_page}");
+                }
+            }
+            else if (stalled)
+            {
+                stalled = false;
+                CliLog.Info("MainLoop", $"主循环恢复响应 phase={Volatile.Read(ref loopPhase)} page={_page}");
+            }
+        }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+
         try
         {
-            _ = InitializeAsync();
+            ObserveTask(InitializeAsync(), "Initialize");
             var nextTick = Environment.TickCount64;
 
             while (!_exitRequested)
             {
+                var tickStart = Environment.TickCount64;
+                Volatile.Write(ref lastHeartbeatTick, tickStart);
+
+                Volatile.Write(ref loopPhase, "Key");
                 while (_input.TryReadKey(out var key))
                 {
-                    _ = HandleKeyAsync(key);
+                    ObserveTask(HandleKeyAsync(key), "HandleKey");
                     _dirty = true;
                 }
 
+                Volatile.Write(ref loopPhase, "Mouse");
                 while (_input.TryReadMouse(out var mouse))
                 {
-                    _ = HandleMouseAsync(mouse);
+                    ObserveTask(HandleMouseAsync(mouse), "HandleMouse");
                     _dirty = true;
                 }
 
+                var afterInput = Environment.TickCount64;
+                Volatile.Write(ref loopPhase, "Drain");
                 if (_dispatcher.Drain())
                 {
                     _dirty = true;
                 }
 
-                var now = Environment.TickCount64;
+                var afterDrain = Environment.TickCount64;
+                var now = afterDrain;
                 if (_dirty || now >= nextTick)
                 {
+                    Volatile.Write(ref loopPhase, "Render");
                     RenderFrame();
                     _dirty = false;
+                    Volatile.Write(ref loopPhase, "Snapshot");
                     var snapshot = _playback.GetSnapshot();
                     nextTick = now + GetFrameIntervalMs(snapshot);
                 }
 
-                var wait = (int)Math.Clamp(nextTick - Environment.TickCount64, 5, 45);
+                var tickEnd = Environment.TickCount64;
+                Volatile.Write(ref lastHeartbeatTick, tickEnd);
+                var activeMs = tickEnd - tickStart;
+                if (activeMs >= slowTickThresholdMs)
+                {
+                    CliLog.Warn(
+                        "MainLoop",
+                        $"主循环单帧耗时过长 total={activeMs}ms input={afterInput - tickStart}ms drain={afterDrain - afterInput}ms render={tickEnd - afterDrain}ms page={_page}");
+                }
+
+                var wait = (int)Math.Clamp(nextTick - tickEnd, 5, 45);
                 if (!_input.HasPending)
                 {
+                    Volatile.Write(ref loopPhase, "Wait");
                     _dispatcher.Wait(wait);
                 }
             }
         }
         finally
         {
+            watchdog.Change(Timeout.Infinite, Timeout.Infinite);
             _input.Dispose();
             _login.Dispose();
             _renderer.Exit();
@@ -234,6 +288,45 @@ internal sealed class TerminalApp : IAsyncDisposable
         }
 
         return Task.CompletedTask;
+    }
+
+    // 捕获即发即忘异步任务的异常并写入日志，避免异常静默丢失。
+    private void ObserveTask(Task task, string context)
+    {
+        if (task.IsCompleted)
+        {
+            if (task.IsFaulted && task.Exception != null)
+            {
+                var ex = task.Exception.GetBaseException();
+                CliLog.Error(context, $"异步任务异常 page={_page}", ex);
+                _status = ex.Message;
+                _dirty = true;
+            }
+
+            return;
+        }
+
+        _ = task.ContinueWith(
+            static (t, state) =>
+            {
+                var (app, ctx) = ((TerminalApp, string))state!;
+                var ex = t.Exception?.GetBaseException();
+                if (ex == null)
+                {
+                    return;
+                }
+
+                CliLog.Error(ctx, $"异步任务异常 page={app._page}", ex);
+                app._dispatcher.Post(() =>
+                {
+                    app._status = ex.Message;
+                    app._dirty = true;
+                });
+            },
+            (this, context),
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private async Task InitializeAsync()

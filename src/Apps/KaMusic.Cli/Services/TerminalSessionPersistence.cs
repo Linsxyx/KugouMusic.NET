@@ -196,6 +196,7 @@ internal sealed class TerminalSessionPersistence : ISessionPersistence
 
     private static void DefaultLogWarning(string message)
     {
+        CliLog.Warn("Session", message);
         Trace.TraceWarning(message);
     }
 

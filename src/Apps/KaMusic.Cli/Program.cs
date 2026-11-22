@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using KaMusic.Cli.Services;
 using KaMusic.Cli.Tui;
@@ -21,17 +22,42 @@ internal static class Program
             return await CliDiagnostics.RunAsync(args);
         }
 
+        CliLog.Initialize();
+        CliLog.RegisterGlobalExceptionHandlers();
+        var version = Environment.GetEnvironmentVariable("KAMUSIC_VERSION");
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "dev";
+        }
+
+        CliLog.Info(
+            "Program",
+            $"CLI 启动 pid={Environment.ProcessId} version={version} os={RuntimeInformation.OSDescription} arch={RuntimeInformation.ProcessArchitecture}");
+
         var updateRequested = false;
-        SimpleAudioPlayer.Initialize();
+        var audioInitialized = false;
         try
         {
+            SimpleAudioPlayer.Initialize();
+            audioInitialized = true;
             await using var app = new TerminalApp();
             await app.RunAsync();
             updateRequested = app.UpdateRequested;
         }
+        catch (Exception ex)
+        {
+            CliLog.Error("Program", "CLI 运行过程中发生未处理异常", ex);
+            throw;
+        }
         finally
         {
-            SimpleAudioPlayer.Free();
+            if (audioInitialized)
+            {
+                SimpleAudioPlayer.Free();
+            }
+
+            CliLog.Info("Program", $"CLI 退出 updateRequested={updateRequested}");
+            CliLog.Shutdown();
         }
 
         if (!updateRequested)

@@ -148,7 +148,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             _personalFm?.Clear();
         }
 
-        await _playLock.WaitAsync();
+        await AcquirePlayLockAsync("Play", song.Name);
         try
         {
             if (Volatile.Read(ref _disposeState) != 0)
@@ -238,7 +238,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        await _playLock.WaitAsync();
+        await AcquirePlayLockAsync(trackFinished ? "PlayNext(Auto)" : "PlayNext", CurrentSong?.Name);
         try
         {
             if (Volatile.Read(ref _disposeState) != 0 || _queue.Count == 0)
@@ -275,7 +275,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        await _playLock.WaitAsync();
+        await AcquirePlayLockAsync("PlayPrevious", CurrentSong?.Name);
         try
         {
             if (Volatile.Read(ref _disposeState) != 0 || _queue.Count == 0)
@@ -575,11 +575,15 @@ internal sealed class TerminalPlaybackService : IDisposable
         var requestVersion = Interlocked.Increment(ref _playVersion);
         var loadCts = ResetLoadCancellation();
         ResetTransitionPipeline(cancelPreparedTrack: true);
+        var loadStartTick = Environment.TickCount64;
+        var sourceKind = song.IsLocalFile ? "local" : song.IsRemoteStream ? "remote" : "online";
+        CliLog.Info("Playback", $"开始加载 song=\"{song.Name}\" source={sourceKind} quality={_settings.MusicQuality}");
 
         if (song.IsLocalFile && !string.IsNullOrWhiteSpace(song.LocalFilePath))
         {
             if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(song.LocalFilePath))
             {
+                CliLog.Warn("Playback", $"本地音频加载失败 song=\"{song.Name}\"");
                 StatusMessage = $"本地音频加载失败：{song.Name}";
                 return;
             }
@@ -596,10 +600,12 @@ internal sealed class TerminalPlaybackService : IDisposable
         {
             if (!await LoadRemoteAudioAsync(song.RemoteUrl, requestVersion, loadCts.Token).ConfigureAwait(false))
             {
+                CliLog.Warn("Playback", $"远程音频加载失败 song=\"{song.Name}\" url={CliLog.SanitizeUrl(song.RemoteUrl)}");
                 StatusMessage = $"远程音频加载失败：{song.Name}";
                 return;
             }
 
+            LogIfSlowLoad(song.Name, loadStartTick);
             _activeSource = _player.ActiveSource ?? song.RemoteUrl;
             ApplySettings();
             _player.Play();
@@ -624,16 +630,19 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         if (playData?.Status != 1 || string.IsNullOrWhiteSpace(url))
         {
+            CliLog.Warn("Playback", $"获取播放地址失败 song=\"{song.Name}\" status={playData?.Status} quality={_settings.MusicQuality}");
             StatusMessage = $"无法播放：{song.Name}";
             return;
         }
 
         if (!await LoadRemoteAudioAsync(url, requestVersion, loadCts.Token).ConfigureAwait(false))
         {
+            CliLog.Warn("Playback", $"在线音频加载失败 song=\"{song.Name}\" url={CliLog.SanitizeUrl(url)}");
             StatusMessage = $"音频加载失败：{song.Name}";
             return;
         }
 
+        LogIfSlowLoad(song.Name, loadStartTick);
         _activeSource = _player.ActiveSource ?? url;
         ApplySettings();
         _player.Play();
@@ -649,6 +658,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             return false;
         }
 
+        var safeUrl = CliLog.SanitizeUrl(url);
         try
         {
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -665,14 +675,21 @@ internal sealed class TerminalPlaybackService : IDisposable
             {
                 return true;
             }
+
+            CliLog.Warn("Playback", $"渐进式音源 Load 返回 false，回退 BASS 直连 url={safeUrl}");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return false;
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            CliLog.Warn("Playback", $"渐进式远程音频首块加载超时 ({RemoteInitialLoadTimeout.TotalSeconds:0}s)，回退 BASS 直连 url={safeUrl}");
+        }
+        catch (Exception ex)
         {
             // 渐进式流打开失败时回退至 BASS 原生直连。
+            CliLog.Warn("Playback", $"渐进式远程音频打开异常，回退 BASS 直连 url={safeUrl}", ex);
         }
 
         if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || cancellationToken.IsCancellationRequested)
@@ -680,7 +697,13 @@ internal sealed class TerminalPlaybackService : IDisposable
             return false;
         }
 
-        return _player.Load(url);
+        var directLoaded = _player.Load(url);
+        if (!directLoaded)
+        {
+            CliLog.Warn("Playback", $"BASS 直连加载失败 url={safeUrl}");
+        }
+
+        return directLoaded;
     }
 
     private void UpdateTransitionPipeline(PlaybackStateSnapshot snapshot)
@@ -801,9 +824,14 @@ internal sealed class TerminalPlaybackService : IDisposable
             };
             StatusMessage = $"已预加载下一首：{nextSong.Name}";
         }
-        catch
+        catch (OperationCanceledException)
+        {
+            // Preload cancellation is expected on track switch.
+        }
+        catch (Exception ex)
         {
             // Preload is opportunistic.
+            CliLog.Warn("Playback", $"预加载下一首失败 song=\"{nextSong.Name}\"", ex);
         }
         finally
         {
@@ -857,8 +885,14 @@ internal sealed class TerminalPlaybackService : IDisposable
             _pendingTransitionProfile = profile;
             StatusMessage = $"智能过渡已就绪：{profile.MixDurationSec:0.0}s";
         }
-        catch
+        catch (OperationCanceledException)
         {
+            _pendingTransitionSong = nextSong;
+            _pendingTransitionProfile = BuildFallbackTransitionProfile(FallbackMixEntrySec);
+        }
+        catch (Exception ex)
+        {
+            CliLog.Warn("Playback", $"智能过渡分析失败，回退默认过渡 song=\"{nextSong.Name}\"", ex);
             _pendingTransitionSong = nextSong;
             _pendingTransitionProfile = BuildFallbackTransitionProfile(FallbackMixEntrySec);
         }
@@ -1085,9 +1119,45 @@ internal sealed class TerminalPlaybackService : IDisposable
         _currentIndex = 0;
     }
 
+    // 获取播放互斥锁；若等待时间超过 500ms 则记录锁竞争告警，便于定位切歌阻塞。
+    private async Task AcquirePlayLockAsync(string operation, string? songName)
+    {
+        if (_playLock.Wait(0))
+        {
+            return;
+        }
+
+        var startTick = Environment.TickCount64;
+        await _playLock.WaitAsync();
+        var waitedMs = Environment.TickCount64 - startTick;
+        if (waitedMs >= 500)
+        {
+            CliLog.Warn("Playback", $"等待播放锁耗时过长 op={operation} waited={waitedMs}ms song=\"{songName}\"");
+        }
+    }
+
+    private static void LogIfSlowLoad(string songName, long startTick)
+    {
+        var elapsedMs = Environment.TickCount64 - startTick;
+        if (elapsedMs >= 3000)
+        {
+            CliLog.Warn("Playback", $"歌曲加载较慢 song=\"{songName}\" elapsed={elapsedMs}ms");
+        }
+    }
+
     private void HandlePlaybackEnded()
     {
-        _ = Task.Run(() => PlayNextInternalAsync(trackFinished: true));
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await PlayNextInternalAsync(trackFinished: true).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                CliLog.Error("Playback", "曲目播完后自动切歌失败", ex);
+            }
+        });
     }
 
     private static bool SameSong(TerminalSongItem a, TerminalSongItem b)

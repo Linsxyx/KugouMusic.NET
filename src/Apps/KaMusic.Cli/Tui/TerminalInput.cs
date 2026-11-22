@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using KaMusic.Cli.Services;
 
 namespace KaMusic.Cli.Tui;
 
@@ -63,59 +64,69 @@ internal sealed class TerminalInput : IDisposable
 
     private void WindowsInputLoop()
     {
-        var handle = GetStdHandle(StdInputHandle);
-        if (handle == nint.Zero)
+        try
         {
-            return;
-        }
-
-        var records = new InputRecord[16];
-        while (!_cts.IsCancellationRequested)
-        {
-            if (!ReadConsoleInputW(handle, records, (uint)records.Length, out var read) || read == 0)
+            var handle = GetStdHandle(StdInputHandle);
+            if (handle == nint.Zero)
             {
-                Thread.Sleep(10);
-                continue;
+                return;
             }
 
-            var notified = false;
-            for (var i = 0; i < read; i++)
+            var records = new InputRecord[16];
+            while (!_cts.IsCancellationRequested)
             {
-                var rec = records[i];
-                if (rec.EventType == KeyEventType)
+                if (!ReadConsoleInputW(handle, records, (uint)records.Length, out var read) || read == 0)
                 {
-                    var k = rec.KeyEvent;
-                    if (k.KeyDown == 0 || k.VirtualKeyCode is 0x10 or 0x11 or 0x12 or 0x14 or 0x5B or 0x5C)
-                    {
-                        continue;
-                    }
-
-                    var shift = (k.ControlKeyState & 0x0010) != 0;
-                    var alt = (k.ControlKeyState & (0x0001 | 0x0002)) != 0;
-                    var ctrl = (k.ControlKeyState & (0x0004 | 0x0008)) != 0;
-                    var repeat = Math.Max((ushort)1, k.RepeatCount);
-                    var info = new ConsoleKeyInfo(k.UnicodeChar, (ConsoleKey)k.VirtualKeyCode, shift, alt, ctrl);
-                    for (var r = 0; r < repeat; r++)
-                    {
-                        _keys.Enqueue(info);
-                    }
-
-                    notified = true;
+                    Thread.Sleep(10);
+                    continue;
                 }
-                else if (rec.EventType == MouseEventType)
+
+                var notified = false;
+                for (var i = 0; i < read; i++)
                 {
-                    if (TryTranslateWindowsMouse(rec.MouseEvent, out var evt))
+                    var rec = records[i];
+                    if (rec.EventType == KeyEventType)
                     {
-                        _mice.Enqueue(evt);
+                        var k = rec.KeyEvent;
+                        if (k.KeyDown == 0 || k.VirtualKeyCode is 0x10 or 0x11 or 0x12 or 0x14 or 0x5B or 0x5C)
+                        {
+                            continue;
+                        }
+
+                        var shift = (k.ControlKeyState & 0x0010) != 0;
+                        var alt = (k.ControlKeyState & (0x0001 | 0x0002)) != 0;
+                        var ctrl = (k.ControlKeyState & (0x0004 | 0x0008)) != 0;
+                        var repeat = Math.Max((ushort)1, k.RepeatCount);
+                        var info = new ConsoleKeyInfo(k.UnicodeChar, (ConsoleKey)k.VirtualKeyCode, shift, alt, ctrl);
+                        for (var r = 0; r < repeat; r++)
+                        {
+                            _keys.Enqueue(info);
+                        }
+
                         notified = true;
                     }
+                    else if (rec.EventType == MouseEventType)
+                    {
+                        if (TryTranslateWindowsMouse(rec.MouseEvent, out var evt))
+                        {
+                            _mice.Enqueue(evt);
+                            notified = true;
+                        }
+                    }
+                }
+
+                if (notified)
+                {
+                    _wake();
                 }
             }
-
-            if (notified)
-            {
-                _wake();
-            }
+        }
+        catch (Exception ex) when (!_cts.IsCancellationRequested)
+        {
+            CliLog.Error("Input", "Windows 输入线程异常退出", ex);
+        }
+        catch
+        {
         }
     }
 
@@ -183,6 +194,10 @@ internal sealed class TerminalInput : IDisposable
 
                 _wake();
             }
+        }
+        catch (Exception ex) when (!_cts.IsCancellationRequested)
+        {
+            CliLog.Error("Input", "Unix 输入线程异常退出", ex);
         }
         catch
         {
