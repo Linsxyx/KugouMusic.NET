@@ -145,7 +145,8 @@ jobs:
             meson \
             ninja-build \
             pkg-config \
-            squashfs-tools
+            squashfs-tools \
+            zstd
 
       - name: Checkout Code
         uses: actions/checkout@v4
