@@ -144,7 +144,8 @@ jobs:
             wayland-protocols \
             meson \
             ninja-build \
-            pkg-config
+            pkg-config \
+            squashfs-tools
 
       - name: Checkout Code
         uses: actions/checkout@v4
