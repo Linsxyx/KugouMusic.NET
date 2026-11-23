@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-windows-linux:
+  build-windows:
     strategy:
       matrix:
         include:
@@ -21,14 +21,6 @@ jobs:
             rid: win-arm64
             framework: net10.0-windows10.0.19041.0
             name: win-arm64
-          - os: ubuntu-latest
-            rid: linux-x64
-            framework: net10.0
-            name: linux-x64
-          - os: ubuntu-24.04-arm
-            rid: linux-arm64
-            framework: net10.0
-            name: linux-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -45,16 +37,135 @@ jobs:
         shell: bash
         run: dotnet tool install -g vpk
 
+      - name: Publish App
+        shell: bash
+        run: |
+          CLEAN_VERSION=${GITHUB_REF_NAME#v}
+          dotnet publish ./src/Apps/KugouAvaloniaPlayer/KugouAvaloniaPlayer.csproj \
+            -c Release \
+            -f ${{ matrix.framework }} \
+            "-p:BUILD_VERSION=$CLEAN_VERSION" \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:DebugType=None \
+            -p:PublishAot=true \
+            -p:IlcSingleThreaded=true \
+            -p:DebugSymbols=false \
+            -o ./publish
+
+      - name: Remove debug symbol files
+        shell: bash
+        run: |
+          find ./publish -type d -name '*.dSYM' -prune -exec rm -rf {} +
+          find ./publish -type f \( -name '*.pdb' -o -name '*.dbg' \) -delete
+
+      - name: Download previous Velopack release
+        shell: bash
+        run: |
+          vpk download github \
+            --repoUrl "https://github.com/${{ github.repository }}" \
+            --token "${{ secrets.GITHUB_TOKEN }}" \
+            --channel "${{ matrix.rid }}" \
+            -o ./releases || true
+
+      - name: Pack with Velopack
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+
+          EXE_NAME="KugouAvaloniaPlayer.exe"
+          ICON_PATH="./src/Apps/KugouAvaloniaPlayer/Assets/Test.ico"
+
+          # Generate Windows MSI installer.
+          # The MSI is patched below to allow selecting the installation directory.
+          vpk pack \
+            -u KugouAvaloniaPlayer \
+            -v "$VERSION" \
+            -p ./publish \
+            -e "$EXE_NAME" \
+            -i "$ICON_PATH" \
+            -c "${{ matrix.rid }}" \
+            -r "${{ matrix.rid }}" \
+            -o ./releases \
+            --msi true \
+            --instLocation PerMachine
+
+          find ./releases -type f -name '*.nupkg' ! -name "KugouAvaloniaPlayer-${VERSION}-*.nupkg" -delete
+          find ./releases -type f -iname '*-delta.nupkg' -delete
+
+      - name: Add install directory selection to MSI
+        shell: pwsh
+        run: |
+          Get-ChildItem ./releases/*.msi | ForEach-Object {
+            ./.github/scripts/customize-velopack-msi.ps1 -Path $_.FullName
+          }
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: releases-${{ matrix.name }}
+          path: ./releases/*
+
+  build-linux:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rid: linux-x64
+            framework: net10.0
+            name: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+            framework: net10.0
+            name: linux-arm64
+
+    runs-on: ${{ matrix.os }}
+    container:
+      image: ubuntu:22.04
+
+    steps:
+      - name: Install Linux build prerequisites
+        shell: bash
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y \
+            ca-certificates \
+            curl \
+            git \
+            build-essential \
+            clang \
+            zlib1g-dev \
+            libicu-dev \
+            libssl-dev \
+            libgtk-4-dev \
+            libwayland-dev \
+            wayland-protocols \
+            meson \
+            ninja-build \
+            pkg-config
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Velopack CLI
+        shell: bash
+        run: |
+          dotnet tool install -g vpk
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
       - name: Setup Rust for Wayland lyrics
-        if: startsWith(matrix.rid, 'linux-')
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build native Wayland lyrics
-        if: startsWith(matrix.rid, 'linux-')
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libwayland-dev wayland-protocols meson ninja-build pkg-config
           curl --fail --location https://github.com/wmww/gtk4-layer-shell/archive/refs/tags/v1.3.0.tar.gz \
             -o "$RUNNER_TEMP/gtk4-layer-shell.tar.gz"
           tar -xzf "$RUNNER_TEMP/gtk4-layer-shell.tar.gz" -C "$RUNNER_TEMP"
@@ -107,16 +218,6 @@ jobs:
 
           EXE_NAME="KugouAvaloniaPlayer"
           ICON_PATH="./src/Apps/KugouAvaloniaPlayer/Assets/ka-logo.png"
-          EXTRA_ARGS=()
-
-          if [[ "${{ matrix.rid }}" == win-* ]]; then
-            EXE_NAME="KugouAvaloniaPlayer.exe"
-            ICON_PATH="./src/Apps/KugouAvaloniaPlayer/Assets/Test.ico"
-
-            # Generate Windows MSI installer.
-            # The MSI is patched below to allow selecting the installation directory.
-            EXTRA_ARGS+=(--msi true --instLocation PerMachine)
-          fi
 
           vpk pack \
             -u KugouAvaloniaPlayer \
@@ -126,22 +227,12 @@ jobs:
             -i "$ICON_PATH" \
             -c "${{ matrix.rid }}" \
             -r "${{ matrix.rid }}" \
-            -o ./releases \
-            "${EXTRA_ARGS[@]}"
+            -o ./releases
 
           find ./releases -type f -name '*.nupkg' ! -name "KugouAvaloniaPlayer-${VERSION}-*.nupkg" -delete
           find ./releases -type f -iname '*-delta.nupkg' -delete
 
-      - name: Add install directory selection to MSI
-        if: startsWith(matrix.rid, 'win-')
-        shell: pwsh
-        run: |
-          Get-ChildItem ./releases/*.msi | ForEach-Object {
-            ./.github/scripts/customize-velopack-msi.ps1 -Path $_.FullName
-          }
-
       - name: Publish Linux single-file test app (without Velopack)
-        if: startsWith(matrix.rid, 'linux-')
         shell: bash
         run: |
           CLEAN_VERSION=${GITHUB_REF_NAME#v}
@@ -356,7 +447,8 @@ jobs:
 
   release:
     needs:
-      - build-windows-linux
+      - build-windows
+      - build-linux
       - build-macos
     runs-on: ubuntu-latest
     permissions:

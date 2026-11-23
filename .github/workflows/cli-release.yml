@@ -30,12 +30,6 @@ jobs:
           - os: windows-latest
             rid: win-arm64
             name: win-arm64
-          - os: ubuntu-latest
-            rid: linux-x64
-            name: linux-x64
-          - os: ubuntu-24.04-arm
-            rid: linux-arm64
-            name: linux-arm64
           - os: macos-latest
             rid: osx-arm64
             name: osx-arm64
@@ -53,13 +47,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-
-      - name: Install NativeAOT prerequisites (Linux)
-        if: startsWith(matrix.rid, 'linux-')
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang zlib1g-dev
 
       - name: Publish KaMusic.Cli (NativeAOT)
         shell: bash
@@ -120,9 +107,101 @@ jobs:
           name: cli-releases-${{ matrix.name }}
           path: ./dist/*
 
+  build-cli-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rid: linux-x64
+            name: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+            name: linux-arm64
+
+    runs-on: ${{ matrix.os }}
+    container:
+      image: ubuntu:22.04
+
+    steps:
+      - name: Install NativeAOT prerequisites (Linux)
+        shell: bash
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y \
+            ca-certificates \
+            curl \
+            clang \
+            zlib1g-dev \
+            libicu-dev \
+            libssl-dev \
+            libsqlite3-0 \
+            zip
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish KaMusic.Cli (NativeAOT)
+        shell: bash
+        run: |
+          CLEAN_VERSION="${GITHUB_REF_NAME#cli-v}"
+          CLEAN_VERSION="${CLEAN_VERSION#v}"
+          if [[ -z "$CLEAN_VERSION" || "$CLEAN_VERSION" == "$GITHUB_REF_NAME" ]]; then
+            CLEAN_VERSION="${{ inputs.version || '0.1.1' }}"
+          fi
+
+          dotnet publish ./src/Apps/KaMusic.Cli/KaMusic.Cli.csproj \
+            -c Release \
+            -f net10.0 \
+            "-p:Version=$CLEAN_VERSION" \
+            -r "${{ matrix.rid }}" \
+            "-p:RuntimeIdentifier=${{ matrix.rid }}" \
+            --self-contained true \
+            -p:PublishAot=true \
+            -p:IlcSingleThreaded=true \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            -o "./publish/KaMusic.Cli-${{ matrix.rid }}"
+
+      - name: Strip debug symbols and XML docs
+        shell: bash
+        run: |
+          find "./publish/KaMusic.Cli-${{ matrix.rid }}" -type d -name '*.dSYM' -prune -exec rm -rf {} +
+          find "./publish/KaMusic.Cli-${{ matrix.rid }}" -type f \( -name '*.pdb' -o -name '*.dbg' -o -name '*.xml' \) -delete
+          ls -lh "./publish/KaMusic.Cli-${{ matrix.rid }}"
+
+      - name: Run NativeAOT self-test
+        shell: bash
+        run: |
+          chmod +x "./publish/KaMusic.Cli-${{ matrix.rid }}/KaMusic.Cli"
+          "./publish/KaMusic.Cli-${{ matrix.rid }}/KaMusic.Cli" --self-test
+
+      - name: Package Archive
+        shell: bash
+        run: |
+          mkdir -p ./dist
+          chmod +x "./publish/KaMusic.Cli-${{ matrix.rid }}/KaMusic.Cli"
+          tar -C "./publish" -czf "./dist/KaMusic.Cli-${{ matrix.rid }}.tar.gz" "KaMusic.Cli-${{ matrix.rid }}"
+          (cd "./publish" && zip -r "../dist/KaMusic.Cli-${{ matrix.rid }}.zip" "KaMusic.Cli-${{ matrix.rid }}")
+          ls -lh ./dist
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-releases-${{ matrix.name }}
+          path: ./dist/*
+
   publish-npm:
     needs:
       - build-cli
+      - build-cli-linux
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
