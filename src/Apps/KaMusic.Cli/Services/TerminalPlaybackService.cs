@@ -49,6 +49,12 @@ internal sealed class TerminalPlaybackService : IDisposable
     private string? _activeSource;
     private CancellationTokenSource? _loadCancellation;
     private CancellationTokenSource? _transitionCancellation;
+    private readonly object _seekGate = new();
+    private long _seekSequence;
+    private TimeSpan? _pendingSeekTarget;
+    private int _pendingSeekPlayVersion;
+    private bool _isSeekWorkerRunning;
+    private long _transitionCleanupSequence;
     private int _currentIndex = -1;
     private int _disposeState;
     private int _playVersion;
@@ -146,6 +152,11 @@ internal sealed class TerminalPlaybackService : IDisposable
         if (!isPersonalFm)
         {
             _personalFm?.Clear();
+        }
+
+        if (_playLock.CurrentCount == 0)
+        {
+            CancelLoadWork();
         }
 
         await AcquirePlayLockAsync("Play", song.Name);
@@ -312,7 +323,30 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     public void Stop()
     {
-        _player.Stop();
+        Interlocked.Increment(ref _playVersion);
+        CancelLoadWork();
+        ResetTransitionStateOnly();
+        ClearPendingSeek();
+        _ = Task.Run(async () =>
+        {
+            if (Volatile.Read(ref _disposeState) != 0)
+            {
+                return;
+            }
+
+            await _playLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (Volatile.Read(ref _disposeState) == 0)
+                {
+                    _player.Stop();
+                }
+            }
+            finally
+            {
+                _playLock.Release();
+            }
+        });
         StatusMessage = "已停止";
     }
 
@@ -334,9 +368,9 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        ResetTransitionPipeline(cancelPreparedTrack: true);
+        ResetTransitionStateOnly();
         var target = TimeSpan.FromSeconds(duration.TotalSeconds * Math.Clamp(ratio, 0.0, 1.0));
-        _player.SetPosition(target);
+        EnqueueSeek(target, Volatile.Read(ref _playVersion));
         StatusMessage = $"跳转到 {target:mm\\:ss}";
     }
 
@@ -347,9 +381,10 @@ internal sealed class TerminalPlaybackService : IDisposable
             return;
         }
 
-        ResetTransitionPipeline(cancelPreparedTrack: true);
+        ResetTransitionStateOnly();
+        var playVersion = Volatile.Read(ref _playVersion);
         var duration = _player.GetDuration();
-        var current = _player.GetPosition();
+        var current = GetSeekBasePosition(playVersion);
         var target = current + delta;
         if (duration > TimeSpan.Zero)
         {
@@ -360,7 +395,7 @@ internal sealed class TerminalPlaybackService : IDisposable
             target = TimeSpan.Zero;
         }
 
-        _player.SetPosition(target);
+        EnqueueSeek(target, playVersion);
         StatusMessage = delta.TotalSeconds >= 0 ? $"快进到 {target:mm\\:ss}" : $"快退到 {target:mm\\:ss}";
     }
 
@@ -604,26 +639,59 @@ internal sealed class TerminalPlaybackService : IDisposable
 
         song.IsPlaying = true;
         var requestVersion = Interlocked.Increment(ref _playVersion);
+        ClearPendingSeek();
         var loadCts = ResetLoadCancellation();
-        ResetTransitionPipeline(cancelPreparedTrack: true);
+        ResetTransitionStateOnly();
         var loadStartTick = Environment.TickCount64;
         var sourceKind = song.IsLocalFile ? "local" : song.IsRemoteStream ? "remote" : "online";
         CliLog.Info("Playback", $"开始加载 song=\"{song.Name}\" source={sourceKind} quality={_settings.MusicQuality}");
 
         if (song.IsLocalFile && !string.IsNullOrWhiteSpace(song.LocalFilePath))
         {
-            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || !_player.Load(song.LocalFilePath))
+            StatusMessage = $"正在加载（本地）：{song.Name}";
+            var localPath = song.LocalFilePath;
+            var loaded = await Task.Run(() =>
             {
-                CliLog.Warn("Playback", $"本地音频加载失败 song=\"{song.Name}\"");
-                StatusMessage = $"本地音频加载失败：{song.Name}";
+                _player.AbortCrossfade();
+                _player.CancelPrepared();
+                if (Volatile.Read(ref _disposeState) != 0 || requestVersion != Volatile.Read(ref _playVersion))
+                {
+                    return false;
+                }
+
+                return _player.Load(localPath);
+            }).ConfigureAwait(false);
+            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != Volatile.Read(ref _playVersion) || !loaded)
+            {
+                if (Volatile.Read(ref _disposeState) == 0 && requestVersion == Volatile.Read(ref _playVersion))
+                {
+                    CliLog.Warn("Playback", $"本地音频加载失败 song=\"{song.Name}\"");
+                    StatusMessage = $"本地音频加载失败：{song.Name}";
+                }
+
                 return;
             }
 
-            _activeSource = song.LocalFilePath;
+            LogIfSlowLoad(song.Name, loadStartTick);
+            _activeSource = localPath;
             ApplySettings();
             _player.Play();
             StatusMessage = $"播放中（本地）：{song.Name}";
             _ = _lyricsService.LoadSongLyricsAsync(song);
+            return;
+        }
+
+        if (_player.IsCrossfading || _player.HasPreparedTrack)
+        {
+            await Task.Run(() =>
+            {
+                _player.AbortCrossfade();
+                _player.CancelPrepared();
+            }).ConfigureAwait(false);
+        }
+
+        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != Volatile.Read(ref _playVersion))
+        {
             return;
         }
 
@@ -684,7 +752,7 @@ internal sealed class TerminalPlaybackService : IDisposable
     // 渐进式打开远程音频：命中本地缓存直接播放；未命中有限文件收到首块即出声；持续流走小块缓冲。
     private async Task<bool> LoadRemoteAudioAsync(string url, int requestVersion, CancellationToken cancellationToken)
     {
-        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion)
+        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != Volatile.Read(ref _playVersion))
         {
             return false;
         }
@@ -697,14 +765,22 @@ internal sealed class TerminalPlaybackService : IDisposable
             using var playbackSource = await RemoteAudioCache
                 .OpenPlaybackSourceAsync(url, _remoteAudioClient, timeoutCts.Token)
                 .ConfigureAwait(false);
-            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || timeoutCts.IsCancellationRequested)
+            if (Volatile.Read(ref _disposeState) != 0 || requestVersion != Volatile.Read(ref _playVersion) || timeoutCts.IsCancellationRequested)
             {
                 return false;
             }
 
-            if (_player.Load(playbackSource))
+            // 即使命中本地缓存同步完成，也在后台线程执行 BASS 加载，并绑定取消令牌以立即中止阻塞探测。
+            using var abortRegistration = timeoutCts.Token.Register(playbackSource.Abort);
+            var loaded = await Task.Run(() => _player.Load(playbackSource)).ConfigureAwait(false);
+            if (loaded)
             {
                 return true;
+            }
+
+            if (cancellationToken.IsCancellationRequested || requestVersion != Volatile.Read(ref _playVersion))
+            {
+                return false;
             }
 
             CliLog.Warn("Playback", $"渐进式音源 Load 返回 false，回退 BASS 直连 url={safeUrl}");
@@ -723,12 +799,12 @@ internal sealed class TerminalPlaybackService : IDisposable
             CliLog.Warn("Playback", $"渐进式远程音频打开异常，回退 BASS 直连 url={safeUrl}", ex);
         }
 
-        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != _playVersion || cancellationToken.IsCancellationRequested)
+        if (Volatile.Read(ref _disposeState) != 0 || requestVersion != Volatile.Read(ref _playVersion) || cancellationToken.IsCancellationRequested)
         {
             return false;
         }
 
-        var directLoaded = _player.Load(url);
+        var directLoaded = await Task.Run(() => _player.Load(url)).ConfigureAwait(false);
         if (!directLoaded)
         {
             CliLog.Warn("Playback", $"BASS 直连加载失败 url={safeUrl}");
@@ -791,6 +867,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         _isPreparingNextTrack = true;
         try
         {
+            var transitionToken = EnsureTransitionCancellation().Token;
             string? source;
             var isLocal = false;
             if (nextSong.IsLocalFile && !string.IsNullOrWhiteSpace(nextSong.LocalFilePath))
@@ -813,35 +890,64 @@ internal sealed class TerminalPlaybackService : IDisposable
                 source = playData?.Urls?.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
             }
 
-            if (requestVersion != _playVersion || string.IsNullOrWhiteSpace(source))
+            if (Volatile.Read(ref _disposeState) != 0 ||
+                requestVersion != Volatile.Read(ref _playVersion) ||
+                transitionToken.IsCancellationRequested ||
+                string.IsNullOrWhiteSpace(source))
             {
                 return;
             }
 
             if (!isLocal && RemoteAudioCache.IsHttpUrl(source))
             {
-                var cts = EnsureTransitionCancellation();
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(transitionToken);
                 timeoutCts.CancelAfter(RemoteInitialLoadTimeout);
                 using var playbackSource = await RemoteAudioCache
                     .OpenPlaybackSourceAsync(source, _remoteAudioClient, timeoutCts.Token)
                     .ConfigureAwait(false);
-                if (requestVersion != _playVersion || cts.IsCancellationRequested)
+                if (Volatile.Read(ref _disposeState) != 0 ||
+                    requestVersion != Volatile.Read(ref _playVersion) ||
+                    transitionToken.IsCancellationRequested)
                 {
                     return;
                 }
 
-                if (!_player.PrepareNext(playbackSource))
+                // 切歌或取消过渡时立即中断探测，且始终在后台线程执行 PrepareNext，避免命中缓存时在主循环同步阻塞。
+                using var abortRegistration = timeoutCts.Token.Register(playbackSource.Abort);
+                var prepared = await Task.Run(() => _player.PrepareNext(playbackSource)).ConfigureAwait(false);
+                if (!prepared)
                 {
+                    return;
+                }
+
+                if (Volatile.Read(ref _disposeState) != 0 ||
+                    requestVersion != Volatile.Read(ref _playVersion) ||
+                    transitionToken.IsCancellationRequested)
+                {
+                    _player.CancelPrepared();
                     return;
                 }
 
                 source = _player.PreparedSource ?? playbackSource.SourceDescription;
                 isLocal = !RemoteAudioCache.IsHttpUrl(source) && File.Exists(source);
             }
-            else if (!_player.PrepareNext(source))
+            else
             {
-                return;
+                // 本地文件预加载同样卸载到后台线程，避免在渲染帧 GetSnapshot() 中同步打开音频文件造成卡帧。
+                var localOrDirectSource = source;
+                var prepared = await Task.Run(() => _player.PrepareNext(localOrDirectSource)).ConfigureAwait(false);
+                if (!prepared)
+                {
+                    return;
+                }
+
+                if (Volatile.Read(ref _disposeState) != 0 ||
+                    requestVersion != Volatile.Read(ref _playVersion) ||
+                    transitionToken.IsCancellationRequested)
+                {
+                    _player.CancelPrepared();
+                    return;
+                }
             }
 
             _preparedNextSong = nextSong;
@@ -858,6 +964,10 @@ internal sealed class TerminalPlaybackService : IDisposable
         catch (OperationCanceledException)
         {
             // Preload cancellation is expected on track switch.
+        }
+        catch (ObjectDisposedException)
+        {
+            // Transition CTS may be disposed concurrently on track switch.
         }
         catch (Exception ex)
         {
@@ -896,7 +1006,7 @@ internal sealed class TerminalPlaybackService : IDisposable
         _isAnalyzingTransition = true;
         try
         {
-            var cts = EnsureTransitionCancellation();
+            var transitionToken = EnsureTransitionCancellation().Token;
             var currentIsLocal = currentSong.IsLocalFile || (!RemoteAudioCache.IsHttpUrl(_activeSource) && File.Exists(_activeSource));
             var currentTrack = new PreparedTrack
             {
@@ -906,8 +1016,8 @@ internal sealed class TerminalPlaybackService : IDisposable
                 DurationSeconds = currentSong.DurationSeconds
             };
 
-            var profile = await _transitionAnalysisService.AnalyzeAsync(currentTrack, nextTrack, cts.Token);
-            if (requestVersion != _playVersion || cts.IsCancellationRequested || nextSong != _preparedNextSong)
+            var profile = await _transitionAnalysisService.AnalyzeAsync(currentTrack, nextTrack, transitionToken);
+            if (requestVersion != Volatile.Read(ref _playVersion) || transitionToken.IsCancellationRequested || nextSong != _preparedNextSong)
             {
                 return;
             }
@@ -1033,6 +1143,16 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     private void ResetTransitionPipeline(bool cancelPreparedTrack)
     {
+        var cleanupSeq = ResetTransitionStateOnly();
+        if (cancelPreparedTrack)
+        {
+            ScheduleCancelPrepared(Volatile.Read(ref _playVersion), cleanupSeq);
+        }
+    }
+
+    // 仅重置过渡内存状态并取消异步令牌（零 I/O、零 BASS 阻塞，可安全在主循环同步调用）。
+    private long ResetTransitionStateOnly()
+    {
         CancelTransitionWork();
         _autoTransitionStarted = false;
         _isAnalyzingTransition = false;
@@ -1042,10 +1162,159 @@ internal sealed class TerminalPlaybackService : IDisposable
         _preparedNextTrack = null;
         _preparedNextSong = null;
         _preparedNextSource = null;
-        if (cancelPreparedTrack)
+        return Interlocked.Increment(ref _transitionCleanupSequence);
+    }
+
+    // 在后台线程串行中止淡入淡出与已预加载流，避免在主循环同步调用 Bass.StreamFree。
+    private void ScheduleCancelPrepared(int playVersion, long cleanupSeq)
+    {
+        if (!_player.IsCrossfading && !_player.HasPreparedTrack)
         {
-            _player.AbortCrossfade();
-            _player.CancelPrepared();
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            if (Volatile.Read(ref _disposeState) != 0 ||
+                playVersion != Volatile.Read(ref _playVersion) ||
+                cleanupSeq != Volatile.Read(ref _transitionCleanupSequence))
+            {
+                return;
+            }
+
+            await _playLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (Volatile.Read(ref _disposeState) != 0 ||
+                    playVersion != Volatile.Read(ref _playVersion) ||
+                    cleanupSeq != Volatile.Read(ref _transitionCleanupSequence))
+                {
+                    return;
+                }
+
+                _player.AbortCrossfade();
+                _player.CancelPrepared();
+            }
+            catch (Exception ex)
+            {
+                CliLog.Warn("Playback", "后台清理过渡预加载流失败", ex);
+            }
+            finally
+            {
+                _playLock.Release();
+            }
+        });
+    }
+
+    private TimeSpan GetSeekBasePosition(int playVersion)
+    {
+        lock (_seekGate)
+        {
+            if (_pendingSeekTarget.HasValue && _pendingSeekPlayVersion == playVersion)
+            {
+                return _pendingSeekTarget.Value;
+            }
+        }
+
+        return _player.GetPosition();
+    }
+
+    private void ClearPendingSeek()
+    {
+        lock (_seekGate)
+        {
+            _pendingSeekTarget = null;
+            _seekSequence++;
+        }
+    }
+
+    // 将 Seek 请求合并并派发到后台单工作协程串行执行，避免在线渐进流 Range 探测阻塞主循环。
+    private void EnqueueSeek(TimeSpan target, int playVersion)
+    {
+        var shouldStart = false;
+        lock (_seekGate)
+        {
+            _pendingSeekTarget = target;
+            _pendingSeekPlayVersion = playVersion;
+            _seekSequence++;
+            if (!_isSeekWorkerRunning)
+            {
+                _isSeekWorkerRunning = true;
+                shouldStart = true;
+            }
+        }
+
+        if (shouldStart)
+        {
+            _ = Task.Run(RunSeekWorkerAsync);
+        }
+    }
+
+    private async Task RunSeekWorkerAsync()
+    {
+        while (true)
+        {
+            TimeSpan target;
+            int playVersion;
+            long sequence;
+            lock (_seekGate)
+            {
+                if (Volatile.Read(ref _disposeState) != 0 || !_pendingSeekTarget.HasValue)
+                {
+                    _isSeekWorkerRunning = false;
+                    return;
+                }
+
+                target = _pendingSeekTarget.Value;
+                playVersion = _pendingSeekPlayVersion;
+                sequence = _seekSequence;
+            }
+
+            if (playVersion != Volatile.Read(ref _playVersion))
+            {
+                lock (_seekGate)
+                {
+                    if (_seekSequence == sequence)
+                    {
+                        _pendingSeekTarget = null;
+                        _isSeekWorkerRunning = false;
+                        return;
+                    }
+                }
+
+                continue;
+            }
+
+            await _playLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (Volatile.Read(ref _disposeState) == 0 &&
+                    playVersion == Volatile.Read(ref _playVersion) &&
+                    sequence == Volatile.Read(ref _seekSequence))
+                {
+                    _player.AbortCrossfade();
+                    _player.CancelPrepared();
+                    _player.SetPosition(target);
+                }
+            }
+            catch (Exception ex)
+            {
+                CliLog.Warn("Playback", $"后台进度跳转失败 target={target:mm\\:ss}", ex);
+            }
+            finally
+            {
+                _playLock.Release();
+            }
+
+            lock (_seekGate)
+            {
+                if (_seekSequence == sequence)
+                {
+                    _pendingSeekTarget = null;
+                    _isSeekWorkerRunning = false;
+                    return;
+                }
+            }
         }
     }
 
@@ -1079,33 +1348,37 @@ internal sealed class TerminalPlaybackService : IDisposable
 
     private CancellationTokenSource EnsureTransitionCancellation()
     {
-        if (_transitionCancellation == null || _transitionCancellation.IsCancellationRequested)
+        var existing = Volatile.Read(ref _transitionCancellation);
+        if (existing != null && !existing.IsCancellationRequested)
         {
-            CancelTransitionWork();
-            _transitionCancellation = new CancellationTokenSource();
+            return existing;
         }
 
-        return _transitionCancellation;
+        CancelTransitionWork();
+        var created = new CancellationTokenSource();
+        var previous = Interlocked.Exchange(ref _transitionCancellation, created);
+        previous?.Dispose();
+        return created;
     }
 
     private void CancelTransitionWork()
     {
-        if (_transitionCancellation == null)
+        var cts = Interlocked.Exchange(ref _transitionCancellation, null);
+        if (cts == null)
         {
             return;
         }
 
         try
         {
-            _transitionCancellation.Cancel();
+            cts.Cancel();
         }
         catch
         {
             // Ignore cancellation races.
         }
 
-        _transitionCancellation.Dispose();
-        _transitionCancellation = null;
+        cts.Dispose();
     }
 
     private static TransitionProfile BuildFallbackTransitionProfile(double availableOverlapSec)
