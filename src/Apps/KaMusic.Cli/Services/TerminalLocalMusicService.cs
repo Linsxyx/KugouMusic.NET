@@ -67,14 +67,17 @@ internal sealed class TerminalLocalMusicService
     }
 
     // 初始化共享 SQLite 数据库表与索引，确保与桌面端 AppDatabase 结构完全一致。
-    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    public Task InitializeAsync(CancellationToken cancellationToken = default) =>
+        _initialized ? Task.CompletedTask : Task.Run(() => InitializeCoreAsync(cancellationToken), cancellationToken);
+
+    private async Task InitializeCoreAsync(CancellationToken cancellationToken)
     {
         if (_initialized)
         {
             return;
         }
 
-        await _gate.WaitAsync(cancellationToken);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             if (_initialized)
@@ -88,7 +91,7 @@ internal sealed class TerminalLocalMusicService
                 Directory.CreateDirectory(directory);
             }
 
-            await using var connection = await CreateConnectionAsync(cancellationToken);
+            await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
             await using var command = connection.CreateCommand();
             command.CommandText =
                 """
@@ -141,7 +144,7 @@ internal sealed class TerminalLocalMusicService
                 CREATE INDEX IF NOT EXISTS IX_playlist_tracks_playlist_id_position ON playlist_tracks (playlist_id, position);
                 CREATE INDEX IF NOT EXISTS IX_playlist_tracks_track_id ON playlist_tracks (track_id);
                 """;
-            await command.ExecuteNonQueryAsync(cancellationToken);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             _initialized = true;
         }
         finally
@@ -150,11 +153,14 @@ internal sealed class TerminalLocalMusicService
         }
     }
 
-    // 读取所有本地歌单摘要并映射为终端歌单列表项。
-    public async Task<IReadOnlyList<TerminalPlaylistItem>> GetPlaylistsAsync(CancellationToken cancellationToken = default)
+    // 读取所有本地歌单摘要并映射为终端歌单列表项（卸载至线程池，避免 SQLite 同步 I/O 阻塞主循环）。
+    public Task<IReadOnlyList<TerminalPlaylistItem>> GetPlaylistsAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(() => GetPlaylistsCoreAsync(cancellationToken), cancellationToken);
+
+    private async Task<IReadOnlyList<TerminalPlaylistItem>> GetPlaylistsCoreAsync(CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
-        await using var connection = await CreateConnectionAsync(cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
@@ -166,8 +172,8 @@ internal sealed class TerminalLocalMusicService
             """;
 
         var list = new List<TerminalPlaylistItem>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
             list.Add(ReadPlaylistItem(reader));
         }
@@ -176,13 +182,19 @@ internal sealed class TerminalLocalMusicService
     }
 
     // 读取指定本地歌单内的全部曲目并转换为终端歌曲项。
-    public async Task<IReadOnlyList<TerminalSongItem>> GetPlaylistTracksAsync(
+    public Task<IReadOnlyList<TerminalSongItem>> GetPlaylistTracksAsync(
         long playlistId,
         string? playlistName = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => GetPlaylistTracksCoreAsync(playlistId, playlistName, cancellationToken), cancellationToken);
+
+    private async Task<IReadOnlyList<TerminalSongItem>> GetPlaylistTracksCoreAsync(
+        long playlistId,
+        string? playlistName,
+        CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
-        await using var connection = await CreateConnectionAsync(cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
@@ -196,8 +208,8 @@ internal sealed class TerminalLocalMusicService
 
         var sourceLabel = string.IsNullOrWhiteSpace(playlistName) ? "本地音乐" : $"本地 · {playlistName}";
         var tracks = new List<TerminalSongItem>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
             tracks.Add(ReadSongItem(reader, sourceLabel));
         }
@@ -206,18 +218,25 @@ internal sealed class TerminalLocalMusicService
     }
 
     // 在本地音乐库中按关键词检索歌曲。
-    public async Task<IReadOnlyList<TerminalSongItem>> SearchTracksAsync(
+    public Task<IReadOnlyList<TerminalSongItem>> SearchTracksAsync(
         string keyword,
         CancellationToken cancellationToken = default)
     {
         var normalizedKeyword = keyword.Trim();
         if (normalizedKeyword.Length == 0)
         {
-            return [];
+            return Task.FromResult<IReadOnlyList<TerminalSongItem>>([]);
         }
 
-        await InitializeAsync(cancellationToken);
-        await using var connection = await CreateConnectionAsync(cancellationToken);
+        return Task.Run(() => SearchTracksCoreAsync(normalizedKeyword, cancellationToken), cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<TerminalSongItem>> SearchTracksCoreAsync(
+        string normalizedKeyword,
+        CancellationToken cancellationToken)
+    {
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
@@ -246,8 +265,8 @@ internal sealed class TerminalLocalMusicService
         command.Parameters.AddWithValue("$pattern", "%" + escaped + "%");
 
         var results = new List<TerminalSongItem>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         {
             results.Add(ReadSongItem(reader, "本地搜索"));
         }
@@ -256,10 +275,13 @@ internal sealed class TerminalLocalMusicService
     }
 
     // 新建手动管理的本地歌单。
-    public async Task<TerminalPlaylistItem> CreatePlaylistAsync(string name, CancellationToken cancellationToken = default)
+    public Task<TerminalPlaylistItem> CreatePlaylistAsync(string name, CancellationToken cancellationToken = default) =>
+        Task.Run(() => CreatePlaylistCoreAsync(name, cancellationToken), cancellationToken);
+
+    private async Task<TerminalPlaylistItem> CreatePlaylistCoreAsync(string name, CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
-        await using var connection = await CreateConnectionAsync(cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
         var now = DateTime.UtcNow;
         var entity = new LocalPlaylistEntity
         {
@@ -269,14 +291,17 @@ internal sealed class TerminalLocalMusicService
             UpdatedAtUtc = now
         };
 
-        entity.Id = await InsertPlaylistAsync(connection, null, entity, cancellationToken);
-        return await GetPlaylistSummaryAsync(connection, null, entity.Id, cancellationToken);
+        entity.Id = await InsertPlaylistAsync(connection, null, entity, cancellationToken).ConfigureAwait(false);
+        return await GetPlaylistSummaryAsync(connection, null, entity.Id, cancellationToken).ConfigureAwait(false);
     }
 
     // 导入文件夹作为本地歌单（与桌面客户端 ImportFolderAsync 保持一致的扫描、标签提取和去重更新逻辑）。
-    public async Task<TerminalPlaylistItem> ImportFolderAsync(string rawFolderPath, CancellationToken cancellationToken = default)
+    public Task<TerminalPlaylistItem> ImportFolderAsync(string rawFolderPath, CancellationToken cancellationToken = default) =>
+        Task.Run(() => ImportFolderCoreAsync(rawFolderPath, cancellationToken), cancellationToken);
+
+    private async Task<TerminalPlaylistItem> ImportFolderCoreAsync(string rawFolderPath, CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
         var folderPath = NormalizeInputPath(rawFolderPath);
         if (!Directory.Exists(folderPath))
         {
@@ -285,7 +310,7 @@ internal sealed class TerminalLocalMusicService
 
         folderPath = Path.GetFullPath(folderPath);
 
-        await using var connection = await CreateConnectionAsync(cancellationToken);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction();
 
         var playlist = await FindPlaylistAsync(
@@ -293,7 +318,7 @@ internal sealed class TerminalLocalMusicService
             transaction,
             PlaylistKindImportedFolder,
             folderPath,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (playlist is null)
         {
@@ -311,24 +336,30 @@ internal sealed class TerminalLocalMusicService
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now
             };
-            playlist.Id = await InsertPlaylistAsync(connection, transaction, playlist, cancellationToken);
+            playlist.Id = await InsertPlaylistAsync(connection, transaction, playlist, cancellationToken).ConfigureAwait(false);
         }
 
-        await ReplacePlaylistTracksFromFolderAsync(connection, transaction, playlist.Id, folderPath, cancellationToken);
+        await ReplacePlaylistTracksFromFolderAsync(connection, transaction, playlist.Id, folderPath, cancellationToken).ConfigureAwait(false);
         playlist.UpdatedAtUtc = DateTime.UtcNow;
-        await UpdatePlaylistAsync(connection, transaction, playlist, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await UpdatePlaylistAsync(connection, transaction, playlist, cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
-        return await GetPlaylistSummaryAsync(connection, null, playlist.Id, cancellationToken);
+        return await GetPlaylistSummaryAsync(connection, null, playlist.Id, cancellationToken).ConfigureAwait(false);
     }
 
     // 智能导入路径：支持直接传入音频文件夹路径或单个音频文件路径，可导入为独立文件夹歌单或追加至现有本地歌单。
-    public async Task<(TerminalPlaylistItem Playlist, int AddedCount)> ImportPathAsync(
+    public Task<(TerminalPlaylistItem Playlist, int AddedCount)> ImportPathAsync(
         string rawPath,
         long? targetPlaylistId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => ImportPathCoreAsync(rawPath, targetPlaylistId, cancellationToken), cancellationToken);
+
+    private async Task<(TerminalPlaylistItem Playlist, int AddedCount)> ImportPathCoreAsync(
+        string rawPath,
+        long? targetPlaylistId,
+        CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
         var normalized = NormalizeInputPath(rawPath);
         if (string.IsNullOrWhiteSpace(normalized))
         {
@@ -339,16 +370,16 @@ internal sealed class TerminalLocalMusicService
         {
             if (targetPlaylistId is null or <= 0)
             {
-                var summary = await ImportFolderAsync(normalized, cancellationToken);
+                var summary = await ImportFolderCoreAsync(normalized, cancellationToken).ConfigureAwait(false);
                 return (summary, summary.Count);
             }
 
             var folderFiles = EnumerateSupportedAudioFileBatches(Path.GetFullPath(normalized), LocalImportBatchSize, cancellationToken)
                 .SelectMany(batch => batch)
                 .ToList();
-            var added = await AddFilesToPlaylistAsync(targetPlaylistId.Value, folderFiles, cancellationToken);
-            await using var conn = await CreateConnectionAsync(cancellationToken);
-            var targetSummary = await GetPlaylistSummaryAsync(conn, null, targetPlaylistId.Value, cancellationToken);
+            var added = await AddFilesToPlaylistCoreAsync(targetPlaylistId.Value, folderFiles, cancellationToken).ConfigureAwait(false);
+            await using var conn = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
+            var targetSummary = await GetPlaylistSummaryAsync(conn, null, targetPlaylistId.Value, cancellationToken).ConfigureAwait(false);
             return (targetSummary, added);
         }
 
@@ -360,7 +391,7 @@ internal sealed class TerminalLocalMusicService
                 throw new InvalidOperationException($"不支持的音频格式：{Path.GetExtension(fullFile)}");
             }
 
-            await using var conn = await CreateConnectionAsync(cancellationToken);
+            await using var conn = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
             long playlistId;
             if (targetPlaylistId is > 0)
             {
@@ -368,10 +399,10 @@ internal sealed class TerminalLocalMusicService
             }
             else
             {
-                var defaultManual = await FindPlaylistByNameAsync(conn, null, PlaylistKindManual, "本地导入单曲", cancellationToken);
+                var defaultManual = await FindPlaylistByNameAsync(conn, null, PlaylistKindManual, "本地导入单曲", cancellationToken).ConfigureAwait(false);
                 if (defaultManual is null)
                 {
-                    var created = await CreatePlaylistAsync("本地导入单曲", cancellationToken);
+                    var created = await CreatePlaylistCoreAsync("本地导入单曲", cancellationToken).ConfigureAwait(false);
                     playlistId = created.LocalPlaylistId;
                 }
                 else
@@ -380,8 +411,8 @@ internal sealed class TerminalLocalMusicService
                 }
             }
 
-            var added = await AddFilesToPlaylistAsync(playlistId, [fullFile], cancellationToken);
-            var summary = await GetPlaylistSummaryAsync(conn, null, playlistId, cancellationToken);
+            var added = await AddFilesToPlaylistCoreAsync(playlistId, [fullFile], cancellationToken).ConfigureAwait(false);
+            var summary = await GetPlaylistSummaryAsync(conn, null, playlistId, cancellationToken).ConfigureAwait(false);
             return (summary, added);
         }
 
@@ -389,12 +420,18 @@ internal sealed class TerminalLocalMusicService
     }
 
     // 向指定本地歌单批量添加音频文件并提取音频元数据。
-    public async Task<int> AddFilesToPlaylistAsync(
+    public Task<int> AddFilesToPlaylistAsync(
         long playlistId,
         IEnumerable<string> filePaths,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => AddFilesToPlaylistCoreAsync(playlistId, filePaths.ToList(), cancellationToken), cancellationToken);
+
+    private async Task<int> AddFilesToPlaylistCoreAsync(
+        long playlistId,
+        IEnumerable<string> filePaths,
+        CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
         var files = filePaths
             .Select(NormalizeInputPath)
             .Where(IsSupportedAudioFile)
@@ -406,23 +443,23 @@ internal sealed class TerminalLocalMusicService
             return 0;
         }
 
-        await using var connection = await CreateConnectionAsync(cancellationToken);
-        var playlist = await GetPlaylistAsync(connection, null, playlistId, cancellationToken);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var playlist = await GetPlaylistAsync(connection, null, playlistId, cancellationToken).ConfigureAwait(false);
         if (playlist is null)
         {
             return 0;
         }
 
         await using var transaction = connection.BeginTransaction();
-        var existingTrackIds = await GetPlaylistTrackIdsAsync(connection, transaction, playlist.Id, cancellationToken);
-        var position = await GetNextPlaylistPositionAsync(connection, transaction, playlist.Id, cancellationToken);
+        var existingTrackIds = await GetPlaylistTrackIdsAsync(connection, transaction, playlist.Id, cancellationToken).ConfigureAwait(false);
+        var position = await GetNextPlaylistPositionAsync(connection, transaction, playlist.Id, cancellationToken).ConfigureAwait(false);
         var added = 0;
 
         for (var i = 0; i < files.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var imported = await ReadTrackImportDataAsync(files[i], cancellationToken);
-            var track = await UpsertTrackAsync(connection, transaction, imported, cancellationToken);
+            var imported = await ReadTrackImportDataAsync(files[i], cancellationToken).ConfigureAwait(false);
+            var track = await UpsertTrackAsync(connection, transaction, imported, cancellationToken).ConfigureAwait(false);
             if (existingTrackIds.Contains(track.Id))
             {
                 continue;
@@ -435,23 +472,26 @@ internal sealed class TerminalLocalMusicService
                 track.Id,
                 position + added,
                 DateTime.UtcNow,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             existingTrackIds.Add(track.Id);
             added++;
         }
 
         playlist.UpdatedAtUtc = DateTime.UtcNow;
-        await UpdatePlaylistAsync(connection, transaction, playlist, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await UpdatePlaylistAsync(connection, transaction, playlist, cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return added;
     }
 
     // 刷新所有已导入的本地文件夹歌单。
-    public async Task<IReadOnlyList<TerminalPlaylistItem>> RefreshImportedFoldersAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TerminalPlaylistItem>> RefreshImportedFoldersAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(() => RefreshImportedFoldersCoreAsync(cancellationToken), cancellationToken);
+
+    private async Task<IReadOnlyList<TerminalPlaylistItem>> RefreshImportedFoldersCoreAsync(CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
-        await using var connection = await CreateConnectionAsync(cancellationToken);
-        var folderPaths = await GetImportedFolderPathsAsync(connection, cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var folderPaths = await GetImportedFolderPathsAsync(connection, cancellationToken).ConfigureAwait(false);
 
         var refreshed = new List<TerminalPlaylistItem>();
         foreach (var folderPath in folderPaths)
@@ -462,27 +502,33 @@ internal sealed class TerminalLocalMusicService
                 continue;
             }
 
-            refreshed.Add(await ImportFolderAsync(folderPath, cancellationToken));
+            refreshed.Add(await ImportFolderCoreAsync(folderPath, cancellationToken).ConfigureAwait(false));
         }
 
         return refreshed;
     }
 
-    public async Task DeletePlaylistAsync(long playlistId, CancellationToken cancellationToken = default)
+    public Task DeletePlaylistAsync(long playlistId, CancellationToken cancellationToken = default) =>
+        Task.Run(() => DeletePlaylistCoreAsync(playlistId, cancellationToken), cancellationToken);
+
+    private async Task DeletePlaylistCoreAsync(long playlistId, CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
-        await using var connection = await CreateConnectionAsync(cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM playlists WHERE id = $playlistId;";
         command.Parameters.AddWithValue("$playlistId", playlistId);
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task RemoveTrackFromPlaylistAsync(long playlistId, long trackId, CancellationToken cancellationToken = default)
+    public Task RemoveTrackFromPlaylistAsync(long playlistId, long trackId, CancellationToken cancellationToken = default) =>
+        Task.Run(() => RemoveTrackFromPlaylistCoreAsync(playlistId, trackId, cancellationToken), cancellationToken);
+
+    private async Task RemoveTrackFromPlaylistCoreAsync(long playlistId, long trackId, CancellationToken cancellationToken)
     {
-        await InitializeAsync(cancellationToken);
-        await using var connection = await CreateConnectionAsync(cancellationToken);
-        var playlist = await GetPlaylistAsync(connection, null, playlistId, cancellationToken);
+        await InitializeCoreAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
+        var playlist = await GetPlaylistAsync(connection, null, playlistId, cancellationToken).ConfigureAwait(false);
         if (playlist is null)
         {
             return;
@@ -498,16 +544,16 @@ internal sealed class TerminalLocalMusicService
             """;
         command.Parameters.AddWithValue("$playlistId", playlistId);
         command.Parameters.AddWithValue("$trackId", trackId);
-        var removed = await command.ExecuteNonQueryAsync(cancellationToken);
+        var removed = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         if (removed == 0)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
             return;
         }
 
         playlist.UpdatedAtUtc = DateTime.UtcNow;
-        await UpdatePlaylistAsync(connection, transaction, playlist, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        await UpdatePlaylistAsync(connection, transaction, playlist, cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // 规范化用户输入的路径：去除首尾空白与引号，并展开 ~ 主目录。
@@ -757,11 +803,11 @@ internal sealed class TerminalLocalMusicService
 
     private async Task<SqliteConnection> CreateConnectionAsync(CancellationToken cancellationToken)
     {
-        var connection = new SqliteConnection($"Data Source={_databasePath}");
-        await connection.OpenAsync(cancellationToken);
+        var connection = new SqliteConnection($"Data Source={_databasePath};Default Timeout=5");
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var pragma = connection.CreateCommand();
-        pragma.CommandText = "PRAGMA foreign_keys = ON;";
-        await pragma.ExecuteNonQueryAsync(cancellationToken);
+        pragma.CommandText = "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;";
+        await pragma.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         return connection;
     }
 
