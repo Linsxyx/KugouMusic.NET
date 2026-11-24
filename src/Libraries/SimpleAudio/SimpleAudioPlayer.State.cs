@@ -30,6 +30,8 @@ public partial class SimpleAudioPlayer
         public int Stream { get; set; }
         public int SourceStream { get; set; }
         public IDisposable? StreamSourceOwner { get; set; }
+        public IAbortableStreamSource? PendingAbortableSource { get; set; }
+        public int LoadGeneration;
         public AudioChannelMode ChannelMode { get; set; } = AudioChannelMode.Auto;
         public AudioChannelLayout? SourceChannelLayout { get; set; }
         public AudioChannelLayout? OutputChannelLayout { get; set; }

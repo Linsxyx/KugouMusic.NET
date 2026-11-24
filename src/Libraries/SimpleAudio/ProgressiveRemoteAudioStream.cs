@@ -89,6 +89,19 @@ public sealed class RemoteAudioPlaybackSource : IDisposable
         _detached = true;
     }
 
+    // 提前中止底层阻塞中的远程读取回调，避免取消预加载或切歌时等待网络超时。
+    public void Abort()
+    {
+        if (Stream is IAbortableStreamSource abortableStream)
+        {
+            abortableStream.Abort();
+        }
+        else if (Owner is IAbortableStreamSource abortableOwner)
+        {
+            abortableOwner.Abort();
+        }
+    }
+
     public void Dispose()
     {
         if (_detached || Interlocked.Exchange(ref _disposed, 1) != 0)

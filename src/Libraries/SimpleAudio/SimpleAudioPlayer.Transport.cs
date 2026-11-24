@@ -35,6 +35,7 @@ public partial class SimpleAudioPlayer : IDisposable
                     ? sourceDescription
                     : null;
 
+        var pendingAbortable = inputStream as IAbortableStreamSource ?? owner as IAbortableStreamSource;
         var loaded = LoadCore(
             sourceDescription,
             (sourceFlags, deviceSpeakers) =>
@@ -49,7 +50,8 @@ public partial class SimpleAudioPlayer : IDisposable
                     deviceSpeakers,
                     _state.ChannelMode);
             },
-            reloadableSourcePath: reloadablePath);
+            reloadableSourcePath: reloadablePath,
+            pendingAbortable: pendingAbortable);
 
         if (!openerInvoked)
         {
@@ -101,17 +103,20 @@ public partial class SimpleAudioPlayer : IDisposable
         TryReloadCurrentSourceForChannelAdaptation();
     }
 
+    // 打开并挂载音频流：设备初始化与句柄提交在短锁内完成，耗时探测/网络 I/O 在锁外执行，避免阻塞其他播放器实例与主线程 Stop。
     private bool LoadCore(
         string sourceDescription,
         Func<BassFlags, int, OpenedBassStream> openSourceStream,
-        string? reloadableSourcePath = null)
+        string? reloadableSourcePath = null,
+        IAbortableStreamSource? pendingAbortable = null)
     {
         Stop();
         LastErrorDetail = null;
 
         var flags = BassFlags.Default | BassFlags.Float;
         var sourceFlags = flags | BassFlags.Decode;
-        string? openError = null;
+        int deviceSpeakers;
+        int generation;
         lock (BassDeviceGate)
         {
             if (!TryInitializeOutputDevice(_preferredOutputDeviceId, out _))
@@ -124,38 +129,83 @@ public partial class SimpleAudioPlayer : IDisposable
                 }
             }
 
-            var deviceSpeakers = Bass.GetInfo(out var bassInfo) && bassInfo.SpeakerCount > 0
+            deviceSpeakers = Bass.GetInfo(out var bassInfo) && bassInfo.SpeakerCount > 0
                 ? bassInfo.SpeakerCount
                 : 2;
+            generation = Interlocked.Increment(ref _state.LoadGeneration);
+            _state.PendingAbortableSource = pendingAbortable;
+        }
 
+        string? openError = null;
+        var createdStream = 0;
+        var abortedByNewerOperation = false;
+        try
+        {
             using var opened = openSourceStream(sourceFlags, deviceSpeakers);
             openError = opened.Error;
 
-            if (opened.IsSuccess)
+            lock (BassDeviceGate)
             {
-                var tempoStream = BassFx.TempoCreate(opened.Handle, flags | BassFlags.FxFreeSource);
-                if (tempoStream == 0)
+                if (ReferenceEquals(_state.PendingAbortableSource, pendingAbortable))
                 {
-                    openError = $"BASS_FX TempoCreate 失败(ch={opened.OutputChannels}): {Bass.LastError}";
+                    _state.PendingAbortableSource = null;
                 }
-                else
+
+                if (Volatile.Read(ref _state.LoadGeneration) != generation)
                 {
-                    var (sourceStream, owner) = opened.Detach();
-                    Stream = tempoStream;
-                    SourceStream = sourceStream;
-                    StreamSourceOwner = owner;
-                    _state.SourceChannelLayout = opened.SourceLayout;
-                    _state.OutputChannelLayout = opened.TargetLayout;
-                    _state.SourceChannelCount = opened.SourceChannels;
-                    _state.OutputChannelCount = opened.OutputChannels;
-                    _state.SourceChannelLayoutName = opened.SourceLayoutName;
-                    _state.OutputChannelLayoutName = opened.OutputLayoutName;
-                    _state.ReloadableSourcePath = reloadableSourcePath;
+                    abortedByNewerOperation = true;
+                }
+                else if (opened.IsSuccess)
+                {
+                    if (!TryInitializeOutputDevice(_preferredOutputDeviceId, out _))
+                    {
+                        _preferredOutputDeviceId = Bass.DefaultDevice;
+                        TryInitializeOutputDevice(Bass.DefaultDevice, out _);
+                    }
+
+                    var tempoStream = BassFx.TempoCreate(opened.Handle, flags | BassFlags.FxFreeSource);
+                    if (tempoStream == 0)
+                    {
+                        openError = $"BASS_FX TempoCreate 失败(ch={opened.OutputChannels}): {Bass.LastError}";
+                    }
+                    else
+                    {
+                        var (sourceStream, owner) = opened.Detach();
+                        Stream = tempoStream;
+                        SourceStream = sourceStream;
+                        StreamSourceOwner = owner;
+                        _state.SourceChannelLayout = opened.SourceLayout;
+                        _state.OutputChannelLayout = opened.TargetLayout;
+                        _state.SourceChannelCount = opened.SourceChannels;
+                        _state.OutputChannelCount = opened.OutputChannels;
+                        _state.SourceChannelLayoutName = opened.SourceLayoutName;
+                        _state.OutputChannelLayoutName = opened.OutputLayoutName;
+                        _state.ReloadableSourcePath = reloadableSourcePath;
+                        createdStream = tempoStream;
+                    }
+                }
+            }
+        }
+        finally
+        {
+            if (pendingAbortable != null)
+            {
+                lock (BassDeviceGate)
+                {
+                    if (ReferenceEquals(_state.PendingAbortableSource, pendingAbortable))
+                    {
+                        _state.PendingAbortableSource = null;
+                    }
                 }
             }
         }
 
-        if (Stream == 0)
+        if (abortedByNewerOperation)
+        {
+            return false;
+        }
+
+        if (createdStream == 0)
         {
             var detailSuffix = string.IsNullOrWhiteSpace(openError) ? string.Empty : $", detail={openError}";
             LastErrorDetail =
@@ -164,9 +214,14 @@ public partial class SimpleAudioPlayer : IDisposable
             return false;
         }
 
+        if (Volatile.Read(ref _state.LoadGeneration) != generation || Stream != createdStream)
+        {
+            return false;
+        }
+
         SyncProcedure endSync = EndSync;
         EndSyncProc = endSync;
-        Bass.ChannelSetSync(Stream, SyncFlags.End, 0, endSync, IntPtr.Zero);
+        Bass.ChannelSetSync(createdStream, SyncFlags.End, 0, endSync, IntPtr.Zero);
 
         PeakEqHandle = 0;
         StereoDspHandle = 0;
@@ -248,41 +303,49 @@ public partial class SimpleAudioPlayer : IDisposable
 
     public void Stop()
     {
+        int stream;
+        int sourceStream;
         IDisposable? streamSourceOwner;
+        IAbortableStreamSource? pendingAbortable;
         lock (BassDeviceGate)
         {
-            var stream = Stream;
-            var sourceStream = SourceStream;
+            Interlocked.Increment(ref _state.LoadGeneration);
+            pendingAbortable = _state.PendingAbortableSource;
+            _state.PendingAbortableSource = null;
+
+            stream = Stream;
+            sourceStream = SourceStream;
             Stream = 0;
             SourceStream = 0;
             streamSourceOwner = StreamSourceOwner;
             StreamSourceOwner = null;
 
-            // 先唤醒可能阻塞在 Read 回调里的自定义流，避免 Bass.StreamFree 等待解码线程卡住。
-            if (streamSourceOwner is IAbortableStreamSource abortable)
-            {
-                abortable.Abort();
-            }
+            _state.SourceChannelLayout = null;
+            _state.OutputChannelLayout = null;
+            _state.SourceChannelCount = 0;
+            _state.OutputChannelCount = 0;
+            _state.SourceChannelLayoutName = string.Empty;
+            _state.OutputChannelLayoutName = string.Empty;
+            _state.ReloadableSourcePath = null;
+            TransitionGain = 1.0f;
+            TransitionToneDepth = 0f;
+        }
 
-            if (stream != 0)
-            {
-                Bass.ChannelStop(stream);
-                if (!Bass.StreamFree(stream) && sourceStream != 0)
-                    Bass.StreamFree(sourceStream);
-            }
+        // 先唤醒可能阻塞在 Read 回调里的自定义流（含正在锁外打开中的流），避免 Bass.StreamFree 或并发 Load 卡住。
+        pendingAbortable?.Abort();
+        if (streamSourceOwner is IAbortableStreamSource abortable)
+        {
+            abortable.Abort();
+        }
+
+        if (stream != 0)
+        {
+            Bass.ChannelStop(stream);
+            if (!Bass.StreamFree(stream) && sourceStream != 0)
+                Bass.StreamFree(sourceStream);
         }
 
         streamSourceOwner?.Dispose();
-
-        _state.SourceChannelLayout = null;
-        _state.OutputChannelLayout = null;
-        _state.SourceChannelCount = 0;
-        _state.OutputChannelCount = 0;
-        _state.SourceChannelLayoutName = string.Empty;
-        _state.OutputChannelLayoutName = string.Empty;
-        _state.ReloadableSourcePath = null;
-        TransitionGain = 1.0f;
-        TransitionToneDepth = 0f;
     }
 
     public static void Free()
