@@ -4,6 +4,7 @@ using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Platform;
 using Avalonia.Rendering.Composition;
+using Avalonia.Threading;
 using AvaloniaSilkEffects.Gpu.OpenGl;
 using Silk.NET.OpenGL;
 
@@ -160,7 +161,9 @@ internal abstract class CompositionEffectPresenter : IEffectPresenter
     private readonly EffectSwapchain _images;
     private SwapchainImage? _drawing;
     private bool _queued;
+    private bool _cleanupScheduled;
     private bool _disposed;
+    protected bool DeviceFaulted { get; private set; }
 
     protected CompositionEffectPresenter(IEffectPresenterHost host, Visual visual, Compositor compositor,
         ICompositionGpuInterop interop)
@@ -205,6 +208,9 @@ internal abstract class CompositionEffectPresenter : IEffectPresenter
                 // Hidden: keep the device, give back the scene's objects and the swapchain memory.
                 Host.ReleaseDeviceResources();
                 _images.Release(force: false);
+                ReclaimIdleMemory();
+                if (_images.FirstPendingPresent() is { } pending)
+                    ScheduleHiddenCleanup(pending);
                 return;
             }
             _drawing = null;
@@ -218,8 +224,23 @@ internal abstract class CompositionEffectPresenter : IEffectPresenter
         }
         catch (Exception exception)
         {
+            DeviceFaulted = true;
             Host.PresenterFailed(this, exception);
         }
+    }
+
+    private void ScheduleHiddenCleanup(Task pending)
+    {
+        if (_cleanupScheduled) return;
+        _cleanupScheduled = true;
+        _ = pending.ContinueWith(_ =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _cleanupScheduled = false;
+                if (!_disposed && !Host.IsRenderingActive) RequestFrame();
+            });
+        }, TaskScheduler.Default);
     }
 
     private GpuRenderTarget? Acquire(PixelSize size)
@@ -249,6 +270,7 @@ internal abstract class CompositionEffectPresenter : IEffectPresenter
         }
     }
 
+    protected virtual void ReclaimIdleMemory() => WaitIdle();
     protected abstract void WaitIdle();
     protected abstract void DisposeDevice();
 }

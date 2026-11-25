@@ -16,6 +16,7 @@ namespace AvaloniaSilkEffects.Gpu.Presentation;
 /// </summary>
 internal sealed unsafe class VulkanEffectPresenter : CompositionEffectPresenter
 {
+    private readonly SharedVulkanDevice _shared;
     private readonly VulkanGpuDevice _gpu;
     private readonly bool _windows = OperatingSystem.IsWindows();
     private readonly KhrExternalMemoryWin32? _memoryWin32;
@@ -26,30 +27,12 @@ internal sealed unsafe class VulkanEffectPresenter : CompositionEffectPresenter
     public VulkanEffectPresenter(IEffectPresenterHost host, Visual visual, Compositor compositor, ICompositionGpuInterop interop)
         : base(host, visual, compositor, interop)
     {
-        string[] deviceExtensions = _windows
-            ? ["VK_KHR_external_memory", "VK_KHR_external_semaphore", KhrExternalMemoryWin32.ExtensionName,
-                KhrExternalSemaphoreWin32.ExtensionName, "VK_KHR_dedicated_allocation", "VK_KHR_get_memory_requirements2"]
-            : ["VK_KHR_external_memory", "VK_KHR_external_semaphore", KhrExternalMemoryFd.ExtensionName,
-                KhrExternalSemaphoreFd.ExtensionName, "VK_KHR_dedicated_allocation", "VK_KHR_get_memory_requirements2"];
-        _gpu = VulkanGpuDevice.Create(new VulkanDeviceOptions
-        {
-            DeviceUuid = interop.DeviceUuid,
-            DeviceLuid = interop.DeviceLuid,
-            InstanceExtensions = ["VK_KHR_get_physical_device_properties2", "VK_KHR_external_memory_capabilities",
-                "VK_KHR_external_semaphore_capabilities"],
-            DeviceExtensions = deviceExtensions,
-        });
-        var vk = _gpu.Vk;
-        var missing = _windows
-            ? !vk.TryGetDeviceExtension(_gpu.Instance, _gpu.Handle, out _memoryWin32) ||
-              !vk.TryGetDeviceExtension(_gpu.Instance, _gpu.Handle, out _semaphoreWin32)
-            : !vk.TryGetDeviceExtension(_gpu.Instance, _gpu.Handle, out _memoryFd) ||
-              !vk.TryGetDeviceExtension(_gpu.Instance, _gpu.Handle, out _semaphoreFd);
-        if (missing)
-        {
-            _gpu.Dispose();
-            throw new NotSupportedException("The Vulkan device cannot export memory and semaphores.");
-        }
+        _shared = SharedVulkanDevice.Acquire(interop.DeviceUuid, interop.DeviceLuid, _windows);
+        _gpu = _shared.Gpu;
+        _memoryWin32 = _shared.MemoryWin32;
+        _memoryFd = _shared.MemoryFd;
+        _semaphoreWin32 = _shared.SemaphoreWin32;
+        _semaphoreFd = _shared.SemaphoreFd;
     }
 
     public override EffectGpuBackend Backend => EffectGpuBackend.Vulkan;
@@ -93,7 +76,123 @@ internal sealed unsafe class VulkanEffectPresenter : CompositionEffectPresenter
         _gpu.Vk.DeviceWaitIdle(_gpu.Handle);
     }
 
-    protected override void DisposeDevice() => _gpu.Dispose();
+    protected override void ReclaimIdleMemory() => _gpu.ReclaimIdleMemory();
+
+    protected override void DisposeDevice() => _shared.Release(poisoned: DeviceFaulted || Interop.IsLost);
+
+    /// <summary>
+    /// Reference-counted process-wide Vulkan device keyed by GPU LUID/UUID so multiple controls share one
+    /// VkInstance + VkDevice instead of paying per-device Windows ICD overhead for every SilkEffectControl.
+    /// </summary>
+    private sealed class SharedVulkanDevice
+    {
+        private static readonly object Gate = new();
+        private static readonly Dictionary<string, SharedVulkanDevice> Pool = [];
+
+        private readonly string _key;
+        private int _refCount;
+        private bool _detached;
+
+        private SharedVulkanDevice(string key, VulkanGpuDevice gpu, KhrExternalMemoryWin32? memoryWin32,
+            KhrExternalMemoryFd? memoryFd, KhrExternalSemaphoreWin32? semaphoreWin32, KhrExternalSemaphoreFd? semaphoreFd)
+        {
+            _key = key;
+            Gpu = gpu;
+            MemoryWin32 = memoryWin32;
+            MemoryFd = memoryFd;
+            SemaphoreWin32 = semaphoreWin32;
+            SemaphoreFd = semaphoreFd;
+            _refCount = 1;
+        }
+
+        public VulkanGpuDevice Gpu { get; }
+        public KhrExternalMemoryWin32? MemoryWin32 { get; }
+        public KhrExternalMemoryFd? MemoryFd { get; }
+        public KhrExternalSemaphoreWin32? SemaphoreWin32 { get; }
+        public KhrExternalSemaphoreFd? SemaphoreFd { get; }
+
+        public static SharedVulkanDevice Acquire(byte[]? deviceUuid, byte[]? deviceLuid, bool windows)
+        {
+            var key = $"{(windows ? "win" : "unix")}:{Convert.ToHexString(deviceLuid ?? [])}:{Convert.ToHexString(deviceUuid ?? [])}";
+            lock (Gate)
+            {
+                if (Pool.TryGetValue(key, out var existing) && !existing.Gpu.IsDisposed)
+                {
+                    existing._refCount++;
+                    return existing;
+                }
+            }
+
+            string[] deviceExtensions = windows
+                ? ["VK_KHR_external_memory", "VK_KHR_external_semaphore", KhrExternalMemoryWin32.ExtensionName,
+                    KhrExternalSemaphoreWin32.ExtensionName, "VK_KHR_dedicated_allocation", "VK_KHR_get_memory_requirements2"]
+                : ["VK_KHR_external_memory", "VK_KHR_external_semaphore", KhrExternalMemoryFd.ExtensionName,
+                    KhrExternalSemaphoreFd.ExtensionName, "VK_KHR_dedicated_allocation", "VK_KHR_get_memory_requirements2"];
+            var gpu = VulkanGpuDevice.Create(new VulkanDeviceOptions
+            {
+                DeviceUuid = deviceUuid,
+                DeviceLuid = deviceLuid,
+                InstanceExtensions = ["VK_KHR_get_physical_device_properties2", "VK_KHR_external_memory_capabilities",
+                    "VK_KHR_external_semaphore_capabilities"],
+                DeviceExtensions = deviceExtensions,
+            });
+            var vk = gpu.Vk;
+            KhrExternalMemoryWin32? memoryWin32 = null;
+            KhrExternalSemaphoreWin32? semaphoreWin32 = null;
+            KhrExternalMemoryFd? memoryFd = null;
+            KhrExternalSemaphoreFd? semaphoreFd = null;
+            var missing = windows
+                ? !vk.TryGetDeviceExtension(gpu.Instance, gpu.Handle, out memoryWin32) ||
+                  !vk.TryGetDeviceExtension(gpu.Instance, gpu.Handle, out semaphoreWin32)
+                : !vk.TryGetDeviceExtension(gpu.Instance, gpu.Handle, out memoryFd) ||
+                  !vk.TryGetDeviceExtension(gpu.Instance, gpu.Handle, out semaphoreFd);
+            if (missing)
+            {
+                gpu.Dispose();
+                throw new NotSupportedException("The Vulkan device cannot export memory and semaphores.");
+            }
+
+            lock (Gate)
+            {
+                if (Pool.TryGetValue(key, out var race) && !race.Gpu.IsDisposed)
+                {
+                    gpu.Dispose();
+                    race._refCount++;
+                    return race;
+                }
+                var created = new SharedVulkanDevice(key, gpu, memoryWin32, memoryFd, semaphoreWin32, semaphoreFd);
+                Pool[key] = created;
+                return created;
+            }
+        }
+
+        public void Release(bool poisoned)
+        {
+            bool disposeNow;
+            lock (Gate)
+            {
+                if (poisoned && !_detached)
+                {
+                    if (Pool.TryGetValue(_key, out var current) && ReferenceEquals(current, this))
+                        Pool.Remove(_key);
+                    _detached = true;
+                }
+                _refCount--;
+                disposeNow = _refCount <= 0;
+                if (disposeNow && !_detached)
+                {
+                    if (Pool.TryGetValue(_key, out var current) && ReferenceEquals(current, this))
+                        Pool.Remove(_key);
+                    _detached = true;
+                }
+            }
+
+            if (disposeNow)
+                Gpu.Dispose();
+            else if (!poisoned)
+                Gpu.ReclaimIdleMemory();
+        }
+    }
 
     private sealed class Image : SwapchainImage
     {

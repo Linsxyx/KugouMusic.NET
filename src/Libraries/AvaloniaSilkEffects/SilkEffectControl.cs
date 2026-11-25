@@ -335,7 +335,7 @@ public class SilkEffectControl : Control, IEffectPresenterHost
         }
         UpdateRenderingActivity();
         base.OnAttachedToVisualTree(e);
-        if (_presenter is null && !_presenterPending)
+        if (IsRenderingActive && _presenter is null && !_presenterPending)
             _ = CreatePresenterAsync();
     }
 
@@ -428,6 +428,8 @@ public class SilkEffectControl : Control, IEffectPresenterHost
         // Keep the playback clock advancing while hidden. IsPaused remains
         // caller-owned, so showing a paused scene does not resume playback.
         OnRenderingActivityChanged();
+        if (active && _isAttached && _presenter is null && !_presenterPending && VisualRoot is not null)
+            _ = CreatePresenterAsync();
         if (active || _device is not null)
             RequestNextFrameRendering();
     }

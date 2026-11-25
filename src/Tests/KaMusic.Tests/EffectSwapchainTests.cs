@@ -99,10 +99,12 @@ public sealed class EffectSwapchainTests
         pool.Release(force: false);
         Assert.False(drawing.Disposed);
         Assert.Equal(1, pool.Count);
+        Assert.NotNull(pool.FirstPendingPresent());
         pool.Release(force: true);
         pool.Release(force: true);
         Assert.True(drawing.Disposed);
         Assert.Equal(0, pool.Count);
+        Assert.Null(pool.FirstPendingPresent());
     }
 
     private sealed class Image(PixelSize size) : SwapchainImage(size)

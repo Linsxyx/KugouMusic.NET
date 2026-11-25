@@ -220,7 +220,7 @@ internal abstract class GpuRenderTarget : GpuResource
     public int Width { get; protected set; }
     public int Height { get; protected set; }
     public int Samples { get; protected set; } = 1;
-    public bool HasDepthStencil { get; protected init; }
+    public bool HasDepthStencil { get; protected set; }
     public abstract GpuTexture? Texture { get; }
     public bool IsAllocated => Width > 0;
 

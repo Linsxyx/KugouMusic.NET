@@ -30,8 +30,10 @@ internal sealed record VulkanDeviceOptions
 internal sealed unsafe class VulkanGpuDevice : GpuDevice
 {
     private const int FramesInFlight = 2;
+    private const int OneShotStagingThreshold = 256 * 1024;
     internal const Format ColorFormat = Format.R8G8B8A8Unorm;
 
+    private readonly VulkanMemoryAllocator _allocator;
     private readonly FrameContext[] _frames = new FrameContext[FramesInFlight];
     private readonly Dictionary<GpuCompiledProgram, ProgramObjects> _programs = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<PipelineKey, Pipeline> _pipelines = [];
@@ -73,6 +75,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         MaxSamples = counts.HasFlag(SampleCountFlags.Count8Bit) ? 8 : counts.HasFlag(SampleCountFlags.Count4Bit) ? 4 : 1;
         DepthStencilFormat = SupportsAttachment(Format.D24UnormS8Uint, FormatFeatureFlags.DepthStencilAttachmentBit)
             ? Format.D24UnormS8Uint : Format.D32SfloatS8Uint;
+        _allocator = new VulkanMemoryAllocator(this);
         for (var index = 0; index < FramesInFlight; index++) _frames[index] = new FrameContext(this);
         _samplers[(int)GpuFilter.Nearest] = CreateSampler(Filter.Nearest, false);
         _samplers[(int)GpuFilter.Linear] = CreateSampler(Filter.Linear, false);
@@ -91,6 +94,9 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
     public PhysicalDeviceProperties Properties { get; }
     public PhysicalDeviceMemoryProperties MemoryProperties { get; }
     public Format DepthStencilFormat { get; }
+    internal VulkanMemoryAllocator MemoryAllocator => _allocator;
+    internal int PendingGarbageCount => _garbage.Count;
+    internal long ArenaBytes => _frames.Sum(frame => frame.ArenaBytes);
     public override EffectGpuBackend Backend => EffectGpuBackend.Vulkan;
     public override string ApiVersion { get; }
     public override string Renderer { get; }
@@ -197,8 +203,26 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         var texture = new VulkanTexture(this, image, memory, view, width, height, filter);
         var frame = EnsureRecording();
         var commands = frame.Uploads();
-        var staging = frame.Staging(rgba.IsEmpty ? 4 : rgba.Length, out var stagingOffset, out var stagingBuffer);
-        rgba.CopyTo(staging);
+        VkBuffer stagingBuffer;
+        int stagingOffset;
+        if (!rgba.IsEmpty && rgba.Length >= OneShotStagingThreshold)
+        {
+            stagingBuffer = CreateHostBuffer((ulong)rgba.Length, BufferUsageFlags.TransferSrcBit, out var stagingAlloc, out var mapped);
+            stagingOffset = 0;
+            rgba.CopyTo(new Span<byte>(mapped, rgba.Length));
+            var tempBuffer = stagingBuffer;
+            var tempAlloc = stagingAlloc;
+            Defer(() =>
+            {
+                Vk.DestroyBuffer(Handle, tempBuffer, null);
+                _allocator.Free(tempAlloc);
+            });
+        }
+        else
+        {
+            var staging = frame.Staging(rgba.IsEmpty ? 4 : rgba.Length, out stagingOffset, out stagingBuffer);
+            rgba.CopyTo(staging);
+        }
         Barrier(commands, image, ImageAspectFlags.ColorBit, ImageLayout.Undefined, ImageLayout.TransferDstOptimal, 0, levels);
         if (!rgba.IsEmpty)
         {
@@ -338,8 +362,18 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         finally
         {
             Vk.DestroyBuffer(Handle, buffer, null);
-            Vk.FreeMemory(Handle, memory, null);
+            _allocator.Free(memory);
         }
+    }
+
+    /// <summary>Waits for all GPU work, flushes deferred destructions and trims per-frame streaming arenas.</summary>
+    public void ReclaimIdleMemory()
+    {
+        if (IsDisposed) return;
+        Submit(wait: true);
+        Vk.DeviceWaitIdle(Handle);
+        Collect(ulong.MaxValue);
+        foreach (var frame in _frames) frame.Trim();
     }
 
     // ---- Drawing -----------------------------------------------------------------------------------------------------
@@ -348,6 +382,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
     {
         if (!ColorWrite) color = null;
         var target = CurrentTarget;
+        if (stencil) target.EnsureDepthStencil();
         if (!target.HasDepthStencil) stencil = false;
         if (color is null && !stencil) return;
         var rect = Clip(Scissor, target);
@@ -447,6 +482,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
     private CommandBuffer Prepare(VulkanShader shader, GpuVertexLayout? layout, GpuTopology topology)
     {
         var target = CurrentTarget;
+        if (Stencil != GpuStencil.Disabled) target.EnsureDepthStencil();
         var commands = EnsurePass(target);
         var objects = _programs[shader.Program];
         var key = new PipelineKey(shader.Program, layout, Blend, ColorWrite, target.HasDepthStencil ? Stencil : GpuStencil.Disabled,
@@ -775,7 +811,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
     // ---- Low-level helpers -------------------------------------------------------------------------------------------
 
     internal Image CreateImage(int width, int height, Format format, uint levels, SampleCountFlags samples,
-        ImageUsageFlags usage, out DeviceMemory memory)
+        ImageUsageFlags usage, out VulkanMemoryAllocation memory)
     {
         var info = new ImageCreateInfo
         {
@@ -793,8 +829,8 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         };
         Check(Vk.CreateImage(Handle, in info, null, out var image), "vkCreateImage");
         Vk.GetImageMemoryRequirements(Handle, image, out var requirements);
-        memory = Allocate(requirements, MemoryPropertyFlags.DeviceLocalBit);
-        Check(Vk.BindImageMemory(Handle, image, memory, 0), "vkBindImageMemory");
+        memory = _allocator.AllocateImage(requirements, MemoryPropertyFlags.DeviceLocalBit);
+        Check(Vk.BindImageMemory(Handle, image, memory.Memory, memory.Offset), "vkBindImageMemory");
         return image;
     }
 
@@ -812,7 +848,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         return view;
     }
 
-    internal VkBuffer CreateHostBuffer(ulong size, BufferUsageFlags usage, out DeviceMemory memory, out void* mapped)
+    internal VkBuffer CreateHostBuffer(ulong size, BufferUsageFlags usage, out VulkanMemoryAllocation memory, out void* mapped)
     {
         var info = new BufferCreateInfo
         {
@@ -820,11 +856,9 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         };
         Check(Vk.CreateBuffer(Handle, in info, null, out var buffer), "vkCreateBuffer");
         Vk.GetBufferMemoryRequirements(Handle, buffer, out var requirements);
-        memory = Allocate(requirements, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit);
-        Check(Vk.BindBufferMemory(Handle, buffer, memory, 0), "vkBindBufferMemory");
-        void* pointer;
-        Check(Vk.MapMemory(Handle, memory, 0, size, 0, &pointer), "vkMapMemory");
-        mapped = pointer;
+        memory = _allocator.AllocateBuffer(requirements, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, map: true);
+        Check(Vk.BindBufferMemory(Handle, buffer, memory.Memory, memory.Offset), "vkBindBufferMemory");
+        mapped = (void*)memory.Mapped;
         return buffer;
     }
 
@@ -978,6 +1012,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         _empty.Dispose();
         Collect(ulong.MaxValue);
         foreach (var frame in _frames) frame.Dispose();
+        _allocator.Dispose();
         foreach (var pipeline in _pipelines.Values) Vk.DestroyPipeline(Handle, pipeline, null);
         foreach (var pass in _renderPasses.Values) Vk.DestroyRenderPass(Handle, pass, null);
         foreach (var program in _programs.Values) program.Dispose();
@@ -1073,12 +1108,12 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
     /// <summary>Per-frame command buffers, fence, descriptor pools and a host-visible streaming arena.</summary>
     private sealed class FrameContext
     {
-        private const int ChunkSize = 4 * 1024 * 1024;
+        private const int ChunkSize = 512 * 1024;
         private readonly VulkanGpuDevice _device;
         private readonly CommandPool _pool;
         private readonly Fence _fence;
         private readonly List<DescriptorPool> _descriptorPools = [];
-        private readonly List<(VkBuffer Buffer, DeviceMemory Memory, nint Mapped, int Size)> _chunks = [];
+        private readonly List<(VkBuffer Buffer, VulkanMemoryAllocation Memory, nint Mapped, int Size)> _chunks = [];
         private readonly Ledger _ledger = new();
         private int _descriptorPool;
         private int _chunk;
@@ -1113,6 +1148,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         public CommandBuffer Commands { get; }
         public CommandBuffer UploadCommands { get; }
         public ulong Serial { get; private set; }
+        public long ArenaBytes => _chunks.Sum(chunk => (long)chunk.Size);
 
         public void Wait()
         {
@@ -1127,6 +1163,16 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
             var vk = _device.Vk;
             var fence = _fence;
             vk.ResetFences(_device.Handle, 1, &fence);
+            // Release any overflow chunks or descriptor pools from a previous spike now that this frame's fence completed.
+            if (_chunks.Count > 1) ReleaseChunks(keepCount: 1);
+            if (_descriptorPools.Count > 1)
+            {
+                for (var index = _descriptorPools.Count - 1; index >= 1; index--)
+                {
+                    vk.DestroyDescriptorPool(_device.Handle, _descriptorPools[index], null);
+                    _descriptorPools.RemoveAt(index);
+                }
+            }
             foreach (var pool in _descriptorPools) vk.ResetDescriptorPool(_device.Handle, pool, 0);
             _descriptorPool = 0;
             _chunk = 0;
@@ -1137,6 +1183,35 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
                 SType = StructureType.CommandBufferBeginInfo, Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
             };
             vk.BeginCommandBuffer(Commands, in begin);
+        }
+
+        /// <summary>Releases all streaming chunks and extra descriptor pools while the device is idle.</summary>
+        public void Trim()
+        {
+            if (_chunks.Count > 0) ReleaseChunks(keepCount: 0);
+            if (_descriptorPools.Count > 0)
+            {
+                var vk = _device.Vk;
+                foreach (var pool in _descriptorPools) vk.DestroyDescriptorPool(_device.Handle, pool, null);
+                _descriptorPools.Clear();
+            }
+            _descriptorPool = 0;
+            _chunk = 0;
+            _offset = 0;
+        }
+
+        private void ReleaseChunks(int keepCount)
+        {
+            var vk = _device.Vk;
+            for (var index = _chunks.Count - 1; index >= keepCount; index--)
+            {
+                var chunk = _chunks[index];
+                vk.DestroyBuffer(_device.Handle, chunk.Buffer, null);
+                _device._allocator.Free(chunk.Memory);
+                _chunks.RemoveAt(index);
+            }
+            if (_chunks.Count == 0) _device.Resources.ReleaseBuffer(_ledger.Id);
+            else _device.Resources.Buffer(_ledger.Id, _chunks.Sum(chunk => (long)chunk.Size));
         }
 
         /// <summary>The upload command buffer, submitted before <see cref="Commands"/>.</summary>
@@ -1263,13 +1338,7 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
         public void Dispose()
         {
             var vk = _device.Vk;
-            foreach (var pool in _descriptorPools) vk.DestroyDescriptorPool(_device.Handle, pool, null);
-            foreach (var chunk in _chunks)
-            {
-                vk.DestroyBuffer(_device.Handle, chunk.Buffer, null);
-                vk.FreeMemory(_device.Handle, chunk.Memory, null);
-            }
-            _device.Resources.ReleaseBuffer(_ledger.Id);
+            Trim();
             vk.DestroyFence(_device.Handle, _fence, null);
             vk.DestroyCommandPool(_device.Handle, _pool, null);
         }
@@ -1284,10 +1353,10 @@ internal sealed unsafe class VulkanGpuDevice : GpuDevice
 internal sealed unsafe class VulkanTexture : GpuTexture
 {
     private readonly VulkanGpuDevice? _device;
-    private readonly DeviceMemory _memory;
+    private readonly VulkanMemoryAllocation _memory;
     private readonly Image _image;
 
-    public VulkanTexture(VulkanGpuDevice? device, Image image, DeviceMemory memory, ImageView view, int width, int height,
+    public VulkanTexture(VulkanGpuDevice? device, Image image, VulkanMemoryAllocation memory, ImageView view, int width, int height,
         GpuFilter filter)
     {
         _device = device;
@@ -1309,12 +1378,12 @@ internal sealed unsafe class VulkanTexture : GpuTexture
         {
             device.Vk.DestroyImageView(device.Handle, view, null);
             device.Vk.DestroyImage(device.Handle, image, null);
-            device.Vk.FreeMemory(device.Handle, memory, null);
+            device.MemoryAllocator.Free(memory);
         });
     }
 }
 
-internal sealed unsafe class VulkanBuffer(VulkanGpuDevice device, VkBuffer handle, DeviceMemory memory, long size) : GpuBuffer
+internal sealed unsafe class VulkanBuffer(VulkanGpuDevice device, VkBuffer handle, VulkanMemoryAllocation memory, long size) : GpuBuffer
 {
     public VkBuffer Handle { get; } = handle;
     public long Length { get; } = size;
@@ -1326,7 +1395,7 @@ internal sealed unsafe class VulkanBuffer(VulkanGpuDevice device, VkBuffer handl
         device.Defer(() =>
         {
             device.Vk.DestroyBuffer(device.Handle, buffer, null);
-            device.Vk.FreeMemory(device.Handle, deviceMemory, null);
+            device.MemoryAllocator.Free(deviceMemory);
         });
     }
 }
@@ -1340,8 +1409,9 @@ internal sealed unsafe class VulkanRenderTarget : GpuRenderTarget
 {
     private readonly VulkanGpuDevice _device;
     private readonly bool _external;
-    private DeviceMemory _colorMemory;
-    private DeviceMemory _depthMemory;
+    private readonly bool _allowLazyDepthStencil;
+    private VulkanMemoryAllocation _colorMemory;
+    private VulkanMemoryAllocation _depthMemory;
     private ImageView _colorView;
     private Image _depthImage;
     private ImageView _depthView;
@@ -1360,7 +1430,9 @@ internal sealed unsafe class VulkanRenderTarget : GpuRenderTarget
     {
         _device = device;
         _external = true;
-        HasDepthStencil = true;
+        _allowLazyDepthStencil = true;
+        // Allocate the depth/stencil attachment lazily: when post-processing is active, swapchain targets never use stencil.
+        HasDepthStencil = false;
         Format = format;
         ColorImage = image;
         RestLayout = restLayout;
@@ -1368,7 +1440,6 @@ internal sealed unsafe class VulkanRenderTarget : GpuRenderTarget
         Width = width;
         Height = height;
         _colorView = device.CreateView(image, format, ImageAspectFlags.ColorBit);
-        CreateDepth(width, height, SampleCountFlags.Count1Bit);
         _texture = new VulkanTexture(null, image, default, _colorView, width, height, GpuFilter.Linear);
     }
 
@@ -1387,6 +1458,22 @@ internal sealed unsafe class VulkanRenderTarget : GpuRenderTarget
 
     internal VulkanGpuDevice.PassKey CompatibleKey =>
         new(Format, Samples, HasDepthStencil, false, false, ImageLayout.Undefined, ImageLayout.Undefined);
+
+    /// <summary>Lazily creates the depth/stencil attachment for an external target on first stencil use.</summary>
+    internal void EnsureDepthStencil()
+    {
+        if (HasDepthStencil || !_allowLazyDepthStencil || !IsAllocated) return;
+        _device.Forget(this);
+        if (_framebuffer.Handle != 0)
+        {
+            var device = _device;
+            var framebuffer = _framebuffer;
+            device.Defer(() => device.Vk.DestroyFramebuffer(device.Handle, framebuffer, null));
+            _framebuffer = default;
+        }
+        HasDepthStencil = true;
+        CreateDepth(Width, Height, (SampleCountFlags)Samples);
+    }
 
     public override void EnsureSize(int width, int height, int samples = 1)
     {
@@ -1453,10 +1540,10 @@ internal sealed unsafe class VulkanRenderTarget : GpuRenderTarget
             if (framebuffer.Handle != 0) vk.DestroyFramebuffer(device.Handle, framebuffer, null);
             if (colorView.Handle != 0) vk.DestroyImageView(device.Handle, colorView, null);
             if (color.Handle != 0) vk.DestroyImage(device.Handle, color, null);
-            if (colorMemory.Handle != 0) vk.FreeMemory(device.Handle, colorMemory, null);
+            if (colorMemory.IsValid) device.MemoryAllocator.Free(colorMemory);
             if (depthView.Handle != 0) vk.DestroyImageView(device.Handle, depthView, null);
             if (depth.Handle != 0) vk.DestroyImage(device.Handle, depth, null);
-            if (depthMemory.Handle != 0) vk.FreeMemory(device.Handle, depthMemory, null);
+            if (depthMemory.IsValid) device.MemoryAllocator.Free(depthMemory);
         });
         _texture?.Abandon();
         _texture = null;

@@ -58,6 +58,14 @@ internal sealed class EffectSwapchain(Func<PixelSize, SwapchainImage> createImag
             _images.RemoveAt(index);
         }
     }
+
+    public Task? FirstPendingPresent()
+    {
+        foreach (var image in _images)
+            if (image.LastPresent is { IsCompleted: false } pending)
+                return pending;
+        return null;
+    }
 }
 
 internal abstract class SwapchainImage(PixelSize size) : IDisposable
