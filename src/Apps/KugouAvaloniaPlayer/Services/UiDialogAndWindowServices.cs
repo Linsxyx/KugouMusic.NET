@@ -16,7 +16,6 @@ using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Views;
-using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -66,7 +65,7 @@ internal static class MainWindowPresentationHelper
 }
 
 public sealed class LoginDialogService(
-    ISukiDialogManager dialogManager,
+    IKugouDialogManager dialogManager,
     IUiDispatcherService uiDispatcher,
     LoginClient loginClient,
     KgSessionManager sessionManager,

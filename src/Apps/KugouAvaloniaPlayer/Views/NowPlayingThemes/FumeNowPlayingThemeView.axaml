@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              x:Class="KugouAvaloniaPlayer.Views.NowPlayingThemes.FumeNowPlayingThemeView"
@@ -371,8 +371,8 @@
                     Background="#E5121928"
                     BorderBrush="#35D6A91F"
                     BorderThickness="1">
-                <Svg Path="/Assets/gear-svgrepo-com.svg"
-                     Css="path { stroke: #F2EBDD; fill: none; }"
+                <kc:KugouIcon Path="/Assets/gear-svgrepo-com.svg"
+                     Foreground="#F2EBDD"
                      Width="18"
                      Height="18"
                      Opacity="0.92"

@@ -19,8 +19,6 @@ using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.GlobalShortcutService;
 using SimpleAudio;
-using SukiUI;
-using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -50,7 +48,7 @@ public partial class SettingViewModel : PageViewModelBase
 
     private readonly INavigationService _navigation;
     private readonly LoginClient _authClient;
-    private readonly ISukiDialogManager _dialogManager;
+    private readonly IKugouDialogManager _dialogManager;
     private readonly EqSettingsViewModel _eqSettingsViewModel;
     private readonly IGlobalShortcutService _globalShortcutService;
     private readonly IFolderPickerService _folderPickerService;
@@ -200,7 +198,7 @@ public partial class SettingViewModel : PageViewModelBase
     [ObservableProperty] public partial string VipStatus { get; set; } = "未开通";
 
     public SettingViewModel(PlayerViewModel player, UserClient userClient, LoginClient authClient,
-        ISukiDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
+        IKugouDialogManager dialogManager, EqSettingsViewModel eqSettingsViewModel, KgSessionManager sessionManager,
         IGlobalShortcutService globalShortcutService, IGitHubReleaseService releaseService,
         IFolderPickerService folderPickerService, IUiPreferencesState uiPreferencesState,
         IMainWindowService mainWindowService, IMessenger messenger, ITaskbarLyricsService taskbarLyricsService,
@@ -406,10 +404,11 @@ public partial class SettingViewModel : PageViewModelBase
 
     public bool IsDarkMode
     {
-        get => SukiTheme.GetInstance().ActiveBaseTheme == ThemeVariant.Dark;
+        get => Avalonia.Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
         set
         {
-            SukiTheme.GetInstance().ChangeBaseTheme(value ? ThemeVariant.Dark : ThemeVariant.Light);
+            if (Avalonia.Application.Current is { } app)
+                app.RequestedThemeVariant = value ? ThemeVariant.Dark : ThemeVariant.Light;
             SettingsManager.Settings.AppTheme = value ? AppSettings.ThemeDark : AppSettings.ThemeLight;
             SettingsManager.Save();
             OnPropertyChanged();

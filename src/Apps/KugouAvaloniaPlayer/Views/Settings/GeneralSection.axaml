@@ -1,4 +1,6 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" x:Class="KugouAvaloniaPlayer.Views.Settings.GeneralSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" x:Class="KugouAvaloniaPlayer.Views.Settings.GeneralSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <TextBlock Classes="GroupHeader" Text="窗口" />
         <localControls:SettingsCard>
@@ -7,20 +9,20 @@
                     <TextBlock Classes="RowTitle" Text="关闭窗口时" />
                     <TextBlock Classes="RowHint" Text="点击窗口关闭按钮后的行为。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding AvailableCloseBehaviors}" SelectedItem="{Binding SelectedCloseBehavior}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding AvailableCloseBehaviors}" SelectedItem="{Binding SelectedCloseBehavior}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="models:CloseBehavior">
                             <TextBlock Text="{Binding Converter={StaticResource CloseBehaviorConverter}}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.ItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto" IsVisible="{Binding IsLinuxWindowDecorationToggleVisible}">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="系统标题栏" />
                     <TextBlock Classes="RowHint" Text="改善 Linux 下的窗口拖动与缩放兼容性。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding LinuxUseFullWindowDecorations, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding LinuxUseFullWindowDecorations, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -31,7 +33,7 @@
                     <TextBlock Classes="RowTitle" Text="使用 OpenGL 渲染" />
                     <TextBlock Classes="RowHint" Text="默认开启以提升兼容性；关闭后将优先使用 Vulkan / Metal 渲染。重启软件后生效。" TextWrapping="Wrap" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding PreferOpenGlRendering, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding PreferOpenGlRendering, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -44,7 +46,7 @@
                 </StackPanel>
                 <Button Grid.Column="1" Classes="Basic" Command="{Binding OpenLogFolderCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Svg Classes="ThemeSvgIcon" Path="/Assets/open-log-folder.svg" Width="16" Height="16" />
+                        <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/open-log-folder.svg" Width="16" Height="16" />
                         <TextBlock Text="打开文件夹" />
                     </StackPanel>
                 </Button>

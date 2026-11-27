@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:converters="clr-namespace:KugouAvaloniaPlayer.Converters"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -32,7 +32,7 @@
                            Stretch="Uniform" />
 
                     <!-- 加载圈 -->
-                    <suki:Loading Width="40" Height="40"
+                    <kc:KugouLoading Width="40" Height="40"
                                   IsVisible="{Binding QrCodeImageUrl, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
 
                     <!-- 过期遮罩层 -->

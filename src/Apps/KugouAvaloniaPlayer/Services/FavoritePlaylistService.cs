@@ -16,8 +16,6 @@ using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
-using SukiUI.Dialogs;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -26,8 +24,8 @@ public partial class FavoritePlaylistService(
     PlaylistClient playlistClient,
     KgSessionManager sessionManager,
     UserCreatedPlaylistCacheService userCreatedPlaylistCacheService,
-    ISukiToastManager toastManager,
-    ISukiDialogManager dialogManager,
+    IKugouToastManager toastManager,
+    IKugouDialogManager dialogManager,
     IUiDispatcherService uiDispatcher,
     ILogger<FavoritePlaylistService> logger)
 {
@@ -1239,7 +1237,7 @@ partial class FavoritePlaylistService
                         Spacing = 10,
                         Children =
                         {
-                            new SukiUI.Controls.Loading
+                            new KugouLoading
                             {
                                 Width = 22,
                                 Height = 22

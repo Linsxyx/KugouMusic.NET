@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.TaskbarLyricsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.TaskbarLyricsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <TextBlock Classes="GroupHeader" Text="常规" />
         <localControls:SettingsCard>
@@ -7,18 +8,18 @@
                     <TextBlock Classes="RowTitle" Text="显示任务栏歌词" />
                     <TextBlock Classes="RowHint" Text="在任务栏空白处显示当前歌词。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableTaskbarLyrics, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding EnableTaskbarLyrics, Mode=TwoWay}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto" IsEnabled="{Binding EnableTaskbarLyrics}">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="显示翻译" />
                     <TextBlock Classes="RowHint" Text="关闭后放大主歌词。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding TaskbarLyricsShowTranslation, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding TaskbarLyricsShowTranslation, Mode=TwoWay}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto" IsEnabled="{Binding EnableTaskbarLyrics}">
                 <TextBlock Classes="RowTitle" Text="对齐方式" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding TaskbarLyricAlignmentOptions}" SelectedItem="{Binding TaskbarSelectedLyricAlignment}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding TaskbarLyricAlignmentOptions}" SelectedItem="{Binding TaskbarSelectedLyricAlignment}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto" IsEnabled="{Binding EnableTaskbarLyrics}">
                 <StackPanel>
@@ -36,20 +37,20 @@
         <localControls:SettingsCard IsEnabled="{Binding EnableTaskbarLyrics}">
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="字体" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricFontFamilyOptions}" SelectedItem="{Binding TaskbarSelectedLyricFontFamily}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricFontFamilyOptions}" SelectedItem="{Binding TaskbarSelectedLyricFontFamily}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="x:String">
                             <TextBlock Text="{Binding .}" FontFamily="{Binding .}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.ItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="字号" />
                     <TextBlock Classes="RowHint" Text="隐藏翻译时自动放大。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding TaskbarLyricFontSizeOptions}" SelectedItem="{Binding TaskbarLyricsFontSize}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding TaskbarLyricFontSizeOptions}" SelectedItem="{Binding TaskbarLyricsFontSize}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 

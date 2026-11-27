@@ -1,27 +1,31 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:models="using:KugouAvaloniaPlayer.Models"
-             xmlns:sections="using:KugouAvaloniaPlayer.Views.Settings" xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:sections="using:KugouAvaloniaPlayer.Views.Settings"
              xmlns:local="using:KugouAvaloniaPlayer.Controls"
              x:Class="KugouAvaloniaPlayer.Views.SettingView" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <UserControl.Styles><StyleInclude Source="/Views/Settings/SettingsStyles.axaml" /></UserControl.Styles>
-    <suki:GlassCard Margin="16,16,16,100" Padding="20">
-        <Grid x:Name="LayoutGrid" ColumnDefinitions="188,*" ColumnSpacing="24">
+    <kc:KugouGlassCard Margin="16,16,16,100" Padding="20">
+        <Grid x:Name="LayoutGrid" ColumnDefinitions="116,*" ColumnSpacing="20">
             <Grid x:Name="SideNavigation" RowDefinitions="Auto,*">
-                <StackPanel Margin="14,2,0,14" Spacing="2">
-                    <TextBlock Text="设置" FontSize="20" FontWeight="SemiBold" />
-                    <TextBlock Text="个性化你的播放器" FontSize="12" Opacity="0.55" />
+                <StackPanel Margin="0,2,0,12" Spacing="2" HorizontalAlignment="Center">
+                    <TextBlock Text="设置" FontSize="19" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <TextBlock Text="偏好设置" FontSize="11" Opacity="0.55" HorizontalAlignment="Center" />
                 </StackPanel>
-                <ListBox Grid.Row="1" Classes="SettingsNavigation" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemTemplate><DataTemplate x:DataType="models:SettingsCategory">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                            <Border Classes="NavIconTile" Width="30" Height="30" CornerRadius="9" VerticalAlignment="Center">
-                                <PathIcon Classes="NavIcon" Data="{Binding Icon}" Width="16" Height="16" />
-                            </Border>
-                            <TextBlock Grid.Column="1" Classes="NavTitle" Text="{Binding Title}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                        </Grid>
-                    </DataTemplate></ListBox.ItemTemplate>
-                </ListBox>
-                <Border Grid.RowSpan="2" Width="1" HorizontalAlignment="Right" Margin="0,0,-12,0" Background="{DynamicResource SettingsDivider}" />
+                <ScrollViewer Grid.Row="1"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Hidden">
+                    <vela:VelaDockBar x:Name="CategoryDock"
+                                      Orientation="Vertical"
+                                      DockWidth="82"
+                                      ShowSearch="False"
+                                      ShowShadow="False"
+                                      Material="Solid"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Top"
+                                      Margin="4,4,4,12" />
+                </ScrollViewer>
             </Grid>
             <Grid Grid.Column="1" x:Name="ContentGrid" RowDefinitions="Auto,*" RowSpacing="18" MaxWidth="880">
                 <StackPanel Spacing="16" Margin="0,2,8,0">
@@ -31,9 +35,9 @@
                             <TextBlock Text="{Binding SelectedCategory.Title}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding SelectedCategory.Description}" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <ComboBox Grid.Column="1" x:Name="CompactNavigation" Classes="SettingsCategoryPicker" IsVisible="False" MaxWidth="Infinity" HorizontalAlignment="Stretch" VerticalAlignment="Center" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}">
-                            <ComboBox.ItemTemplate><DataTemplate x:DataType="models:SettingsCategory"><TextBlock Text="{Binding Title}" /></DataTemplate></ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <vela:VelaSelect Size="Small" Grid.Column="1" x:Name="CompactNavigation" Classes="SettingsCategoryPicker" IsVisible="False" MaxWidth="Infinity" HorizontalAlignment="Stretch" VerticalAlignment="Center" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}">
+                            <vela:VelaSelect.ItemTemplate><DataTemplate x:DataType="models:SettingsCategory"><TextBlock Text="{Binding Title}" /></DataTemplate></vela:VelaSelect.ItemTemplate>
+                        </vela:VelaSelect>
                         <Button Grid.Column="2" Classes="Basic EscapeBackButton" ToolTip.Tip="返回" VerticalAlignment="Center" Command="{Binding $parent[local:KugouWindow].((vm:MainWindowViewModel)DataContext).NavigateBackCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <PathIcon Data="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" Width="14" Height="14" />
@@ -64,5 +68,5 @@
                 </ScrollViewer>
             </Grid>
         </Grid>
-    </suki:GlassCard>
+    </kc:KugouGlassCard>
 </UserControl>

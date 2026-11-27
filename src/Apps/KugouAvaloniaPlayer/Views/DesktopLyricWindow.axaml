@@ -1,10 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
         xmlns:views="using:KugouAvaloniaPlayer.Views"
-        xmlns:suki="https://github.com/kikipoulet/SukiUI"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="150"
         x:Class="KugouAvaloniaPlayer.Views.DesktopLyricWindow"
         x:DataType="vm:DesktopLyricViewModel"
@@ -32,7 +32,7 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="CornerRadius" Value="12" />
         </Style>
-        <Style Selector="suki|GlassCard#ControlCard">
+        <Style Selector="kc|KugouGlassCard#ControlCard">
             <Setter Property="Width" Value="716" />
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsOpaque" Value="False" />
@@ -46,11 +46,11 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="suki|GlassCard#ControlCard.expanded">
+        <Style Selector="kc|KugouGlassCard#ControlCard.expanded">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransform" Value="translateY(0)" />
         </Style>
-        <Style Selector="suki|GlassCard#ControlCard.locked"><Setter Property="Opacity" Value="0" /></Style>
+        <Style Selector="kc|KugouGlassCard#ControlCard.locked"><Setter Property="Opacity" Value="0" /></Style>
         <Style Selector="StackPanel#LeftControls">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransformOrigin" Value="1,0.5" />
@@ -121,7 +121,7 @@
                 PointerEntered="OnCollapsedIconPointerEntered"
                 PointerExited="OnCollapsedIconPointerExited"
                 PointerPressed="OnCollapsedIconPointerPressed">
-            <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="22" Height="22" Css="path { fill: white; }" />
+            <kc:KugouIcon Path="/Assets/lock2-svgrepo-com.svg" Width="22" Height="22" Foreground="White" />
         </Border>
     </Grid>
 </Window>

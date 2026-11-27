@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:services="using:KugouAvaloniaPlayer.Services" x:Class="KugouAvaloniaPlayer.Views.Settings.AppearanceSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:models="clr-namespace:KugouAvaloniaPlayer.Models" xmlns:services="using:KugouAvaloniaPlayer.Services" x:Class="KugouAvaloniaPlayer.Views.Settings.AppearanceSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <TextBlock Classes="GroupHeader" Text="主题与字体" />
         <localControls:SettingsCard>
@@ -7,13 +8,13 @@
                     <TextBlock Classes="RowTitle" Text="界面缩放" />
                     <TextBlock Classes="RowHint" Text="放大文字和控件（包括播放页）。自动会在大屏或高分辨率下按屏幕尺寸放大。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding UiScaleOptions}" SelectedItem="{Binding SelectedUiScaleOption}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding UiScaleOptions}" SelectedItem="{Binding SelectedUiScaleOption}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="services:UiScaleOption">
                             <TextBlock Text="{Binding Label}" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.ItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
@@ -27,13 +28,13 @@
                     <TextBlock Classes="RowTitle" Text="界面字体" />
                     <TextBlock Classes="RowHint" Text="未自定义字体的歌词也会使用此字体。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding AppFontFamilyOptions}" SelectedItem="{Binding SelectedAppFontFamily}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding AppFontFamilyOptions}" SelectedItem="{Binding SelectedAppFontFamily}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="x:String">
                             <TextBlock Text="{Binding .}" FontFamily="{Binding .}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.ItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -44,7 +45,7 @@
                     <TextBlock Classes="RowTitle" Text="使用自定义背景" />
                     <TextBlock Classes="RowHint" Text="用一张图片作为主界面背景。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding UseCustomBackgroundImage, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding UseCustomBackgroundImage, Mode=TwoWay}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
@@ -75,18 +76,18 @@
                     <TextBlock Classes="RowTitle" Text="播放页背景" />
                     <TextBlock Classes="RowHint" Text="打开播放页时显示的背景来源。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding NowPlayingBackgroundSourceOptions}" SelectedItem="{Binding SelectedNowPlayingBackgroundSource}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding NowPlayingBackgroundSourceOptions}" SelectedItem="{Binding SelectedNowPlayingBackgroundSource}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="models:NowPlayingBackgroundSource">
                             <TextBlock Text="{Binding Converter={StaticResource NowPlayingBackgroundSourceConverter}}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                    <ComboBox.SelectionBoxItemTemplate>
+                    </vela:VelaSelect.ItemTemplate>
+                    <vela:VelaSelect.SelectionBoxItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Converter={StaticResource NowPlayingBackgroundSourceConverter}}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.SelectionBoxItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.SelectionBoxItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>

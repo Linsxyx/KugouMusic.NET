@@ -5,7 +5,6 @@ using Avalonia.Threading;
 using KuGou.Net.Clients;
 using KuGou.Net.Protocol.Session;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -19,7 +18,7 @@ internal sealed class LoginInitializationService(
     KgSessionManager sessionManager,
     LoginClient loginClient,
     UserClient userClient,
-    ISukiToastManager toastManager, 
+    IKugouToastManager toastManager, 
     ILogger<LoginInitializationService> logger) : ILoginInitializationService
 {
     public async Task<LoginInitializationResult> InitializeLocalSessionAsync()

@@ -14,7 +14,6 @@ using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.Jellyfin;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -33,7 +32,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
     private readonly ILocalMusicSearchDialogService _localMusicSearchDialogService;
     private readonly ITrackPlaylistSearchDialogService _trackPlaylistSearchDialogService;
     private readonly ILogger<LocalMusicLibraryViewModel> _logger;
-    private readonly ISukiToastManager _toastManager;
+    private readonly IKugouToastManager _toastManager;
     private readonly List<SongItem> _selectedPlaylistSongsDefaultOrder = new();
 
     [ObservableProperty]
@@ -69,7 +68,7 @@ public partial class LocalMusicLibraryViewModel : PageViewModelBase
         ILocalMusicLibraryService localMusicLibraryService,
         ILocalMusicSearchDialogService localMusicSearchDialogService,
         ITrackPlaylistSearchDialogService trackPlaylistSearchDialogService,
-        ISukiToastManager toastManager,
+        IKugouToastManager toastManager,
         ILogger<LocalMusicLibraryViewModel> logger)
     {
         _createPlaylistDialogService = createPlaylistDialogService;

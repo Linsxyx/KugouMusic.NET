@@ -1,4 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
@@ -6,343 +8,192 @@
              Name="Root"
              x:DataType="vm:MainWindowViewModel">
 
-    <UserControl.Resources>
-
-        <!-- 背景层 -->
-        <SolidColorBrush x:Key="CardBg" Color="{DynamicResource SukiStrongBackground}" />
-
-        <!-- 主色调：柔和的暖橙 -->
-        <SolidColorBrush x:Key="AccentPrimary" Color="{DynamicResource SukiPrimaryColor5}" />
-        <SolidColorBrush x:Key="AccentLight" Color="{DynamicResource SukiPrimaryColor5}" />
-        <SolidColorBrush x:Key="AccentMid" Color="{DynamicResource SukiPrimaryColor5}" />
-
-        <!-- 文字 -->
-        <SolidColorBrush x:Key="TextPrimary" Color="{DynamicResource SukiText}" />
-        <SolidColorBrush x:Key="TextSecondary" Color="{DynamicResource SukiLowText}" />
-        <SolidColorBrush x:Key="TextMuted" Color="#A8A29E" />
-
-        <!-- 分割线 / 边框 -->
-        <SolidColorBrush x:Key="BorderLight" Color="#E7E5E4" />
-        <SolidColorBrush x:Key="HoverBg" Color="{DynamicResource SukiPrimaryColor3}" />
-        <SolidColorBrush x:Key="ActiveBg" Color="#FEF0EB" />
-
-        <!-- 删除按钮悬停 -->
-        <SolidColorBrush x:Key="DangerHover" Color="#FEE2E2" />
-
-        <!-- 标签背景 -->
-        <SolidColorBrush x:Key="BadgeBg" Color="{DynamicResource SukiPrimaryColor1}" />
-    </UserControl.Resources>
-
     <UserControl.Styles>
-
-        <Style Selector="ScrollBar[Orientation=Vertical]">
-            <Setter Property="Width" Value="4" />
-            <Setter Property="Margin" Value="0,4" />
-            <Setter Property="Opacity" Value="0.4" />
-        </Style>
-        <Style Selector="ScrollBar[Orientation=Vertical]:pointerover">
-            <Setter Property="Opacity" Value="0.8" />
-        </Style>
-
-        <Style Selector="ListBoxItem">
+        <Style Selector="vela|VelaListBox.QueueList vela|VelaListBoxItem" x:DataType="vm:SongItem">
+            <Setter Property="MinHeight" Value="52" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="0,1" />
             <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="IsHitTestVisible" Value="True" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Panel>
-                        <Border Name="BgLayer"
-                                CornerRadius="10"
-                                Background="Transparent">
-                            <Border.Transitions>
-                                <Transitions>
-                                    <BrushTransition Property="Background" Duration="0:0:0.15" />
-                                </Transitions>
-                            </Border.Transitions>
-                        </Border>
-                        <ContentPresenter Name="PART_ContentPresenter"
-                                          Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          Background="Transparent"
-                                          Padding="{TemplateBinding Padding}" />
-                    </Panel>
-                </ControlTemplate>
-            </Setter>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="IsSelected" Value="{Binding IsPlaying, Mode=OneWay}" />
         </Style>
 
-        <!-- 悬停 -->
-        <Style Selector="ListBoxItem:pointerover /template/ Border#BgLayer">
-            <Setter Property="Background" Value="{StaticResource HoverBg}" />
-        </Style>
-
-        <!-- 按下 -->
-        <Style Selector="ListBoxItem:pressed /template/ Border#BgLayer">
-            <Setter Property="Background" Value="{StaticResource AccentMid}" />
-        </Style>
-
-        <!-- 选中态：暖橙浅色，覆盖 SukiUI 蓝 -->
-        <Style Selector="ListBoxItem:selected /template/ Border#BgLayer">
-            <Setter Property="Background" Value="{StaticResource ActiveBg}" />
-        </Style>
-        <Style Selector="ListBoxItem:selected:pointerover /template/ Border#BgLayer">
-            <Setter Property="Background" Value="{StaticResource AccentMid}" />
-        </Style>
-        <Style Selector="ListBoxItem:selected:focus /template/ Border#BgLayer">
-            <Setter Property="Background" Value="{StaticResource ActiveBg}" />
-        </Style>
-
-        <Style Selector="ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-
-        <!-- 悬停时让操作按钮浮现 -->
-        <Style Selector="ListBoxItem:pointerover Button.QueueAction">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-
-        <!-- 操作按钮默认隐藏 -->
         <Style Selector="Button.QueueAction">
-            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="5" />
-            <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
             <Setter Property="Transitions">
                 <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Button.QueueAction:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource AccentLight}" />
-            <Setter Property="CornerRadius" Value="6" />
+        <Style Selector="vela|VelaListBox.QueueList vela|VelaListBoxItem:pointerover Button.QueueAction">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.QueueAction:pointerover">
+            <Setter Property="Background" Value="{DynamicResource VelaSurfaceMutedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
+        </Style>
+        <Style Selector="Button.QueueAction.Danger:pointerover">
+            <Setter Property="Background" Value="{DynamicResource VelaDangerSubtleBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaDangerBrush}" />
         </Style>
 
-        <!-- 删除按钮特殊悬停色 -->
-        <Style Selector="Button.QueueDanger:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource DangerHover}" />
-            <Setter Property="CornerRadius" Value="6" />
+        <Style Selector="TextBlock.QueueTitle">
+            <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
         </Style>
-
-        <!-- 正在播放文字高亮 -->
-        <Style Selector="TextBlock.NowPlaying">
-            <Setter Property="Foreground" Value="{StaticResource AccentPrimary}" />
+        <Style Selector="TextBlock.QueueTitle.NowPlaying">
+            <Setter Property="Foreground" Value="{DynamicResource VelaAccentBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
 
-        <!-- 头部按钮 -->
-        <Style Selector="Button.HeaderAction">
+        <Style Selector="Button.QueueClearButton">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="6" />
+            <Setter Property="Padding" Value="8,5" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
         </Style>
-        <Style Selector="Button.HeaderAction:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource HoverBg}" />
-            <Setter Property="CornerRadius" Value="8" />
+        <Style Selector="Button.QueueClearButton:pointerover">
+            <Setter Property="Background" Value="{DynamicResource VelaDangerSubtleBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaDangerBrush}" />
         </Style>
-
-        <Style Selector="ListBox">
-            <Setter Property="BorderThickness" Value="0" />
-        </Style>
-
     </UserControl.Styles>
 
-
-    <Border CornerRadius="24"
-            Margin="12"
-            Background="{StaticResource CardBg}"
-            BoxShadow="0 0 0 1 #0F000000, 0 4 16 0 #14000000, 0 16 40 0 #0E000000">
-
-        <Grid RowDefinitions="Auto, Auto, *">
-
-            <!-- ── 头部 ── -->
-            <Grid Grid.Row="0"
-                  ColumnDefinitions="*, Auto"
-                  Margin="16,14,12,0">
-
-                <StackPanel Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
-
-                    <Border Width="30" Height="30"
-                            CornerRadius="8"
-                            Background="{StaticResource AccentLight}">
-                        <Svg Classes="ThemeSvgIcon"
-                             Path="/Assets/FormatList.svg"
-                             Width="16" Height="16"
-                             HorizontalAlignment="Center"
-                             VerticalAlignment="Center" />
-                    </Border>
-
-                    <TextBlock Text="播放队列"
-                               FontSize="14"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Foreground="{StaticResource TextPrimary}" />
-
-                    <!-- 数量徽章 -->
-                    <Border Background="{StaticResource BadgeBg}"
-                            CornerRadius="20"
-                            Padding="7,2"
-                            VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Player.DisplayPlaybackQueueCount}"
-                                   FontSize="11"
-                                   FontWeight="Medium"
-                                   Foreground="{StaticResource TextMuted}" />
-                    </Border>
-
-                </StackPanel>
-
-                <!-- 清空按钮 -->
-                <Button Grid.Column="1"
-                        Classes="HeaderAction"
-                        Command="{Binding Player.ClearQueueCommand}"
-                        ToolTip.Tip="清空队列"
+    <Grid RowDefinitions="Auto, *">
+        <!-- 紧凑统计与清空栏 -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*, Auto"
+              Margin="16,10,14,6">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
                         VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Svg Classes="ThemeSvgIcon" Path="/Assets/trash-svgrepo-com.svg" Width="15" Height="15" />
-                        <TextBlock Text="清空"
-                                   FontSize="12"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
+                <TextBlock Text="当前曲目"
+                           FontSize="12"
+                           Foreground="{DynamicResource VelaTextMutedBrush}"
+                           VerticalAlignment="Center" />
+                <vela:VelaBadge Tone="Neutral"
+                                IsPill="True"
+                                Content="{Binding Player.DisplayPlaybackQueueCount, StringFormat='{}{0} 首'}"
+                                VerticalAlignment="Center" />
+            </StackPanel>
 
-            </Grid>
-
-            <!-- ── 分隔线 ── -->
-            <Border Grid.Row="1"
-                    Height="1"
-                    Margin="16,10,16,6"
-                    Background="{StaticResource BorderLight}" />
-
-            <!-- ── 列表内容 ── -->
-            <ListBox Grid.Row="2"
-                     ItemsSource="{Binding Player.DisplayPlaybackQueue}"
-                     Background="Transparent"
-                     BorderThickness="0"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     Padding="8,0,8,8">
-
-                <ListBox.ItemTemplate>
-                    <DataTemplate DataType="vm:SongItem">
-
-                        <Grid x:Name="QueueItemRoot"
-                              ColumnDefinitions="Auto, *, Auto"
-                              Height="50"
-                              Margin="4,0"
-                              behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}">
-
-                            <Grid.ContextFlyout>
-                                <MenuFlyout>
-                                    <MenuItem Header="下一首播放"
-                                              Command="{Binding #Root.AddToNextCommand}"
-                                              CommandParameter="{Binding .}" />
-                                    <MenuItem Header="查看歌手" ItemsSource="{Binding Singers}">
-                                        <MenuItem.Styles>
-                                            <Style Selector="MenuItem> MenuItem">
-                                                <Setter Property="Header"
-                                                        Value="{Binding ., Converter={StaticResource SingerNameConverter}}" />
-                                                <Setter Property="Command"
-                                                        Value="{Binding #Root.ViewSingerCommand}" />
-                                                <Setter Property="CommandParameter" Value="{Binding .}" />
-                                            </Style>
-                                        </MenuItem.Styles>
-                                    </MenuItem>
-                                    <MenuItem Header="添加到歌单"
-                                              Command="{Binding #Root.ShowPlaylistDialogCommand}"
-                                              CommandParameter="{Binding .}" />
-
-                                    <MenuItem Header="从队列移除"
-                                              Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
-                                              CommandParameter="{Binding .}" />
-                                </MenuFlyout>
-                            </Grid.ContextFlyout>
-
-                            <Panel Grid.Column="0"
-                                   Width="28"
-                                   VerticalAlignment="Center"
-                                   Margin="4,0,6,0">
-
-                                <Border Width="24" Height="24"
-                                        CornerRadius="12"
-                                        Background="{DynamicResource SukiAccentColor75}"
-                                        IsVisible="{Binding IsPlaying}">
-                                    <Svg Classes="ThemeSvgIcon"
-                                         Path="/Assets/music-party-svgrepo-com.svg"
-                                         Width="13" Height="13"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center" />
-                                </Border>
-
-                                <Panel IsVisible="{Binding !IsPlaying}" Width="24" Height="24" />
-
-                            </Panel>
-
-                            <StackPanel Grid.Column="1"
-                                        VerticalAlignment="Center"
-                                        Spacing="2">
-
-                                <TextBlock Text="{Binding Name}"
-                                           Classes.NowPlaying="{Binding IsPlaying}"
-                                           FontSize="13"
-                                           FontWeight="Medium"
-                                           TextTrimming="CharacterEllipsis"
-                                           Foreground="{StaticResource TextPrimary}" />
-
-                                <TextBlock Text="{Binding Singer}"
-                                           FontSize="12"
-                                           TextTrimming="CharacterEllipsis"
-                                           Foreground="{StaticResource TextMuted}" />
-
-                            </StackPanel>
-
-                            <!-- 列 2：操作按钮组（悬停浮现） -->
-                            <StackPanel Grid.Column="2"
-                                        Orientation="Horizontal"
-                                        Spacing="5"
-                                        VerticalAlignment="Center"
-                                        Margin="10,0,5,0">
-
-                                <!-- 播放按钮 -->
-                                <Button Classes="Basic"
-                                        ToolTip.Tip="播放"
-                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
-                                        CommandParameter="{Binding .}"
-                                        Foreground="{DynamicResource SukiLowText}">
-                                    <Svg Classes="ThemeSvgIcon" Path="/Assets/Play-2.svg" Width="10" Height="10" />
-                                </Button>
-                                <Button Classes="Basic"
-                                        ToolTip.Tip="移除"
-                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
-                                        CommandParameter="{Binding .}">
-                                    <TextBlock Text="✕" FontSize="10" Foreground="{DynamicResource SukiText}" />
-                                </Button>
-                            </StackPanel>
-
-                        </Grid>
-
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-
-            </ListBox>
-
+            <Button Grid.Column="1"
+                    Classes="QueueClearButton"
+                    Command="{Binding Player.ClearQueueCommand}"
+                    ToolTip.Tip="清空播放队列"
+                    VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                    <PathIcon Data="{x:Static kc:KugouIcons.Trash}"
+                              Width="13"
+                              Height="13"
+                              Foreground="{Binding $parent[Button].Foreground}"
+                              VerticalAlignment="Center" />
+                    <TextBlock Text="清空"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </Grid>
-    </Border>
 
+        <!-- 虚拟化队列列表 -->
+        <vela:VelaListBox Grid.Row="1"
+                          Classes="QueueList"
+                          Variant="Plain"
+                          ShowSelectionIndicator="True"
+                          EmptyContent="播放队列为空"
+                          ItemsSource="{Binding Player.DisplayPlaybackQueue}"
+                          Padding="10,2,10,16">
+            <vela:VelaListBox.ItemTemplate>
+                <DataTemplate DataType="vm:SongItem">
+                    <Border x:Name="QueueItemRoot"
+                            Padding="10,6"
+                            MinHeight="52"
+                            Background="Transparent"
+                            ContextRequested="QueueItemRoot_OnContextRequested"
+                            behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}">
+                    <Grid ColumnDefinitions="Auto, *, Auto">
+
+                        <Panel Grid.Column="0"
+                               Width="24"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0">
+                            <Border Width="22"
+                                    Height="22"
+                                    CornerRadius="11"
+                                    Background="{DynamicResource VelaAccentSubtleBrush}"
+                                    IsVisible="{Binding IsPlaying}">
+                                <PathIcon Data="{x:Static kc:KugouIcons.NavMusic}"
+                                          Width="12"
+                                          Height="12"
+                                          Foreground="{DynamicResource VelaAccentBrush}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                            </Border>
+                            <PathIcon Data="{x:Static kc:KugouIcons.NavMusic}"
+                                      Width="12"
+                                      Height="12"
+                                      Opacity="0.35"
+                                      Foreground="{DynamicResource VelaTextMutedBrush}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      IsVisible="{Binding !IsPlaying}" />
+                        </Panel>
+
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="2">
+                            <TextBlock Text="{Binding Name}"
+                                       Classes="QueueTitle"
+                                       Classes.NowPlaying="{Binding IsPlaying}"
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Singer}"
+                                       FontSize="11.5"
+                                       TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource VelaTextSecondaryBrush}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    Spacing="2"
+                                    VerticalAlignment="Center"
+                                    Margin="8,0,0,0">
+                            <Button Classes="QueueAction"
+                                    ToolTip.Tip="播放"
+                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
+                                    CommandParameter="{Binding .}">
+                                <PathIcon Data="{x:Static kc:KugouIcons.Play}"
+                                          Width="12"
+                                          Height="12"
+                                          Foreground="{Binding $parent[Button].Foreground}" />
+                            </Button>
+                            <Button Classes="QueueAction Danger"
+                                    ToolTip.Tip="移除"
+                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
+                                    CommandParameter="{Binding .}">
+                                <PathIcon Data="{x:Static kc:KugouIcons.WindowClose}"
+                                          Width="11"
+                                          Height="11"
+                                          Foreground="{Binding $parent[Button].Foreground}" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    </Border>
+                </DataTemplate>
+            </vela:VelaListBox.ItemTemplate>
+        </vela:VelaListBox>
+    </Grid>
 </UserControl>

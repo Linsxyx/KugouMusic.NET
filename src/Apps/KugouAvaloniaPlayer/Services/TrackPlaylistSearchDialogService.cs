@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.ViewModels;
-using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -12,7 +11,7 @@ public interface ITrackPlaylistSearchDialogService
 }
 
 public sealed class TrackPlaylistSearchDialogService(
-    ISukiDialogManager dialogManager,
+    IKugouDialogManager dialogManager,
     ILocalMusicLibraryService localMusicLibraryService,
     IUiDispatcherService uiDispatcher) : ITrackPlaylistSearchDialogService
 {

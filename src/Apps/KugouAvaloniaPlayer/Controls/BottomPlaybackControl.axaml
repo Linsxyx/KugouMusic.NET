@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:local="clr-namespace:KugouAvaloniaPlayer.Controls"
@@ -9,8 +10,25 @@
              x:DataType="vm:MainWindowViewModel"
              Name="PlaybackControlPanel">
 
+    <UserControl.Resources>
+        <ControlTheme x:Key="TransparentFlyoutPresenterTheme" TargetType="FlyoutPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </UserControl.Resources>
+
     <UserControl.Styles>
-        <Style Selector="suki|GlassCard#MiniPlayer">
+        <Style Selector="vela|VelaLiquidGlass#MiniPlayer">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="Transitions">
                 <Transitions>
@@ -18,31 +36,39 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="suki|GlassCard#MiniPlayer.hidden">
+        <Style Selector="vela|VelaLiquidGlass#MiniPlayer.hidden">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
-        <Style Selector="ComboBox.QualityCombo">
+        <Style Selector=":is(ComboBox).QualityCombo">
             <Setter Property="MinWidth" Value="96" />
         </Style>
-        <Style Selector="ComboBox.QualityCombo ComboBoxItem">
+        <Style Selector=":is(ComboBox).QualityCombo ComboBoxItem">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Button.QueueDependent.empty">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
+        <Style Selector="Button#VolumeButton Popup">
+            <Setter Property="ShouldUseOverlayLayer" Value="True" />
+            <Setter Property="WindowManagerAddShadowHint" Value="False" />
+        </Style>
     </UserControl.Styles>
 
     <Grid>
-        <suki:GlassCard Name="MiniPlayer"
-                        VerticalAlignment="Bottom"
-                        Margin="20,0,20,16"
-                        Padding="16,0"
-                        CornerRadius="18"
-                        Classes.hidden="{Binding NowPlaying.IsOpen}"
-                        Height="72"
-                        IsOpaque="{Binding IsMiniPlayerOpaque, FallbackValue=True}">
+        <vela:VelaLiquidGlass Name="MiniPlayer"
+                              VerticalAlignment="Bottom"
+                              Margin="20,0,20,16"
+                              Padding="16,0"
+                              CornerRadius="24"
+                              BlurRadius="12"
+                              BevelWidth="16"
+                              Refraction="0.72"
+                              Dispersion="0.48"
+                              Specular="0.90"
+                              Classes.hidden="{Binding NowPlaying.IsOpen}"
+                              Height="74">
 
             <Grid ColumnDefinitions="*, Auto, *">
 
@@ -102,7 +128,7 @@
                                 Spacing="16"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Margin="0,10,0,-15">
+                                Margin="0,4,0,-4">
                         <Button Cursor="Hand"
                                 Command="{Binding Player.ToggleLikeCommand}"
                                 Classes="Basic QueueDependent"
@@ -111,11 +137,11 @@
                                 Height="32"
                                 VerticalAlignment="Center">
                             <Panel>
-                                <Svg Path="/Assets/FavoriteBorder.svg"
-                                     Css="path { fill: red; }"
+                                <kc:KugouIcon Path="/Assets/FavoriteBorder.svg"
+                                     Foreground="Red"
                                      Width="18" Height="18"
                                      IsVisible="{Binding Player.IsLiked}" />
-                                <Svg Classes="ThemeSvgIcon"
+                                <kc:KugouIcon Classes="ThemeSvgIcon"
                                      Path="/Assets/FavoriteBorder.svg"
                                      Width="18" Height="18"
                                      Opacity="0.45"
@@ -126,7 +152,7 @@
                                 Command="{Binding Player.PlayPreviousCommand}"
                                 Classes="Basic"
                                 Width="32" Height="32">
-                            <Svg Classes="ThemeSvgIcon" Path="/Assets/backward.svg" Width="16" Height="16" />
+                            <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/backward.svg" Width="16" Height="16" />
                         </Button>
                         <Button Cursor="Hand"
                                 Command="{Binding Player.TogglePlayPauseCommand}"
@@ -134,11 +160,11 @@
                                 Width="40"
                                 Height="40">
                             <Panel>
-                                <Svg Classes="ThemeSvgIcon"
+                                <kc:KugouIcon Classes="ThemeSvgIcon"
                                      Path="/Assets/pause-1006-svgrepo-com.svg"
                                      Width="22" Height="22"
                                      IsVisible="{Binding Player.IsPlayingAudio}" />
-                                <Svg Classes="ThemeSvgIcon"
+                                <kc:KugouIcon Classes="ThemeSvgIcon"
                                      Path="/Assets/play-1003-svgrepo-com.svg"
                                      Width="22" Height="22"
                                      IsVisible="{Binding !Player.IsPlayingAudio}" />
@@ -148,7 +174,7 @@
                                 Command="{Binding Player.PlayNextCommand}"
                                 Classes="Basic"
                                 Width="32" Height="32">
-                            <Svg Classes="ThemeSvgIcon" Path="/Assets/next-svgrepo-com.svg" Width="16" Height="16" />
+                            <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/next-svgrepo-com.svg" Width="16" Height="16" />
                         </Button>
                         <Button Cursor="Hand"
                                 Command="{Binding Player.CyclePlayModeCommand}"
@@ -157,17 +183,17 @@
                                 VerticalAlignment="Center">
                             <Panel>
                                 <!-- 列表循环 -->
-                                <Svg Classes="ThemeSvgIcon"
+                                <kc:KugouIcon Classes="ThemeSvgIcon"
                                      Path="/Assets/repeat-svgrepo-com.svg"
                                      Width="18" Height="18"
                                      IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=Normal}" />
                                 <!-- 单曲循环 -->
-                                <Svg Classes="ThemeSvgIcon"
+                                <kc:KugouIcon Classes="ThemeSvgIcon"
                                      Path="/Assets/repeat-one.svg"
                                      Width="18" Height="18"
                                      IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=RepeatOne}" />
                                 <!-- 随机播放 -->
-                                <Svg Classes="ThemeSvgIcon"
+                                <kc:KugouIcon Classes="ThemeSvgIcon"
                                      Path="/Assets/shuffle-svgrepo-com.svg"
                                      Width="18" Height="18"
                                      IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=Shuffle}" />
@@ -178,13 +204,14 @@
                     <!-- 进度条 -->
                     <Grid Grid.Row="1"
                           ColumnDefinitions="Auto, *, Auto"
-                          Width="380"
-                          Margin="0,6,0,0">
+                          Width="390"
+                          Margin="0,2,0,2">
                         <TextBlock
                             Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                             FontSize="11"
-                            Opacity="0.45"
-                            Width="46"
+                            FontFeatures="+tnum"
+                            Opacity="0.6"
+                            Width="44"
                             TextAlignment="Right"
                             VerticalAlignment="Center" />
                         <Slider Grid.Column="1"
@@ -194,12 +221,14 @@
                                 Margin="10,0"
                                 IsSnapToTickEnabled="False"
                                 HorizontalAlignment="Stretch"
+                                VerticalAlignment="Center"
                                 Classes="Player" />
                         <TextBlock Grid.Column="2"
                                    Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                                    FontSize="11"
-                                   Opacity="0.45"
-                                   Width="46"
+                                   FontFeatures="+tnum"
+                                   Opacity="0.6"
+                                   Width="44"
                                    TextAlignment="Left"
                                    VerticalAlignment="Center" />
                     </Grid>
@@ -213,7 +242,8 @@
                             HorizontalAlignment="Right">
 
                     <!-- 音量控制：悬浮展开竖向滑块，点击按钮静音切换 -->
-                    <Button Cursor="Hand"
+                    <Button x:Name="VolumeButton"
+                            Cursor="Hand"
                             Classes="Basic"
                             Width="32"
                             Height="32"
@@ -224,46 +254,52 @@
                         <!-- 使用AttachedFlyout以禁用Button的触发影响 -->
                         <FlyoutBase.AttachedFlyout>
                             <Flyout Placement="Top"
+                                    VerticalOffset="-8"
                                     ShowMode="TransientWithDismissOnPointerMoveAway"
+                                    FlyoutPresenterTheme="{StaticResource TransparentFlyoutPresenterTheme}"
                                     OverlayInputPassThroughElement="{Binding #PlaybackControlPanel}">
-                                <suki:GlassCard Height="150" Width="40" HorizontalContentAlignment="Center" Margin="0"
-                                                Padding="3 12 3 2" Focusable="False">
-                                    <StackPanel Orientation="Vertical" Spacing="8">
-                                        <TextBlock DockPanel.Dock="Top" Focusable="False"
+                                <vela:VelaLiquidGlass Width="48"
+                                                      Height="164"
+                                                      CornerRadius="24"
+                                                      BlurRadius="14"
+                                                      BevelWidth="12"
+                                                      Refraction="0.65"
+                                                      Dispersion="0.40"
+                                                      Specular="0.85"
+                                                      Padding="0,12,0,12"
+                                                      Margin="6"
+                                                      Focusable="False">
+                                    <StackPanel Orientation="Vertical"
+                                                Spacing="8"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center">
+                                        <TextBlock Focusable="False"
                                                    Text="{Binding Player.MusicVolume, StringFormat='{}{0:P0}'}"
                                                    FontSize="11"
-                                                   FontWeight="Bold"
+                                                   FontWeight="SemiBold"
+                                                   FontFeatures="+tnum"
+                                                   Foreground="{DynamicResource VelaForegroundBrush}"
                                                    HorizontalAlignment="Center" />
-                                        <LayoutTransformControl LayoutTransform="rotate(-90deg)"
-                                                                HorizontalAlignment="Center"
-                                                                VerticalAlignment="Stretch">
-                                            <Slider Width="100" Height="5"
-                                                    Minimum="0" Maximum="1"
-                                                    SmallChange="0.05" LargeChange="0.1"
-                                                    TickFrequency="0.25"
-                                                    Value="{Binding Player.MusicVolume}"
-                                                    Classes="Player" x:Name="VolumeSlider"
-                                                    PointerWheelChanged="VolumeSlider_OnPointerWheelChanged">
-                                                <Slider.Styles>
-                                                    <Style Selector="Slider /template/ Thumb#thumb">
-                                                        <Setter Property="Height" Value="1" />
-                                                        <Setter Property="IsVisible" Value="False" />
-                                                    </Style>
-                                                </Slider.Styles>
-                                            </Slider>
-                                        </LayoutTransformControl>
+                                        <Slider Minimum="0" Maximum="1"
+                                                SmallChange="0.05" LargeChange="0.1"
+                                                TickFrequency="0.25"
+                                                Value="{Binding Player.MusicVolume}"
+                                                Classes="VolumeCapsule"
+                                                x:Name="VolumeSlider"
+                                                HorizontalAlignment="Center"
+                                                PointerWheelChanged="VolumeSlider_OnPointerWheelChanged" />
                                     </StackPanel>
-                                </suki:GlassCard>
+                                </vela:VelaLiquidGlass>
                             </Flyout>
                         </FlyoutBase.AttachedFlyout>
                         <Panel>
-                            <Svg Classes="ThemeSvgIcon"
+                            <kc:KugouIcon Classes="ThemeSvgIcon"
                                  Path="/Assets/volume-max-svgrepo-com.svg"
                                  Width="18"
                                  Height="18"
                                  Opacity="0.7"
                                  IsVisible="{Binding !Player.IsMuted}" />
-                            <Svg Classes="ThemeSvgIcon"
+                            <kc:KugouIcon Classes="ThemeSvgIcon"
                                  Path="/Assets/VolumeOff.svg"
                                  Width="18"
                                  Height="18"
@@ -280,33 +316,12 @@
                             VerticalAlignment="Center"
                             Padding="8,0"
                             MinWidth="68"
-                            Height="32">
-                        <Button.Flyout>
-                            <MenuFlyout>
-                                <MenuItem Header="0.5x"
-                                          Command="{Binding Player.SetPlaybackSpeedOptionCommand}"
-                                          CommandParameter="0.5x" />
-                                <MenuItem Header="0.75x"
-                                          Command="{Binding Player.SetPlaybackSpeedOptionCommand}"
-                                          CommandParameter="0.75x" />
-                                <MenuItem Header="1x"
-                                          Command="{Binding Player.SetPlaybackSpeedOptionCommand}"
-                                          CommandParameter="1x" />
-                                <MenuItem Header="1.25x"
-                                          Command="{Binding Player.SetPlaybackSpeedOptionCommand}"
-                                          CommandParameter="1.25x" />
-                                <MenuItem Header="1.5x"
-                                          Command="{Binding Player.SetPlaybackSpeedOptionCommand}"
-                                          CommandParameter="1.5x" />
-                                <MenuItem Header="2x"
-                                          Command="{Binding Player.SetPlaybackSpeedOptionCommand}"
-                                          CommandParameter="2x" />
-                            </MenuFlyout>
-                        </Button.Flyout>
+                            Height="32"
+                            Click="PlaybackSpeedButton_OnClick">
                         <StackPanel Orientation="Horizontal"
                                     Spacing="4"
                                     VerticalAlignment="Center">
-                            <Svg Classes="ThemeSvgIcon"
+                            <kc:KugouIcon Classes="ThemeSvgIcon"
                                  Path="/Assets/speed-svgrepo-com.svg"
                                  Width="16"
                                  Height="16" />
@@ -316,46 +331,34 @@
                         </StackPanel>
                     </Button>
                     
-                    <ComboBox Classes="QualityCombo"
+                    <vela:VelaSelect Size="Small" Classes="QualityCombo"
                               ItemsSource="{Binding Player.QualityOptions}"
                               SelectedItem="{Binding Player.QualitySelection}"
                               IsEnabled="{Binding Player.IsSwitchingQuality, Converter={x:Static BoolConverters.Not}}"
                               VerticalAlignment="Center">
-                        <ComboBox.ItemTemplate>
+                        <vela:VelaSelect.ItemTemplate>
                             <DataTemplate DataType="x:String">
                                 <TextBlock
                                     Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
 
                             </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                        <ComboBox.SelectionBoxItemTemplate>
+                        </vela:VelaSelect.ItemTemplate>
+                        <vela:VelaSelect.SelectionBoxItemTemplate>
                             <DataTemplate>
                                 <TextBlock
                                     Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" />
                             </DataTemplate>
-                        </ComboBox.SelectionBoxItemTemplate>
-                    </ComboBox>
+                        </vela:VelaSelect.SelectionBoxItemTemplate>
+                    </vela:VelaSelect>
                     
-                    <!-- 队列按钮 -->
+                    <!-- 队列按钮：打开 Vela 右侧滑出抽屉 -->
                     <Button x:Name="QueueButton"
                             Cursor="Hand"
                             Classes="Basic"
                             ToolTip.Tip="播放列表"
-                            Width="32" Height="32">
-                        <Button.Flyout>
-                            <Flyout Placement="TopEdgeAlignedRight"
-                                    Opening="QueueFlyout_OnOpening"
-                                    Opened="QueueFlyout_OnOpened"
-                                    Closed="QueueFlyout_OnClosed">
-                                <local:PlaybackQueueControl x:Name="QueueFlyoutContent"
-                                                            DataContext="{Binding}"
-                                                            Width="360"
-                                                            MinWidth="280"
-                                                            MaxWidth="460"
-                                                            MaxHeight="560" />
-                            </Flyout>
-                        </Button.Flyout>
-                        <Svg Classes="ThemeSvgIcon" Path="/Assets/PlayList.svg" Width="18" Height="18" />
+                            Width="32" Height="32"
+                            Click="QueueButton_OnClick">
+                        <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/PlayList.svg" Width="18" Height="18" />
                     </Button>
 
                     <!-- 桌面歌词 -->
@@ -364,7 +367,7 @@
                             Classes="Basic"
                             ToolTip.Tip="桌面歌词"
                             Width="32" Height="32">
-                        <Svg Classes="ThemeSvgIcon"
+                        <kc:KugouIcon Classes="ThemeSvgIcon"
                              Path="/Assets/DesktopLyric2.svg"
                              Width="20" Height="20"
                              HorizontalAlignment="Center"
@@ -373,6 +376,6 @@
                 </StackPanel>
 
             </Grid>
-        </suki:GlassCard>
+        </vela:VelaLiquidGlass>
     </Grid>
 </UserControl>

@@ -1,7 +1,7 @@
  <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Controls.LocalMusicSearchDialog"
@@ -36,18 +36,18 @@
                 </ControlTemplate>
             </Setter>
         </Style>
-        <Style Selector="suki|GlassCard.ToggleExpansion PathIcon.ExpansionIcon">
+        <Style Selector="kc|KugouGlassCard.ToggleExpansion PathIcon.ExpansionIcon">
             <Setter Property="Transitions">
                 <Transitions>
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" />
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="suki|GlassCard.ToggleExpansion PathIcon.Collapsed">
+        <Style Selector="kc|KugouGlassCard.ToggleExpansion PathIcon.Collapsed">
             <Setter Property="RenderTransform" Value="rotate(0deg)" />
         </Style>
         <!-- Expand toggle chevron rotation -->
-        <Style Selector="suki|GlassCard.ToggleExpansion PathIcon.Expanded">
+        <Style Selector="kc|KugouGlassCard.ToggleExpansion PathIcon.Expanded">
             <Setter Property="RenderTransform" Value="rotate(90deg)" />
         </Style>
     </UserControl.Styles>
@@ -82,7 +82,7 @@
                         Cursor="Hand"
                         Command="{Binding SearchCommand}"
                         ToolTip.Tip="搜索">
-                    <PathIcon Data="{x:Static suki:Icons.Search}"
+                    <PathIcon Data="{x:Static kc:KugouIcons.Search}"
                               Width="18"
                               Height="18" />
                 </Button>
@@ -93,7 +93,7 @@
                             VerticalAlignment="Center"
                             Spacing="8"
                             IsVisible="{Binding ShowPromptState}">
-                    <PathIcon Data="{x:Static suki:Icons.Search}"
+                    <PathIcon Data="{x:Static kc:KugouIcons.Search}"
                               Width="30"
                               Height="30"
                               Foreground="{DynamicResource SukiLowText}" />
@@ -105,7 +105,7 @@
                             VerticalAlignment="Center"
                             Spacing="10"
                             IsVisible="{Binding IsSearching}">
-                    <suki:Loading Width="40" Height="40" />
+                    <kc:KugouLoading Width="40" Height="40" />
                     <TextBlock Text="正在搜索本地音乐库..."
                                Foreground="{DynamicResource SukiLiquid2}" />
                 </StackPanel>
@@ -152,7 +152,7 @@
 
                 <Grid RowDefinitions="Auto,*" Margin="10 5"
                       IsVisible="{Binding HasResults}">
-                    <suki:GlassCard Background="{x:Null}" BorderBrush="{x:Null}" BorderThickness="0" CornerRadius="0"
+                    <kc:KugouGlassCard Background="{x:Null}" BorderBrush="{x:Null}" BorderThickness="0" CornerRadius="0"
                                     Padding="10 0">
                         <Grid ColumnDefinitions="50,72,*,140,40"
                               ColumnSpacing="12">
@@ -160,7 +160,7 @@
                             <TextBlock Grid.Column="3" Text="专辑" Foreground="{DynamicResource SukiLowText}" />
                             <TextBlock Grid.Column="4" Text="时长" Foreground="{DynamicResource SukiLowText}" />
                         </Grid>
-                    </suki:GlassCard>
+                    </kc:KugouGlassCard>
 
                     <ListBox Grid.Row="1"
                              Classes="LocalMusicSearchList"
@@ -174,7 +174,7 @@
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="vm:GroupedSearchResultItemViewModel">
-                                <suki:GlassCard Classes="ToggleExpansion" IsInteractive="True"
+                                <kc:KugouGlassCard Classes="ToggleExpansion" IsInteractive="True"
                                                 Command="{Binding ToggleExpandCommand}"
                                                 CornerRadius="16"
                                                 Padding="10 5"
@@ -188,7 +188,7 @@
                                             Classes.ExpansionIcon="True"
                                             Classes.Collapsed="{Binding !IsExpanded}"
                                             Classes.Expanded="{Binding IsExpanded}"
-                                            Data="{x:Static suki:Icons.ChevronRight}"
+                                            Data="{x:Static kc:KugouIcons.ChevronRight}"
                                             Width="18"
                                             Height="18" />
 
@@ -238,7 +238,7 @@
                                                         Orientation="Horizontal"
                                                         Spacing="8"
                                                         Margin="8">
-                                                <suki:Loading Width="18" Height="18" />
+                                                <kc:KugouLoading Width="18" Height="18" />
                                                 <TextBlock Text="正在加载所在歌单..."
                                                            Foreground="{DynamicResource SukiLowText}" />
                                             </StackPanel>
@@ -247,7 +247,7 @@
                                                      IsVisible="{Binding !IsLoadingPlaylists}">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate DataType="vm:PlaylistSummaryItem">
-                                                        <suki:GlassCard Padding="8,6"
+                                                        <kc:KugouGlassCard Padding="8,6"
                                                                         CornerRadius="12"
                                                                         IsInteractive="True"
                                                                         Command="{Binding $parent[ListBox].((vm:GroupedSearchResultItemViewModel)DataContext).OpenPlaylistCommand}"
@@ -271,16 +271,16 @@
                                                                            VerticalAlignment="Center"
                                                                            TextTrimming="CharacterEllipsis" />
 
-                                                                <Svg Grid.Column="2"
+                                                                <kc:KugouIcon Grid.Column="2"
                                                                      Path="avares://KugouAvaloniaPlayer/Assets/NavigateNext.svg" />
                                                             </Grid>
-                                                        </suki:GlassCard>
+                                                        </kc:KugouGlassCard>
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
                                             </ListBox>
                                         </Grid>
                                     </Grid>
-                                </suki:GlassCard>
+                                </kc:KugouGlassCard>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

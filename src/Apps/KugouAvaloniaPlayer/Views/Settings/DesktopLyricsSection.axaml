@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.DesktopLyricsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.DesktopLyricsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <TextBlock Classes="GroupHeader" Text="窗口" />
         <localControls:SettingsCard>
@@ -7,14 +8,14 @@
                     <TextBlock Classes="RowTitle" Text="使用原生桌面歌词" />
                     <TextBlock Classes="RowHint" Text="适用于支持的 Wayland 桌面；不支持时自动使用默认窗口。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableNativeDesktopLyrics, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding EnableNativeDesktopLyrics, Mode=TwoWay}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto" IsVisible="{Binding IsWaylandDesktopLyricOptionsVisible}">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="全屏应用上显示歌词" />
                     <TextBlock Classes="RowHint" Text="使用原生 Wayland 桌面歌词时生效。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding WaylandDesktopLyricOverFullscreen, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding WaylandDesktopLyricOverFullscreen, Mode=TwoWay}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
@@ -29,18 +30,18 @@
         <localControls:SettingsCard>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="排版方向" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding DesktopLyricLayoutOptions}" SelectedItem="{Binding DesktopSelectedLyricLayout}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding DesktopLyricLayoutOptions}" SelectedItem="{Binding DesktopSelectedLyricLayout}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="对齐方式" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricAlignmentOptions}" SelectedItem="{Binding DesktopSelectedLyricAlignment}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricAlignmentOptions}" SelectedItem="{Binding DesktopSelectedLyricAlignment}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="双行歌词" />
                     <TextBlock Classes="RowHint" Text="歌词上下交替显示，开启后隐藏翻译。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding DesktopLyricDoubleLineEnabled, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding DesktopLyricDoubleLineEnabled, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -51,17 +52,17 @@
                     <TextBlock Classes="RowTitle" Text="字体模式" />
                     <TextBlock Classes="RowHint" Text="歌词与翻译共用字体。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricFontModeOptions}" SelectedItem="{Binding DesktopSelectedLyricFontMode}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricFontModeOptions}" SelectedItem="{Binding DesktopSelectedLyricFontMode}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto" IsVisible="{Binding IsDesktopLyricFontCustomMode}">
                 <TextBlock Classes="RowTitle" Text="字体" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricFontFamilyOptions}" SelectedItem="{Binding DesktopSelectedLyricFontFamily}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricFontFamilyOptions}" SelectedItem="{Binding DesktopSelectedLyricFontFamily}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="x:String">
                             <TextBlock Text="{Binding .}" FontFamily="{Binding .}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.ItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -72,11 +73,11 @@
                     <TextBlock Classes="RowTitle" Text="调整对象" />
                     <TextBlock Classes="RowHint" Text="选择要修改颜色的歌词部分。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricColorTargetOptions}" SelectedItem="{Binding DesktopSelectedLyricColorTarget}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricColorTargetOptions}" SelectedItem="{Binding DesktopSelectedLyricColorTarget}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="颜色模式" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricColorModeOptions}" SelectedItem="{Binding DesktopSelectedLyricColorMode}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricColorModeOptions}" SelectedItem="{Binding DesktopSelectedLyricColorMode}" />
             </localControls:SettingsRow>
             <StackPanel Classes="RowDetail" IsVisible="{Binding IsDesktopLyricColorCustomMode}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">

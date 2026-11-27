@@ -8,28 +8,46 @@
              x:Name="Root">
 
     <Border Name="ItemShell"
-            Height="40"
-            CornerRadius="8"
+            Background="Transparent"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
             ContextRequested="ItemShell_OnContextRequested">
-        <Button Classes="SidebarPlaylistOption"
-                Classes.selected="{Binding IsSelected}"
-                Command="{Binding #Root.OpenCommand}"
-                CommandParameter="{Binding .}">
-            <Grid ColumnDefinitions="32,*"
+        <Button Command="{Binding #Root.OpenCommand}"
+                CommandParameter="{Binding .}"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="10,6"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                VerticalContentAlignment="Center"
+                Cursor="Hand">
+            <Button.Template>
+                <ControlTemplate>
+                    <Border Background="Transparent"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          HorizontalContentAlignment="Stretch"
+                                          VerticalContentAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Button.Template>
+            <Grid ColumnDefinitions="28,*"
+                  ColumnSpacing="10"
                   VerticalAlignment="Center">
                 <Border Width="28"
                         Height="28"
                         CornerRadius="6"
                         ClipToBounds="True"
-                        VerticalAlignment="Center">
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource VelaSurfaceMutedBrush}">
                     <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
                            behaviors:ImageRenderOptions.InterpolationSource="{Binding Cover}"
-                           Stretch="UniformToFill"
-                           />
+                           Stretch="UniformToFill" />
                 </Border>
                 <TextBlock Grid.Column="1"
-                           Margin="10,0,0,0"
                            Text="{Binding Name}"
+                           FontSize="13"
                            FontWeight="Medium"
                            TextTrimming="CharacterEllipsis"
                            VerticalAlignment="Center" />

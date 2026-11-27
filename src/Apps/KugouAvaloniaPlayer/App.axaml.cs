@@ -17,7 +17,6 @@ using KugouAvaloniaPlayer.Views;
 using Serilog;
 using Serilog.Extensions.Logging;
 using SimpleAudio;
-using SukiUI;
 
 namespace KugouAvaloniaPlayer;
 
@@ -129,17 +128,16 @@ public partial class App : Application
         }
     }
 
-    private static void ApplySavedTheme()
+    private void ApplySavedTheme()
     {
         var theme = SettingsManager.Settings.AppTheme switch
         {
             AppSettings.ThemeDark => ThemeVariant.Dark,
             AppSettings.ThemeLight => ThemeVariant.Light,
-            _ => null
+            _ => ThemeVariant.Default
         };
 
-        if (theme != null)
-            SukiTheme.GetInstance().ChangeBaseTheme(theme);
+        RequestedThemeVariant = theme;
     }
 
     private void ConfigureImageLoader()

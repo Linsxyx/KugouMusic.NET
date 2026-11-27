@@ -6,7 +6,6 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services.Jellyfin;
-using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -27,7 +26,7 @@ public interface ICreatePlaylistDialogService
 public sealed record LocalPlaylistEditResult(string Name, string? CoverPath);
 
 public sealed class CreatePlaylistDialogService(
-    ISukiDialogManager dialogManager,
+    IKugouDialogManager dialogManager,
     IFolderPickerService folderPickerService,
     IUiDispatcherService uiDispatcher) : ICreatePlaylistDialogService
 {

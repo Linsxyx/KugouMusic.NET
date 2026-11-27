@@ -6,133 +6,116 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using KugouAvaloniaPlayer.ViewModels;
+using Vela.Avalonia.Controls;
+using Vela.Avalonia.Tokens;
 
 namespace KugouAvaloniaPlayer.Controls;
 
 public partial class BottomPlaybackControl : UserControl
 {
-    private const double QueueFlyoutRightInset = 20;
-    private Flyout? _queueFlyout;
-    private TopLevel? _lightDismissTopLevel;
+    private static readonly string[] PlaybackSpeedOptions = ["0.5x", "0.75x", "1x", "1.25x", "1.5x", "2x"];
+    private VelaContextMenu? _speedMenu;
 
     public BottomPlaybackControl()
     {
         InitializeComponent();
     }
 
-    private void QueueFlyout_OnOpening(object? sender, EventArgs e)
+    private void QueueButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is not Flyout flyout)
+        if (DataContext is not MainWindowViewModel vm)
             return;
 
-        _queueFlyout = flyout;
-
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null)
+        var drawerHost = this.FindAncestorOfType<VelaDrawerHost>();
+        if (drawerHost is null)
             return;
 
-        var queueButtonTopLeft = QueueButton.TranslatePoint(new Point(0, 0), topLevel);
-        if (queueButtonTopLeft is null)
+        if (drawerHost.IsDrawerOpen)
+        {
+            drawerHost.Close();
             return;
+        }
 
-        var buttonRight = queueButtonTopLeft.Value.X + QueueButton.Bounds.Width;
-        flyout.HorizontalOffset = topLevel.Bounds.Width - QueueFlyoutRightInset - buttonRight;
-    }
+        var queueContent = new PlaybackQueueControl
+        {
+            DataContext = vm
+        };
 
-    private void QueueFlyout_OnOpened(object? sender, EventArgs e)
-    {
-        _queueFlyout = sender as Flyout;
-
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null || ReferenceEquals(_lightDismissTopLevel, topLevel))
-            return;
-
-        DetachLightDismissHandler();
-
-        _lightDismissTopLevel = topLevel;
-        topLevel.AddHandler(
-            PointerPressedEvent,
-            OnTopLevelPointerPressed,
-            RoutingStrategies.Tunnel,
-            handledEventsToo: true);
-    }
-
-    private void QueueFlyout_OnClosed(object? sender, EventArgs e)
-    {
-        _queueFlyout = sender as Flyout;
-        DetachLightDismissHandler();
+        _ = drawerHost.ShowAsync(queueContent, new VelaDrawerOptions
+        {
+            Title = "播放列表",
+            Side = VelaDrawerSide.Right,
+            Width = 380,
+            Material = VelaSurfaceMaterial.LiquidGlass,
+            ShowHeader = true,
+            WrapInScrollViewer = false,
+            BodyPadding = new Thickness(0),
+            CloseOnBackdropClick = true
+        });
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        _queueFlyout?.Hide();
-        _queueFlyout = null;
-        DetachLightDismissHandler();
+        _speedMenu?.Close();
+        _speedMenu = null;
         base.OnDetachedFromVisualTree(e);
     }
 
-    private void DetachLightDismissHandler()
+    private void PlaybackSpeedButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        _lightDismissTopLevel?.RemoveHandler(
-            PointerPressedEvent,
-            OnTopLevelPointerPressed);
-        _lightDismissTopLevel = null;
-    }
-
-    private void OnTopLevelPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (_queueFlyout is not { IsOpen: true })
+        if (sender is not Control button || DataContext is not MainWindowViewModel vm)
             return;
 
-        if (e.Source is not Visual source)
+        _speedMenu ??= new VelaContextMenu
         {
-            _queueFlyout.Hide();
-            return;
+            Placement = PlacementMode.Top,
+            VerticalOffset = -8,
+            MenuMinWidth = 124
+        };
+
+        _speedMenu.Items.Clear();
+        var currentSpeed = vm.Player.PlaybackSpeedSelection;
+        foreach (var option in PlaybackSpeedOptions)
+        {
+            _speedMenu.Items.Add(new VelaMenuItem
+            {
+                Header = option,
+                IsChecked = string.Equals(currentSpeed, option, StringComparison.OrdinalIgnoreCase),
+                Command = vm.Player.SetPlaybackSpeedOptionCommand,
+                CommandParameter = option
+            });
         }
 
-        if (source == QueueButton || IsDescendantOf(source, QueueButton))
-            return;
-
-        if (source == QueueFlyoutContent || IsDescendantOf(source, QueueFlyoutContent))
-            return;
-
-        _queueFlyout.Hide();
+        _speedMenu.ShowAt(button, showAtPointer: false);
     }
 
-    private static bool IsDescendantOf(Visual source, Visual ancestor)
+    private void VolumeButton_OnPointerEntered(object? sender, PointerEventArgs e)
     {
-        foreach (var currentAncestor in source.GetVisualAncestors())
-        {
-            if (ReferenceEquals(currentAncestor, ancestor))
-                return true;
-        }
-
-        return false;
-    }
-
-    private void VolumeButton_OnPointerEntered(object? sender, PointerEventArgs e) {
         if (sender is not Button button)
             return;
         FlyoutBase.ShowAttachedFlyout(button);
         VolumeSlider.Focus();
     }
 
-    private void VolumeButton_OnClick(object? sender, RoutedEventArgs e) {
+    private void VolumeButton_OnClick(object? sender, RoutedEventArgs e)
+    {
         if (DataContext is not MainWindowViewModel vm)
             return;
         vm.Player.ToggleMute();
         e.Handled = true;
     }
 
-    private void VolumeSlider_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e) {
+    private void VolumeSlider_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
         if (DataContext is not MainWindowViewModel vm)
             return;
-        vm.Player.MusicVolume = Math.Clamp((float)(vm.Player.MusicVolume+0.01f* e.Delta.Y), 0f, 1f);
+        vm.Player.MusicVolume = Math.Clamp((float)(vm.Player.MusicVolume + 0.01f * e.Delta.Y), 0f, 1f);
     }
-    
-    private void VolumeButton_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e) {
+
+    private void VolumeButton_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
         if (DataContext is not MainWindowViewModel vm)
             return;
-        vm.Player.MusicVolume = Math.Clamp((float)(vm.Player.MusicVolume+0.05f* e.Delta.Y), 0f, 1f);
+        vm.Player.MusicVolume = Math.Clamp((float)(vm.Player.MusicVolume + 0.05f * e.Delta.Y), 0f, 1f);
     }
 }

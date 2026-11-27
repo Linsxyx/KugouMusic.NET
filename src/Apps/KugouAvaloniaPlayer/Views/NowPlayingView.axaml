@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:chrome="clr-namespace:Avalonia.Controls.Chrome;assembly=Avalonia.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
@@ -162,7 +162,7 @@
                         <Border Classes="NowPlayingGlass" Width="45" Height="36">
                             <Panel>
                                 <Border Classes="NowPlayingGlassHighlight" />
-                                <PathIcon Data="{x:Static suki:Icons.ChevronDown}" Foreground="White" Width="15" Height="15"
+                                <PathIcon Data="{x:Static kc:KugouIcons.ChevronDown}" Foreground="White" Width="15" Height="15"
                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Panel>
                         </Border>
@@ -177,7 +177,7 @@
                     <Button Classes="Basic"
                             Cursor="Hand"
                             Command="{Binding RequestWindowToggleFullScreenCommand}">
-                        <PathIcon Data="{x:Static suki:Icons.WindowFullScreen}"
+                        <PathIcon Data="{x:Static kc:KugouIcons.WindowFullScreen}"
                                   Foreground="White"
                                   Width="13"
                                   Height="13" />
@@ -185,7 +185,7 @@
                     <Button Classes="Basic"
                             Cursor="Hand"
                             Command="{Binding RequestWindowMinimizeCommand}">
-                        <PathIcon Data="{x:Static suki:Icons.WindowMinimize}"
+                        <PathIcon Data="{x:Static kc:KugouIcons.WindowMinimize}"
                                   Foreground="White"
                                   Width="13"
                                   Height="13"
@@ -194,7 +194,7 @@
                     <Button Classes="Basic"
                             Cursor="Hand"
                             Command="{Binding RequestWindowToggleMaximizeCommand}">
-                        <PathIcon Data="{x:Static suki:Icons.WindowMaximize}"
+                        <PathIcon Data="{x:Static kc:KugouIcons.WindowMaximize}"
                                   Foreground="White"
                                   Width="13"
                                   Height="13" />
@@ -202,7 +202,7 @@
                     <Button Classes="Basic"
                             Cursor="Hand"
                             Command="{Binding RequestWindowCloseCommand}">
-                        <PathIcon Data="{x:Static suki:Icons.WindowClose}"
+                        <PathIcon Data="{x:Static kc:KugouIcons.WindowClose}"
                                   Foreground="White"
                                   Width="13"
                                   Height="13" />

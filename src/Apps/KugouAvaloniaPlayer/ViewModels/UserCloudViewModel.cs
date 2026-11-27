@@ -1,3 +1,4 @@
+using KugouAvaloniaPlayer.Services;
 using System;
 using System.Globalization;
 using System.Threading;
@@ -10,14 +11,13 @@ using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 using ZLinq;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class UserCloudViewModel(
     UserClient userClient,
-    ISukiToastManager toastManager,
+    IKugouToastManager toastManager,
     ILogger<UserCloudViewModel> logger) : PageViewModelBase
 {
     private const int PageSize = 100;

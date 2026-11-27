@@ -10,7 +10,6 @@ using CommunityToolkit.Mvvm.Input;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 

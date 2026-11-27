@@ -1,66 +1,63 @@
 <Styles xmlns="https://github.com/avaloniaui"
+        xmlns:vela="using:Vela.Avalonia.Controls"
         xmlns:localControls="using:KugouAvaloniaPlayer.Controls">
-    <Style Selector="ListBox.SongList">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Padding" Value="0" />
+
+    <Style Selector="vela|VelaListBox.SongList">
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
     </Style>
 
-    <Style Selector="ListBox.SongList > ListBoxItem">
+    <Style Selector="vela|VelaListBox.SongList /template/ Border#PART_HeaderBorder">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="18,4,18,8" />
+    </Style>
+
+    <Style Selector="vela|VelaListBox.SongList vela|VelaListBoxItem">
         <Setter Property="Padding" Value="0" />
         <Setter Property="Margin" Value="0,1" />
+        <Setter Property="MinHeight" Value="58" />
+        <Setter Property="ClipToBounds" Value="False" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Panel>
-                    <Border Name="BgLayer"
-                            Background="Transparent" />
-                    <ContentPresenter Name="PART_ContentPresenter"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Background="Transparent"
-                                      Padding="{TemplateBinding Padding}" />
-                </Panel>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
     </Style>
 
-    <Style Selector="ListBox.SongList > ListBoxItem:selected /template/ Border#BgLayer">
+    <Style Selector="vela|VelaListBox.SongList vela|VelaListBoxItem:pointerover /template/ Border#PART_Row,
+                     vela|VelaListBox.SongList vela|VelaListBoxItem:selected /template/ Border#PART_Row,
+                     vela|VelaListBox.SongList vela|VelaListBoxItem:selected:pointerover /template/ Border#PART_Row,
+                     vela|VelaListBox.SongList vela|VelaListBoxItem:pressed /template/ Border#PART_Row">
         <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
 
-    <Style Selector="ListBox.SongList > ListBoxItem:pointerover /template/ Border#BgLayer">
-        <Setter Property="Background" Value="Transparent" />
+    <Style Selector="vela|VelaListBox.SongList vela|VelaListBoxItem:selected localControls|SongListItemControl TextBlock.SongTitle">
+        <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
     </Style>
 
-    <Style Selector="ListBox.SongList > ListBoxItem:pressed /template/ Border#BgLayer">
-        <Setter Property="Background" Value="Transparent" />
+    <Style Selector="vela|VelaListBox.SongList vela|VelaListBoxItem:selected localControls|SongListItemControl TextBlock.SongTitle.playing">
+        <Setter Property="Foreground" Value="{DynamicResource VelaAccentBrush}" />
     </Style>
 
-    <Style Selector="ListBox.SongList > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="Transparent" />
+    <Style Selector="vela|VelaListBox.SongList vela|VelaListBoxItem:selected localControls|SongListItemControl TextBlock.SongArtist,
+                     vela|VelaListBox.SongList vela|VelaListBoxItem:selected:pointerover localControls|SongListItemControl TextBlock.SongArtist,
+                     vela|VelaListBox.SongList vela|VelaListBoxItem:selected localControls|SongListItemControl TextBlock.SongAlbum,
+                     vela|VelaListBox.SongList vela|VelaListBoxItem:selected:pointerover localControls|SongListItemControl TextBlock.SongAlbum">
+        <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
     </Style>
 
-    <Style Selector="ListBox.SongList > ListBoxItem:selected localControls|SongListItemControl TextBlock.SongArtist,
-                     ListBox.SongList > ListBoxItem:selected:pointerover localControls|SongListItemControl TextBlock.SongArtist">
-        <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
+    <Style Selector="vela|VelaListBox.SongList vela|VelaListBoxItem:selected localControls|SongListItemControl TextBlock.SongDuration,
+                     vela|VelaListBox.SongList vela|VelaListBoxItem:selected:pointerover localControls|SongListItemControl TextBlock.SongDuration">
+        <Setter Property="Foreground" Value="{DynamicResource VelaTextMutedBrush}" />
     </Style>
 
-    <Style Selector="ListBox.SongList > ListBoxItem:selected localControls|SongListItemControl TextBlock.SongAlbum,
-                     ListBox.SongList > ListBoxItem:selected:pointerover localControls|SongListItemControl TextBlock.SongAlbum">
-        <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
-    </Style>
-
-    <Style Selector="ListBox.SongList > ListBoxItem:selected localControls|SongListItemControl TextBlock.SongDuration,
-                     ListBox.SongList > ListBoxItem:selected:pointerover localControls|SongListItemControl TextBlock.SongDuration">
-        <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
-    </Style>
-
+    <!-- 贴合原 SukiUI 的行内悬浮微缩放动效（无底色遮罩、无行间线条） -->
     <Style Selector="Border.SongListItemShell">
+        <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+        <Setter Property="RenderTransform" Value="scale(1)" />
         <Setter Property="Transitions">
             <Transitions>
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.12" Easing="CubicEaseOut" />
             </Transitions>
         </Setter>
     </Style>
@@ -70,19 +67,24 @@
     </Style>
 
     <Style Selector="Border.SongListItemShell:pressed">
-        <Setter Property="RenderTransform" Value="scale(0.98)" />
+        <Setter Property="RenderTransform" Value="scale(0.985)" />
     </Style>
 
-    <Style Selector="Border.SongListHoverOverlay">
-        <Setter Property="Opacity" Value="0" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
-            </Transitions>
-        </Setter>
+    <Style Selector="Button.SongActionButton">
+        <Setter Property="Width" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
+    </Style>
+    <Style Selector="Button.SongActionButton:pointerover">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
     </Style>
 
-    <Style Selector="Border.SongListItemShell:pointerover Border.SongListHoverOverlay">
-        <Setter Property="Opacity" Value="1" />
-    </Style>
 </Styles>

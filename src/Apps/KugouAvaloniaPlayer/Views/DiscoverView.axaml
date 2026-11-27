@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -97,7 +97,7 @@
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center"
                                 ToolTip.Tip="刷新">
-                            <PathIcon Data="{x:Static suki:Icons.Refresh}"
+                            <PathIcon Data="{x:Static kc:KugouIcons.Refresh}"
                                       Foreground="{DynamicResource SukiLowText}"
                                       Width="18"
                                       Height="18" />
@@ -113,12 +113,12 @@
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                 <Button Classes="DiscoverScrollButton"
                                         Click="OnTopCardsScrollLeft">
-                                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}"
+                                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronLeft}"
                                               Foreground="{DynamicResource SukiText}" />
                                 </Button>
                                 <Button Classes="DiscoverScrollButton"
                                         Click="OnTopCardsScrollRight">
-                                    <PathIcon Data="{x:Static suki:Icons.ChevronRight}"
+                                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronRight}"
                                               Foreground="{DynamicResource SukiText}" />
                                 </Button>
                             </StackPanel>
@@ -129,7 +129,7 @@
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         IsVisible="{Binding IsTopCardsLoading}">
-                                <suki:Loading Width="26" Height="26" />
+                                <kc:KugouLoading Width="26" Height="26" />
                             </StackPanel>
 
                             <ScrollViewer x:Name="TopCardsScrollViewer"
@@ -218,7 +218,7 @@
                                                FontSize="21"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource DiscoverSectionTitleBrush}" />
-                                    <PathIcon Data="{x:Static suki:Icons.ChevronRight}"
+                                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronRight}"
                                               Foreground="{DynamicResource SukiLowText}"
                                               Width="15"
                                               Height="15"
@@ -228,12 +228,12 @@
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                 <Button Classes="DiscoverScrollButton"
                                         Click="OnPlaylistsScrollLeft">
-                                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}"
+                                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronLeft}"
                                               Foreground="{DynamicResource SukiText}" />
                                 </Button>
                                 <Button Classes="DiscoverScrollButton"
                                         Click="OnPlaylistsScrollRight">
-                                    <PathIcon Data="{x:Static suki:Icons.ChevronRight}"
+                                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronRight}"
                                               Foreground="{DynamicResource SukiText}" />
                                 </Button>
                             </StackPanel>
@@ -244,7 +244,7 @@
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         IsVisible="{Binding IsPlaylistsLoading}">
-                                <suki:Loading Width="26" Height="26" />
+                                <kc:KugouLoading Width="26" Height="26" />
                             </StackPanel>
 
                             <ScrollViewer x:Name="PlaylistsScrollViewer"
@@ -283,7 +283,7 @@
                                                FontSize="21"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource DiscoverSectionTitleBrush}" />
-                                    <PathIcon Data="{x:Static suki:Icons.ChevronRight}"
+                                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronRight}"
                                               Foreground="{DynamicResource SukiLowText}"
                                               Width="15"
                                               Height="15"
@@ -297,7 +297,7 @@
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         IsVisible="{Binding IsRanksLoading}">
-                                <suki:Loading Width="26" Height="26" />
+                                <kc:KugouLoading Width="26" Height="26" />
                             </StackPanel>
 
                             <ItemsRepeater IsVisible="{Binding !IsRanksLoading}"
@@ -395,6 +395,6 @@
             ShowAddLoadedSongsToQueueButton="True"
             HeroActionCommand="{Binding CollectPlaylistCommand}"
             HeroActionIsVisible="{Binding CanCollectSelectedPlaylist}"
-            HeroActionIconData="{x:Static suki:Icons.Star}" />
+            HeroActionIconData="{x:Static kc:KugouIcons.Star}" />
     </Grid>
 </UserControl>

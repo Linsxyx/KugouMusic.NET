@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.ShortcutsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors" x:Class="KugouAvaloniaPlayer.Views.Settings.ShortcutsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <localControls:SettingsCard>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
@@ -6,7 +7,7 @@
                     <TextBlock Classes="RowTitle" Text="启用全局快捷键" />
                     <TextBlock Classes="RowHint" Text="窗口隐藏后仍可使用。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableGlobalShortcuts, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding EnableGlobalShortcuts, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 

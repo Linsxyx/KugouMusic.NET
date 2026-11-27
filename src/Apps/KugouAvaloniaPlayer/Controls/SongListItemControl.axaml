@@ -12,92 +12,110 @@
 
     <UserControl.Styles>
         <Style Selector="TextBlock.SongTitle">
-            <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
         </Style>
         <Style Selector="TextBlock.SongTitle.playing">
-            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor75}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaAccentBrush}" />
         </Style>
         <Style Selector="TextBlock.SongArtist,
                          TextBlock.SongAlbum">
-            <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
         </Style>
         <Style Selector="TextBlock.SongDuration">
-            <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextMutedBrush}" />
         </Style>
     </UserControl.Styles>
 
     <Border Name="ItemShell"
             Classes="SongListItemShell"
             CornerRadius="14"
-            Padding="6"
-            Margin="0,2"
+            Background="Transparent"
+            Margin="6,2"
+            Padding="12,7"
             ContextRequested="ItemShell_OnContextRequested">
-        <Grid ColumnDefinitions="Auto, *, 150, 80, 150"
+        <Grid ColumnDefinitions="56, *, 160, 76, 88"
               Background="Transparent"
               behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #Root.PlayCommand}"
               behaviors:InteractionBehaviors.DoubleTappedCommandParameter="{Binding .}">
-            <Border Name="HoverOverlay"
-                    Classes="SongListHoverOverlay"
-                    Grid.ColumnSpan="5"
-                    CornerRadius="12"
-                    Background="{StaticResource SukiControlTouchBackground}" />
 
-            <Border Grid.Column="0" CornerRadius="6" ClipToBounds="True" Width="45" Height="45" Margin="8,5">
+            <Border Grid.Column="0"
+                    Width="44"
+                    Height="44"
+                    CornerRadius="8"
+                    ClipToBounds="True"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource VelaSurfaceMutedBrush}">
                 <Image asyncImageLoader:ImageLoader.Source="{Binding Cover}"
                        behaviors:ImageRenderOptions.InterpolationSource="{Binding Cover}"
-                       Width="45"
-                       Height="45"
+                       Width="44"
+                       Height="44"
                        Stretch="UniformToFill" />
             </Border>
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0" Spacing="3">
+            <StackPanel Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Margin="0,0,14,0"
+                        Spacing="3">
                 <TextBlock Text="{Binding Name}"
                            Classes="SongTitle"
                            Classes.playing="{Binding IsPlaying}"
-                           FontWeight="Bold"
+                           FontSize="13.5"
+                           FontWeight="SemiBold"
                            TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding Singer}" FontSize="12" FontWeight="ExtraLight"
+                <TextBlock Text="{Binding Singer}"
+                           FontSize="12"
                            Classes="SongArtist"
                            TextTrimming="CharacterEllipsis" />
             </StackPanel>
 
-            <TextBlock Grid.Column="2" Text="{Binding AlbumName}" VerticalAlignment="Center"
+            <TextBlock Grid.Column="2"
+                       Text="{Binding AlbumName}"
+                       FontSize="12.5"
+                       Margin="0,0,12,0"
+                       VerticalAlignment="Center"
                        Classes="SongAlbum"
-                       TextTrimming="CharacterEllipsis" FontWeight="ExtraLight"/>
+                       TextTrimming="CharacterEllipsis" />
 
             <TextBlock Grid.Column="3"
-                       Text="{Binding DurationSeconds,Converter={StaticResource SecondsToTimeConverter}}"
+                       Text="{Binding DurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                       FontSize="12"
+                       FontFeatures="+tnum"
                        Classes="SongDuration"
                        VerticalAlignment="Center" />
 
-            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center"
-                        HorizontalAlignment="Right" Margin="0,0,10,0">
+            <StackPanel Grid.Column="4"
+                        Orientation="Horizontal"
+                        Spacing="4"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right">
 
-                <Button Cursor="Hand" Classes="Basic" ToolTip.Tip="播放"
+                <Button Classes="SongActionButton"
+                        ToolTip.Tip="播放"
                         Command="{Binding #Root.PlayCommand}"
                         CommandParameter="{Binding .}">
-                    <Panel Width="15" Height="15">
+                    <Panel Width="14" Height="14">
                         <PathIcon Data="M0,0 L6,3 L0,6 Z"
-                                  Width="15"
-                                  Height="15"
+                                  Width="13"
+                                  Height="13"
                                   IsVisible="{Binding !IsPlaying}"
-                                  Foreground="{DynamicResource SukiLowText}" />
+                                  Foreground="{Binding $parent[Button].Foreground}" />
                         <PathIcon Data="M2,1 L5,1 L5,14 L2,14 Z M10,1 L13,1 L13,14 L10,14 Z"
-                                  Width="15"
-                                  Height="15"
+                                  Width="13"
+                                  Height="13"
                                   IsVisible="{Binding IsPlaying}"
-                                  Foreground="{DynamicResource SukiLowText}" />
+                                  Foreground="{DynamicResource VelaAccentBrush}" />
                     </Panel>
                 </Button>
 
-                <Button Cursor="Hand" x:Name="MoreButton"
-                        Classes="Basic"
+                <Button x:Name="MoreButton"
+                        Classes="SongActionButton"
                         ToolTip.Tip="更多操作"
                         Click="MoreButton_OnClick">
                     <PathIcon Data="M12 20q-.825 0-1.412-.587T10 18t.588-1.412T12 16t1.413.588T14 18t-.587 1.413T12 20m0-6q-.825 0-1.412-.587T10 12t.588-1.412T12 10t1.413.588T14 12t-.587 1.413T12 14m0-6q-.825 0-1.412-.587T10 6t.588-1.412T12 4t1.413.588T14 6t-.587 1.413T12 8"
-                              Width="25"
-                              Height="25"
-                              Foreground="{DynamicResource SukiLowText}" />
+                              Width="16"
+                              Height="16"
+                              Foreground="{Binding $parent[Button].Foreground}" />
                 </Button>
             </StackPanel>
         </Grid>

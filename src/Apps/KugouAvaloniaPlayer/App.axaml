@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="KugouAvaloniaPlayer.App"
              xmlns:local="using:KugouAvaloniaPlayer"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             xmlns:vela="using:Vela.Avalonia"
              xmlns:converters="clr-namespace:KugouAvaloniaPlayer.Converters"
              RequestedThemeVariant="Default">
 
@@ -11,7 +11,9 @@
     </Application.DataTemplates>
 
     <Application.Styles>
-        <suki:SukiTheme ThemeColor="Blue" />
+        <FluentTheme />
+        <vela:VelaTheme Accent="Blue" />
+        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/VelaCompatResources.axaml" />
         <Style Selector="TemplatedControl">
             <Setter Property="FontFamily" Value="{DynamicResource AppDefaultFontFamily}" />
         </Style>
@@ -21,12 +23,9 @@
         <Style Selector="SelectableTextBlock">
             <Setter Property="FontFamily" Value="{DynamicResource AppDefaultFontFamily}" />
         </Style>
-        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SukiMainHostCustomBackground.axaml" />
-        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/KugouSideMenu.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SliderPlayer.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SegmentedStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/GorgeousThemeSwitch.axaml" />
-        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/ThemeSvgIconStyles.axaml" />
         <StyleInclude Source="avares://AvaloniaLyrics/Themes/AvaloniaLyrics.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SongListStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/MediaCardStyles.axaml" />

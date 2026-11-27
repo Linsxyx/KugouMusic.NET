@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
@@ -161,8 +162,8 @@
                     Height="48"
                     CornerRadius="24"
                     Background="Transparent">
-                <Svg Path="/Assets/gear-svgrepo-com.svg"
-                     Css="path { stroke: #E6F5FF; fill: none; }"
+                <kc:KugouIcon Path="/Assets/gear-svgrepo-com.svg"
+                     Foreground="#E6F5FF"
                      Width="18"
                      Height="18"
                      Opacity="0.92"

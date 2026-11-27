@@ -1,13 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              x:Class="KugouAvaloniaPlayer.Views.VerticalDesktopLyricLayoutView"
              x:DataType="vm:VerticalDesktopLyricLayoutViewModel"
              LayoutUpdated="OnLayoutUpdated">
     <UserControl.Styles>
-        <Style Selector="suki|GlassCard#VerticalControlCard">
+        <Style Selector="kc|KugouGlassCard#VerticalControlCard">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="RenderTransformOrigin" Value="0.5,0" />
             <Setter Property="RenderTransform" Value="translateY(-6px)" />
@@ -18,11 +18,11 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="suki|GlassCard#VerticalControlCard.expanded">
+        <Style Selector="kc|KugouGlassCard#VerticalControlCard.expanded">
             <Setter Property="Opacity" Value="1" />
             <Setter Property="RenderTransform" Value="translateY(0)" />
         </Style>
-        <Style Selector="suki|GlassCard#VerticalControlCard.locked">
+        <Style Selector="kc|KugouGlassCard#VerticalControlCard.locked">
             <Setter Property="Opacity" Value="0" />
         </Style>
         <Style Selector="lyrics|VerticalLyricLineControl.VerticalDesktopLyricLine">
@@ -39,7 +39,7 @@
 
     <Grid RowDefinitions="Auto,*,Auto">
         <Grid Grid.Row="{Binding Owner.ControlBarRow}" Height="{Binding Owner.ControlBarHeight}" Margin="12,0" Background="Transparent">
-            <suki:GlassCard Name="VerticalControlCard"
+            <kc:KugouGlassCard Name="VerticalControlCard"
                             Classes.expanded="{Binding Owner.IsControlBarExpanded}"
                             Classes.locked="{Binding Owner.IsLocked}"
                             IsHitTestVisible="{Binding Owner.IsControlBarExpanded}"
@@ -54,10 +54,10 @@
                         </Button>
                         <Button Command="{Binding Owner.ToggleTranslationVisibilityCommand}" Classes="Basic" ToolTip.Tip="切换翻译显示">
                             <Panel>
-                                <Svg Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18"
-                                     Css="path { fill: white; }" IsVisible="{Binding Owner.IsTranslationVisible}" />
-                                <Svg Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18" Opacity="0.38"
-                                     Css="path { fill: white; }" IsVisible="{Binding !Owner.IsTranslationVisible}" />
+                                <kc:KugouIcon Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18"
+                                     Foreground="White" IsVisible="{Binding Owner.IsTranslationVisible}" />
+                                <kc:KugouIcon Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18" Opacity="0.38"
+                                     Foreground="White" IsVisible="{Binding !Owner.IsTranslationVisible}" />
                             </Panel>
                         </Button>
                         <Button Command="{Binding Owner.DecreaseFontSizeCommand}" Classes="Basic"><TextBlock Text="A-" Foreground="White" /></Button>
@@ -66,29 +66,29 @@
                     </StackPanel>
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="14">
                         <Button Command="{Binding Owner.Player.PlayPreviousCommand}" Classes="Basic">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="White" />
+                            <PathIcon Data="{x:Static kc:KugouIcons.ChevronLeft}" Foreground="White" />
                         </Button>
                         <Button Command="{Binding Owner.Player.TogglePlayPauseCommand}" Classes="Basic">
                             <Panel>
-                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="22" Height="22"
-                                     Css="path { fill: white; }" IsVisible="{Binding Owner.Player.IsPlayingAudio}" />
-                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="22" Height="22"
-                                     Css="path { fill: white; }" IsVisible="{Binding !Owner.Player.IsPlayingAudio}" />
+                                <kc:KugouIcon Path="/Assets/pause-1006-svgrepo-com.svg" Width="22" Height="22"
+                                     Foreground="White" IsVisible="{Binding Owner.Player.IsPlayingAudio}" />
+                                <kc:KugouIcon Path="/Assets/play-1003-svgrepo-com.svg" Width="22" Height="22"
+                                     Foreground="White" IsVisible="{Binding !Owner.Player.IsPlayingAudio}" />
                             </Panel>
                         </Button>
                         <Button Command="{Binding Owner.ToggleLockCommand}" Classes="Basic"
                                 IsVisible="{Binding Owner.CanMousePassthrough}" ToolTip.Tip="锁定歌词">
-                            <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="19" Height="19" Css="path { fill: white; }" />
+                            <kc:KugouIcon Path="/Assets/lock2-svgrepo-com.svg" Width="19" Height="19" Foreground="White" />
                         </Button>
                         <Button Command="{Binding Owner.Player.PlayNextCommand}" Classes="Basic">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronRight}" Foreground="White" />
+                            <PathIcon Data="{x:Static kc:KugouIcons.ChevronRight}" Foreground="White" />
                         </Button>
                         <Button Click="OnCloseClicked" Classes="Basic NoPressedAnimation" ToolTip.Tip="关闭歌词">
-                            <PathIcon Data="{x:Static suki:Icons.Cross}" Foreground="White" Width="12" />
+                            <PathIcon Data="{x:Static kc:KugouIcons.Cross}" Foreground="White" Width="12" />
                         </Button>
                     </StackPanel>
                 </Grid>
-            </suki:GlassCard>
+            </kc:KugouGlassCard>
         </Grid>
 
         <Grid x:Name="LyricHost" Grid.Row="1" Margin="24,8,24,20" IsHitTestVisible="False">

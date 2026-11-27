@@ -7,7 +7,6 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 

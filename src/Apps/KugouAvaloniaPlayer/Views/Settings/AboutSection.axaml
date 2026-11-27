@@ -1,4 +1,6 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.AboutSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.AboutSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <localControls:SettingsCard>
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16" Margin="18">
@@ -14,7 +16,7 @@
                 </StackPanel>
                 <Button Grid.Column="2" Classes="Basic" VerticalAlignment="Center" Command="{Binding OpenRepositoryCommand}" Cursor="Hand" ToolTip.Tip="项目主页">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Svg Classes="ThemeSvgIcon" Path="/Assets/github.svg" Width="18" Height="18" />
+                        <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/github.svg" Width="18" Height="18" />
                         <TextBlock Text="GitHub" />
                     </StackPanel>
                 </Button>
@@ -30,14 +32,14 @@
                 </StackPanel>
                 <Button Grid.Column="1" Classes="Basic" Command="{Binding CheckForUpdateCommand}" IsEnabled="{Binding !IsCheckingUpdate}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="16" Height="16" />
+                        <PathIcon Data="{x:Static kc:KugouIcons.Refresh}" Width="16" Height="16" />
                         <TextBlock Text="立即检查" />
                     </StackPanel>
                 </Button>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="启动时自动检查" />
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding AutoCheckUpdate, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -45,7 +47,7 @@
             <TextBlock Classes="GroupHeader" Text="更新日志" />
             <Button Grid.Column="1" Classes="Basic" Command="{Binding RefreshReleaseNotesCommand}" IsEnabled="{Binding !IsLoadingReleaseNotes}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="12" Height="12" />
+                    <PathIcon Data="{x:Static kc:KugouIcons.Refresh}" Width="12" Height="12" />
                     <TextBlock Text="刷新" FontSize="12" />
                 </StackPanel>
             </Button>

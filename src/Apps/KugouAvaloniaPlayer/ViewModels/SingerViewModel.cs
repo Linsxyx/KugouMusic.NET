@@ -13,7 +13,6 @@ using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -31,7 +30,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
     private readonly ArtistClient _artistClient;
     private readonly AlbumClient _albumClient;
     private readonly PlaylistClient _playlistClient;
-    private readonly ISukiToastManager _toastManager;
+    private readonly IKugouToastManager _toastManager;
 
     private int _currentPage = 1;
     private int _currentAlbumPage = 1;
@@ -97,7 +96,7 @@ public partial class SingerViewModel : PageViewModelBase, IDisposable
         ArtistClient artistClient,
         AlbumClient albumClient,
         PlaylistClient playlistClient,
-        ISukiToastManager toastManager,
+        IKugouToastManager toastManager,
         IMessenger messenger,
         ILogger<SingerViewModel> logger,
         string authorId,

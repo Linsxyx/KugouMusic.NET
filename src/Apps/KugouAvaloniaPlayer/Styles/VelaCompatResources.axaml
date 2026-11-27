@@ -1,0 +1,192 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:system="clr-namespace:System;assembly=netstandard"
+        xmlns:localControls="clr-namespace:KugouAvaloniaPlayer.Controls"
+        xmlns:vela="using:Vela.Avalonia.Controls">
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <system:TimeSpan x:Key="MediumAnimationDuration">0:0:0.25</system:TimeSpan>
+            <system:TimeSpan x:Key="ShortAnimationDuration">0:0:0.15</system:TimeSpan>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <x:Boolean x:Key="IsLight">True</x:Boolean>
+                    <x:Boolean x:Key="IsDark">False</x:Boolean>
+
+                    <!-- Legacy Suki token bridge as Color (works on both Color & IBrush properties) -->
+                    <Color x:Key="SukiText">#FF111827</Color>
+                    <Color x:Key="SukiLowText">#FF6B7280</Color>
+                    <Color x:Key="SukiBackground">#FFF8FAFC</Color>
+                    <Color x:Key="SukiStrongBackground">#FFF1F5F9</Color>
+                    <Color x:Key="SukiCardBackground">#EBFFFFFF</Color>
+                    <Color x:Key="SukiBorder">#180F172A</Color>
+                    <Color x:Key="SukiBorderBrush">#180F172A</Color>
+                    <Color x:Key="SukiControlTouchBackground">#120F172A</Color>
+                    <Color x:Key="SukiDangerColor">#FFEF4444</Color>
+                    <Color x:Key="SukiPrimaryColor">#FF0EA5E9</Color>
+                    <Color x:Key="SukiPrimaryColor75">#BF0EA5E9</Color>
+                    <Color x:Key="SukiAccentColor75">#BF0EA5E9</Color>
+                    <Color x:Key="SukiPrimaryColorLow">#180EA5E9</Color>
+                    <Color x:Key="SukiPrimaryColor10">#1A0EA5E9</Color>
+                    <Color x:Key="SukiPrimaryColor5">#0D0EA5E9</Color>
+                    <Color x:Key="SukiPrimaryColor3">#080EA5E9</Color>
+                    <Color x:Key="SukiPrimaryColor1">#050EA5E9</Color>
+                    <Color x:Key="SukiPrimaryColor0">#000EA5E9</Color>
+                    <Color x:Key="SukiLiquid1">#CCFFFFFF</Color>
+                    <Color x:Key="SukiLiquid2">#FF64748B</Color>
+
+                    <SolidColorBrush x:Key="KugouIconBrush" Color="#18181B" />
+                    <SolidColorBrush x:Key="KugouCardSurfaceBrush" Color="#DEFFFFFF" />
+                    <SolidColorBrush x:Key="KugouCardOpaqueSurfaceBrush" Color="#FAFFFFFF" />
+                    <SolidColorBrush x:Key="KugouNavSelectedPillBrush" Color="#1C0EA5E9" />
+                    <SolidColorBrush x:Key="KugouNavHoverPillBrush" Color="#0E0F172A" />
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Dark">
+                    <x:Boolean x:Key="IsLight">False</x:Boolean>
+                    <x:Boolean x:Key="IsDark">True</x:Boolean>
+
+                    <!-- Legacy Suki token bridge as Color (works on both Color & IBrush properties) -->
+                    <Color x:Key="SukiText">#FFF4F4F5</Color>
+                    <Color x:Key="SukiLowText">#FFA1A1AA</Color>
+                    <Color x:Key="SukiBackground">#FF0C0D10</Color>
+                    <Color x:Key="SukiStrongBackground">#FF14161C</Color>
+                    <Color x:Key="SukiCardBackground">#D8171A21</Color>
+                    <Color x:Key="SukiBorder">#1EFFFFFF</Color>
+                    <Color x:Key="SukiBorderBrush">#1EFFFFFF</Color>
+                    <Color x:Key="SukiControlTouchBackground">#1AFFFFFF</Color>
+                    <Color x:Key="SukiDangerColor">#FFF87171</Color>
+                    <Color x:Key="SukiPrimaryColor">#FF38BDF8</Color>
+                    <Color x:Key="SukiPrimaryColor75">#BF38BDF8</Color>
+                    <Color x:Key="SukiAccentColor75">#BF38BDF8</Color>
+                    <Color x:Key="SukiPrimaryColorLow">#2238BDF8</Color>
+                    <Color x:Key="SukiPrimaryColor10">#1F38BDF8</Color>
+                    <Color x:Key="SukiPrimaryColor5">#1038BDF8</Color>
+                    <Color x:Key="SukiPrimaryColor3">#0A38BDF8</Color>
+                    <Color x:Key="SukiPrimaryColor1">#0538BDF8</Color>
+                    <Color x:Key="SukiPrimaryColor0">#0038BDF8</Color>
+                    <Color x:Key="SukiLiquid1">#44FFFFFF</Color>
+                    <Color x:Key="SukiLiquid2">#FF94A3B8</Color>
+
+                    <SolidColorBrush x:Key="KugouIconBrush" Color="#A8D8FF" />
+                    <SolidColorBrush x:Key="KugouCardSurfaceBrush" Color="#CC16181F" />
+                    <SolidColorBrush x:Key="KugouCardOpaqueSurfaceBrush" Color="#F5181B22" />
+                    <SolidColorBrush x:Key="KugouNavSelectedPillBrush" Color="#2438BDF8" />
+                    <SolidColorBrush x:Key="KugouNavHoverPillBrush" Color="#12FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Dedicated Vela-powered ControlTheme for KugouGlassCard -->
+            <ControlTheme x:Key="{x:Type localControls:KugouGlassCard}" TargetType="localControls:KugouGlassCard">
+                <Setter Property="Background" Value="{DynamicResource KugouCardSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource VelaBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="Padding" Value="14" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                <Setter Property="ClipToBounds" Value="False" />
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <Border x:Name="PART_Outer"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                BoxShadow="{TemplateBinding CardShadow}">
+                            <Panel>
+                                <Border x:Name="PART_BlurBackdrop"
+                                        IsVisible="{TemplateBinding BlurBackground}"
+                                        CornerRadius="{TemplateBinding CornerRadius}"
+                                        ClipToBounds="True"
+                                        BackdropEffectCache="Retained"
+                                        IsHitTestVisible="False" />
+
+                                <Border x:Name="PART_Surface"
+                                        CornerRadius="{TemplateBinding CornerRadius}"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        ClipToBounds="True">
+                                    <Border.Transitions>
+                                        <Transitions>
+                                            <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+                                            <BrushTransition Property="Background" Duration="0:0:0.15" />
+                                        </Transitions>
+                                    </Border.Transitions>
+                                    <ContentPresenter Name="PART_ContentPresenter"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                      Padding="{TemplateBinding Padding}"
+                                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                </Border>
+                            </Panel>
+                        </Border>
+                    </ControlTemplate>
+                </Setter>
+
+                <Style Selector="^[IsOpaque=True]">
+                    <Setter Property="Background" Value="{DynamicResource KugouCardOpaqueSurfaceBrush}" />
+                    <Setter Property="CardShadow" Value="{DynamicResource VelaShadowRaised}" />
+                </Style>
+
+                <Style Selector="^[IsInteractive=True]:pointerover /template/ Border#PART_Surface">
+                    <Setter Property="BorderBrush" Value="{DynamicResource VelaAccentBrush}" />
+                </Style>
+            </ControlTheme>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!-- Zero-SVG vector icon theme tinting -->
+    <Style Selector="localControls|KugouIcon.ThemeSvgIcon">
+        <Setter Property="Foreground" Value="{DynamicResource KugouIconBrush}" />
+    </Style>
+
+    <!-- Clean Vela-styled replacements for legacy Suki button classes -->
+    <Style Selector="Button.Basic">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.Basic:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VelaSurfaceMutedBrush}" />
+    </Style>
+
+    <Style Selector="Button.WindowControlsButton">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.WindowControlsButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VelaSurfaceMutedBrush}" />
+    </Style>
+    <Style Selector="Button.WindowControlsButton.Close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource VelaDangerBrush}" />
+    </Style>
+    <Style Selector="Button.WindowControlsButton.Close:pointerover">
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <Style Selector="Button.Flat">
+        <Setter Property="Background" Value="{DynamicResource VelaAccentBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource VelaAccentForegroundBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <Style Selector="Button.Outlined">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource VelaBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+</Styles>

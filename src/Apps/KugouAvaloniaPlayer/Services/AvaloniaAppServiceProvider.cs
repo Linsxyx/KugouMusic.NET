@@ -15,8 +15,6 @@ using KugouAvaloniaPlayer.ViewModels;
 using Microsoft.Extensions.Logging;
 using Pure.DI;
 using SimpleAudio;
-using SukiUI.Dialogs;
-using SukiUI.Toasts;
 using static Pure.DI.Lifetime;
 using GlobalShortcutServiceImpl = KugouAvaloniaPlayer.Services.GlobalShortcutService.GlobalShortcutService;
 using SystemMediaSessionServiceImpl = KugouAvaloniaPlayer.Services.SystemMediaSession.SystemMediaSessionService;
@@ -48,8 +46,8 @@ public sealed partial class AvaloniaAppServiceProvider
             CreateHttpClient(cookieContainer, signatureHandler))
         .Bind<IKgTransport>().As(Singleton).To<KgHttpTransport>()
 
-        .Bind<ISukiToastManager>().As(Singleton).To<SukiToastManager>()
-        .Bind<ISukiDialogManager>().As(Singleton).To<SukiDialogManager>()
+        .Bind<IKugouToastManager>().As(Singleton).To<KugouToastManager>()
+        .Bind<IKugouDialogManager>().As(Singleton).To<KugouDialogManager>()
         .Bind<IHttpClientFactory>().As(Singleton).To<SimpleHttpClientFactory>()
         .Bind<ICreatePlaylistDialogService>().As(Singleton).To<CreatePlaylistDialogService>()
         .Bind<IExternalPlaylistParser>().As(Singleton).To<ExternalPlaylistParser>()

@@ -1,12 +1,11 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.VisualTree;
+using Avalonia.Media;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.ViewModels;
+using Vela.Avalonia.Controls;
 
 namespace KugouAvaloniaPlayer.Controls;
 
@@ -24,8 +23,7 @@ public partial class SidebarPlaylistItemControl : UserControl
     public static readonly StyledProperty<ICommand?> DeleteLocalPlaylistCommandProperty =
         AvaloniaProperty.Register<SidebarPlaylistItemControl, ICommand?>(nameof(DeleteLocalPlaylistCommand));
 
-    private MenuFlyout? _contextFlyout;
-    private TopLevel? _lightDismissTopLevel;
+    private VelaContextMenu? _contextMenu;
 
     public SidebarPlaylistItemControl()
     {
@@ -61,90 +59,70 @@ public partial class SidebarPlaylistItemControl : UserControl
         if (DataContext is not PlaylistItem item)
             return;
 
-        var flyout = EnsureContextFlyout();
-        PopulateMenu(flyout, item);
+        var menu = EnsureContextMenu();
+        PopulateMenu(menu, item);
 
-        if (flyout.Items.Count == 0)
+        if (menu.Items.Count == 0)
             return;
 
-        flyout.ShowAt(ItemShell, showAtPointer: true);
-        AttachLightDismissHandler();
+        menu.ShowAt(ItemShell, showAtPointer: e.TryGetPosition(ItemShell, out _));
         e.Handled = true;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        _contextFlyout?.Hide();
-        _contextFlyout?.Items.Clear();
-        _contextFlyout = null;
-        DetachLightDismissHandler();
+        _contextMenu?.Close();
+        _contextMenu?.Items.Clear();
+        _contextMenu = null;
         base.OnDetachedFromVisualTree(e);
     }
 
-    private MenuFlyout EnsureContextFlyout()
+    private VelaContextMenu EnsureContextMenu()
     {
-        return _contextFlyout ??= new MenuFlyout();
+        return _contextMenu ??= new VelaContextMenu
+        {
+            MenuMinWidth = 176
+        };
     }
 
-    private void PopulateMenu(MenuFlyout flyout, PlaylistItem item)
+    private void PopulateMenu(VelaContextMenu menu, PlaylistItem item)
     {
-        flyout.Items.Clear();
+        menu.Items.Clear();
 
         switch (item.Type)
         {
             case PlaylistType.Online:
-                AddMenuItem(flyout, "删除歌单", DeleteOnlinePlaylistCommand, item);
+                AddMenuItem(menu, "删除歌单", KugouIcons.Trash, DeleteOnlinePlaylistCommand, item, isDestructive: true);
                 break;
             case PlaylistType.Album:
-                AddMenuItem(flyout, "取消收藏专辑", DeleteOnlinePlaylistCommand, item);
+                AddMenuItem(menu, "取消收藏专辑", KugouIcons.Trash, DeleteOnlinePlaylistCommand, item, isDestructive: true);
                 break;
             case PlaylistType.Local:
-                AddMenuItem(flyout, "编辑本地歌单", EditLocalPlaylistCommand, item);
-                AddMenuItem(flyout, "移除本地歌单", DeleteLocalPlaylistCommand, item);
+                AddMenuItem(menu, "编辑本地歌单", KugouIcons.Edit, EditLocalPlaylistCommand, item);
+                menu.Items.Add(new VelaMenuItem { IsSeparator = true });
+                AddMenuItem(menu, "移除本地歌单", KugouIcons.Trash, DeleteLocalPlaylistCommand, item, isDestructive: true);
                 break;
         }
     }
 
-    private static void AddMenuItem(MenuFlyout flyout, string header, ICommand? command, PlaylistItem item)
+    private static void AddMenuItem(
+        VelaContextMenu menu,
+        string header,
+        Geometry icon,
+        ICommand? command,
+        PlaylistItem item,
+        bool isDestructive = false)
     {
         if (command == null)
             return;
 
-        flyout.Items.Add(new MenuItem
+        menu.Items.Add(new VelaMenuItem
         {
             Header = header,
+            Icon = icon,
+            IsDestructive = isDestructive,
             Command = command,
             CommandParameter = item
         });
-    }
-
-    private void AttachLightDismissHandler()
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null || ReferenceEquals(_lightDismissTopLevel, topLevel))
-            return;
-
-        DetachLightDismissHandler();
-
-        _lightDismissTopLevel = topLevel;
-        topLevel.AddHandler(
-            PointerPressedEvent,
-            OnTopLevelPointerPressed,
-            RoutingStrategies.Tunnel,
-            handledEventsToo: true);
-    }
-
-    private void DetachLightDismissHandler()
-    {
-        _lightDismissTopLevel?.RemoveHandler(
-            PointerPressedEvent,
-            OnTopLevelPointerPressed);
-        _lightDismissTopLevel = null;
-    }
-
-    private void OnTopLevelPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        _contextFlyout?.Hide();
-        DetachLightDismissHandler();
     }
 }

@@ -1,8 +1,9 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:local="using:KugouAvaloniaPlayer.Controls"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              x:Class="KugouAvaloniaPlayer.Views.EqSettingsView" x:DataType="vm:EqSettingsViewModel">
-    <suki:GlassCard Margin="16,16,16,100" Padding="24">
+    <kc:KugouGlassCard Margin="16,16,16,100" Padding="24">
         <Grid RowDefinitions="Auto,*" RowSpacing="16">
             <StackPanel Spacing="8">
                 <Button Classes="Basic EscapeBackButton" Content="‹  播放与音效" ToolTip.Tip="返回播放与音效" Command="{Binding BackCommand}" HorizontalAlignment="Left" />
@@ -12,7 +13,7 @@
             <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="16">
                     <WrapPanel Orientation="Horizontal">
-                        <ComboBox ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" MinWidth="130" Margin="0,0,12,8" />
+                        <vela:VelaSelect Size="Small" ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}" MinWidth="130" Margin="0,0,12,8" />
                         <Button Classes="Basic" Content="撤销上次修改" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" Margin="0,0,8,8" />
                         <Button Classes="Basic" Content="全部归零" Command="{Binding ResetCommand}" Margin="0,0,0,8" />
                     </WrapPanel>
@@ -36,5 +37,5 @@
                 </StackPanel>
             </ScrollViewer>
         </Grid>
-    </suki:GlassCard>
+    </kc:KugouGlassCard>
 </UserControl>

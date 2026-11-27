@@ -1,4 +1,6 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:models="using:KugouAvaloniaPlayer.Models" xmlns:suki="https://github.com/kikipoulet/SukiUI" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" x:Class="KugouAvaloniaPlayer.Views.Settings.PlaybackSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:models="using:KugouAvaloniaPlayer.Models" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" xmlns:simpleAudio="clr-namespace:SimpleAudio;assembly=SimpleAudio" x:Class="KugouAvaloniaPlayer.Views.Settings.PlaybackSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <TextBlock Classes="GroupHeader" Text="输出" />
         <localControls:SettingsCard>
@@ -8,20 +10,20 @@
                     <TextBlock Classes="RowHint" Text="{Binding OutputDeviceStatus}" IsVisible="{Binding IsOutputDeviceStatusVisible}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <ComboBox MinWidth="200" ItemsSource="{Binding OutputDeviceOptions}" SelectedItem="{Binding SelectedOutputDevice}">
-                        <ComboBox.ItemTemplate>
+                    <vela:VelaSelect Size="Small" MinWidth="200" ItemsSource="{Binding OutputDeviceOptions}" SelectedItem="{Binding SelectedOutputDevice}">
+                        <vela:VelaSelect.ItemTemplate>
                             <DataTemplate DataType="simpleAudio:AudioOutputDevice">
                                 <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
                             </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                        <ComboBox.SelectionBoxItemTemplate>
+                        </vela:VelaSelect.ItemTemplate>
+                        <vela:VelaSelect.SelectionBoxItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                             </DataTemplate>
-                        </ComboBox.SelectionBoxItemTemplate>
-                    </ComboBox>
+                        </vela:VelaSelect.SelectionBoxItemTemplate>
+                    </vela:VelaSelect>
                     <Button Classes="Basic" Cursor="Hand" Command="{Binding RefreshOutputDevicesCommand}" ToolTip.Tip="刷新输出设备列表">
-                        <PathIcon Data="{x:Static suki:Icons.Refresh}" Width="16" Height="16" />
+                        <PathIcon Data="{x:Static kc:KugouIcons.Refresh}" Width="16" Height="16" />
                     </Button>
                 </StackPanel>
             </localControls:SettingsRow>
@@ -30,43 +32,43 @@
                     <TextBlock Classes="RowTitle" Text="多声道适配" />
                     <TextBlock Classes="RowHint" Text="{Binding CurrentDeviceChannelSummary}" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" MinWidth="170" ItemsSource="{Binding AudioChannelModeOptions}" SelectedItem="{Binding SelectedAudioChannelMode}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" MinWidth="170" ItemsSource="{Binding AudioChannelModeOptions}" SelectedItem="{Binding SelectedAudioChannelMode}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="models:AudioChannelModeOption">
                             <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                    <ComboBox.SelectionBoxItemTemplate>
+                    </vela:VelaSelect.ItemTemplate>
+                    <vela:VelaSelect.SelectionBoxItemTemplate>
                         <DataTemplate DataType="models:AudioChannelModeOption">
                             <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
                         </DataTemplate>
-                    </ComboBox.SelectionBoxItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.SelectionBoxItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="播放音质" />
                     <TextBlock Classes="RowHint" Text="可用音质取决于音源。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding Player.QualityOptions}" SelectedItem="{Binding Player.QualitySelection}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding Player.QualityOptions}" SelectedItem="{Binding Player.QualitySelection}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="x:String">
                             <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                    <ComboBox.SelectionBoxItemTemplate>
+                    </vela:VelaSelect.ItemTemplate>
+                    <vela:VelaSelect.SelectionBoxItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding ., Converter={StaticResource PlaybackQualityDisplayConverter}}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.SelectionBoxItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.SelectionBoxItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="智能过渡" />
                     <TextBlock Classes="RowHint" Text="在歌曲尾段平滑切换到下一首。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableSeamlessTransition, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding EnableSeamlessTransition, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -78,7 +80,7 @@
                     <TextBlock Classes="RowHint" Text="选择预设，或手动绘制频响曲线。" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <ComboBox ItemsSource="{Binding EQPresetOptions}" SelectedItem="{Binding SelectedEQPreset}" />
+                    <vela:VelaSelect Size="Small" ItemsSource="{Binding EQPresetOptions}" SelectedItem="{Binding SelectedEQPreset}" />
                     <Button Classes="Basic" Content="调整曲线" Command="{Binding OpenEqSettingsCommand}" />
                 </StackPanel>
             </localControls:SettingsRow>
@@ -87,14 +89,14 @@
                     <TextBlock Classes="RowTitle" Text="音量平衡" />
                     <TextBlock Classes="RowHint" Text="减小歌曲之间的音量差异。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableVolumeNormalization, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding EnableVolumeNormalization, Mode=TwoWay}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="空间音效" />
                     <TextBlock Classes="RowHint" Text="增强声音的空间感。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableSurround, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding EnableSurround, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
     </StackPanel>

@@ -15,7 +15,6 @@ using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -40,7 +39,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
     private readonly ILogger<MyPlaylistsViewModel> _logger;
     private readonly AlbumClient _albumClient;
     private readonly PlaylistClient _playlistClient;
-    private readonly ISukiToastManager _toastManager;
+    private readonly IKugouToastManager _toastManager;
     private readonly UserClient _userClient;
 
     private int _currentPage = 1;
@@ -75,7 +74,7 @@ public partial class MyPlaylistsViewModel : PageViewModelBase, IDisposable
         AlbumClient albumClient,
         FavoritePlaylistService favoritePlaylistService,
         UserCreatedPlaylistCacheService userCreatedPlaylistCacheService,
-        ISukiToastManager toastManager,
+        IKugouToastManager toastManager,
         ICreatePlaylistDialogService createPlaylistDialogService,
         IExternalPlaylistImportService externalPlaylistImportService,
         INavigationService navigationService,

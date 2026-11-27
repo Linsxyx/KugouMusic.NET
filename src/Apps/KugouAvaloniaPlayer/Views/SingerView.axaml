@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              x:Class="KugouAvaloniaPlayer.Views.SingerView"
@@ -45,7 +45,7 @@
                 ShowSongList="False"
                 ShowPlayAllButton="False" />
 
-            <suki:GlassCard Grid.Row="1"
+            <kc:KugouGlassCard Grid.Row="1"
                             Classes="CollectionPanel"
                             Margin="0,15,0,0"
                             Padding="22,16,22,0"
@@ -78,7 +78,7 @@
                                 HorizontalAlignment="Center"
                                 IsVisible="{Binding IsLoadingAlbums}"
                                 Spacing="10">
-                        <suki:Loading Width="40" Height="40" />
+                        <kc:KugouLoading Width="40" Height="40" />
                         <TextBlock Text="正在加载专辑..."
                                    Foreground="{DynamicResource SukiLiquid2}" />
                     </StackPanel>
@@ -89,13 +89,13 @@
                                 Margin="10"
                                 Spacing="10"
                                 IsVisible="{Binding IsLoadingMoreAlbums}">
-                        <suki:Loading Width="20" Height="20" />
+                        <kc:KugouLoading Width="20" Height="20" />
                         <TextBlock Text="正在加载更多专辑..."
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource SukiLiquid2}" />
                     </StackPanel>
                 </Grid>
-            </suki:GlassCard>
+            </kc:KugouGlassCard>
         </Grid>
 
         <localControls:SongCollectionDetailView
@@ -116,7 +116,7 @@
             TitleFontSize="24"
             ShowAddLoadedSongsToQueueButton="True"
             HeroActionCommand="{Binding CollectAlbumCommand}"
-            HeroActionIconData="{x:Static suki:Icons.Star}"
+            HeroActionIconData="{x:Static kc:KugouIcons.Star}"
             HeroActionIsVisible="True" />
     </Grid>
 </UserControl>

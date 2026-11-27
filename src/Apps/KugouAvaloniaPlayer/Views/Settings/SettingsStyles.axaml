@@ -1,4 +1,5 @@
-<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:KugouAvaloniaPlayer.Controls" xmlns:suki="https://github.com/kikipoulet/SukiUI">
+<Styles xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:KugouAvaloniaPlayer.Controls">
     <Styles.Resources>
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
@@ -19,7 +20,7 @@
     </Styles.Resources>
 
     <Style Selector="TextBlock"><Setter Property="FontSize" Value="14" /></Style>
-    <Style Selector="ComboBox"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="MinHeight" Value="36" /><Setter Property="MinWidth" Value="150" /><Setter Property="MaxWidth" Value="280" /></Style>
+    <Style Selector=":is(ComboBox)"><Setter Property="HorizontalAlignment" Value="Stretch" /><Setter Property="MinHeight" Value="36" /><Setter Property="MinWidth" Value="150" /><Setter Property="MaxWidth" Value="280" /></Style>
     <Style Selector="Button"><Setter Property="MinHeight" Value="32" /></Style>
     <Style Selector="local|SettingsRow"><Setter Property="Margin" Value="16,11" /><Setter Property="RowSpacing" Value="10" /><Setter Property="ColumnSpacing" Value="16" /><Setter Property="MinHeight" Value="38" /></Style>
 
@@ -237,16 +238,16 @@
                     <Border Name="HoverFill" CornerRadius="12" Background="{DynamicResource SukiText}" Opacity="0" IsHitTestVisible="False">
                         <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions></Border.Transitions>
                     </Border>
-                    <suki:GlassCard Name="SelectionGlass" CornerRadius="12" Padding="0" BorderThickness="1" IsAnimated="False" IsHitTestVisible="False" Opacity="0">
-                        <suki:GlassCard.BorderBrush>
+                    <kc:KugouGlassCard Name="SelectionGlass" CornerRadius="12" Padding="0" BorderThickness="1" IsAnimated="False" IsHitTestVisible="False" Opacity="0">
+                        <kc:KugouGlassCard.BorderBrush>
                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                                 <GradientStop Offset="0" Color="{DynamicResource SukiLiquid1}" />
                                 <GradientStop Offset="0.5" Color="Transparent" />
                                 <GradientStop Offset="1" Color="{DynamicResource SukiLiquid2}" />
                             </LinearGradientBrush>
-                        </suki:GlassCard.BorderBrush>
-                        <suki:GlassCard.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions></suki:GlassCard.Transitions>
-                    </suki:GlassCard>
+                        </kc:KugouGlassCard.BorderBrush>
+                        <kc:KugouGlassCard.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions></kc:KugouGlassCard.Transitions>
+                    </kc:KugouGlassCard>
                     <Border Name="Indicator" Width="3" Height="18" CornerRadius="2" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,0,0,0" Background="{DynamicResource SukiPrimaryColor}" IsHitTestVisible="False" RenderTransform="scaleY(0)">
                         <Border.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut" /></Transitions></Border.Transitions>
                     </Border>
@@ -262,7 +263,7 @@
     <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected /template/ Border#HoverFill">
         <Setter Property="Opacity" Value="0" />
     </Style>
-    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected /template/ suki|GlassCard#SelectionGlass">
+    <Style Selector="ListBox.SettingsNavigation ListBoxItem:selected /template/ kc|KugouGlassCard#SelectionGlass">
         <Setter Property="Opacity" Value="1" />
     </Style>
     <Style Selector="ListBox.SettingsNavigation ListBoxItem:focus-visible /template/ Border#KeyboardFocus">
@@ -308,7 +309,7 @@
         <Setter Property="Opacity" Value="1" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
-    <Style Selector="ComboBox.SettingsCategoryPicker">
+    <Style Selector=":is(ComboBox).SettingsCategoryPicker">
         <Setter Property="CornerRadius" Value="10" />
         <Setter Property="FontWeight" Value="Normal" />
     </Style>

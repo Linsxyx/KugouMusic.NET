@@ -1,10 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              mc:Ignorable="d" d:DesignWidth="1100" d:DesignHeight="700"
              x:Class="KugouAvaloniaPlayer.Views.DailyRecommendView"
@@ -201,7 +202,7 @@
                                                 Height="28"
                                                 IsEnabled="{Binding CanEditFmConfiguration}"
                                                 Command="{Binding CyclePersonalFmModeCommand}">
-                                            <Svg Classes="ThemeSvgIcon"
+                                            <kc:KugouIcon Classes="ThemeSvgIcon"
                                                  Path="/Assets/switch-up.svg"
                                                  Width="15"
                                                  Height="15" />
@@ -239,7 +240,7 @@
                                     <StackPanel Orientation="Horizontal"
                                                 Spacing="8"
                                                 IsVisible="{Binding IsFmLoading}">
-                                        <suki:Loading Width="15" Height="15" />
+                                        <kc:KugouLoading Width="15" Height="15" />
                                         <TextBlock Text="正在更新专属电台..."
                                                    Foreground="#F8FBFF"
                                                    FontSize="12"
@@ -278,7 +279,7 @@
                                             Padding="2,2,-2,0"
                                             IsVisible="{Binding ShowFmControls}"
                                             Command="{Binding PlayPersonalFmCommand}">
-                                        <Svg Classes="ThemeSvgIcon"
+                                        <kc:KugouIcon Classes="ThemeSvgIcon"
                                              Path="{Binding FmPlayIconPath}"
                                              Width="18"
                                              Height="18" />
@@ -297,7 +298,7 @@
                                         ToolTip.Tip="不喜欢"
                                         IsVisible="{Binding ShowFmControls}"
                                         Command="{Binding DislikePersonalFmCommand}">
-                                    <Svg Classes="ThemeSvgIcon"
+                                    <kc:KugouIcon Classes="ThemeSvgIcon"
                                          Path="/Assets/unlike-svgrepo-com.svg"
                                          Width="17"
                                          Height="17" />
@@ -310,7 +311,7 @@
                                         IsVisible="{Binding CanUsePersonalFm}"
                                         IsEnabled="{Binding CanEditFmConfiguration}"
                                         Command="{Binding RefreshPersonalFmCommand}">
-                                    <PathIcon Data="{x:Static suki:Icons.Refresh}"
+                                    <PathIcon Data="{x:Static kc:KugouIcons.Refresh}"
                                               Foreground="White"
                                               Width="15"
                                               Height="15" />
@@ -321,52 +322,46 @@
                 </Grid>
             </Grid>
 
-            <suki:GlassCard Grid.Row="1"
+            <kc:KugouGlassCard Grid.Row="1"
                             Margin="0,15,0,0"
-                            Padding="22,16,22,0"
+                            Padding="14,10,14,0"
                             CornerRadius="18">
-                <Grid RowDefinitions="Auto,*">
-                    <Grid ColumnDefinitions="*,150,80,150"
-                          Margin="70,0,16,8">
-                        <TextBlock Classes="daily-table-heading" Text="歌曲" />
-                        <TextBlock Grid.Column="1" Classes="daily-table-heading" Text="专辑" />
-                        <TextBlock Grid.Column="2" Classes="daily-table-heading" Text="时长" />
-                        <TextBlock Grid.Column="3" Classes="daily-table-heading" Text="操作" HorizontalAlignment="Right" Margin="0,0,50,0" />
-                    </Grid>
+                <Grid>
+                    <vela:VelaListBox Classes="SongList"
+                                      Variant="Plain"
+                                      ShowSelectionIndicator="False"
+                                      ShowDividers="False"
+                                      ItemsSource="{Binding Songs}"
+                                      Padding="0,0,0,96">
+                        <vela:VelaListBox.Header>
+                            <Grid ColumnDefinitions="56, *, 160, 76, 88">
+                                <TextBlock Grid.Column="1" Classes="daily-table-heading" Text="歌曲" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Classes="daily-table-heading" Text="专辑" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Classes="daily-table-heading" Text="时长" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Classes="daily-table-heading" Text="操作" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
+                            </Grid>
+                        </vela:VelaListBox.Header>
+                        <vela:VelaListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:SongItem">
+                                <localControls:SongListItemControl
+                                    PlayCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).PlaySongCommand}"
+                                    AddToNextCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).AddSongToNextCommand}"
+                                    ShowPlaylistDialogCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ShowSongPlaylistDialogCommand}"
+                                    ViewSingerCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ViewSongSingerCommand}" />
+                            </DataTemplate>
+                        </vela:VelaListBox.ItemTemplate>
+                    </vela:VelaListBox>
 
-                    <Grid Grid.Row="1">
-                        <ListBox Classes="SongList"
-                                 ItemsSource="{Binding Songs}"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 Padding="0,0,0,80">
-                            <ListBox.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <VirtualizingStackPanel />
-                                </ItemsPanelTemplate>
-                            </ListBox.ItemsPanel>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="vm:SongItem">
-                                    <localControls:SongListItemControl
-                                        PlayCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).PlaySongCommand}"
-                                        AddToNextCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).AddSongToNextCommand}"
-                                        ShowPlaylistDialogCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ShowSongPlaylistDialogCommand}"
-                                        ViewSingerCommand="{Binding #DailyRecommendRoot.((vm:DailyRecommendViewModel)DataContext).ViewSongSingerCommand}" />
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
-                        <StackPanel VerticalAlignment="Center"
-                                    HorizontalAlignment="Center"
-                                    IsVisible="{Binding IsDailyRecommendationsLoading}"
-                                    Spacing="10">
-                            <suki:Loading Width="40" Height="40" />
-                            <TextBlock Text="正在加载每日推荐..."
-                                       Foreground="{DynamicResource SukiLiquid2}" />
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                IsVisible="{Binding IsDailyRecommendationsLoading}"
+                                Spacing="10">
+                        <kc:KugouLoading Width="40" Height="40" />
+                        <TextBlock Text="正在加载每日推荐..."
+                                   Foreground="{DynamicResource VelaTextSecondaryBrush}" />
+                    </StackPanel>
                 </Grid>
-            </suki:GlassCard>
+            </kc:KugouGlassCard>
         </Grid>
     </Grid>
 </UserControl>

@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.ViewModels;
-using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -13,7 +12,7 @@ public interface ILocalMusicSearchDialogService
 }
 
 public sealed class LocalMusicSearchDialogService(
-    ISukiDialogManager dialogManager,
+    IKugouDialogManager dialogManager,
     ILocalMusicLibraryService localMusicLibraryService,
     IUiDispatcherService uiDispatcher) : ILocalMusicSearchDialogService
 {

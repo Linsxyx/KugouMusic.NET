@@ -7,7 +7,6 @@ using CommunityToolkit.Mvvm.Input;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
 using SimpleAudio;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 

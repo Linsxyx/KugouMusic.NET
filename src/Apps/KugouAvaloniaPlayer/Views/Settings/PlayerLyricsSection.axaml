@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.PlayerLyricsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:KugouAvaloniaPlayer.ViewModels" xmlns:localControls="using:KugouAvaloniaPlayer.Controls" x:Class="KugouAvaloniaPlayer.Views.Settings.PlayerLyricsSection" x:Name="UserRoot" x:DataType="vm:SettingViewModel">
     <StackPanel>
         <TextBlock Classes="GroupHeader" Text="显示" />
         <localControls:SettingsCard>
@@ -7,14 +8,14 @@
                     <TextBlock Classes="RowTitle" Text="显示频谱" />
                     <TextBlock Classes="RowHint" Text="显示在播放页进度条下方。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding EnableNowPlayingVisualizer, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding EnableNowPlayingVisualizer, Mode=TwoWay}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="关闭上升动效" />
                     <TextBlock Classes="RowHint" Text="歌词切换时直接滚动，降低性能占用。" />
                 </StackPanel>
-                <ToggleSwitch Grid.Column="1" IsChecked="{Binding UseLightweightNowPlayingLyricScroll, Mode=TwoWay}" />
+                <vela:VelaSwitch Grid.Column="1" IsChecked="{Binding UseLightweightNowPlayingLyricScroll, Mode=TwoWay}" />
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -29,24 +30,24 @@
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="对齐方式" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricAlignmentOptions}" SelectedItem="{Binding PlayPageSelectedLyricAlignment}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricAlignmentOptions}" SelectedItem="{Binding PlayPageSelectedLyricAlignment}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <StackPanel>
                     <TextBlock Classes="RowTitle" Text="字体模式" />
                     <TextBlock Classes="RowHint" Text="歌词与翻译共用字体。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricFontModeOptions}" SelectedItem="{Binding PlayPageSelectedLyricFontMode}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricFontModeOptions}" SelectedItem="{Binding PlayPageSelectedLyricFontMode}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto" IsVisible="{Binding IsPlayPageLyricFontCustomMode}">
                 <TextBlock Classes="RowTitle" Text="字体" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricFontFamilyOptions}" SelectedItem="{Binding PlayPageSelectedLyricFontFamily}">
-                    <ComboBox.ItemTemplate>
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricFontFamilyOptions}" SelectedItem="{Binding PlayPageSelectedLyricFontFamily}">
+                    <vela:VelaSelect.ItemTemplate>
                         <DataTemplate DataType="x:String">
                             <TextBlock Text="{Binding .}" FontFamily="{Binding .}" TextWrapping="Wrap" />
                         </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                    </vela:VelaSelect.ItemTemplate>
+                </vela:VelaSelect>
             </localControls:SettingsRow>
         </localControls:SettingsCard>
 
@@ -57,11 +58,11 @@
                     <TextBlock Classes="RowTitle" Text="调整对象" />
                     <TextBlock Classes="RowHint" Text="选择要修改颜色的歌词部分。" />
                 </StackPanel>
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricColorTargetOptions}" SelectedItem="{Binding PlayPageSelectedLyricColorTarget}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricColorTargetOptions}" SelectedItem="{Binding PlayPageSelectedLyricColorTarget}" />
             </localControls:SettingsRow>
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="颜色模式" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding LyricColorModeOptions}" SelectedItem="{Binding PlayPageSelectedLyricColorMode}" />
+                <vela:VelaSelect Size="Small" Grid.Column="1" ItemsSource="{Binding LyricColorModeOptions}" SelectedItem="{Binding PlayPageSelectedLyricColorMode}" />
             </localControls:SettingsRow>
             <StackPanel Classes="RowDetail" IsVisible="{Binding IsPlayPageLyricColorCustomMode}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">

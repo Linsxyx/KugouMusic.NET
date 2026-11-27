@@ -1,7 +1,6 @@
 using System;
-#if KUGOU_WINDOWS
+using System.Collections.Generic;
 using System.ComponentModel;
-#endif
 using System.IO;
 using ZLinq;
 using Avalonia;
@@ -16,7 +15,7 @@ using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
 using KugouAvaloniaPlayer.Controls;
-using SukiUI.Dialogs;
+using Vela.Avalonia.Controls;
 using Size = Avalonia.Size;
 
 namespace KugouAvaloniaPlayer.Views;
@@ -29,6 +28,8 @@ public partial class MainWindow : KugouWindow
     private readonly double _baseMinWidth;
     private readonly double _baseMinHeight;
     private double _appliedUiScale = 1;
+    private readonly Dictionary<PageViewModelBase, VelaNavItem> _pageNavItems = new();
+    private bool _syncingNavSelection;
 
 #if KUGOU_WINDOWS
     private WindowsTaskbarThumbnailToolbar? _taskbarToolbar;
@@ -235,8 +236,13 @@ public partial class MainWindow : KugouWindow
             _isDialogOpen = false;
             if (change.NewValue is MainWindowViewModel newViewModel)
             {
+                newViewModel.ToastManager.AttachHost(ToastHost);
+                newViewModel.DialogManager.AttachHost(DialogHost);
                 newViewModel.DialogManager.OnDialogShown += OnDialogShown;
                 newViewModel.DialogManager.OnDialogDismissed += OnDialogDismissed;
+                newViewModel.PropertyChanged += OnMainViewModelPropertyChanged;
+                PopulateNavigationItems(newViewModel);
+                SyncSelectedNavItem(newViewModel.SelectedMenuPage);
             }
         }
 
@@ -244,12 +250,120 @@ public partial class MainWindow : KugouWindow
             CaptureNormalBounds();
     }
 
-    private void OnDialogShown(object? sender, SukiDialogManagerEventArgs e) => _isDialogOpen = true;
+    private VelaContextMenu? _newPlaylistMenu;
 
-    private void OnDialogDismissed(object? sender, SukiDialogManagerEventArgs e) => _isDialogOpen = false;
+    private void OnSidebarToggleClick(object? sender, RoutedEventArgs e)
+    {
+        AppNav.IsPaneOpen = !AppNav.IsPaneOpen;
+    }
+
+    private void OnNewPlaylistMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Control button || DataContext is not MainWindowViewModel vm)
+            return;
+
+        _newPlaylistMenu ??= new VelaContextMenu
+        {
+            Placement = PlacementMode.TopEdgeAlignedLeft,
+            VerticalOffset = -6,
+            MenuMinWidth = 212
+        };
+
+        _newPlaylistMenu.Items.Clear();
+        _newPlaylistMenu.Items.Add(new VelaMenuItem
+        {
+            Header = "新建歌单...",
+            Icon = KugouIcons.PlaylistAdd,
+            Command = vm.PlaylistsViewModel.ShowCreatePlaylistDialogCommand
+        });
+        _newPlaylistMenu.Items.Add(new VelaMenuItem
+        {
+            Header = "导入其他平台歌单链接...",
+            Icon = KugouIcons.Link,
+            Command = vm.PlaylistsViewModel.ImportExternalPlaylistCommand
+        });
+
+        _newPlaylistMenu.ShowAt(button, showAtPointer: false);
+    }
+
+    private void PopulateNavigationItems(MainWindowViewModel vm)
+    {
+        // Remove any previously inserted nav headers/items while keeping PlaylistsSectionPanel
+        for (var i = AppNav.Items.Count - 1; i >= 0; i--)
+        {
+            if (!ReferenceEquals(AppNav.Items[i], PlaylistsSectionPanel))
+                AppNav.Items.RemoveAt(i);
+        }
+
+        _pageNavItems.Clear();
+
+        var insertIndex = 0;
+        AppNav.Items.Insert(insertIndex++, new VelaNavSectionHeader { Header = "发现与音乐" });
+
+        foreach (var page in vm.Pages)
+        {
+            var navItem = new VelaNavItem
+            {
+                Header = page.DisplayName,
+                Icon = KugouIcons.ResolveNavIcon(page.Icon),
+                Tag = page,
+            };
+
+            navItem.Click += (_, _) =>
+            {
+                if (_syncingNavSelection || DataContext is not MainWindowViewModel currentVm)
+                    return;
+
+                if (ReferenceEquals(currentVm.SelectedMenuPage, page) &&
+                    ReferenceEquals(currentVm.ActivePage, page))
+                {
+                    if (currentVm.ReclickMenuPageCommand.CanExecute(page))
+                        currentVm.ReclickMenuPageCommand.Execute(page);
+                    return;
+                }
+
+                currentVm.SelectedMenuPage = page;
+            };
+
+            _pageNavItems[page] = navItem;
+            AppNav.Items.Insert(insertIndex++, navItem);
+        }
+    }
+
+    private void OnMainViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.SelectedMenuPage) &&
+            sender is MainWindowViewModel vm)
+        {
+            SyncSelectedNavItem(vm.SelectedMenuPage);
+        }
+    }
+
+    private void SyncSelectedNavItem(PageViewModelBase? selectedPage)
+    {
+        _syncingNavSelection = true;
+        try
+        {
+            if (selectedPage is not null && _pageNavItems.TryGetValue(selectedPage, out var navItem))
+                AppNav.SelectedItem = navItem;
+            else
+                AppNav.SelectedItem = null;
+        }
+        finally
+        {
+            _syncingNavSelection = false;
+        }
+    }
+
+    private void OnDialogShown(object? sender, KugouDialogManagerEventArgs e) => _isDialogOpen = true;
+
+    private void OnDialogDismissed(object? sender, KugouDialogManagerEventArgs e) => _isDialogOpen = false;
 
     private void UnsubscribeDialogEvents(MainWindowViewModel vm)
     {
+        vm.PropertyChanged -= OnMainViewModelPropertyChanged;
+        vm.ToastManager.DetachHost(ToastHost);
+        vm.DialogManager.DetachHost(DialogHost);
         vm.DialogManager.OnDialogShown -= OnDialogShown;
         vm.DialogManager.OnDialogDismissed -= OnDialogDismissed;
     }

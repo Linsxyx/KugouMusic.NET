@@ -4,12 +4,11 @@ using System.Threading.Tasks;
 using KuGou.Net.Abstractions.Models;
 using KugouAvaloniaPlayer.Controls;
 using KugouAvaloniaPlayer.ViewModels;
-using SukiUI.Dialogs;
 
 namespace KugouAvaloniaPlayer.Services;
 
 public sealed class LocalLyricMatchService(
-    ISukiDialogManager dialogManager,
+    IKugouDialogManager dialogManager,
     IUiDispatcherService uiDispatcher) : ILocalLyricMatchService
 {
     public async Task<LocalLyricMatchResult?> MatchLyricAsync(SongItem localSong, List<SongInfo> candidates)

@@ -16,7 +16,6 @@ using KuGou.Net.Abstractions.Models;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.ViewModels;
-using SukiUI;
 
 namespace KugouAvaloniaPlayer.Controls;
 
@@ -528,7 +527,8 @@ public partial class SongCollectionDetailView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        SukiTheme.GetInstance().PropertyChanged += OnSukiThemePropertyChanged;
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged += OnAppThemeVariantChanged;
         AttachSongsCollectionChanged(Songs);
         AttachPlayerPropertyChanged();
         UpdateCurrentHeroBackground();
@@ -538,7 +538,8 @@ public partial class SongCollectionDetailView : UserControl
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        SukiTheme.GetInstance().PropertyChanged -= OnSukiThemePropertyChanged;
+        if (Application.Current is { } app)
+            app.ActualThemeVariantChanged -= OnAppThemeVariantChanged;
         DetachSongsCollectionChanged(Songs);
         DetachPlayerPropertyChanged();
         base.OnDetachedFromVisualTree(e);
@@ -765,7 +766,7 @@ public partial class SongCollectionDetailView : UserControl
         HasHeroDropdownLabel = !string.IsNullOrWhiteSpace(HeroDropdownLabel);
     }
 
-    private void OnSukiThemePropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    private void OnAppThemeVariantChanged(object? sender, EventArgs e)
     {
         UpdateCurrentHeroBackground();
     }
@@ -778,7 +779,7 @@ public partial class SongCollectionDetailView : UserControl
             return;
         }
 
-        CurrentHeroBackground = SukiTheme.GetInstance().ActiveBaseTheme == ThemeVariant.Dark
+        CurrentHeroBackground = ActualThemeVariant == ThemeVariant.Dark
             ? NightHeroBackground
             : LightHeroBackground;
     }

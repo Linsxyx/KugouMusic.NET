@@ -8,7 +8,6 @@ using CommunityToolkit.Mvvm.Input;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -40,7 +39,7 @@ public partial class RankViewModel : PageViewModelBase
     private readonly ILogger<RankViewModel> _logger;
     private readonly INavigationService _navigationService;
     private readonly RankClient _rankClient;
-    private readonly ISukiToastManager _toastManager;
+    private readonly IKugouToastManager _toastManager;
 
     private int _currentPage = 1;
     private bool _hasMoreSongs = true;
@@ -57,7 +56,7 @@ public partial class RankViewModel : PageViewModelBase
     public RankViewModel(
         RankClient rankClient,
         INavigationService navigationService,
-        ISukiToastManager toastManager,
+        IKugouToastManager toastManager,
         ILogger<RankViewModel> logger)
     {
         _rankClient = rankClient;

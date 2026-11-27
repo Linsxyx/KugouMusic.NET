@@ -7,7 +7,6 @@ using Avalonia.Controls.Notifications;
 using KuGou.Net.Abstractions.Models;
 using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.ViewModels;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.Services;
 
@@ -33,7 +32,7 @@ public sealed class SongInteractionService(
     ILocalSingerMatchService localSingerMatchService,
     ILocalLyricMatchService localLyricMatchService,
     LyricsService lyricsService,
-    ISukiToastManager toastManager) : ISongInteractionService {
+    IKugouToastManager toastManager) : ISongInteractionService {
     
     public void NavigateToSinger(SingerLite singer) {
         if (singer.Id == -1 && !string.IsNullOrWhiteSpace(singer.Name))

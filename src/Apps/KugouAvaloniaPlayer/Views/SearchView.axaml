@@ -1,8 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:models="using:KuGou.Net.Abstractions.Models"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:models1="clr-namespace:KugouAvaloniaPlayer.Models"
@@ -10,7 +11,7 @@
              x:Name="SearchRoot"
              x:DataType="vm:SearchViewModel">
 
-    <suki:GlassCard Margin="15" Padding="25">
+    <kc:KugouGlassCard Margin="15" Padding="25">
         <Grid RowDefinitions="Auto,*">
             <Grid Grid.Row="0"
                   Margin="0,0,0,20"
@@ -33,7 +34,7 @@
                                 IsEnabled="{Binding IsSearching, Converter={x:Static BoolConverters.Not}}"
                                 Padding="12,0"
                                 Cursor="Hand">
-                            <PathIcon Data="{x:Static suki:Icons.Search}"
+                            <PathIcon Data="{x:Static kc:KugouIcons.Search}"
                                       Foreground="{DynamicResource SukiPrimaryColor}" />
                         </Button>
                     </TextBox.InnerRightContent>
@@ -86,18 +87,19 @@
                                 VerticalAlignment="Center"
                                 Spacing="10"
                                 IsVisible="{Binding IsSearching}">
-                        <suki:Loading Width="24" Height="24" />
+                        <kc:KugouLoading Width="24" Height="24" />
                         <TextBlock Text="正在检索中..."
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource SukiLowText}" />
                     </StackPanel>
 
-                    <ListBox Classes="SongList"
-                             ItemsSource="{Binding Songs}"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             Padding="0,0,0,50"
-                             Background="Transparent">
-                        <ListBox.IsVisible>
+                    <vela:VelaListBox Classes="SongList"
+                                      Variant="Plain"
+                                      ShowSelectionIndicator="False"
+                                      ShowDividers="False"
+                                      ItemsSource="{Binding Songs}"
+                                      Padding="0,0,0,96">
+                        <vela:VelaListBox.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
                                 <Binding Path="HasSearched" />
                                 <Binding Path="!IsSearching" />
@@ -106,8 +108,16 @@
                                          ConverterParameter="{x:Static models1:SearchType.Song}" />
                                 <Binding Path="!IsShowingDetail" />
                             </MultiBinding>
-                        </ListBox.IsVisible>
-                        <ListBox.ItemTemplate>
+                        </vela:VelaListBox.IsVisible>
+                        <vela:VelaListBox.Header>
+                            <Grid ColumnDefinitions="56, *, 160, 76, 88">
+                                <TextBlock Grid.Column="1" Text="歌曲" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource VelaTextSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="专辑" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource VelaTextSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="时长" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource VelaTextSecondaryBrush}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Text="操作" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource VelaTextSecondaryBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
+                            </Grid>
+                        </vela:VelaListBox.Header>
+                        <vela:VelaListBox.ItemTemplate>
                             <DataTemplate DataType="vm:SongItem">
                                 <localControls:SongListItemControl
                                     PlayCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).PlaySongCommand}"
@@ -115,8 +125,8 @@
                                     ShowPlaylistDialogCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ShowSongPlaylistDialogCommand}"
                                     ViewSingerCommand="{Binding #SearchRoot.((vm:SearchViewModel)DataContext).ViewSongSingerCommand}" />
                             </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                        </vela:VelaListBox.ItemTemplate>
+                    </vela:VelaListBox>
 
                     <ScrollViewer Padding="0,0,0,50">
                         <ScrollViewer.IsVisible>
@@ -224,10 +234,10 @@
                         TitleFontSize="24"
                         ShowAddLoadedSongsToQueueButton="{Binding CanCollectDetail}"
                         HeroActionCommand="{Binding CollectPlaylistCommand}"
-                        HeroActionIconData="{x:Static suki:Icons.Star}"
+                        HeroActionIconData="{x:Static kc:KugouIcons.Star}"
                         HeroActionIsVisible="{Binding CanCollectDetail}" />
                 </Grid>
             </Grid>
         </Grid>
-    </suki:GlassCard>
+    </kc:KugouGlassCard>
 </UserControl>

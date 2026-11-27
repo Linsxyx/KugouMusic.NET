@@ -17,8 +17,6 @@ using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Dialogs;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -92,9 +90,9 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public partial string UserName { get; set; } = "未登录";
 
     public MainWindowViewModel(
-        ISukiToastManager toastManager,
+        IKugouToastManager toastManager,
         PlayerViewModel player,
-        ISukiDialogManager dialogManager,
+        IKugouDialogManager dialogManager,
         KgSessionManager sessionManager,
         ISongInteractionService songInteractionService,
         IAppUpdateService appUpdateService,
@@ -328,8 +326,8 @@ public partial class MainWindowViewModel : ObservableObject, IDisposable
     public PlayerViewModel Player { get; }
     public ISongInteractionService SongInteractions { get; }
     public NowPlayingViewModel NowPlaying { get; }
-    public ISukiToastManager ToastManager { get; }
-    public ISukiDialogManager DialogManager { get; }
+    public IKugouToastManager ToastManager { get; }
+    public IKugouDialogManager DialogManager { get; }
 
     public AvaloniaList<PageViewModelBase> Pages { get; } = new();
 

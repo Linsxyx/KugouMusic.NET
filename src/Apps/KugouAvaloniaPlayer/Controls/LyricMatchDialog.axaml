@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:models="using:KuGou.Net.Abstractions.Models"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Controls.LyricMatchDialog"
              x:DataType="vm:LyricMatchDialogViewModel">
@@ -20,7 +20,7 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="models:SongInfo">
-                        <suki:GlassCard CornerRadius="12" IsInteractive="True"
+                        <kc:KugouGlassCard CornerRadius="12" IsInteractive="True"
                                         Background="{DynamicResource SukiPrimaryColor0}">
                             <Grid ColumnDefinitions="52,*,Auto" ColumnSpacing="12">
                                 <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True"
@@ -39,7 +39,7 @@
                                 <TextBlock Grid.Column="2" Text="{Binding Duration,Converter={StaticResource SecondsToTimeConverter}}"
                                            VerticalAlignment="Center" FontSize="12" Opacity="0.65" />
                             </Grid>
-                        </suki:GlassCard>
+                        </kc:KugouGlassCard>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

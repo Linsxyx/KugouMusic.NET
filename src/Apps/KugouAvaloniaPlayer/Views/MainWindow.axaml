@@ -3,11 +3,13 @@
                  xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                 xmlns:suki="https://github.com/kikipoulet/SukiUI"
+                 xmlns:local="using:KugouAvaloniaPlayer"
+                 xmlns:vela="using:Vela.Avalonia.Controls"
                  xmlns:chrome="clr-namespace:Avalonia.Controls.Chrome;assembly=Avalonia.Controls"
                  xmlns:views="clr-namespace:KugouAvaloniaPlayer.Views"
                  xmlns:localControls="clr-namespace:KugouAvaloniaPlayer.Controls"
-                 mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+                 xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+                 mc:Ignorable="d" d:DesignWidth="1060" d:DesignHeight="720"
                  x:Class="KugouAvaloniaPlayer.Views.MainWindow"
                  MinHeight="600"
                  MinWidth="800"
@@ -20,190 +22,57 @@
                  TransparencyLevelHint="Transparent">
 
     <localControls:KugouWindow.Styles>
-        <Style Selector="Button.SidebarPlaylistOption">
-            <Setter Property="Height" Value="40" />
-            <Setter Property="Padding" Value="6,4" />
-            <Setter Property="Background" Value="Transparent" />
+        <Style Selector="vela|VelaAccordion.SidebarAccordion vela|VelaAccordionItem">
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Panel Background="Transparent">
-                        <Border Name="OptionBackground"
-                                Background="{DynamicResource SukiPrimaryColorLow}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Opacity="0">
-                            <Border.Transitions>
-                                <Transitions>
-                                    <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
-                                </Transitions>
-                            </Border.Transitions>
-                        </Border>
-                        <Border Name="OptionAccent"
-                                Width="3"
-                                Margin="0,8,0,8"
-                                HorizontalAlignment="Left"
-                                Background="{DynamicResource SukiPrimaryColor}"
-                                CornerRadius="2"
-                                Opacity="0">
-                            <Border.Transitions>
-                                <Transitions>
-                                    <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
-                                </Transitions>
-                            </Border.Transitions>
-                        </Border>
-                        <ContentPresenter Name="PART_ContentPresenter"
-                                          Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          Margin="{TemplateBinding Padding}"
-                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                    </Panel>
-                </ControlTemplate>
-            </Setter>
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="HeaderPadding" Value="10,7" />
+            <Setter Property="Padding" Value="0,2,0,4" />
         </Style>
-        <Style Selector="Button.SidebarPlaylistOption:pointerover">
-            <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
+        <Style Selector="vela|VelaAccordion.SidebarAccordion vela|VelaAccordionItem:expanded">
+            <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
         </Style>
-        <Style Selector="Button.SidebarPlaylistOption:pointerover /template/ Border#OptionBackground">
-            <Setter Property="Opacity" Value="0.55" />
+        <Style Selector="vela|VelaAccordion.SidebarAccordion vela|VelaAccordionItem /template/ Button#PART_Trigger:pointerover">
+            <Setter Property="Background" Value="{DynamicResource VelaSurfaceMutedBrush}" />
         </Style>
-        <Style Selector="Button.SidebarPlaylistOption:pressed /template/ Border#OptionBackground">
-            <Setter Property="Opacity" Value="0.75" />
+        <Style Selector="vela|VelaAccordion.SidebarAccordion vela|VelaAccordionItem /template/ Button#PART_Trigger:pressed">
+            <Setter Property="Background" Value="{DynamicResource VelaAccentSubtleBrush}" />
         </Style>
-        <Style Selector="Button.SidebarPlaylistOption.selected">
-            <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
+        <Style Selector="vela|VelaNavigationView#AppNav /template/ ScrollViewer#PART_ItemsScroller">
+            <Setter Property="VerticalScrollBarVisibility" Value="Hidden" />
         </Style>
-        <Style Selector="Button.SidebarPlaylistOption.selected /template/ Border#OptionBackground">
-            <Setter Property="Opacity" Value="0.9" />
-        </Style>
-        <Style Selector="Button.SidebarPlaylistOption.selected /template/ Border#OptionAccent">
-            <Setter Property="Opacity" Value="1" />
-        </Style>
-        <Style Selector="ListBox.SidebarPlaylistList">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
-            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        <Style Selector="vela|VelaListBox.SidebarPlaylistList">
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Hidden" />
             <Setter Property="ScrollViewer.IsScrollChainingEnabled" Value="False" />
         </Style>
-        <Style Selector="ListBox.SidebarPlaylistList ListBoxItem">
+        <Style Selector="vela|VelaListBox.SidebarPlaylistList vela|VelaListBoxItem" x:DataType="vm:PlaylistItem">
             <Setter Property="MinHeight" Value="40" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Margin" Value="0,1" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <ContentPresenter Name="PART_ContentPresenter"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                      Background="Transparent" />
-                </ControlTemplate>
-            </Setter>
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=OneWay}" />
         </Style>
-        <Style Selector="ListBox.SidebarPlaylistList ListBoxItem:selected">
-            <Setter Property="Background" Value="Transparent" />
+        <Style Selector="vela|VelaListBox.SidebarPlaylistList vela|VelaListBoxItem:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
         </Style>
-        <Style Selector="ListBox.SidebarPlaylistList ListBoxItem:pointerover">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="ToggleButton.SidebarSectionHeader">
-            <Setter Property="Height" Value="34" />
-            <Setter Property="Padding" Value="4,0,8,0" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Panel Background="Transparent">
-                        <Border Name="HeaderBackground"
-                                Background="{DynamicResource SukiPrimaryColorLow}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Opacity="0">
-                            <Border.Transitions>
-                                <Transitions>
-                                    <DoubleTransition Property="Opacity" Duration="0:0:0.14" Easing="CubicEaseOut" />
-                                </Transitions>
-                            </Border.Transitions>
-                        </Border>
-                        <Grid ColumnDefinitions="20,*"
-                              Margin="{TemplateBinding Padding}">
-                            <Svg Name="SectionChevron"
-                                 Classes="ThemeSvgIcon"
-                                 Path="/Assets/NavigateNext.svg"
-                                 Width="14"
-                                 Height="14"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center"
-                                 RenderTransformOrigin="50%,50%">
-                                <Svg.Transitions>
-                                    <Transitions>
-                                        <TransformOperationsTransition Property="RenderTransform"
-                                                                       Duration="0:0:0.14"
-                                                                       Easing="CubicEaseOut" />
-                                    </Transitions>
-                                </Svg.Transitions>
-                            </Svg>
-                            <ContentPresenter Grid.Column="1"
-                                              Content="{TemplateBinding Content}"
-                                              ContentTemplate="{TemplateBinding ContentTemplate}"
-                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                        </Grid>
-                    </Panel>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        <Style Selector="ToggleButton.SidebarSectionHeader:pointerover">
-            <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
-        </Style>
-        <Style Selector="ToggleButton.SidebarSectionHeader:pointerover /template/ Border#HeaderBackground">
-            <Setter Property="Opacity" Value="0.42" />
-        </Style>
-        <Style Selector="ToggleButton.SidebarSectionHeader:pressed /template/ Border#HeaderBackground">
-            <Setter Property="Opacity" Value="0.62" />
-        </Style>
-        <Style Selector="ToggleButton.SidebarSectionHeader:checked /template/ Svg#SectionChevron">
-            <Setter Property="RenderTransform" Value="rotate(90deg)" />
-        </Style>
-        <Style Selector="suki|SukiSideMenuItem /template/ TextBlock#PART_Header">
-            <Setter Property="FontWeight" Value="Bold" />
-        </Style>
-        <Style Selector="suki|SukiSideMenuItem[IsSelected=True] /template/ TextBlock#PART_Header">
-            <Setter Property="FontWeight" Value="Bold" />
+        <Style Selector="vela|VelaListBox.SidebarPlaylistList vela|VelaListBoxItem:selected">
+            <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
         </Style>
         <Style Selector="localControls|KugouWindow[WindowState=Maximized] PathIcon#MaximizeIcon">
-            <Setter Property="Data" Value="{x:Static suki:Icons.WindowRestore}" />
+            <Setter Property="Data" Value="{x:Static localControls:KugouIcons.WindowRestore}" />
         </Style>
         <Style Selector="localControls|KugouWindow[WindowState=FullScreen] Button#MaximizeButton">
             <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="localControls|KugouWindow[WindowState=FullScreen] PathIcon#FullScreenIcon">
-            <Setter Property="Data" Value="{x:Static suki:Icons.WindowFullScreenOff}" />
+            <Setter Property="Data" Value="{x:Static localControls:KugouIcons.WindowFullScreenOff}" />
         </Style>
-        <Style Selector="localControls|KugouWindow[WindowState=Maximized] suki|SukiMainHost#WindowHost">
+        <Style Selector="localControls|KugouWindow[WindowState=Maximized] Border#WindowHost">
             <Setter Property="CornerRadius" Value="0" />
         </Style>
-        <Style Selector="localControls|KugouWindow[WindowState=FullScreen] suki|SukiMainHost#WindowHost">
+        <Style Selector="localControls|KugouWindow[WindowState=FullScreen] Border#WindowHost">
             <Setter Property="CornerRadius" Value="0" />
         </Style>
         <!-- 弹出层继承界面缩放，与主界面保持同一尺寸。 -->
@@ -213,256 +82,346 @@
     </localControls:KugouWindow.Styles>
 
     <!-- 缩放挂在不裁剪的 Panel 上：Avalonia 计算有效视口时，会先按变换元素自身的 ClipToBounds
-         以未缩放的尺寸裁剪，若直接缩放 SukiMainHost，虚拟化列表会少生成行。 -->
+         以未缩放的尺寸裁剪，若直接缩放外层裁剪容器，虚拟化列表会少生成行。 -->
     <LayoutTransformControl Name="UiScaleHost">
     <Panel>
-    <suki:SukiMainHost Name="WindowHost"
-                       BackgroundStyle="Bubble">
-        <suki:SukiMainHost.Hosts>
-            <suki:SukiToastHost Manager="{Binding ToastManager}" />
-            <suki:SukiDialogHost x:Name="DialogHost" Manager="{Binding DialogManager}" />
-        </suki:SukiMainHost.Hosts>
+    <Border Name="WindowHost"
+            CornerRadius="12"
+            ClipToBounds="True"
+            Background="{DynamicResource VelaBackgroundBrush}">
+        <vela:VelaDialogHost x:Name="DialogHost">
+            <vela:VelaDrawerHost x:Name="DrawerHost">
+            <Grid Name="MainGrid">
+                <vela:VelaToastHost x:Name="ToastHost" />
 
-    <Grid Name="MainGrid">
-        <Grid Name="TitleBar"
-              ColumnDefinitions="48,*,Auto"
-              Height="36"
-              Margin="216,0,0,0"
-              Background="Transparent"
-              VerticalAlignment="Top"
-              IsVisible="{Binding !NowPlaying.IsOpen}"
-              ZIndex="20"
-              chrome:WindowDecorationProperties.ElementRole="TitleBar">
-            <Border Grid.Column="1"
-                    Background="Transparent"
-                    chrome:WindowDecorationProperties.ElementRole="TitleBar" />
+                <vela:VelaNavigationView x:Name="AppNav"
+                                         DisplayMode="Left"
+                                         PaneVariant="Floating"
+                                         OpenPaneLength="244"
+                                         CompactPaneLength="60"
+                                         IsPaneToggleVisible="True"
+                                         ShowTopBar="True"
+                                         ShowTopBarDivider="False"
+                                         ShowTopBarBreadcrumb="False"
+                                         TopBarHeight="48"
+                                         TopBarBackground="Transparent"
+                                         IsBottomBarVisible="False"
+                                         PageCacheMode="Lru"
+                                         MaxCachedPages="8"
+                                         PageTransitionMode="CompositorFade"
+                                         Content="{Binding ActivePage}">
+                    <vela:VelaNavigationView.PageTemplate>
+                        <local:ViewLocator />
+                    </vela:VelaNavigationView.PageTemplate>
 
-            <StackPanel Grid.Column="2"
-                        Orientation="Horizontal"
-                        Spacing="7"
-                        Margin="0,12,12,0"
-                        VerticalAlignment="Center"
-                        chrome:WindowDecorationProperties.ElementRole="User">
-                
-                <TextBox Text="{Binding SearchKeyword}"
-                         PlaceholderText="输入歌曲、歌手、歌单或专辑..."
-                         CornerRadius="15"
-                         Height="34"
-                         Width="260"
-                         FontSize="12"
-                         VerticalContentAlignment="Center">
-                    <TextBox.KeyBindings>
-                        <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
-                    </TextBox.KeyBindings>
-                    <TextBox.InnerLeftContent>
-                        <PathIcon Data="{x:Static suki:Icons.Search}"
-                                  Width="12"
-                                  Height="12"
-                                  Foreground="{DynamicResource SukiLowText}" />
-                    </TextBox.InnerLeftContent>
-                </TextBox>
-                <Button Classes="WindowControlsButton"
-                        Command="{Binding NavigateToUserCommand}"
-                        ToolTip.Tip="设置"
-                        chrome:WindowDecorationProperties.ElementRole="User">
-                    <Svg Classes="ThemeSvgIcon"
-                         Path="/Assets/gear-svgrepo-com.svg"
-                         Width="18"
-                         Height="18"
-                         VerticalAlignment="Center" />
-                </Button>
-                <Button Classes="WindowControlsButton"
-                        Command="{Binding RequestWindowToggleFullScreenCommand}"
-                        ToolTip.Tip="全屏"
-                        chrome:WindowDecorationProperties.ElementRole="User">
-                    <PathIcon Name="FullScreenIcon"
-                              Data="{x:Static suki:Icons.WindowFullScreen}"
-                              Width="12"
-                              Height="12" />
-                </Button>
-                <Button Classes="WindowControlsButton"
-                        Command="{Binding RequestWindowMinimizeCommand}"
-                        ToolTip.Tip="最小化"
-                        chrome:WindowDecorationProperties.ElementRole="User">
-                    <PathIcon Data="{x:Static suki:Icons.WindowMinimize}"
-                              Width="12"
-                              Height="12"
-                              Margin="0,0,0,-6.5" />
-                </Button>
-                <Button Name="MaximizeButton"
-                        Classes="WindowControlsButton"
-                        Command="{Binding RequestWindowToggleMaximizeCommand}"
-                        ToolTip.Tip="最大化/还原"
-                        chrome:WindowDecorationProperties.ElementRole="User">
-                    <PathIcon Name="MaximizeIcon"
-                              Data="{x:Static suki:Icons.WindowMaximize}"
-                              Width="12"
-                              Height="12" />
-                </Button>
-                <Button Classes="WindowControlsButton Close"
-                        Command="{Binding RequestWindowCloseCommand}"
-                        ToolTip.Tip="关闭"
-                        chrome:WindowDecorationProperties.ElementRole="User">
-                    <PathIcon Data="{x:Static suki:Icons.WindowClose}"
-                              Width="12"
-                              Height="12" />
-                </Button>
-            </StackPanel>
-        </Grid>
+                    <vela:VelaNavigationView.BackgroundContent>
+                        <Border Background="{DynamicResource KugouCustomBackgroundBrush}" />
+                    </vela:VelaNavigationView.BackgroundContent>
 
-        <localControls:KugouSideMenu
-            ItemsSource="{Binding Pages}"
-            SelectedItem="{Binding SelectedMenuPage}"
-            ItemReclickedCommand="{Binding ReclickMenuPageCommand}"
-            UseCustomContent="True"
-            Content="{Binding ActivePage}"
-            IsSearchEnabled="False">
+                    <!-- Expanded Sidebar Profile Header -->
+                    <vela:VelaNavigationView.Header>
+                        <Panel VerticalAlignment="Center">
+                            <Button Classes="Basic"
+                                    Cursor="Hand"
+                                    Command="{Binding ShowLoginDialogCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Left"
+                                    Padding="8,6"
+                                    IsVisible="{Binding !IsLoggedIn}">
+                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <Border Width="30" Height="30" CornerRadius="15"
+                                            Background="{DynamicResource VelaAccentSubtleBrush}">
+                                        <PathIcon Width="14" Height="14"
+                                                  Data="{x:Static localControls:KugouIcons.NavMusic}"
+                                                  Foreground="{DynamicResource VelaAccentBrush}" />
+                                    </Border>
+                                    <TextBlock Text="点击登录"
+                                               FontSize="13"
+                                               FontWeight="Medium"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource VelaTextSecondaryBrush}" />
+                                </StackPanel>
+                            </Button>
 
-            <localControls:KugouSideMenu.HeaderContent>
-                <Border Margin="16,10,16,14"
-                        Padding="8"
-                        CornerRadius="10"
-                        Background="{DynamicResource SukiPrimaryColorLow}">
-                    <localControls:UserAvatarControl />
-                </Border>
-            </localControls:KugouSideMenu.HeaderContent>
+                            <Grid ColumnDefinitions="Auto,*"
+                                  ColumnSpacing="10"
+                                  Margin="4,0"
+                                  IsVisible="{Binding IsLoggedIn}">
+                                <Border Width="34"
+                                        Height="34"
+                                        CornerRadius="17"
+                                        ClipToBounds="True"
+                                        Background="{DynamicResource VelaSurfaceMutedBrush}">
+                                    <Image asyncImageLoader:ImageLoader.Source="{Binding UserAvatar}"
+                                           Stretch="UniformToFill" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                    <TextBlock Text="{Binding UserName}"
+                                               FontSize="13.5"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource VelaForegroundBrush}" />
+                                    <TextBlock Text="KA Music"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource VelaTextMutedBrush}" />
+                                </StackPanel>
+                            </Grid>
+                        </Panel>
+                    </vela:VelaNavigationView.Header>
 
-            <localControls:KugouSideMenu.ItemTemplate>
-                <DataTemplate DataType="vm:PageViewModelBase">
-                    <suki:SukiSideMenuItem Header="{Binding DisplayName}" FontWeight="Bold">
-                        <suki:SukiSideMenuItem.Icon>
-                            <Svg Classes="ThemeSvgIcon" Path="{Binding Icon}" VerticalAlignment="Center" HorizontalAlignment="Center" />
-                        </suki:SukiSideMenuItem.Icon>
-                    </suki:SukiSideMenuItem>
-                </DataTemplate>
-            </localControls:KugouSideMenu.ItemTemplate>
+                    <!-- Compact Rail Profile Avatar -->
+                    <vela:VelaNavigationView.CompactHeader>
+                        <Panel>
+                            <Button Classes="Basic"
+                                    Width="34"
+                                    Height="34"
+                                    Padding="0"
+                                    CornerRadius="17"
+                                    ToolTip.Tip="点击登录"
+                                    Command="{Binding ShowLoginDialogCommand}"
+                                    IsVisible="{Binding !IsLoggedIn}">
+                                <PathIcon Width="15" Height="15"
+                                          Data="{x:Static localControls:KugouIcons.NavMusic}"
+                                          Foreground="{DynamicResource VelaAccentBrush}" />
+                            </Button>
+                            <Border Width="34"
+                                    Height="34"
+                                    CornerRadius="17"
+                                    ClipToBounds="True"
+                                    ToolTip.Tip="{Binding UserName}"
+                                    Background="{DynamicResource VelaSurfaceMutedBrush}"
+                                    IsVisible="{Binding IsLoggedIn}">
+                                <Image asyncImageLoader:ImageLoader.Source="{Binding UserAvatar}"
+                                       Stretch="UniformToFill" />
+                            </Border>
+                        </Panel>
+                    </vela:VelaNavigationView.CompactHeader>
 
-            <localControls:KugouSideMenu.FooterContent>
-                <StackPanel Margin="10,4,10,100" Spacing="10">
-                    <Separator Margin="0,4,0,2" />
+                    <!-- Custom TopBar: Sidebar Toggle + Drag Region + Search + Window Controls -->
+                    <vela:VelaNavigationView.TopBarCustomContent>
+                        <Grid Name="TitleBar"
+                              ColumnDefinitions="Auto,*,Auto"
+                              Background="Transparent"
+                              IsVisible="{Binding !NowPlaying.IsOpen}"
+                              chrome:WindowDecorationProperties.ElementRole="TitleBar">
+                            <StackPanel Grid.Column="0"
+                                        Orientation="Horizontal"
+                                        Spacing="6"
+                                        VerticalAlignment="Center"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                <Button Name="SidebarToggleButton"
+                                        Classes="WindowControlsButton"
+                                        Width="30"
+                                        Height="30"
+                                        ToolTip.Tip="展开/折叠导航栏"
+                                        Click="OnSidebarToggleClick"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                    <PathIcon Width="15"
+                                              Height="15"
+                                              Data="{DynamicResource VelaIconSidebar}"
+                                              Foreground="{DynamicResource VelaTextSecondaryBrush}" />
+                                </Button>
+                            </StackPanel>
 
-                    <StackPanel Spacing="6"
-                                MaxHeight="430">
-                        <ToggleButton Name="CreatedPlaylistsHeader"
-                                      Classes="SidebarSectionHeader"
-                                      Content="创建的歌单"
-                                      IsChecked="{Binding IsCreatedPlaylistsExpanded, Mode=TwoWay}" />
-                        <StackPanel Spacing="8"
-                                    IsVisible="{Binding IsCreatedPlaylistsExpanded}">
-                                    <ListBox Classes="SidebarPlaylistList"
-                                             MaxHeight="320"
-                                             SelectionMode="Single"
-                                             ItemsSource="{Binding SidebarCreatedPlaylists}">
-                                        <ListBox.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <VirtualizingStackPanel />
-                                            </ItemsPanelTemplate>
-                                        </ListBox.ItemsPanel>
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate DataType="vm:PlaylistItem">
-                                                <localControls:SidebarPlaylistItemControl
-                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                    DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                        </StackPanel>
+                            <Border Grid.Column="1"
+                                    Background="Transparent"
+                                    chrome:WindowDecorationProperties.ElementRole="TitleBar" />
 
-                        <ToggleButton Name="CollectedPlaylistsHeader"
-                                      Classes="SidebarSectionHeader"
-                                      Content="收藏的歌单"
-                                      IsChecked="{Binding IsCollectedPlaylistsExpanded, Mode=TwoWay}" />
-                        <StackPanel Spacing="8"
-                                    IsVisible="{Binding IsCollectedPlaylistsExpanded}">
-                                    <ListBox Classes="SidebarPlaylistList"
-                                             MaxHeight="320"
-                                             SelectionMode="Single"
-                                             ItemsSource="{Binding SidebarCollectedPlaylists}">
-                                        <ListBox.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <VirtualizingStackPanel />
-                                            </ItemsPanelTemplate>
-                                        </ListBox.ItemsPanel>
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate DataType="vm:PlaylistItem">
-                                                <localControls:SidebarPlaylistItemControl
-                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                    DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                        </StackPanel>
-                        
-                        <ToggleButton Name="AlbumPlaylistsHeader"
-                                      Classes="SidebarSectionHeader"
-                                      Content="收藏的专辑"
-                                      IsChecked="{Binding IsAlbumPlaylistsExpanded, Mode=TwoWay}" />
-                        <StackPanel IsVisible="{Binding IsAlbumPlaylistsExpanded}">
-                                <ListBox Classes="SidebarPlaylistList"
-                                         MaxHeight="320"
-                                         SelectionMode="Single"
-                                         ItemsSource="{Binding SidebarAlbumPlaylists}">
-                                    <ListBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <VirtualizingStackPanel />
-                                        </ItemsPanelTemplate>
-                                    </ListBox.ItemsPanel>
-                                    <ListBox.ItemTemplate>
-                                            <DataTemplate DataType="vm:PlaylistItem">
-                                                <localControls:SidebarPlaylistItemControl
-                                                    OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
-                                                    DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
-                                            </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                        </StackPanel>
-                        
-                    </StackPanel>
-
-                    <Button Height="36"
-                            Classes="Basic"
-                            Cursor="Hand"
-                            HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch">
-                        <Button.Flyout>
-                            <MenuFlyout Placement="Bottom">
-                                <MenuItem Header="导入其他平台歌单链接..."
-                                          Command="{Binding PlaylistsViewModel.ImportExternalPlaylistCommand}" />
-                                <MenuItem Header="新建歌单..."
-                                          Command="{Binding PlaylistsViewModel.ShowCreatePlaylistDialogCommand}" />
-                            </MenuFlyout>
-                        </Button.Flyout>
-                        <Grid ColumnDefinitions="28,*" VerticalAlignment="Center">
-                            <Border Grid.Column="0"
-                                    Width="20"
-                                    Height="20"
-                                    CornerRadius="4"
-                                    VerticalAlignment="Center"
-                                    Background="{DynamicResource SukiPrimaryColorLow}" />
-                            <Svg Grid.Column="0"
-                                 Classes="ThemeSvgIcon"
-                                 Path="/Assets/music-folder-8-svgrepo-com.svg"
-                                 HorizontalAlignment="Center"
-                                 VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1"
-                                       Margin="10,0,0,0"
-                                       Text="新建歌单"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"
-                                       Foreground="{DynamicResource SukiLowText}" />
+                            <StackPanel Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        Spacing="7"
+                                        VerticalAlignment="Center"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                <vela:VelaInput Text="{Binding SearchKeyword}"
+                                                PlaceholderText="输入歌曲、歌手、歌单或专辑..."
+                                                LeadingIcon="{x:Static localControls:KugouIcons.Search}"
+                                                IsClearable="True"
+                                                Size="Small"
+                                                CornerRadius="16"
+                                                Width="260"
+                                                FontSize="12"
+                                                VerticalAlignment="Center">
+                                    <vela:VelaInput.KeyBindings>
+                                        <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+                                    </vela:VelaInput.KeyBindings>
+                                </vela:VelaInput>
+                                <Button Classes="WindowControlsButton"
+                                        Command="{Binding NavigateToUserCommand}"
+                                        ToolTip.Tip="设置"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                    <localControls:KugouIcon Classes="ThemeSvgIcon"
+                                         Path="/Assets/gear-svgrepo-com.svg"
+                                         Width="18"
+                                         Height="18"
+                                         VerticalAlignment="Center" />
+                                </Button>
+                                <Button Classes="WindowControlsButton"
+                                        Command="{Binding RequestWindowToggleFullScreenCommand}"
+                                        ToolTip.Tip="全屏"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                    <PathIcon Name="FullScreenIcon"
+                                              Data="{x:Static localControls:KugouIcons.WindowFullScreen}"
+                                              Width="12"
+                                              Height="12" />
+                                </Button>
+                                <Button Classes="WindowControlsButton"
+                                        Command="{Binding RequestWindowMinimizeCommand}"
+                                        ToolTip.Tip="最小化"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                    <PathIcon Data="{x:Static localControls:KugouIcons.WindowMinimize}"
+                                              Width="12"
+                                              Height="12"
+                                              Margin="0,0,0,-6.5" />
+                                </Button>
+                                <Button Name="MaximizeButton"
+                                        Classes="WindowControlsButton"
+                                        Command="{Binding RequestWindowToggleMaximizeCommand}"
+                                        ToolTip.Tip="最大化/还原"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                    <PathIcon Name="MaximizeIcon"
+                                              Data="{x:Static localControls:KugouIcons.WindowMaximize}"
+                                              Width="12"
+                                              Height="12" />
+                                </Button>
+                                <Button Classes="WindowControlsButton Close"
+                                        Command="{Binding RequestWindowCloseCommand}"
+                                        ToolTip.Tip="关闭"
+                                        chrome:WindowDecorationProperties.ElementRole="User">
+                                    <PathIcon Data="{x:Static localControls:KugouIcons.WindowClose}"
+                                              Width="12"
+                                              Height="12" />
+                                </Button>
+                            </StackPanel>
                         </Grid>
-                    </Button>
+                    </vela:VelaNavigationView.TopBarCustomContent>
 
-                </StackPanel>
-            </localControls:KugouSideMenu.FooterContent>
-        </localControls:KugouSideMenu>
+                    <!-- Compact Rail Quick Favorite Footer -->
+                    <vela:VelaNavigationView.CompactFooter>
+                        <Button Width="36"
+                                Height="36"
+                                Padding="8"
+                                HorizontalAlignment="Center"
+                                Classes="Basic"
+                                Command="{Binding OpenSidebarPlaylistCommand}"
+                                CommandParameter="{Binding QuickLikePlaylist}"
+                                Cursor="Hand"
+                                IsVisible="{Binding QuickLikePlaylist, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                ToolTip.Tip="我喜欢">
+                            <localControls:KugouIcon Path="/Assets/Favorite.svg"
+                                                     Classes="ThemeSvgIcon"
+                                                     Width="18"
+                                                     Height="18"
+                                                     HorizontalAlignment="Center"
+                                                     VerticalAlignment="Center" />
+                        </Button>
+                    </vela:VelaNavigationView.CompactFooter>
 
-        <localControls:BottomPlaybackControl />
-        <views:NowPlayingView DataContext="{Binding NowPlaying}"
-                              ZIndex="300" />
+                    <!-- Dynamic VelaNavItems are inserted ahead of this playlists block in MainWindow.axaml.cs -->
+                    <StackPanel x:Name="PlaylistsSectionPanel"
+                                Margin="2,8,2,100"
+                                Spacing="8"
+                                IsVisible="{Binding #AppNav.IsPaneOpen}">
+                        <Border Height="1"
+                                Margin="8,2,8,2"
+                                Background="{DynamicResource VelaBorderSubtleBrush}" />
 
-    </Grid>
-    </suki:SukiMainHost>
+                        <vela:VelaAccordion Classes="SidebarAccordion"
+                                            AllowMultiple="False"
+                                            BorderThickness="0">
+                            <vela:VelaAccordionItem Header="创建的歌单"
+                                                    IsExpanded="{Binding IsCreatedPlaylistsExpanded, Mode=TwoWay}">
+                                <vela:VelaListBox Classes="SidebarPlaylistList"
+                                                  Variant="Plain"
+                                                  ShowSelectionIndicator="True"
+                                                  MaxHeight="300"
+                                                  EmptyContent="暂无歌单"
+                                                  ItemsSource="{Binding SidebarCreatedPlaylists}">
+                                    <vela:VelaListBox.ItemTemplate>
+                                        <DataTemplate DataType="vm:PlaylistItem">
+                                            <localControls:SidebarPlaylistItemControl
+                                                OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
+                                        </DataTemplate>
+                                    </vela:VelaListBox.ItemTemplate>
+                                </vela:VelaListBox>
+                            </vela:VelaAccordionItem>
+
+                            <vela:VelaAccordionItem Header="收藏的歌单"
+                                                    IsExpanded="{Binding IsCollectedPlaylistsExpanded, Mode=TwoWay}">
+                                <vela:VelaListBox Classes="SidebarPlaylistList"
+                                                  Variant="Plain"
+                                                  ShowSelectionIndicator="True"
+                                                  MaxHeight="300"
+                                                  EmptyContent="暂无收藏歌单"
+                                                  ItemsSource="{Binding SidebarCollectedPlaylists}">
+                                    <vela:VelaListBox.ItemTemplate>
+                                        <DataTemplate DataType="vm:PlaylistItem">
+                                            <localControls:SidebarPlaylistItemControl
+                                                OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
+                                        </DataTemplate>
+                                    </vela:VelaListBox.ItemTemplate>
+                                </vela:VelaListBox>
+                            </vela:VelaAccordionItem>
+
+                            <vela:VelaAccordionItem Header="收藏的专辑"
+                                                    IsExpanded="{Binding IsAlbumPlaylistsExpanded, Mode=TwoWay}">
+                                <vela:VelaListBox Classes="SidebarPlaylistList"
+                                                  Variant="Plain"
+                                                  ShowSelectionIndicator="True"
+                                                  MaxHeight="300"
+                                                  EmptyContent="暂无收藏专辑"
+                                                  ItemsSource="{Binding SidebarAlbumPlaylists}">
+                                    <vela:VelaListBox.ItemTemplate>
+                                        <DataTemplate DataType="vm:PlaylistItem">
+                                            <localControls:SidebarPlaylistItemControl
+                                                OpenCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).OpenSidebarPlaylistCommand}"
+                                                DeleteOnlinePlaylistCommand="{Binding #RootWindow.((vm:MainWindowViewModel)DataContext).PlaylistsViewModel.DeleteOnlinePlaylistCommand}" />
+                                        </DataTemplate>
+                                    </vela:VelaListBox.ItemTemplate>
+                                </vela:VelaListBox>
+                            </vela:VelaAccordionItem>
+                        </vela:VelaAccordion>
+
+                        <Button Height="36"
+                                Classes="Basic"
+                                Cursor="Hand"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                Click="OnNewPlaylistMenuClick">
+                            <Grid ColumnDefinitions="28,*" VerticalAlignment="Center">
+                                <Border Grid.Column="0"
+                                        Width="22"
+                                        Height="22"
+                                        CornerRadius="6"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource VelaAccentSubtleBrush}" />
+                                <localControls:KugouIcon Grid.Column="0"
+                                     Classes="ThemeSvgIcon"
+                                     Path="/Assets/music-folder-8-svgrepo-com.svg"
+                                     Width="13"
+                                     Height="13"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1"
+                                           Margin="10,0,0,0"
+                                           Text="新建歌单"
+                                           FontSize="13"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource VelaTextSecondaryBrush}" />
+                            </Grid>
+                        </Button>
+                    </StackPanel>
+                </vela:VelaNavigationView>
+
+                <localControls:BottomPlaybackControl />
+                <views:NowPlayingView DataContext="{Binding NowPlaying}"
+                                      ZIndex="300" />
+            </Grid>
+            </vela:VelaDrawerHost>
+        </vela:VelaDialogHost>
+    </Border>
     </Panel>
     </LayoutTransformControl>
 </localControls:KugouWindow>

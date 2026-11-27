@@ -11,7 +11,6 @@ using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -23,7 +22,7 @@ public partial class SearchViewModel(
     PlayerViewModel player,
     ISongInteractionService songInteractions,
     IMessenger messenger,
-    ISukiToastManager toastManager,
+    IKugouToastManager toastManager,
     ILogger<SearchViewModel> logger) : PageViewModelBase
 {
     private const string DefaultSongCover = "avares://KugouAvaloniaPlayer/Assets/default_song.webp";

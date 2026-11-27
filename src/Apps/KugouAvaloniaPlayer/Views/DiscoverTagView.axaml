@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -33,7 +33,7 @@
                         Command="{Binding NavigateBackCommand}"
                         Cursor="Hand"
                         ToolTip.Tip="返回发现">
-                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}"
+                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronLeft}"
                               Foreground="{DynamicResource SukiLowText}" />
                 </Button>
                 <TextBlock Text="发现歌单"
@@ -41,7 +41,7 @@
                            FontWeight="Bold"
                            VerticalAlignment="Center" />
                 <Button Classes="Basic" Command="{Binding LoadTagsCommand}" Cursor="Hand">
-                    <PathIcon Data="{x:Static suki:Icons.Refresh}" Foreground="{DynamicResource SukiLowText}" />
+                    <PathIcon Data="{x:Static kc:KugouIcons.Refresh}" Foreground="{DynamicResource SukiLowText}" />
                 </Button>
             </StackPanel>
 
@@ -95,7 +95,7 @@
                             VerticalAlignment="Center"
                             Spacing="10"
                             IsVisible="{Binding IsLoading}">
-                    <suki:Loading Width="24" Height="24" />
+                    <kc:KugouLoading Width="24" Height="24" />
                     <TextBlock Text="正在加载歌单..."
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource SukiLiquid2}" />
@@ -136,6 +136,6 @@
             IsLoadingMore="{Binding IsLoadingMoreSongs}"
             ShowAddLoadedSongsToQueueButton="True"
             HeroActionCommand="{Binding CollectPlaylistCommand}"
-            HeroActionIconData="{x:Static suki:Icons.Star}" />
+            HeroActionIconData="{x:Static kc:KugouIcons.Star}" />
     </Grid>
 </UserControl>

@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
              x:Class="KugouAvaloniaPlayer.Controls.NowPlayingThemePicker"
              Width="96">
@@ -92,11 +92,11 @@
             <Button x:Name="Trigger" Classes="ThemePickerButton" Height="34"
                     Click="OnTriggerClick" AutomationProperties.Name="选择播放主题">
                 <Grid ColumnDefinitions="14,*,10">
-                    <Svg Path="/Assets/gear-svgrepo-com.svg"
-                         Css="path { stroke: #E5B96B; fill: none; }" Width="14" Height="14" />
+                    <kc:KugouIcon Path="/Assets/gear-svgrepo-com.svg"
+                         Foreground="#E5B96B" Width="14" Height="14" />
                     <TextBlock x:Name="CurrentName" Grid.Column="1" Margin="9,0"
                                FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <PathIcon x:Name="Chevron" Grid.Column="2" Data="{x:Static suki:Icons.ChevronDown}"
+                    <PathIcon x:Name="Chevron" Grid.Column="2" Data="{x:Static kc:KugouIcons.ChevronDown}"
                               Width="9" Height="9" Foreground="#E5B96B" RenderTransformOrigin="50%,50%" />
                 </Grid>
             </Button>

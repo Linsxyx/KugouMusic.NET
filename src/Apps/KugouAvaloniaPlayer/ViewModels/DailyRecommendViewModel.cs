@@ -13,7 +13,6 @@ using KuGou.Net.Protocol.Session;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -25,7 +24,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
     private readonly PlayerViewModel _player;
     private readonly ISongInteractionService _songInteractions;
     private readonly KgSessionManager _sessionManager;
-    private readonly ISukiToastManager _toastManager;
+    private readonly IKugouToastManager _toastManager;
     private CancellationTokenSource? _fmPreviewLoadCancellation;
     private bool _isDisposed;
     private int _fmPreviewRequestVersion;
@@ -53,7 +52,7 @@ public partial class DailyRecommendViewModel : PageViewModelBase, IDisposable
         PlayerViewModel player,
         ISongInteractionService songInteractions,
         KgSessionManager sessionManager,
-        ISukiToastManager toastManager,
+        IKugouToastManager toastManager,
         ILogger<DailyRecommendViewModel> logger)
     {
         _discoveryClient = discoveryClient;

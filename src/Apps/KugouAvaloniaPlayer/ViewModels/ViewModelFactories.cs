@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Messaging;
 using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.DesktopLyric;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -16,7 +15,7 @@ public sealed class SingerViewModelFactory(
     ArtistClient artistClient,
     AlbumClient albumClient,
     PlaylistClient playlistClient,
-    ISukiToastManager toastManager,
+    IKugouToastManager toastManager,
     IMessenger messenger,
     ILogger<SingerViewModel> logger)
     : ISingerViewModelFactory
@@ -44,7 +43,7 @@ public sealed class DiscoverTagViewModelFactory(
     PlaylistClient playlistClient,
     RecommendClient discoveryClient,
     KugouAvaloniaPlayer.Services.INavigationService navigationService,
-    ISukiToastManager toastManager,
+    IKugouToastManager toastManager,
     IMessenger messenger,
     ILogger<DiscoverTagViewModel> logger)
     : IDiscoverTagViewModelFactory

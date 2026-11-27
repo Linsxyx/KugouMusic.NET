@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
              x:Class="KugouAvaloniaPlayer.Controls.MultiPlaylistSelectionDialog"
@@ -132,7 +133,7 @@
 
                                     <Grid ColumnDefinitions="Auto,76,*"
                                           Margin="10">
-                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                        <vela:VelaCheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                   VerticalAlignment="Center"
                                                   Margin="2,0,6,0" />
 
@@ -202,7 +203,7 @@
                         IsEnabled="{Binding CanConfirm}"
                         MinWidth="140">
                     <Grid ColumnDefinitions="Auto,Auto">
-                        <suki:Loading Width="16"
+                        <kc:KugouLoading Width="16"
                                       Height="16"
                                       Margin="0,0,8,0"
                                       IsVisible="{Binding IsSubmitting}" />

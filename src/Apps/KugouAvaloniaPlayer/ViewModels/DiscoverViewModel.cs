@@ -12,7 +12,6 @@ using KuGou.Net.Clients;
 using KugouAvaloniaPlayer.Models;
 using KugouAvaloniaPlayer.Services;
 using Microsoft.Extensions.Logging;
-using SukiUI.Toasts;
 using ZLinq;
 
 namespace KugouAvaloniaPlayer.ViewModels;
@@ -122,7 +121,7 @@ public partial class DiscoverViewModel : PageViewModelBase
     private readonly PlaylistClient _playlistClient;
     private readonly RankClient _rankClient;
     private readonly RankViewModel _rankViewModel;
-    private readonly ISukiToastManager _toastManager;
+    private readonly IKugouToastManager _toastManager;
     private DetailSource _detailSource = DetailSource.None;
     private bool _hasMoreSongs = true;
     private int _playlistLoadVersion;
@@ -165,7 +164,7 @@ public partial class DiscoverViewModel : PageViewModelBase
         RankViewModel rankViewModel,
         IDiscoverTagViewModelFactory discoverTagViewModelFactory,
         INavigationService navigationService,
-        ISukiToastManager toastManager,
+        IKugouToastManager toastManager,
         IMessenger messenger,
         ILogger<DiscoverViewModel> logger)
     {

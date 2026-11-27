@@ -1,10 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
              x:Class="KugouAvaloniaPlayer.Views.LocalMusicLibraryView"
@@ -12,7 +13,7 @@
              x:DataType="vm:LocalMusicLibraryViewModel">
 
     <Grid Margin="15">
-        <suki:GlassCard Padding="24"
+        <kc:KugouGlassCard Padding="24"
                         IsVisible="{Binding IsLocalLibraryHome}">
             <Grid RowDefinitions="Auto,*">
                 <Grid Grid.Row="0"
@@ -32,7 +33,7 @@
                             Command="{Binding ShowLocalMusicSearchDialogCommand}"
                             Cursor="Hand">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <PathIcon Data="{x:Static suki:Icons.Search}" />
+                            <PathIcon Data="{x:Static kc:KugouIcons.Search}" />
                             <TextBlock Text="搜索本地歌曲" />
                         </StackPanel>
                     </Button>
@@ -45,7 +46,7 @@
                             IsEnabled="{Binding !IsRefreshingLocalLibrary}"
                             Cursor="Hand">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <PathIcon  Data="{x:Static suki:Icons.Refresh}" />
+                            <PathIcon  Data="{x:Static kc:KugouIcons.Refresh}" />
                             <TextBlock Text="刷新" />
                         </StackPanel>
                     </Button>
@@ -57,7 +58,7 @@
                             Command="{Binding ImportLocalFolderCommand}"
                             Cursor="Hand">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Svg Classes="ThemeSvgIcon" Path="/Assets/music-folder-8-svgrepo-com.svg" Width="16" Height="16" />
+                            <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/music-folder-8-svgrepo-com.svg" Width="16" Height="16" />
                             <TextBlock Text="导入文件夹" />
                         </StackPanel>
                     </Button>
@@ -70,7 +71,7 @@
                             IsEnabled="{Binding !IsImportingJellyfinLibrary}"
                             Cursor="Hand">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Svg Classes="ThemeSvgIcon" Path="/Assets/music-folder-8-svgrepo-com.svg" Width="16" Height="16" />
+                            <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/music-folder-8-svgrepo-com.svg" Width="16" Height="16" />
                             <TextBlock Text="导入 Jellyfin" />
                         </StackPanel>
                     </Button>
@@ -82,7 +83,7 @@
                             Command="{Binding ShowCreateLocalPlaylistDialogCommand}"
                             Cursor="Hand">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Svg Classes="ThemeSvgIcon" Path="/Assets/PlaylistAdd.svg" Width="16" Height="16" />
+                            <kc:KugouIcon Classes="ThemeSvgIcon" Path="/Assets/PlaylistAdd.svg" Width="16" Height="16" />
                             <TextBlock Text="新建本地歌单" />
                         </StackPanel>
                     </Button>
@@ -104,23 +105,27 @@
                                                          Subtitle="{Binding Subtitle}"
                                                          Command="{Binding #LocalMusicRoot.((vm:LocalMusicLibraryViewModel)DataContext).OpenPlaylistCommand}"
                                                          CommandParameter="{Binding .}">
-                                    <localControls:MediaCard.ContextMenu>
-                                        <ContextMenu>
-                                            <MenuItem Header="编辑..."
-                                                      Command="{Binding #LocalMusicRoot.((vm:LocalMusicLibraryViewModel)DataContext).EditLocalPlaylistCommand}"
-                                                      CommandParameter="{Binding}" />
-                                            <MenuItem Header="删除"
-                                                      Command="{Binding #LocalMusicRoot.((vm:LocalMusicLibraryViewModel)DataContext).DeleteLocalPlaylistCommand}"
-                                                      CommandParameter="{Binding}" />
-                                        </ContextMenu>
-                                    </localControls:MediaCard.ContextMenu>
+                                    <vela:VelaContextMenu.Menu>
+                                        <vela:VelaContextMenu MenuMinWidth="168">
+                                            <vela:VelaMenuItem Header="编辑..."
+                                                               Icon="{x:Static localControls:KugouIcons.Edit}"
+                                                               Command="{Binding #LocalMusicRoot.((vm:LocalMusicLibraryViewModel)DataContext).EditLocalPlaylistCommand}"
+                                                               CommandParameter="{Binding}" />
+                                            <vela:VelaMenuItem IsSeparator="True" />
+                                            <vela:VelaMenuItem Header="删除"
+                                                               Icon="{x:Static localControls:KugouIcons.Trash}"
+                                                               IsDestructive="True"
+                                                               Command="{Binding #LocalMusicRoot.((vm:LocalMusicLibraryViewModel)DataContext).DeleteLocalPlaylistCommand}"
+                                                               CommandParameter="{Binding}" />
+                                        </vela:VelaContextMenu>
+                                    </vela:VelaContextMenu.Menu>
                                 </localControls:MediaCard>
                             </DataTemplate>
                         </ItemsRepeater.ItemTemplate>
                     </ItemsRepeater>
                 </ScrollViewer>
             </Grid>
-        </suki:GlassCard>
+        </kc:KugouGlassCard>
 
         <localControls:SongCollectionDetailView
             PlaybackCommands="{Binding $parent[localControls:KugouWindow].((vm:MainWindowViewModel)DataContext).Player}"

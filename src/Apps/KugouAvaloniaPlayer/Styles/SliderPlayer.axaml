@@ -5,53 +5,57 @@
         <ResourceDictionary>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#DDDDDD" />
-                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#444450" />
+                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#240F172A" />
+                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#0EA5E9" />
                     <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#444450" />
+                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#1F0F172A" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#40FFFFFF" />
-                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#F2FFFFFF" />
+                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#2CFFFFFF" />
+                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#38BDF8" />
                     <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#F2FFFFFF" />
+                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#44FFFFFF" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
-            <SolidColorBrush x:Key="PlayerSliderLightTrackBrush" Color="#DDDDDD" />
+            <SolidColorBrush x:Key="PlayerSliderLightTrackBrush" Color="#240F172A" />
             <SolidColorBrush x:Key="PlayerSliderLightFillBrush" Color="#444450" />
             <SolidColorBrush x:Key="PlayerSliderLightThumbBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PlayerSliderLightThumbBorderBrush" Color="#444450" />
-            <SolidColorBrush x:Key="PlayerSliderDarkTrackBrush" Color="#40FFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderDarkTrackBrush" Color="#38FFFFFF" />
             <SolidColorBrush x:Key="PlayerSliderDarkFillBrush" Color="#F2FFFFFF" />
             <SolidColorBrush x:Key="PlayerSliderDarkThumbBrush" Color="#FFFFFF" />
             <SolidColorBrush x:Key="PlayerSliderDarkThumbBorderBrush" Color="#F2FFFFFF" />
         </ResourceDictionary>
     </Styles.Resources>
 
-    <!-- 定义样式类 "Modern" -->
+    <!-- 现代音频进度条 (Vela 风格：细轨 + 悬浮加粗 + 柔影圆钮) -->
     <Style Selector="Slider.Player">
-        <!-- 基础属性设置 -->
-        <Setter Property="Background" Value="{DynamicResource PlayerSliderTrackBrush}" /> <!-- 轨道背景色 -->
-        <Setter Property="Foreground" Value="{DynamicResource PlayerSliderFillBrush}" /> <!-- 进度条颜色 (主色) -->
+        <Setter Property="Background" Value="{DynamicResource PlayerSliderTrackBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSliderFillBrush}" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="MinHeight" Value="30" /> <!-- 增加点击区域高度，对应CSS的::before扩大点击范围 -->
-
-        <!-- 重写控件模板 -->
+        <Setter Property="MinHeight" Value="24" />
         <Setter Property="Template">
             <ControlTemplate>
                 <DataValidationErrors>
-                    <!-- 根Grid，背景透明用于接收点击 -->
-                    <Grid Name="GridRoot" Background="Transparent" RowDefinitions="Auto">
+                    <Grid Name="GridRoot" Background="Transparent" Height="24">
+                        <!-- 底层完整轨道，确保左右圆角无缝衔接 -->
+                        <Border Name="PART_FullTrack"
+                                Height="4"
+                                CornerRadius="3"
+                                Background="{TemplateBinding Background}"
+                                VerticalAlignment="Center">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Height" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </Border.Transitions>
+                        </Border>
 
-                        <!-- 轨道容器 -->
                         <Track Name="PART_Track"
-                               Grid.Row="0"
                                IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
                                Orientation="Horizontal"
-                               Height="30">
-
-                            <!-- 1. 已走过的进度 (左侧) -->
+                               Height="24">
                             <Track.DecreaseButton>
                                 <RepeatButton Name="PART_DecreaseButton"
                                               Background="{TemplateBinding Foreground}"
@@ -60,51 +64,50 @@
                                               Focusable="False">
                                     <RepeatButton.Template>
                                         <ControlTemplate>
-                                            <!-- 实际的视觉线条：高度6px -->
                                             <Border Name="PART_DecreaseBorder"
-                                                    Height="6"
+                                                    Height="4"
                                                     CornerRadius="3"
                                                     Background="{TemplateBinding Background}"
-                                                    VerticalAlignment="Center" />
+                                                    VerticalAlignment="Center">
+                                                <Border.Transitions>
+                                                    <Transitions>
+                                                        <DoubleTransition Property="Height" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                                                    </Transitions>
+                                                </Border.Transitions>
+                                            </Border>
                                         </ControlTemplate>
                                     </RepeatButton.Template>
                                 </RepeatButton>
                             </Track.DecreaseButton>
 
-                            <!-- 2. 未走过的进度 (右侧) -->
                             <Track.IncreaseButton>
                                 <RepeatButton Name="PART_IncreaseButton"
-                                              Background="{TemplateBinding Background}"
+                                              Background="Transparent"
                                               HorizontalAlignment="Stretch"
                                               VerticalAlignment="Stretch"
                                               Focusable="False">
                                     <RepeatButton.Template>
                                         <ControlTemplate>
-                                            <!-- 实际的视觉线条：高度6px -->
-                                            <Border Name="PART_IncreaseBorder"
-                                                    Height="6"
-                                                    CornerRadius="3"
-                                                    Background="{TemplateBinding Background}"
-                                                    VerticalAlignment="Center" />
+                                            <Border Background="Transparent" />
                                         </ControlTemplate>
                                     </RepeatButton.Template>
                                 </RepeatButton>
                             </Track.IncreaseButton>
 
-                            <!-- 3. 滑块 (圆点) -->
                             <Track.Thumb>
                                 <Thumb Name="thumb"
                                        Width="12" Height="12"
                                        Background="{DynamicResource PlayerSliderThumbBrush}"
                                        BorderBrush="{DynamicResource PlayerSliderThumbBorderBrush}"
-                                       BorderThickness="2"
-                                       DataContext="{TemplateBinding Value}"> <!-- DataContext workaround if needed -->
+                                       BorderThickness="1"
+                                       DataContext="{TemplateBinding Value}">
                                     <Thumb.Template>
                                         <ControlTemplate>
                                             <Border Background="{TemplateBinding Background}"
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="50" />
+                                                    CornerRadius="999"
+                                                    BoxShadow="0 1 4 0 #38000000" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -116,11 +119,43 @@
         </Setter>
     </Style>
 
+    <Style Selector="Slider.Player /template/ Thumb#thumb">
+        <Setter Property="Opacity" Value="0.88" />
+        <Setter Property="RenderTransform" Value="scale(0.88)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+            </Transitions>
+        </Setter>
+    </Style>
+
+    <Style Selector="Slider.Player:pointerover /template/ Border#PART_FullTrack">
+        <Setter Property="Height" Value="6" />
+    </Style>
+    <Style Selector="Slider.Player:pointerover /template/ RepeatButton#PART_DecreaseButton /template/ Border#PART_DecreaseBorder">
+        <Setter Property="Height" Value="6" />
+    </Style>
+    <Style Selector="Slider.Player:pointerover /template/ Thumb#thumb">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="RenderTransform" Value="scale(1.12)" />
+    </Style>
+
+    <Style Selector="Slider.Player:pressed /template/ Border#PART_FullTrack">
+        <Setter Property="Height" Value="6" />
+    </Style>
+    <Style Selector="Slider.Player:pressed /template/ RepeatButton#PART_DecreaseButton /template/ Border#PART_DecreaseBorder">
+        <Setter Property="Height" Value="6" />
+    </Style>
+    <Style Selector="Slider.Player:pressed /template/ Thumb#thumb">
+        <Setter Property="Opacity" Value="1" />
+        <Setter Property="RenderTransform" Value="scale(1.22)" />
+    </Style>
+
     <Style Selector="Slider.Player.PlayerLight">
         <Setter Property="Background" Value="{StaticResource PlayerSliderLightTrackBrush}" />
         <Setter Property="Foreground" Value="{StaticResource PlayerSliderLightFillBrush}" />
     </Style>
-
     <Style Selector="Slider.Player.PlayerLight /template/ Thumb#thumb">
         <Setter Property="Background" Value="{StaticResource PlayerSliderLightThumbBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource PlayerSliderLightThumbBorderBrush}" />
@@ -130,46 +165,103 @@
         <Setter Property="Background" Value="{StaticResource PlayerSliderDarkTrackBrush}" />
         <Setter Property="Foreground" Value="{StaticResource PlayerSliderDarkFillBrush}" />
     </Style>
-
     <Style Selector="Slider.Player.PlayerDark /template/ Thumb#thumb">
         <Setter Property="Background" Value="{StaticResource PlayerSliderDarkThumbBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource PlayerSliderDarkThumbBorderBrush}" />
     </Style>
 
     <Style Selector="Slider.Player.PlayerCompact">
-        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="MinHeight" Value="20" />
     </Style>
 
-    <!-- 默认 Thumb 样式：透明，设置过渡动画 -->
-    <Style Selector="Slider.Player /template/ Thumb#thumb">
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="RenderTransform" Value="scale(1)" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut" />
-            </Transitions>
+    <!-- 竖向胶囊音量条（macOS Control Center / Apple Music 风格） -->
+    <Style Selector="Slider.VolumeCapsule">
+        <Setter Property="Orientation" Value="Vertical" />
+        <Setter Property="Background" Value="{DynamicResource PlayerSliderTrackBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSliderFillBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="112" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <DataValidationErrors>
+                    <Grid Background="Transparent" Width="28">
+                        <Border Width="8"
+                                CornerRadius="4"
+                                Background="{TemplateBinding Background}"
+                                HorizontalAlignment="Center" />
+
+                        <Track Name="PART_Track"
+                               Orientation="Vertical"
+                               IsDirectionReversed="{TemplateBinding IsDirectionReversed}">
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton"
+                                              Background="{TemplateBinding Foreground}"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Stretch"
+                                              Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate>
+                                            <Border Width="8"
+                                                    CornerRadius="4"
+                                                    Background="{TemplateBinding Background}"
+                                                    HorizontalAlignment="Center" />
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseButton>
+
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton"
+                                              Background="Transparent"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Stretch"
+                                              Focusable="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate>
+                                            <Border Background="Transparent" />
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.IncreaseButton>
+
+                            <Track.Thumb>
+                                <Thumb Name="thumb"
+                                       Width="15" Height="15"
+                                       Background="{DynamicResource PlayerSliderThumbBrush}"
+                                       BorderBrush="{DynamicResource PlayerSliderThumbBorderBrush}"
+                                       BorderThickness="1"
+                                       DataContext="{TemplateBinding Value}">
+                                    <Thumb.Template>
+                                        <ControlTemplate>
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="999"
+                                                    BoxShadow="0 2 6 0 #3A000000" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </DataValidationErrors>
+            </ControlTemplate>
         </Setter>
     </Style>
 
-    <!-- 鼠标悬停在 Slider 上时，显示 Thumb -->
-    <Style Selector="Slider.Player:pointerover /template/ Thumb#thumb">
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="RenderTransform" Value="scale(1.3)" />
+    <Style Selector="Slider.VolumeCapsule /template/ Thumb#thumb">
+        <Setter Property="RenderTransform" Value="scale(0.92)" />
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" />
+            </Transitions>
+        </Setter>
     </Style>
-
-    <!-- 正在拖拽 (Pressed) Thumb 时，显示 Thumb 且放大 -->
-    <Style Selector="Slider.Player:pressed /template/ Thumb#thumb">
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="RenderTransform" Value="scale(1.3)" />
+    <Style Selector="Slider.VolumeCapsule:pointerover /template/ Thumb#thumb">
+        <Setter Property="RenderTransform" Value="scale(1.1)" />
     </Style>
-
-    <Style Selector="Slider.Player:pointerover /template/ RepeatButton#PART_DecreaseButton">
-        <Setter Property="Opacity" Value="0.8" />
+    <Style Selector="Slider.VolumeCapsule:pressed /template/ Thumb#thumb">
+        <Setter Property="RenderTransform" Value="scale(1.18)" />
     </Style>
-
-    <Style Selector="Slider.Player.PlayerDark:pointerover /template/ RepeatButton#PART_DecreaseButton">
-        <Setter Property="Opacity" Value="1" />
-    </Style>
-
 </Styles>

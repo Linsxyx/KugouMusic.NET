@@ -2,11 +2,11 @@ using System.Windows.Input;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using KugouAvaloniaPlayer.ViewModels;
+using Vela.Avalonia.Controls;
 
 namespace KugouAvaloniaPlayer.Controls;
 
@@ -36,9 +36,8 @@ public partial class SongListItemControl : UserControl
     public static readonly StyledProperty<ICommand?> MatchLocalLyricsCommandProperty =
         AvaloniaProperty.Register<SongListItemControl, ICommand?>(nameof(MatchLocalLyricsCommand));
 
-    private MenuFlyout? _contextFlyout;
-    private TopLevel? _lightDismissTopLevel;
-    private MenuFlyout? _moreFlyout;
+    private VelaContextMenu? _contextMenu;
+    private VelaContextMenu? _moreMenu;
 
     public SongListItemControl()
     {
@@ -98,66 +97,71 @@ public partial class SongListItemControl : UserControl
         if (sender is not Control control)
             return;
 
-        var flyout = EnsureMoreFlyout();
-        PopulateMenu(flyout, includePlaylistSpecificItems: true);
-        flyout.ShowAt(control);
-        AttachLightDismissHandler();
+        var menu = EnsureMoreMenu();
+        PopulateMenu(menu, includePlaylistSpecificItems: true);
+        menu.ShowAt(control, showAtPointer: false);
     }
 
     private void ItemShell_OnContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        var flyout = EnsureContextFlyout();
-        PopulateMenu(flyout, includePlaylistSpecificItems: true);
-        flyout.ShowAt(ItemShell, showAtPointer: true);
-        AttachLightDismissHandler();
+        var menu = EnsureContextMenu();
+        PopulateMenu(menu, includePlaylistSpecificItems: true);
+        menu.ShowAt(ItemShell, showAtPointer: e.TryGetPosition(ItemShell, out _));
         e.Handled = true;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        _moreFlyout?.Hide();
-        _moreFlyout?.Items.Clear();
-        _moreFlyout = null;
-        _contextFlyout?.Hide();
-        _contextFlyout?.Items.Clear();
-        _contextFlyout = null;
-        DetachLightDismissHandler();
+        _moreMenu?.Close();
+        _moreMenu?.Items.Clear();
+        _moreMenu = null;
+        _contextMenu?.Close();
+        _contextMenu?.Items.Clear();
+        _contextMenu = null;
         base.OnDetachedFromVisualTree(e);
     }
 
-    private MenuFlyout EnsureMoreFlyout()
+    private VelaContextMenu EnsureMoreMenu()
     {
-        return _moreFlyout ??= new MenuFlyout
+        return _moreMenu ??= new VelaContextMenu
         {
-            Placement = PlacementMode.BottomEdgeAlignedRight
+            Placement = PlacementMode.BottomEdgeAlignedRight,
+            MenuMinWidth = 196
         };
     }
 
-    private MenuFlyout EnsureContextFlyout()
+    private VelaContextMenu EnsureContextMenu()
     {
-        return _contextFlyout ??= new MenuFlyout();
+        return _contextMenu ??= new VelaContextMenu
+        {
+            MenuMinWidth = 196
+        };
     }
 
-    private void PopulateMenu(MenuFlyout flyout, bool includePlaylistSpecificItems)
+    private void PopulateMenu(VelaContextMenu menu, bool includePlaylistSpecificItems)
     {
-        flyout.Items.Clear();
+        menu.Items.Clear();
 
         if (DataContext is not SongItem song)
             return;
 
-        flyout.Items.Add(CreateSingerMenuItem(song));
-        flyout.Items.Add(new MenuItem
+        if (CreateSingerMenuItem(song) is { } singerItem)
+            menu.Items.Add(singerItem);
+
+        menu.Items.Add(new VelaMenuItem
         {
             Header = "下一首播放",
+            Icon = KugouIcons.QueueNext,
             Command = AddToNextCommand,
             CommandParameter = song
         });
 
         if (song.LocalFilePath is null)
         {
-            flyout.Items.Add(new MenuItem
+            menu.Items.Add(new VelaMenuItem
             {
                 Header = "添加到歌单",
+                Icon = KugouIcons.PlaylistAdd,
                 Command = ShowPlaylistDialogCommand,
                 CommandParameter = song
             });
@@ -166,17 +170,19 @@ public partial class SongListItemControl : UserControl
         {
             if (File.Exists(song.LocalFilePath))
             {
-                flyout.Items.Add(new MenuItem
+                menu.Items.Add(new VelaMenuItem
                 {
                     Header = "匹配歌词...",
+                    Icon = KugouIcons.Lyrics,
                     Command = MatchLocalLyricsCommand,
                     CommandParameter = song
                 });
             }
 
-            flyout.Items.Add(new MenuItem
+            menu.Items.Add(new VelaMenuItem
             {
                 Header = "查找所在歌单",
+                Icon = KugouIcons.Search,
                 Command = SearchLocalPlaylistsCommand,
                 CommandParameter = song
             });
@@ -189,44 +195,68 @@ public partial class SongListItemControl : UserControl
         var localMusicLibraryViewModel = FindLocalMusicLibraryViewModel();
         if (localMusicLibraryViewModel?.IsLocalPlaylist == true)
         {
-            flyout.Items.Add(new MenuItem
+            menu.Items.Add(new VelaMenuItem
             {
                 Header = "设置歌曲封面",
+                Icon = KugouIcons.Image,
                 Command = SetLocalCoverCommand,
                 CommandParameter = song
             });
 
-            flyout.Items.Add(new MenuItem
+            menu.Items.Add(new VelaMenuItem { IsSeparator = true });
+            menu.Items.Add(new VelaMenuItem
             {
                 Header = "从歌单移除",
+                Icon = KugouIcons.Trash,
+                IsDestructive = true,
                 Command = RemoveFromPlaylistCommand,
                 CommandParameter = song
             });
         }
-
-        if (playlistsViewModel?.IsOnlinePlaylist == true)
+        else if (playlistsViewModel?.IsOnlinePlaylist == true)
         {
-            flyout.Items.Add(new MenuItem
+            menu.Items.Add(new VelaMenuItem { IsSeparator = true });
+            menu.Items.Add(new VelaMenuItem
             {
                 Header = "从歌单移除",
+                Icon = KugouIcons.Trash,
+                IsDestructive = true,
                 Command = RemoveFromPlaylistCommand,
                 CommandParameter = song
             });
         }
     }
 
-    private MenuItem CreateSingerMenuItem(SongItem song)
+    private VelaMenuItem? CreateSingerMenuItem(SongItem song)
     {
-        var singerMenuItem = new MenuItem
+        if (song.Singers.Count == 0)
+            return null;
+
+        if (song.Singers.Count == 1)
         {
-            Header = "查看歌手"
+            var only = song.Singers[0];
+            var name = string.IsNullOrWhiteSpace(only.Name) ? "未知歌手" : only.Name;
+            return new VelaMenuItem
+            {
+                Header = $"查看歌手：{name}",
+                Icon = KugouIcons.Singer,
+                Command = ViewSingerCommand,
+                CommandParameter = only
+            };
+        }
+
+        var singerMenuItem = new VelaMenuItem
+        {
+            Header = "查看歌手",
+            Icon = KugouIcons.Singer
         };
 
         foreach (var singer in song.Singers)
         {
-            singerMenuItem.Items.Add(new MenuItem
+            singerMenuItem.Items.Add(new VelaMenuItem
             {
                 Header = string.IsNullOrWhiteSpace(singer.Name) ? "未知歌手" : singer.Name,
+                Icon = KugouIcons.Singer,
                 Command = ViewSingerCommand,
                 CommandParameter = singer
             });
@@ -255,36 +285,5 @@ public partial class SongListItemControl : UserControl
         }
 
         return null;
-    }
-
-    private void AttachLightDismissHandler()
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel == null || ReferenceEquals(_lightDismissTopLevel, topLevel))
-            return;
-
-        DetachLightDismissHandler();
-
-        _lightDismissTopLevel = topLevel;
-        topLevel.AddHandler(
-            PointerPressedEvent,
-            OnTopLevelPointerPressed,
-            RoutingStrategies.Tunnel,
-            handledEventsToo: true);
-    }
-
-    private void DetachLightDismissHandler()
-    {
-        _lightDismissTopLevel?.RemoveHandler(
-            PointerPressedEvent,
-            OnTopLevelPointerPressed);
-        _lightDismissTopLevel = null;
-    }
-
-    private void OnTopLevelPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        _moreFlyout?.Hide();
-        _contextFlyout?.Hide();
-        DetachLightDismissHandler();
     }
 }

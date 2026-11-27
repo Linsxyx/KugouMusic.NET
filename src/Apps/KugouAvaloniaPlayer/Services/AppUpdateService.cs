@@ -10,7 +10,6 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using KugouAvaloniaPlayer.Models;
-using SukiUI.Toasts;
 using Velopack;
 using Velopack.Sources;
 
@@ -22,7 +21,7 @@ public interface IAppUpdateService
 }
 
 public sealed class AppUpdateService(
-    ISukiToastManager toastManager,
+    IKugouToastManager toastManager,
     ILogger<AppUpdateService> logger) : IAppUpdateService
 {
     private const string GitHubRepositoryUrl = "https://github.com/Linsxyx/KugouMusic.NET";
@@ -199,7 +198,7 @@ public sealed class AppUpdateService(
     private async Task ShowUpdatingToastAndDownloadAsync(IReadOnlyList<AvailableUpdateSource> updateSources)
     {
         var progress = new ProgressBar { Value = 0, ShowProgressText = true, Minimum = 0, Maximum = 100 };
-        ISukiToast? toast = null;
+        IKugouToast? toast = null;
 
         var hideButton = new Button
         {

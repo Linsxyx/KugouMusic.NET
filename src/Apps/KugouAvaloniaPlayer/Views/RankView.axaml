@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:localControls="using:KugouAvaloniaPlayer.Controls"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
@@ -40,7 +40,7 @@
                         Command="{Binding NavigateBackCommand}"
                         Cursor="Hand"
                         ToolTip.Tip="返回发现">
-                    <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}" />
+                    <PathIcon Data="{x:Static kc:KugouIcons.ChevronLeft}" Foreground="{DynamicResource SukiLowText}" />
                 </Button>
                 <TextBlock Text="排行榜"
                            FontSize="28"

@@ -16,7 +16,6 @@ using KugouAvaloniaPlayer.Services;
 using KugouAvaloniaPlayer.Services.SystemMediaSession;
 using Microsoft.Extensions.Logging;
 using SimpleAudio;
-using SukiUI.Toasts;
 
 namespace KugouAvaloniaPlayer.ViewModels;
 
@@ -52,7 +51,7 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
 
     private readonly PlaybackQueueManager _queueManager;
     private readonly List<PlaybackTelemetryPoint> _tailTelemetry = [];
-    private readonly ISukiToastManager _toastManager;
+    private readonly IKugouToastManager _toastManager;
     private readonly ITransitionAnalysisService _transitionAnalysisService;
     private TransitionProfile? _activeTransitionProfile;
     private string? _analysisFailureSongKey;
@@ -168,7 +167,7 @@ public partial class PlayerViewModel : ViewModelBase, IPlaybackCommands, IDispos
     private bool _isSyncingPlaybackSpeedSelection;
 
     public PlayerViewModel(
-        ISukiToastManager toastManager, ILogger<PlayerViewModel> logger,
+        IKugouToastManager toastManager, ILogger<PlayerViewModel> logger,
         PlaybackQueueManager queueManager, LyricsService lyricsService, FavoritePlaylistService favoriteService,
         PlaybackHistoryService historyService,
         PersonalFmService personalFmService, PlaybackQueueCacheService queueCacheService,

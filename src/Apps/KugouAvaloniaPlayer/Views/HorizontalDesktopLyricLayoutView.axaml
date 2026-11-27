@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              x:Class="KugouAvaloniaPlayer.Views.HorizontalDesktopLyricLayoutView"
              x:DataType="vm:HorizontalDesktopLyricLayoutViewModel">
     <UserControl.Styles>
@@ -24,7 +24,7 @@
     <Grid RowDefinitions="Auto,*,Auto">
         <Grid Grid.Row="{Binding Owner.ControlBarRow}" Width="716" Height="{Binding Owner.ControlBarHeight}" Background="Transparent"
               HorizontalAlignment="Center" VerticalAlignment="Top">
-            <suki:GlassCard Name="ControlCard"
+            <kc:KugouGlassCard Name="ControlCard"
                             Classes.expanded="{Binding Owner.IsControlBarExpanded}"
                             Classes.locked="{Binding Owner.IsLocked}"
                             IsHitTestVisible="{Binding Owner.IsControlBarExpanded}"
@@ -42,10 +42,10 @@
                         <Button Command="{Binding Owner.ToggleTranslationVisibilityCommand}" Classes="Basic"
                                 ToolTip.Tip="切换翻译显示">
                             <Panel>
-                                <Svg Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18"
-                                     Css="path { fill: white; }" IsVisible="{Binding Owner.IsTranslationVisible}" />
-                                <Svg Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18" Opacity="0.38"
-                                     Css="path { fill: white; }" IsVisible="{Binding !Owner.IsTranslationVisible}" />
+                                <kc:KugouIcon Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18"
+                                     Foreground="White" IsVisible="{Binding Owner.IsTranslationVisible}" />
+                                <kc:KugouIcon Path="/Assets/translation-svgrepo-com.svg" Width="18" Height="18" Opacity="0.38"
+                                     Foreground="White" IsVisible="{Binding !Owner.IsTranslationVisible}" />
                             </Panel>
                         </Button>
                         <Button Command="{Binding Owner.DecreaseFontSizeCommand}" Classes="Basic" ToolTip.Tip="减小歌词字号">
@@ -63,8 +63,8 @@
                             IsVisible="{Binding Owner.CanMousePassthrough}"
                             Classes="Basic" Margin="8,-5,0,0" Cursor="Hand"
                             ToolTip.Tip="锁定后收起为悬浮图标">
-                        <Svg Path="/Assets/lock2-svgrepo-com.svg" Width="22" Height="22"
-                             Css="path { fill: white; }" />
+                        <kc:KugouIcon Path="/Assets/lock2-svgrepo-com.svg" Width="22" Height="22"
+                             Foreground="White" />
                     </Button>
 
                     <StackPanel Name="RightControls" Grid.Column="4"
@@ -72,25 +72,25 @@
                                 Orientation="Horizontal" HorizontalAlignment="Right"
                                 VerticalAlignment="Center" Spacing="16">
                         <Button Command="{Binding Owner.Player.PlayPreviousCommand}" Classes="Basic">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronLeft}" Foreground="White" />
+                            <PathIcon Data="{x:Static kc:KugouIcons.ChevronLeft}" Foreground="White" />
                         </Button>
                         <Button Command="{Binding Owner.Player.TogglePlayPauseCommand}" Classes="Basic">
                             <Panel>
-                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
-                                     Css="path { fill: white; }" IsVisible="{Binding Owner.Player.IsPlayingAudio}" />
-                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
-                                     Css="path { fill: white; }" IsVisible="{Binding !Owner.Player.IsPlayingAudio}" />
+                                <kc:KugouIcon Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
+                                     Foreground="White" IsVisible="{Binding Owner.Player.IsPlayingAudio}" />
+                                <kc:KugouIcon Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
+                                     Foreground="White" IsVisible="{Binding !Owner.Player.IsPlayingAudio}" />
                             </Panel>
                         </Button>
                         <Button Command="{Binding Owner.Player.PlayNextCommand}" Classes="Basic">
-                            <PathIcon Data="{x:Static suki:Icons.ChevronRight}" Foreground="White" />
+                            <PathIcon Data="{x:Static kc:KugouIcons.ChevronRight}" Foreground="White" />
                         </Button>
                         <Button Click="OnCloseClicked" Classes="Basic NoPressedAnimation" ToolTip.Tip="关闭歌词">
-                            <PathIcon Data="{x:Static suki:Icons.Cross}" Foreground="White" Width="12" />
+                            <PathIcon Data="{x:Static kc:KugouIcons.Cross}" Foreground="White" Width="12" />
                         </Button>
                     </StackPanel>
                 </Grid>
-            </suki:GlassCard>
+            </kc:KugouGlassCard>
         </Grid>
 
         <Grid Grid.Row="1" IsHitTestVisible="False" Margin="32,0">

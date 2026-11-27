@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:suki="https://github.com/kikipoulet/SukiUI"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              xmlns:lyrics="clr-namespace:AvaloniaLyrics;assembly=AvaloniaLyrics"
@@ -179,8 +179,8 @@
                     Height="36">
                 <Panel>
                     <Border Classes="NowPlayingGlassHighlight" />
-                    <Svg Path="/Assets/portrait-mode.svg"
-                         Css="path { stroke: white; fill: none; } circle { stroke: white; fill: none; }"
+                    <kc:KugouIcon Path="/Assets/portrait-mode.svg"
+                         Foreground="White"
                          Width="22"
                          Height="22"
                          HorizontalAlignment="Center"
@@ -208,7 +208,7 @@
                     </TranslateTransform.Transitions>
                 </TranslateTransform>
             </StackPanel.RenderTransform>
-            <suki:GlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
+            <kc:KugouGlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
                             MinHeight="220" MaxWidth="350" MaxHeight="350">
                 <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover}"
                        behaviors:LocalArtworkImageBehavior.DecodePixelWidth="512"
@@ -218,7 +218,7 @@
                        behaviors:NowPlayingRemoteImageBehavior.IsEnabled="{Binding IsOpen}"
                        RenderOptions.BitmapInterpolationMode="HighQuality"
                        Stretch="UniformToFill" />
-            </suki:GlassCard>
+            </kc:KugouGlassCard>
 
             <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">
                 <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name}"
@@ -234,10 +234,10 @@
                                 Classes="Basic"
                                 ToolTip.Tip="添加到我喜欢">
                             <Panel>
-                                <Svg Path="/Assets/FavoriteBorder.svg" Css="path { fill: red; }"
+                                <kc:KugouIcon Path="/Assets/FavoriteBorder.svg" Foreground="Red"
                                      Width="20" Height="20"
                                      IsVisible="{Binding Player.IsLiked}" />
-                                <Svg Path="/Assets/FavoriteBorder.svg" Css="path { fill: white; }"
+                                <kc:KugouIcon Path="/Assets/FavoriteBorder.svg" Foreground="White"
                                      Opacity="0.6"
                                      Width="20" Height="20"
                                      IsVisible="{Binding !Player.IsLiked}" />
@@ -245,23 +245,23 @@
                         </Button>
                         <Button Cursor="Hand" Command="{Binding Player.PlayPreviousCommand}" Classes="Basic"
                                 ToolTip.Tip="上一首">
-                            <Svg Path="/Assets/backward.svg" Css="path { fill: white; }" Width="18" Height="18" />
+                            <kc:KugouIcon Path="/Assets/backward.svg" Foreground="White" Width="18" Height="18" />
                         </Button>
                         <Button Cursor="Hand" Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic"
                                 Width="36"
                                 Height="36">
                             <Panel>
-                                <Svg Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
-                                     Css="path { fill: white; }"
+                                <kc:KugouIcon Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
+                                     Foreground="White"
                                      IsVisible="{Binding Player.IsPlayingAudio}" />
-                                <Svg Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
-                                     Css="path { fill: white; }"
+                                <kc:KugouIcon Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
+                                     Foreground="White"
                                      IsVisible="{Binding !Player.IsPlayingAudio}" />
                             </Panel>
                         </Button>
                         <Button Cursor="Hand" Command="{Binding Player.PlayNextCommand}" Classes="Basic"
                                 ToolTip.Tip="下一首">
-                            <Svg Path="/Assets/next-svgrepo-com.svg" Css="path { fill: white; }" Width="18"
+                            <kc:KugouIcon Path="/Assets/next-svgrepo-com.svg" Foreground="White" Width="18"
                                  Height="18" />
                         </Button>
                         <Button x:Name="MoreButton"
@@ -279,8 +279,8 @@
                                             <Button Classes="NowPlayingMoreMenuButton"
                                                     Command="{Binding ToggleLyricDisplayModeCommand}">
                                                 <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
-                                                    <Svg Path="/Assets/translation-svgrepo-com.svg"
-                                                         Css="path { fill: white; }"
+                                                    <kc:KugouIcon Path="/Assets/translation-svgrepo-com.svg"
+                                                         Foreground="White"
                                                          Width="18"
                                                          Height="18"
                                                          Opacity="0.9"
@@ -299,7 +299,7 @@
                                                 <Button Classes="NowPlayingMoreMenuButton"
                                                         Command="{Binding ToggleSingerMenuCommand}">
                                                     <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
-                                                        <PathIcon Data="{x:Static suki:Icons.Search}"
+                                                        <PathIcon Data="{x:Static kc:KugouIcons.Search}"
                                                                   Foreground="White"
                                                                   Width="18"
                                                                   Height="18"
@@ -312,14 +312,14 @@
                                                                        Text="{Binding CurrentSingerDisplayText}" />
                                                         </StackPanel>
                                                         <PathIcon Grid.Column="2"
-                                                                  Data="{x:Static suki:Icons.ChevronRight}"
+                                                                  Data="{x:Static kc:KugouIcons.ChevronRight}"
                                                                   Foreground="#D8FFFFFF"
                                                                   Width="14"
                                                                   Height="14"
                                                                   VerticalAlignment="Center"
                                                                   IsVisible="{Binding !IsSingerMenuExpanded}" />
                                                         <PathIcon Grid.Column="2"
-                                                                  Data="{x:Static suki:Icons.ChevronDown}"
+                                                                  Data="{x:Static kc:KugouIcons.ChevronDown}"
                                                                   Foreground="#D8FFFFFF"
                                                                   Width="14"
                                                                   Height="14"
@@ -350,8 +350,8 @@
                                                     IsVisible="{Binding CanAddCurrentSongToPlaylist}"
                                                     Tapped="AddCurrentSongToPlaylist_OnTapped">
                                                 <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
-                                                    <Svg Path="/Assets/PlaylistAdd.svg"
-                                                         Css="path { fill: white; }"
+                                                    <kc:KugouIcon Path="/Assets/PlaylistAdd.svg"
+                                                         Foreground="White"
                                                          Width="18"
                                                          Height="18"
                                                          Opacity="0.9"
@@ -368,8 +368,8 @@
                                             <Button Classes="NowPlayingMoreMenuButton"
                                                     Command="{Binding ToggleVolumeCommand}">
                                                 <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
-                                                    <Svg Path="/Assets/VolumeUp.svg"
-                                                         Css="path { fill: white; }"
+                                                    <kc:KugouIcon Path="/Assets/VolumeUp.svg"
+                                                         Foreground="White"
                                                          Width="18"
                                                          Height="18"
                                                          Opacity="0.9"
@@ -392,8 +392,8 @@
                                                   ColumnSpacing="10"
                                                   Margin="2,0,2,2"
                                                   IsVisible="{Binding IsVolumeVisible}">
-                                                <Svg Path="/Assets/VolumeOff.svg"
-                                                     Css="path { fill: white; }"
+                                                <kc:KugouIcon Path="/Assets/VolumeOff.svg"
+                                                     Foreground="White"
                                                      Width="18"
                                                      Height="18"
                                                      Opacity="0.78"
@@ -405,9 +405,9 @@
                                                         Value="{Binding Player.MusicVolume}"
                                                         Classes="Player PlayerLight PlayerCompact"
                                                         HorizontalAlignment="Stretch" />
-                                                <Svg Grid.Column="2"
+                                                <kc:KugouIcon Grid.Column="2"
                                                      Path="/Assets/VolumeUp.svg"
-                                                     Css="path { fill: white; }"
+                                                     Foreground="White"
                                                      Width="18"
                                                      Height="18"
                                                      Opacity="0.9"
@@ -417,8 +417,8 @@
                                     </Border>
                                 </Flyout>
                             </Button.Flyout>
-                            <Svg Path="/Assets/More.svg"
-                                 Css="path { fill: white; }"
+                            <kc:KugouIcon Path="/Assets/More.svg"
+                                 Foreground="White"
                                  Width="22"
                                  Height="22"
                                  Opacity="0.88" />

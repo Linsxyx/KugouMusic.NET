@@ -1,0 +1,269 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
+             xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
+             xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
+             xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
+             x:Class="KugouAvaloniaPlayer.Controls.TrayPlaybackPanel"
+             x:DataType="vm:MainWindowViewModel"
+             Width="268">
+
+    <UserControl.Styles>
+        <Style Selector="Button.TrayIconAction">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.TrayIconAction:pointerover">
+            <Setter Property="Background" Value="{DynamicResource VelaSurfaceMutedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
+        </Style>
+        <Style Selector="Button.TrayPlayPrimary">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Background" Value="{DynamicResource VelaAccentBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaAccentForegroundBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.TrayPlayPrimary:pointerover">
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="Button.TrayHeaderCard">
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.TrayHeaderCard:pointerover">
+            <Setter Property="Background" Value="{DynamicResource VelaSurfaceMutedBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="10" Margin="2,2,2,4">
+        <!-- 歌曲封面 + 标题 + 播放状态 -->
+        <Button Classes="TrayHeaderCard"
+                Click="TrackHeader_OnClick"
+                ToolTip.Tip="打开主界面">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <Border Width="44"
+                        Height="44"
+                        CornerRadius="10"
+                        ClipToBounds="True"
+                        Background="{DynamicResource VelaSurfaceMutedBrush}">
+                    <Panel>
+                        <PathIcon Width="18"
+                                  Height="18"
+                                  Data="{x:Static kc:KugouIcons.NavMusic}"
+                                  Foreground="{DynamicResource VelaTextMutedBrush}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  IsVisible="{Binding !Player.HasDisplayPlaybackQueue}" />
+                        <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover}"
+                               behaviors:LocalArtworkImageBehavior.DecodePixelWidth="96"
+                               asyncImageLoader:ImageLoader.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
+                               behaviors:ImageRenderOptions.InterpolationSource="{Binding Player.DisplayedPlayingSong.Cover}"
+                               Stretch="UniformToFill"
+                               IsVisible="{Binding Player.HasDisplayPlaybackQueue}" />
+                    </Panel>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{Binding Player.DisplayedPlayingSong.DisplayTitle, TargetNullValue='KA Music'}"
+                               FontSize="13.5"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource VelaForegroundBrush}" />
+                    <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer, TargetNullValue='未在播放'}"
+                               FontSize="11.5"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource VelaTextSecondaryBrush}" />
+                </StackPanel>
+
+                <Panel Grid.Column="2" VerticalAlignment="Center">
+                    <vela:VelaBadge Tone="Success"
+                                    IsPill="True"
+                                    Content="播放中"
+                                    IsVisible="{Binding Player.IsPlayingAudio}" />
+                    <vela:VelaBadge Tone="Neutral"
+                                    IsPill="True"
+                                    Content="已暂停"
+                                    IsVisible="{Binding !Player.IsPlayingAudio}" />
+                </Panel>
+            </Grid>
+        </Button>
+
+        <!-- 紧凑进度条 -->
+        <Grid ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="6"
+              Margin="4,-2,4,-2"
+              IsVisible="{Binding Player.HasDisplayPlaybackQueue}">
+            <TextBlock Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                       FontSize="10.5"
+                       FontFeatures="+tnum"
+                       Foreground="{DynamicResource VelaTextMutedBrush}"
+                       VerticalAlignment="Center" />
+            <Slider Grid.Column="1"
+                    Minimum="0"
+                    Maximum="{Binding Player.TotalDurationSeconds}"
+                    Value="{Binding Player.CurrentPositionSeconds}"
+                    IsSnapToTickEnabled="False"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Center"
+                    Classes="Player PlayerCompact" />
+            <TextBlock Grid.Column="2"
+                       Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                       FontSize="10.5"
+                       FontFeatures="+tnum"
+                       Foreground="{DynamicResource VelaTextMutedBrush}"
+                       VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- 播控按钮组 -->
+        <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*,Auto"
+              Margin="4,0">
+            <Button Grid.Column="0"
+                    Classes="TrayIconAction"
+                    ToolTip.Tip="喜欢"
+                    Command="{Binding Player.ToggleLikeCommand}"
+                    IsEnabled="{Binding Player.HasDisplayPlaybackQueue}">
+                <Panel>
+                    <kc:KugouIcon Path="/Assets/FavoriteBorder.svg"
+                                  Foreground="#EF4444"
+                                  Width="16"
+                                  Height="16"
+                                  IsVisible="{Binding Player.IsLiked}" />
+                    <kc:KugouIcon Classes="ThemeSvgIcon"
+                                  Path="/Assets/FavoriteBorder.svg"
+                                  Width="16"
+                                  Height="16"
+                                  Opacity="0.65"
+                                  IsVisible="{Binding !Player.IsLiked}" />
+                </Panel>
+            </Button>
+
+            <Button Grid.Column="2"
+                    Classes="TrayIconAction"
+                    ToolTip.Tip="上一首"
+                    Command="{Binding Player.PlayPreviousCommand}">
+                <PathIcon Data="{x:Static kc:KugouIcons.SkipPrevious}"
+                          Width="15"
+                          Height="15"
+                          Foreground="{Binding $parent[Button].Foreground}" />
+            </Button>
+
+            <Button Grid.Column="4"
+                    Classes="TrayPlayPrimary"
+                    ToolTip.Tip="播放/暂停"
+                    Command="{Binding Player.TogglePlayPauseCommand}">
+                <Panel>
+                    <PathIcon Data="{x:Static kc:KugouIcons.Pause}"
+                              Width="15"
+                              Height="15"
+                              Foreground="{Binding $parent[Button].Foreground}"
+                              IsVisible="{Binding Player.IsPlayingAudio}" />
+                    <PathIcon Data="{x:Static kc:KugouIcons.Play}"
+                              Width="15"
+                              Height="15"
+                              Margin="2,0,0,0"
+                              Foreground="{Binding $parent[Button].Foreground}"
+                              IsVisible="{Binding !Player.IsPlayingAudio}" />
+                </Panel>
+            </Button>
+
+            <Button Grid.Column="6"
+                    Classes="TrayIconAction"
+                    ToolTip.Tip="下一首"
+                    Command="{Binding Player.PlayNextCommand}">
+                <PathIcon Data="{x:Static kc:KugouIcons.SkipNext}"
+                          Width="15"
+                          Height="15"
+                          Foreground="{Binding $parent[Button].Foreground}" />
+            </Button>
+
+            <Button Grid.Column="8"
+                    Classes="TrayIconAction"
+                    ToolTip.Tip="切换播放模式"
+                    Command="{Binding Player.CyclePlayModeCommand}">
+                <Panel>
+                    <kc:KugouIcon Classes="ThemeSvgIcon"
+                                  Path="/Assets/repeat-svgrepo-com.svg"
+                                  Width="16"
+                                  Height="16"
+                                  IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=Normal}" />
+                    <kc:KugouIcon Classes="ThemeSvgIcon"
+                                  Path="/Assets/repeat-one.svg"
+                                  Width="16"
+                                  Height="16"
+                                  IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=RepeatOne}" />
+                    <kc:KugouIcon Classes="ThemeSvgIcon"
+                                  Path="/Assets/shuffle-svgrepo-com.svg"
+                                  Width="16"
+                                  Height="16"
+                                  IsVisible="{Binding Player.CurrentPlayMode, Converter={StaticResource EnumEqualityConverter}, ConverterParameter=Shuffle}" />
+                </Panel>
+            </Button>
+        </Grid>
+
+        <!-- 紧凑音量控制 -->
+        <Border CornerRadius="10"
+                Padding="8,4"
+                Background="{DynamicResource VelaSurfaceMutedBrush}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <Button Classes="TrayIconAction"
+                        Width="24"
+                        Height="24"
+                        ToolTip.Tip="静音/取消静音"
+                        Click="VolumeMuteButton_OnClick">
+                    <Panel>
+                        <kc:KugouIcon Classes="ThemeSvgIcon"
+                                      Path="/Assets/volume-max-svgrepo-com.svg"
+                                      Width="14"
+                                      Height="14"
+                                      Opacity="0.8"
+                                      IsVisible="{Binding !Player.IsMuted}" />
+                        <kc:KugouIcon Classes="ThemeSvgIcon"
+                                      Path="/Assets/VolumeOff.svg"
+                                      Width="14"
+                                      Height="14"
+                                      Opacity="0.8"
+                                      IsVisible="{Binding Player.IsMuted}" />
+                    </Panel>
+                </Button>
+
+                <Slider Grid.Column="1"
+                        Minimum="0"
+                        Maximum="1"
+                        SmallChange="0.05"
+                        LargeChange="0.1"
+                        Value="{Binding Player.MusicVolume}"
+                        Classes="Player PlayerCompact"
+                        VerticalAlignment="Center" />
+
+                <TextBlock Grid.Column="2"
+                           Text="{Binding Player.MusicVolume, StringFormat='{}{0:P0}'}"
+                           FontSize="11"
+                           FontFeatures="+tnum"
+                           Width="34"
+                           TextAlignment="Right"
+                           Foreground="{DynamicResource VelaTextSecondaryBrush}"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </StackPanel>
+</UserControl>
