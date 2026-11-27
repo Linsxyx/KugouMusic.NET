@@ -2,26 +2,36 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Threading;
 
 namespace KugouAvaloniaPlayer.Controls;
 
 /// <summary>
 /// Lightweight Vela-accented circular loading spinner replacing SukiUI.Controls.Loading.
-/// Stops ticking automatically when detached or hidden (zero idle CPU cost).
+/// Driven by <see cref="TopLevel.RequestAnimationFrame"/> only while effectively visible and rendered,
+/// ensuring zero idle CPU usage and zero redraws when hidden by an ancestor container or cached page.
 /// </summary>
 public sealed class KugouLoading : Control
 {
     public static readonly StyledProperty<IBrush?> ForegroundProperty =
         AvaloniaProperty.Register<KugouLoading, IBrush?>(nameof(Foreground));
 
-    private DispatcherTimer? _timer;
     private double _angle;
+    private bool _framePending;
+    private TimeSpan? _lastFrameTs;
+
+    private double _cachedRadius = -1;
+    private StreamGeometry? _cachedArc;
+    private IBrush? _cachedTrackBrush;
+    private double _cachedTrackStroke = -1;
+    private Pen? _cachedTrackPen;
+    private IBrush? _cachedAccentBrush;
+    private double _cachedAccentStroke = -1;
+    private Pen? _cachedAccentPen;
 
     static KugouLoading()
     {
         AffectsRender<KugouLoading>(ForegroundProperty);
-        IsVisibleProperty.Changed.AddClassHandler<KugouLoading>((c, _) => c.SyncTimer());
+        IsVisibleProperty.Changed.AddClassHandler<KugouLoading>((c, _) => c.OnVisibilityMaybeChanged());
     }
 
     public IBrush? Foreground
@@ -33,39 +43,60 @@ public sealed class KugouLoading : Control
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        SyncTimer();
+        if (IsEffectivelyVisible)
+            ScheduleNextFrame();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        StopTimer();
+        StopAnimation();
     }
 
-    private void SyncTimer()
+    private void OnVisibilityMaybeChanged()
     {
-        if (IsVisible && VisualRoot is not null)
-        {
-            if (_timer is null)
-            {
-                _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) =>
-                {
-                    _angle = (_angle + 7.5) % 360.0;
-                    InvalidateVisual();
-                });
-            }
-            if (!_timer.IsEnabled)
-                _timer.Start();
-        }
+        if (IsEffectivelyVisible && VisualRoot is not null)
+            ScheduleNextFrame();
         else
-        {
-            StopTimer();
-        }
+            StopAnimation();
     }
 
-    private void StopTimer()
+    private void StopAnimation()
     {
-        _timer?.Stop();
+        _framePending = false;
+        _lastFrameTs = null;
+    }
+
+    private void ScheduleNextFrame()
+    {
+        if (_framePending || !IsEffectivelyVisible)
+            return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null)
+            return;
+
+        _framePending = true;
+        topLevel.RequestAnimationFrame(OnAnimationFrame);
+    }
+
+    private void OnAnimationFrame(TimeSpan timestamp)
+    {
+        _framePending = false;
+
+        if (VisualRoot is null || !IsEffectivelyVisible)
+        {
+            _lastFrameTs = null;
+            return;
+        }
+
+        var dt = _lastFrameTs.HasValue
+            ? Math.Clamp((timestamp - _lastFrameTs.Value).TotalSeconds, 0.001, 0.05)
+            : 1.0 / 60.0;
+        _lastFrameTs = timestamp;
+
+        _angle = (_angle + dt * 360.0) % 360.0;
+        InvalidateVisual();
     }
 
     public override void Render(DrawingContext context)
@@ -73,6 +104,9 @@ public sealed class KugouLoading : Control
         var size = Math.Min(Bounds.Width, Bounds.Height);
         if (size <= 2)
             return;
+
+        // Only continue requesting frames when Avalonia actually renders this visible control.
+        ScheduleNextFrame();
 
         var stroke = Math.Clamp(size * 0.11, 1.8, 3.6);
         var radius = (size - stroke) * 0.5;
@@ -85,19 +119,40 @@ public sealed class KugouLoading : Control
                          ? b
                          : Brushes.DodgerBlue);
 
-        // Subtle track ring
         var trackBrush = this.TryFindResource("VelaBorderSubtleBrush", ActualThemeVariant, out var tb) && tb is IBrush track
             ? track
-            : new SolidColorBrush(Color.FromArgb(40, 128, 128, 128));
-        context.DrawEllipse(null, new Pen(trackBrush, stroke), center, radius, radius);
+            : FallbackTrackBrush;
 
-        // Animated 250-degree arc
-        var startRad = _angle * Math.PI / 180.0;
-        var sweepRad = 250.0 * Math.PI / 180.0;
-        var endRad = startRad + sweepRad;
+        if (!ReferenceEquals(_cachedTrackBrush, trackBrush) || Math.Abs(_cachedTrackStroke - stroke) > 0.01 || _cachedTrackPen is null)
+        {
+            _cachedTrackBrush = trackBrush;
+            _cachedTrackStroke = stroke;
+            _cachedTrackPen = new Pen(trackBrush, stroke);
+        }
 
-        var p0 = new Point(center.X + radius * Math.Cos(startRad), center.Y + radius * Math.Sin(startRad));
-        var p1 = new Point(center.X + radius * Math.Cos(endRad), center.Y + radius * Math.Sin(endRad));
+        if (!ReferenceEquals(_cachedAccentBrush, accent) || Math.Abs(_cachedAccentStroke - stroke) > 0.01 || _cachedAccentPen is null)
+        {
+            _cachedAccentBrush = accent;
+            _cachedAccentStroke = stroke;
+            _cachedAccentPen = new Pen(accent, stroke, lineCap: PenLineCap.Round);
+        }
+
+        context.DrawEllipse(null, _cachedTrackPen, center, radius, radius);
+
+        var arc = GetOrCreateArc(radius);
+        var transform = Matrix.CreateRotation(_angle * Math.PI / 180.0) * Matrix.CreateTranslation(center.X, center.Y);
+        using var _ = context.PushTransform(transform);
+        context.DrawGeometry(null, _cachedAccentPen, arc);
+    }
+
+    private StreamGeometry GetOrCreateArc(double radius)
+    {
+        if (_cachedArc is not null && Math.Abs(_cachedRadius - radius) < 0.01)
+            return _cachedArc;
+
+        const double sweepRad = 250.0 * Math.PI / 180.0;
+        var p0 = new Point(radius, 0);
+        var p1 = new Point(radius * Math.Cos(sweepRad), radius * Math.Sin(sweepRad));
 
         var geo = new StreamGeometry();
         using (var ctx = geo.Open())
@@ -107,6 +162,10 @@ public sealed class KugouLoading : Control
             ctx.EndFigure(false);
         }
 
-        context.DrawGeometry(null, new Pen(accent, stroke, lineCap: PenLineCap.Round), geo);
+        _cachedRadius = radius;
+        _cachedArc = geo;
+        return geo;
     }
+
+    private static readonly IBrush FallbackTrackBrush = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128));
 }

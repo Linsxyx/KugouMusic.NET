@@ -100,6 +100,7 @@
                                         Margin="12,0,0,0"
                                         Spacing="4">
                                 <local:ScrollingTextBlock Text="{Binding Player.DisplayedPlayingSong.DisplayTitle, TargetNullValue='KA Music'}"
+                                                          IsScrollingEnabled="{Binding Player.IsPlayingAudio}"
                                                           Width="200"
                                                           Height="18"
                                                           FontWeight="Bold"

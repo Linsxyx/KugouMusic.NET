@@ -2,8 +2,9 @@ using System;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
-using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace KugouAvaloniaPlayer.Controls;
 
@@ -30,11 +31,14 @@ public class ScrollingTextBlock : Control
     public static readonly StyledProperty<FontStyle> FontStyleProperty =
         TextBlock.FontStyleProperty.AddOwner<ScrollingTextBlock>();
 
-    private readonly DispatcherTimer _timer;
-    private DateTime _lastTick;
+    public static readonly StyledProperty<bool> IsScrollingEnabledProperty =
+        AvaloniaProperty.Register<ScrollingTextBlock, bool>(nameof(IsScrollingEnabled), true);
+
+    private TimeSpan? _lastFrameTime;
     private double _offset;
     private bool _isAttached;
-    
+    private bool _frameRequested;
+
     private FormattedText? _cachedFormattedText;
     private double _cachedTextWidth;
     private double _cachedTextHeight;
@@ -54,13 +58,8 @@ public class ScrollingTextBlock : Control
             FontSizeProperty,
             FontFamilyProperty,
             FontWeightProperty,
-            FontStyleProperty);
-    }
-
-    public ScrollingTextBlock()
-    {
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
-        _timer.Tick += OnTick;
+            FontStyleProperty,
+            IsScrollingEnabledProperty);
     }
 
     public string? Text
@@ -99,19 +98,43 @@ public class ScrollingTextBlock : Control
         set => SetValue(FontStyleProperty, value);
     }
 
+    public bool IsScrollingEnabled
+    {
+        get => GetValue(IsScrollingEnabledProperty);
+        set => SetValue(IsScrollingEnabledProperty, value);
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
         _isAttached = true;
-        _lastTick = DateTime.UtcNow;
-        _timer.Start();
+        _lastFrameTime = null;
+        InvalidateVisual();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
         _isAttached = false;
-        _timer.Stop();
+        _frameRequested = false;
+        _lastFrameTime = null;
+    }
+
+    protected override void OnPointerEntered(PointerEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        if (!IsScrollingEnabled && _offset != 0)
+        {
+            _offset = 0;
+            _lastFrameTime = null;
+        }
+        InvalidateVisual();
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -121,7 +144,17 @@ public class ScrollingTextBlock : Control
         if (change.Property == BoundsProperty)
         {
             if (_isAttached)
-                _timer.Start();
+                InvalidateVisual();
+            return;
+        }
+
+        if (change.Property == IsScrollingEnabledProperty)
+        {
+            _lastFrameTime = null;
+            if (!IsScrollingEnabled && !IsPointerOver && _offset != 0)
+                _offset = 0;
+            if (_isAttached)
+                InvalidateVisual();
             return;
         }
 
@@ -134,11 +167,12 @@ public class ScrollingTextBlock : Control
         {
             _cachedFormattedText = null;
             _offset = 0;
+            _lastFrameTime = null;
             if (_isAttached)
-                _timer.Start();
+                InvalidateVisual();
         }
     }
-    
+
     private FormattedText? GetOrUpdateFormattedText()
     {
         if (string.IsNullOrEmpty(Text))
@@ -190,6 +224,15 @@ public class ScrollingTextBlock : Control
         {
             if (_cachedTextWidth <= Bounds.Width || Bounds.Width <= 0)
             {
+                _offset = 0;
+                _lastFrameTime = null;
+                context.DrawText(formattedText, new Point(0, originY));
+                return;
+            }
+
+            if (!ShouldScroll())
+            {
+                _lastFrameTime = null;
                 context.DrawText(formattedText, new Point(0, originY));
                 return;
             }
@@ -199,42 +242,75 @@ public class ScrollingTextBlock : Control
             context.DrawText(formattedText, new Point(x, originY));
             context.DrawText(formattedText, new Point(x + cycleWidth, originY));
         }
+
+        RequestNextFrame();
     }
 
-    private void OnTick(object? sender, EventArgs e)
+    private bool ShouldScroll()
     {
-        var now = DateTime.UtcNow;
-        var elapsedSeconds = Math.Min(0.1, (now - _lastTick).TotalSeconds);
-        _lastTick = now;
+        if (!_isAttached || !IsEffectivelyVisible)
+            return false;
 
-        if (GetOrUpdateFormattedText() == null || Bounds.Width <= 0)
+        if (!IsScrollingEnabled && !IsPointerOver)
+            return false;
+
+        // Avoid ticking behind transparent overlays (e.g. MiniPlayer faded to Opacity=0 when NowPlaying is open).
+        Visual? current = this;
+        while (current is not null)
         {
+            if (current.Opacity <= 0.001)
+                return false;
+            current = current.GetVisualParent();
+        }
+
+        return true;
+    }
+
+    private void RequestNextFrame()
+    {
+        if (_frameRequested || !_isAttached)
+            return;
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null)
+            return;
+
+        _frameRequested = true;
+        topLevel.RequestAnimationFrame(OnAnimationFrame);
+    }
+
+    private void OnAnimationFrame(TimeSpan frameTime)
+    {
+        _frameRequested = false;
+
+        if (!_isAttached || GetOrUpdateFormattedText() == null || Bounds.Width <= 0 || _cachedTextWidth <= Bounds.Width)
+        {
+            _lastFrameTime = null;
             if (_offset != 0)
             {
                 _offset = 0;
                 InvalidateVisual();
             }
-            else
-            {
-                _timer.Stop();
-            }
-
             return;
         }
 
-        if (_cachedTextWidth > Bounds.Width)
+        if (!ShouldScroll())
         {
-            _offset += elapsedSeconds * DefaultSpeed;
-            InvalidateVisual();
+            _lastFrameTime = null;
+            if (_offset != 0)
+            {
+                _offset = 0;
+                InvalidateVisual();
+            }
+            return;
         }
-        else if (_offset != 0)
-        {
-            _offset = 0;
-            InvalidateVisual();
-        }
-        else
-        {
-            _timer.Stop();
-        }
+
+        var dt = _lastFrameTime.HasValue
+            ? Math.Clamp((frameTime - _lastFrameTime.Value).TotalSeconds, 0.0, 0.1)
+            : 0.0;
+        _lastFrameTime = frameTime;
+
+        _offset += dt * DefaultSpeed;
+        InvalidateVisual();
     }
 }

@@ -107,7 +107,7 @@
                                          TopBarBackground="Transparent"
                                          IsBottomBarVisible="False"
                                          PageCacheMode="Lru"
-                                         MaxCachedPages="8"
+                                         MaxCachedPages="3"
                                          PageTransitionMode="CompositorFade"
                                          Content="{Binding ActivePage}">
                     <vela:VelaNavigationView.PageTemplate>
