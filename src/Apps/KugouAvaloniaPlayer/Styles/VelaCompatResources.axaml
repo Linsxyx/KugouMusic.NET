@@ -147,6 +147,7 @@
 
             <!-- Clean Vela-aligned Button ControlTheme replacing FluentTheme's PART_ContentPresenter hover/press hijack -->
             <ControlTheme x:Key="{x:Type Button}" TargetType="Button">
+                <Setter Property="ClipToBounds" Value="False" />
                 <Setter Property="Background" Value="{DynamicResource VelaSurfaceBrush}" />
                 <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource VelaBorderBrush}" />

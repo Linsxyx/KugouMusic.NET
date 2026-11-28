@@ -1,7 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vela="using:Vela.Avalonia.Controls"
-             x:Class="KugouAvaloniaPlayer.Controls.NowPlayingThemePicker">
+             x:Class="KugouAvaloniaPlayer.Controls.NowPlayingThemePicker"
+             ClipToBounds="False">
     <ThemeVariantScope RequestedThemeVariant="Dark">
         <vela:VelaGlassMenu x:Name="ThemeGlassMenu"
                             HorizontalAlignment="Left"

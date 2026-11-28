@@ -6,7 +6,8 @@
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
              x:Class="KugouAvaloniaPlayer.Controls.FloatingPlayerBar"
              x:DataType="vm:NowPlayingViewModel"
-             Background="Transparent">
+             Background="Transparent"
+             ClipToBounds="False">
 
     <UserControl.Styles>
         <!-- 基础容器样式与尺寸过渡动画 -->
