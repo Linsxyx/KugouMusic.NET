@@ -43,6 +43,7 @@ public sealed partial class FumeTuningViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSteppedCamera))]
     [NotifyPropertyChangedFor(nameof(IsSmoothCamera))]
+    [NotifyPropertyChangedFor(nameof(CameraTrackingModeIndex))]
     public partial FumeCameraTrackingMode CameraTrackingMode { get; set; } =
         FumeCameraTrackingMode.Smooth;
 
@@ -58,6 +59,14 @@ public sealed partial class FumeTuningViewModel : ObservableObject, IDisposable
     public bool IsSteppedCamera => CameraTrackingMode == FumeCameraTrackingMode.Stepped;
 
     public bool IsSmoothCamera => CameraTrackingMode == FumeCameraTrackingMode.Smooth;
+
+    public int CameraTrackingModeIndex
+    {
+        get => IsSmoothCamera ? 1 : 0;
+        set => CameraTrackingMode = value == 0
+            ? FumeCameraTrackingMode.Stepped
+            : FumeCameraTrackingMode.Smooth;
+    }
 
     [RelayCommand]
     private void UseSteppedCamera()

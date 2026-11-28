@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:behaviors="using:KugouAvaloniaPlayer.Behaviors"
@@ -9,25 +10,6 @@
              x:DataType="vm:NowPlayingViewModel">
 
     <UserControl.Styles>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Padding" Value="0,15" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <ContentPresenter Name="PART_ContentPresenter"
-                                      Background="Transparent"
-                                      BorderBrush="Transparent"
-                                      BorderThickness="0"
-                                      CornerRadius="{TemplateBinding CornerRadius}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Content="{TemplateBinding Content}"
-                                      Padding="{TemplateBinding Padding}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
-                </ControlTemplate>
-            </Setter>
-        </Style>
         <Style Selector="StackPanel#AlbumMotionContainer">
             <Setter Property="Transitions">
                 <Transitions>
@@ -35,454 +17,474 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Border.NowPlayingMoreFlyoutCard">
-            <Setter Property="Background" Value="#F0222227" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="Padding" Value="14" />
-            <Setter Property="BorderBrush" Value="#24FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BoxShadow" Value="0 18 40 0 #48000000" />
-        </Style>
-        <Style Selector="Button.NowPlayingMoreMenuButton">
+
+        <Style Selector="Button.NowPlayingTransportBtn">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="19" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="10,8" />
-            <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-                    </Border>
-                </ControlTemplate>
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut" />
+                </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Button.NowPlayingMoreMenuButton:pointerover">
-            <Setter Property="Background" Value="#18FFFFFF" />
+        <Style Selector="Button.NowPlayingTransportBtn /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
         </Style>
-        <Style Selector="Button.NowPlayingMoreMenuButton:pressed">
-            <Setter Property="Background" Value="#24FFFFFF" />
+        <Style Selector="Button.NowPlayingTransportBtn:pointerover">
+            <Setter Property="Background" Value="#22FFFFFF" />
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
         </Style>
-        <Style Selector="Border.NowPlayingMoreMenuAction">
+        <Style Selector="Button.NowPlayingTransportBtn:pressed">
+            <Setter Property="Background" Value="#32FFFFFF" />
+            <Setter Property="RenderTransform" Value="scale(0.95)" />
+        </Style>
+
+        <Style Selector="Button.NowPlayingPlayHeroBtn">
+            <Setter Property="Width" Value="50" />
+            <Setter Property="Height" Value="50" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="25" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Padding" Value="10,8" />
-            <Setter Property="CornerRadius" Value="12" />
-        </Style>
-        <Style Selector="Border.NowPlayingMoreMenuAction:pointerover">
-            <Setter Property="Background" Value="#18FFFFFF" />
-        </Style>
-        <Style Selector="Border.NowPlayingMoreMenuAction:pressed">
-            <Setter Property="Background" Value="#24FFFFFF" />
-        </Style>
-        <Style Selector="TextBlock.NowPlayingMoreMenuTitle">
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-        <Style Selector="TextBlock.NowPlayingMoreMenuDescription">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="#B8FFFFFF" />
-        </Style>
-        <Style Selector="Button.NowPlayingSingerSubMenuButton">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-                    </Border>
-                </ControlTemplate>
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" />
+                </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Button.NowPlayingSingerSubMenuButton:pointerover">
-            <Setter Property="Background" Value="#14FFFFFF" />
+        <Style Selector="Button.NowPlayingPlayHeroBtn /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
         </Style>
-        <Style Selector="Button.NowPlayingSingerSubMenuButton:pressed">
-            <Setter Property="Background" Value="#20FFFFFF" />
+        <Style Selector="Button.NowPlayingPlayHeroBtn:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.07)" />
+        </Style>
+        <Style Selector="Button.NowPlayingPlayHeroBtn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.94)" />
+        </Style>
+
+        <Style Selector="Button.NowPlayingPortraitBtn">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="19" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.NowPlayingPortraitBtn /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Button.NowPlayingPortraitBtn:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+        </Style>
+        <Style Selector="Button.NowPlayingPortraitBtn:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.95)" />
+        </Style>
+        <Style Selector="Border.PortraitActiveRing">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.PortraitActiveRing.active">
+            <Setter Property="Opacity" Value="1" />
         </Style>
     </UserControl.Styles>
 
-    <Grid x:Name="StandardThemeRoot">
-        <Grid IsHitTestVisible="False"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch"
-              RowDefinitions="*,Auto"
-              Opacity="0.68"
-              IsVisible="{Binding Player.IsNowPlayingVisualizerEnabled}">
-            <Border Grid.Row="1"
-                    Height="170"
-                    Margin="-80,0,-80,-30"
-                    VerticalAlignment="Bottom"
+    <ThemeVariantScope RequestedThemeVariant="Dark">
+        <Grid x:Name="StandardThemeRoot">
+            <Grid IsHitTestVisible="False"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  RowDefinitions="*,Auto"
+                  Opacity="0.68"
+                  IsVisible="{Binding Player.IsNowPlayingVisualizerEnabled}">
+                <Border Grid.Row="1"
+                        Height="170"
+                        Margin="-80,0,-80,-30"
+                        VerticalAlignment="Bottom"
+                        HorizontalAlignment="Stretch"
+                        IsHitTestVisible="False"
+                        Opacity="0.2">
+                    <Border.Background>
+                        <RadialGradientBrush Center="50%,100%"
+                                             GradientOrigin="50%,100%"
+                                             RadiusX="0.82"
+                                             RadiusY="0.72">
+                            <GradientStop Color="#00FFFFFF" Offset="0.0" />
+                            <GradientStop Color="#22FFFFFF" Offset="0.35" />
+                            <GradientStop Color="#42FFFFFF" Offset="0.66" />
+                            <GradientStop Color="#00FFFFFF" Offset="1.0" />
+                        </RadialGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Height="1"
+                        Margin="-40,0,-40,28"
+                        VerticalAlignment="Bottom"
+                        HorizontalAlignment="Stretch"
+                        Opacity="0.18">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                            <GradientStop Color="#00FFFFFF" Offset="0.0" />
+                            <GradientStop Color="#C8FFFFFF" Offset="0.5" />
+                            <GradientStop Color="#00FFFFFF" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <controls:AudioVisualizerControl
+                    Grid.Row="1"
+                    Height="235"
+                    Margin="-20,0,-20,-24"
                     HorizontalAlignment="Stretch"
-                    IsHitTestVisible="False"
-                    Opacity="0.2">
-                <Border.Background>
-                    <RadialGradientBrush Center="50%,100%"
-                                         GradientOrigin="50%,100%"
-                                         RadiusX="0.82"
-                                         RadiusY="0.72">
-                        <GradientStop Color="#00FFFFFF" Offset="0.0" />
-                        <GradientStop Color="#22FFFFFF" Offset="0.35" />
-                        <GradientStop Color="#42FFFFFF" Offset="0.66" />
-                        <GradientStop Color="#00FFFFFF" Offset="1.0" />
-                    </RadialGradientBrush>
-                </Border.Background>
-            </Border>
-
-            <Border Grid.Row="1"
-                    Height="1"
-                    Margin="-40,0,-40,28"
                     VerticalAlignment="Bottom"
-                    HorizontalAlignment="Stretch"
-                    Opacity="0.18">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                        <GradientStop Color="#00FFFFFF" Offset="0.0" />
-                        <GradientStop Color="#C8FFFFFF" Offset="0.5" />
-                        <GradientStop Color="#00FFFFFF" Offset="1.0" />
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
+                    Player="{Binding Player}" />
+            </Grid>
 
-            <controls:AudioVisualizerControl
-                Grid.Row="1"
-                Height="235"
-                Margin="-20,0,-20,-24"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Bottom"
-                Player="{Binding Player}" />
-        </Grid>
-
-        <Button Cursor="Hand"
-                Command="{Binding TogglePortraitModeCommand}"
-                Classes="Basic"
-                ToolTip.Tip="写真模式"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Padding="0"
-                Margin="40,94,0,0">
-            <!-- 与 NowPlayingView 中的关闭按钮同尺寸 (45x36)，位于其正下方 8px：40 外边距 + 10 行边距 + 36 高 + 8 间距 = 94 -->
-            <Border Classes="NowPlayingGlass"
-                    Classes.active="{Binding IsPortraitModeEnabled}"
-                    Width="45"
-                    Height="36">
+            <!-- 写真模式按钮：38x38 GPU 毛玻璃圆形按钮，对齐左上角收起按钮正下方 -->
+            <Button Command="{Binding TogglePortraitModeCommand}"
+                    Classes="NowPlayingPortraitBtn"
+                    ToolTip.Tip="写真模式"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Margin="40,98,0,0">
                 <Panel>
-                    <Border Classes="NowPlayingGlassHighlight" />
-                    <kc:KugouIcon Path="/Assets/portrait-mode.svg"
-                         Foreground="White"
-                         Width="22"
-                         Height="22"
-                         HorizontalAlignment="Center"
-                         VerticalAlignment="Center"
-                         Opacity="0.9" />
+                    <vela:VelaGlassCard Width="38"
+                                        Height="38"
+                                        CornerRadius="19"
+                                        Padding="0"
+                                        BlurRadius="36"
+                                        TintLevel="Standard">
+                        <kc:KugouIcon Path="/Assets/portrait-mode.svg"
+                                      Foreground="White"
+                                      Width="20"
+                                      Height="20"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Opacity="0.92" />
+                    </vela:VelaGlassCard>
+                    <Border Classes="PortraitActiveRing"
+                            Classes.active="{Binding IsPortraitModeEnabled}"
+                            CornerRadius="19"
+                            BorderThickness="1.5"
+                            BorderBrush="{DynamicResource VelaAccentBrush}"
+                            Background="#283B82F6"
+                            IsHitTestVisible="False" />
                 </Panel>
-            </Border>
-        </Button>
+            </Button>
 
-        <Grid ColumnDefinitions="4*, 6*"
-              Margin="40,120,40,68">
-            <StackPanel Grid.Column="0"
-                    x:Name="AlbumMotionContainer"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    Spacing="40"
-                    IsVisible="{Binding IsStandardLayoutVisible}"
-                    Opacity="{Binding Player.NowPlayingArtworkOpacity}">
-            <StackPanel.RenderTransform>
-                <TranslateTransform Y="{Binding Player.NowPlayingArtworkTranslateY}">
-                    <TranslateTransform.Transitions>
-                        <Transitions>
-                            <DoubleTransition Property="Y" Duration="0:0:0.28" Easing="CubicEaseOut" />
-                        </Transitions>
-                    </TranslateTransform.Transitions>
-                </TranslateTransform>
-            </StackPanel.RenderTransform>
-            <kc:KugouGlassCard CornerRadius="20" Padding="0" Width="320" Height="320" MinWidth="220"
-                            MinHeight="220" MaxWidth="350" MaxHeight="350">
-                <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover}"
-                       behaviors:LocalArtworkImageBehavior.DecodePixelWidth="512"
-                       behaviors:LocalArtworkImageBehavior.DecodeInterpolationMode="HighQuality"
-                       behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
-                       behaviors:NowPlayingRemoteImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
-                       behaviors:NowPlayingRemoteImageBehavior.IsEnabled="{Binding IsOpen}"
-                       RenderOptions.BitmapInterpolationMode="HighQuality"
-                       Stretch="UniformToFill" />
-            </kc:KugouGlassCard>
+            <Grid ColumnDefinitions="4*, 6*"
+                  Margin="40,120,40,68">
+                <StackPanel Grid.Column="0"
+                            x:Name="AlbumMotionContainer"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="28"
+                            IsVisible="{Binding IsStandardLayoutVisible}"
+                            Opacity="{Binding Player.NowPlayingArtworkOpacity}">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform Y="{Binding Player.NowPlayingArtworkTranslateY}">
+                            <TranslateTransform.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Y" Duration="0:0:0.28" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </TranslateTransform.Transitions>
+                        </TranslateTransform>
+                    </StackPanel.RenderTransform>
 
-            <StackPanel Spacing="10" HorizontalAlignment="Left" Margin="10,0">
-                <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name}"
-                           FontSize="28" FontWeight="ExtraLight" Foreground="White"
-                           TextTrimming="CharacterEllipsis" />
-                <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer}"
-                           FontSize="18" Foreground="#DDFFFFFF"
-                           TextTrimming="CharacterEllipsis" />
-                <Grid RowDefinitions="Auto, Auto, Auto" VerticalAlignment="Center"
-                      HorizontalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" Spacing="25" HorizontalAlignment="Center">
-                        <Button Cursor="Hand" Command="{Binding Player.ToggleLikeCommand}"
-                                Classes="Basic"
-                                ToolTip.Tip="添加到我喜欢">
-                            <Panel>
-                                <kc:KugouIcon Path="/Assets/FavoriteBorder.svg" Foreground="Red"
-                                     Width="20" Height="20"
-                                     IsVisible="{Binding Player.IsLiked}" />
-                                <kc:KugouIcon Path="/Assets/FavoriteBorder.svg" Foreground="White"
-                                     Opacity="0.6"
-                                     Width="20" Height="20"
-                                     IsVisible="{Binding !Player.IsLiked}" />
-                            </Panel>
-                        </Button>
-                        <Button Cursor="Hand" Command="{Binding Player.PlayPreviousCommand}" Classes="Basic"
-                                ToolTip.Tip="上一首">
-                            <kc:KugouIcon Path="/Assets/backward.svg" Foreground="White" Width="18" Height="18" />
-                        </Button>
-                        <Button Cursor="Hand" Command="{Binding Player.TogglePlayPauseCommand}" Classes="Basic"
-                                Width="36"
-                                Height="36">
-                            <Panel>
-                                <kc:KugouIcon Path="/Assets/pause-1006-svgrepo-com.svg" Width="24" Height="24"
-                                     Foreground="White"
-                                     IsVisible="{Binding Player.IsPlayingAudio}" />
-                                <kc:KugouIcon Path="/Assets/play-1003-svgrepo-com.svg" Width="24" Height="24"
-                                     Foreground="White"
-                                     IsVisible="{Binding !Player.IsPlayingAudio}" />
-                            </Panel>
-                        </Button>
-                        <Button Cursor="Hand" Command="{Binding Player.PlayNextCommand}" Classes="Basic"
-                                ToolTip.Tip="下一首">
-                            <kc:KugouIcon Path="/Assets/next-svgrepo-com.svg" Foreground="White" Width="18"
-                                 Height="18" />
-                        </Button>
-                        <Button x:Name="MoreButton"
-                                Cursor="Hand"
-                                Classes="Basic"
-                                ToolTip.Tip="更多">
-                            <Button.Flyout>
-                                <Flyout Placement="TopEdgeAlignedRight"
-                                        Opened="MoreFlyout_OnOpened"
-                                        Closed="MoreFlyout_OnClosed">
-                                    <Border x:Name="MoreFlyoutContent"
-                                            Classes="NowPlayingMoreFlyoutCard"
-                                            Width="260">
-                                        <StackPanel Spacing="6">
-                                            <Button Classes="NowPlayingMoreMenuButton"
-                                                    Command="{Binding ToggleLyricDisplayModeCommand}">
-                                                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
-                                                    <kc:KugouIcon Path="/Assets/translation-svgrepo-com.svg"
-                                                         Foreground="White"
-                                                         Width="18"
-                                                         Height="18"
-                                                         Opacity="0.9"
-                                                         VerticalAlignment="Center" />
-                                                    <StackPanel Grid.Column="1" Spacing="2">
-                                                        <TextBlock Classes="NowPlayingMoreMenuTitle"
-                                                                   Text="歌词显示模式" />
-                                                        <TextBlock Classes="NowPlayingMoreMenuDescription"
-                                                                   Text="{Binding CurrentLyricDisplayModeText}" />
-                                                    </StackPanel>
+                    <!-- 封面玻璃相框 -->
+                    <vela:VelaGlassCard CornerRadius="22"
+                                        Padding="0"
+                                        BlurBackground="False"
+                                        Width="320"
+                                        Height="320"
+                                        MinWidth="220"
+                                        MinHeight="220"
+                                        MaxWidth="350"
+                                        MaxHeight="350">
+                        <Image behaviors:LocalArtworkImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover}"
+                               behaviors:LocalArtworkImageBehavior.DecodePixelWidth="512"
+                               behaviors:LocalArtworkImageBehavior.DecodeInterpolationMode="HighQuality"
+                               behaviors:LocalArtworkImageBehavior.IsEnabled="{Binding IsOpen}"
+                               behaviors:NowPlayingRemoteImageBehavior.Source="{Binding Player.DisplayedPlayingSong.Cover, Converter={StaticResource RemoteImageSourceConverter}}"
+                               behaviors:NowPlayingRemoteImageBehavior.IsEnabled="{Binding IsOpen}"
+                               RenderOptions.BitmapInterpolationMode="HighQuality"
+                               Stretch="UniformToFill" />
+                    </vela:VelaGlassCard>
+
+                    <!-- 歌曲信息 + 弹性进度条 + 玻璃播控区 -->
+                    <StackPanel Spacing="14"
+                                Width="320"
+                                HorizontalAlignment="Center">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding Player.DisplayedPlayingSong.Name}"
+                                       FontSize="26"
+                                       FontWeight="SemiBold"
+                                       Foreground="White"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Player.DisplayedPlayingSong.Singer}"
+                                       FontSize="16"
+                                       Foreground="#CCFFFFFF"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+
+                        <!-- VelaElasticSlider 弹性进度条 + 等宽时间戳 -->
+                        <StackPanel Spacing="2">
+                            <vela:VelaElasticSlider Minimum="0"
+                                                    Maximum="{Binding Player.TotalDurationSeconds}"
+                                                    Value="{Binding Player.CurrentPositionSeconds, Mode=TwoWay}"
+                                                    Step="0.1"
+                                                    Margin="-12,0"
+                                                    HorizontalAlignment="Stretch"
+                                                    Classes="MediaProgress MediaDark" />
+                            <Grid ColumnDefinitions="*,*">
+                                <TextBlock Text="{Binding Player.CurrentPositionSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                                           FontSize="11.5"
+                                           FontFeatures="+tnum"
+                                           Foreground="#A8FFFFFF"
+                                           HorizontalAlignment="Left" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
+                                           FontSize="11.5"
+                                           FontFeatures="+tnum"
+                                           Foreground="#A8FFFFFF"
+                                           HorizontalAlignment="Right" />
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- 播控行：喜欢 / 上一首 / 玻璃播放暂停 / 下一首 / 独立音量玻璃弹层 -->
+                        <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*,Auto"
+                              Margin="2,2,2,0">
+                            <Button Grid.Column="0"
+                                    Command="{Binding Player.ToggleLikeCommand}"
+                                    Classes="NowPlayingTransportBtn"
+                                    ToolTip.Tip="添加到我喜欢">
+                                <Panel>
+                                    <kc:KugouIcon Path="/Assets/FavoriteBorder.svg"
+                                                  Foreground="#FF4D5E"
+                                                  Width="19"
+                                                  Height="19"
+                                                  IsVisible="{Binding Player.IsLiked}" />
+                                    <kc:KugouIcon Path="/Assets/FavoriteBorder.svg"
+                                                  Foreground="White"
+                                                  Opacity="0.7"
+                                                  Width="19"
+                                                  Height="19"
+                                                  IsVisible="{Binding !Player.IsLiked}" />
+                                </Panel>
+                            </Button>
+
+                            <Button Grid.Column="2"
+                                    Command="{Binding Player.PlayPreviousCommand}"
+                                    Classes="NowPlayingTransportBtn"
+                                    ToolTip.Tip="上一首">
+                                <kc:KugouIcon Path="/Assets/backward.svg"
+                                              Foreground="White"
+                                              Width="18"
+                                              Height="18" />
+                            </Button>
+
+                            <Button Grid.Column="4"
+                                    Command="{Binding Player.TogglePlayPauseCommand}"
+                                    Classes="NowPlayingPlayHeroBtn"
+                                    ToolTip.Tip="播放 / 暂停">
+                                <vela:VelaGlassCard Width="50"
+                                                    Height="50"
+                                                    CornerRadius="25"
+                                                    Padding="0"
+                                                    BlurRadius="32"
+                                                    TintLevel="Standard">
+                                    <Panel>
+                                        <kc:KugouIcon Path="/Assets/pause-1006-svgrepo-com.svg"
+                                                      Width="22"
+                                                      Height="22"
+                                                      Foreground="White"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      IsVisible="{Binding Player.IsPlayingAudio}" />
+                                        <kc:KugouIcon Path="/Assets/play-1003-svgrepo-com.svg"
+                                                      Width="22"
+                                                      Height="22"
+                                                      Margin="2,0,0,0"
+                                                      Foreground="White"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      IsVisible="{Binding !Player.IsPlayingAudio}" />
+                                    </Panel>
+                                </vela:VelaGlassCard>
+                            </Button>
+
+                            <Button Grid.Column="6"
+                                    Command="{Binding Player.PlayNextCommand}"
+                                    Classes="NowPlayingTransportBtn"
+                                    ToolTip.Tip="下一首">
+                                <kc:KugouIcon Path="/Assets/next-svgrepo-com.svg"
+                                              Foreground="White"
+                                              Width="18"
+                                              Height="18" />
+                            </Button>
+
+                            <Button Grid.Column="8"
+                                    x:Name="VolumeTriggerButton"
+                                    Classes="NowPlayingTransportBtn"
+                                    ToolTip.Tip="音量调节"
+                                    PointerWheelChanged="VolumeButton_OnPointerWheelChanged">
+                                <Button.Flyout>
+                                    <Flyout Placement="TopEdgeAlignedRight"
+                                            VerticalOffset="-8"
+                                            FlyoutPresenterTheme="{StaticResource TransparentFlyoutPresenterTheme}">
+                                        <ThemeVariantScope RequestedThemeVariant="Dark">
+                                            <vela:VelaGlassCard Width="236"
+                                                                CornerRadius="18"
+                                                                Padding="12,10"
+                                                                BlurRadius="40"
+                                                                TintLevel="HighContrast">
+                                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                                      ColumnSpacing="8"
+                                                      VerticalAlignment="Center">
+                                                    <Button Classes="NowPlayingTransportBtn"
+                                                            Width="28"
+                                                            Height="28"
+                                                            ToolTip.Tip="静音 / 取消静音"
+                                                            Click="VolumeMuteButton_OnClick">
+                                                        <Panel>
+                                                            <kc:KugouIcon Path="/Assets/VolumeUp.svg"
+                                                                          Foreground="White"
+                                                                          Width="16"
+                                                                          Height="16"
+                                                                          Opacity="0.9"
+                                                                          IsVisible="{Binding !Player.IsMuted}" />
+                                                            <kc:KugouIcon Path="/Assets/VolumeOff.svg"
+                                                                          Foreground="White"
+                                                                          Width="16"
+                                                                          Height="16"
+                                                                          Opacity="0.65"
+                                                                          IsVisible="{Binding Player.IsMuted}" />
+                                                        </Panel>
+                                                    </Button>
+
+                                                    <vela:VelaElasticSlider Grid.Column="1"
+                                                                            Minimum="0"
+                                                                            Maximum="1"
+                                                                            Step="0.01"
+                                                                            Value="{Binding Player.MusicVolume, Mode=TwoWay}"
+                                                                            Classes="MediaVolume MediaDark Compact"
+                                                                            VerticalAlignment="Center"
+                                                                            PointerWheelChanged="VolumeButton_OnPointerWheelChanged" />
+
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Player.MusicVolume, StringFormat='{}{0:P0}'}"
+                                                               FontSize="11.5"
+                                                               FontFeatures="+tnum"
+                                                               Width="36"
+                                                               TextAlignment="Right"
+                                                               Foreground="#CCFFFFFF"
+                                                               VerticalAlignment="Center" />
                                                 </Grid>
-                                            </Button>
-
-                                            <StackPanel Spacing="4"
-                                                        IsVisible="{Binding HasCurrentSinger}">
-                                                <Button Classes="NowPlayingMoreMenuButton"
-                                                        Command="{Binding ToggleSingerMenuCommand}">
-                                                    <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="10">
-                                                        <PathIcon Data="{x:Static kc:KugouIcons.Search}"
-                                                                  Foreground="White"
-                                                                  Width="18"
-                                                                  Height="18"
-                                                                  Opacity="0.9"
-                                                                  VerticalAlignment="Center" />
-                                                        <StackPanel Grid.Column="1" Spacing="2">
-                                                            <TextBlock Classes="NowPlayingMoreMenuTitle"
-                                                                       Text="跳转歌手" />
-                                                            <TextBlock Classes="NowPlayingMoreMenuDescription"
-                                                                       Text="{Binding CurrentSingerDisplayText}" />
-                                                        </StackPanel>
-                                                        <PathIcon Grid.Column="2"
-                                                                  Data="{x:Static kc:KugouIcons.ChevronRight}"
-                                                                  Foreground="#D8FFFFFF"
-                                                                  Width="14"
-                                                                  Height="14"
-                                                                  VerticalAlignment="Center"
-                                                                  IsVisible="{Binding !IsSingerMenuExpanded}" />
-                                                        <PathIcon Grid.Column="2"
-                                                                  Data="{x:Static kc:KugouIcons.ChevronDown}"
-                                                                  Foreground="#D8FFFFFF"
-                                                                  Width="14"
-                                                                  Height="14"
-                                                                  VerticalAlignment="Center"
-                                                                  IsVisible="{Binding IsSingerMenuExpanded}" />
-                                                    </Grid>
-                                                </Button>
-
-                                                <ItemsControl ItemsSource="{Binding Player.DisplayedPlayingSong.Singers}"
-                                                              Margin="34,0,0,0"
-                                                              IsVisible="{Binding IsSingerMenuExpanded}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Button Classes="NowPlayingSingerSubMenuButton"
-                                                                    Command="{Binding #StandardThemeRoot.((vm:NowPlayingViewModel)DataContext).ViewSingerCommand}"
-                                                                    CommandParameter="{Binding .}">
-                                                                <TextBlock Text="{Binding ., Converter={StaticResource SingerNameConverter}}"
-                                                                           Foreground="White"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                            </Button>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-
-                                            <Border Classes="NowPlayingMoreMenuAction"
-                                                    Cursor="Hand"
-                                                    IsVisible="{Binding CanAddCurrentSongToPlaylist}"
-                                                    Tapped="AddCurrentSongToPlaylist_OnTapped">
-                                                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
-                                                    <kc:KugouIcon Path="/Assets/PlaylistAdd.svg"
-                                                         Foreground="White"
-                                                         Width="18"
-                                                         Height="18"
-                                                         Opacity="0.9"
-                                                         VerticalAlignment="Center" />
-                                                    <StackPanel Grid.Column="1" Spacing="2">
-                                                        <TextBlock Classes="NowPlayingMoreMenuTitle"
-                                                                   Text="添加到歌单" />
-                                                        <TextBlock Classes="NowPlayingMoreMenuDescription"
-                                                                   Text="把当前歌曲加入你的歌单" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Border>
-
-                                            <Button Classes="NowPlayingMoreMenuButton"
-                                                    Command="{Binding ToggleVolumeCommand}">
-                                                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
-                                                    <kc:KugouIcon Path="/Assets/VolumeUp.svg"
-                                                         Foreground="White"
-                                                         Width="18"
-                                                         Height="18"
-                                                         Opacity="0.9"
-                                                         VerticalAlignment="Center" />
-                                                    <StackPanel Grid.Column="1" Spacing="2">
-                                                        <TextBlock Classes="NowPlayingMoreMenuTitle"
-                                                                   Text="音量调节" />
-                                                        <TextBlock Classes="NowPlayingMoreMenuDescription"
-                                                                   Text="展开或收起播放页音量滑块" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </Button>
-
-                                            <Border Height="1"
-                                                    Margin="2,6"
-                                                    Background="#18FFFFFF"
-                                                    IsVisible="{Binding IsVolumeVisible}" />
-
-                                            <Grid ColumnDefinitions="Auto, *, Auto"
-                                                  ColumnSpacing="10"
-                                                  Margin="2,0,2,2"
-                                                  IsVisible="{Binding IsVolumeVisible}">
-                                                <kc:KugouIcon Path="/Assets/VolumeOff.svg"
-                                                     Foreground="White"
-                                                     Width="18"
-                                                     Height="18"
-                                                     Opacity="0.78"
-                                                     VerticalAlignment="Center" />
-                                                <Slider Grid.Column="1"
-                                                        Minimum="0"
-                                                        Maximum="1"
-                                                        SmallChange="0.05" LargeChange="0.1"
-                                                        Value="{Binding Player.MusicVolume}"
-                                                        Classes="Player PlayerLight PlayerCompact"
-                                                        HorizontalAlignment="Stretch" />
-                                                <kc:KugouIcon Grid.Column="2"
-                                                     Path="/Assets/VolumeUp.svg"
-                                                     Foreground="White"
-                                                     Width="18"
-                                                     Height="18"
-                                                     Opacity="0.9"
-                                                     VerticalAlignment="Center" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-                                </Flyout>
-                            </Button.Flyout>
-                            <kc:KugouIcon Path="/Assets/More.svg"
-                                 Foreground="White"
-                                 Width="22"
-                                 Height="22"
-                                 Opacity="0.88" />
-                        </Button>
-                    </StackPanel>
-
-                    <Grid Grid.Row="1"
-                          MinWidth="220"
-                          MaxWidth="420"
-                          Margin="0,4,0,0"
-                          HorizontalAlignment="Stretch">
-                        <Grid ColumnDefinitions="Auto, *">
-                            <Slider Grid.Column="1" Minimum="0" Maximum="{Binding Player.TotalDurationSeconds}"
-                                    Value="{Binding Player.CurrentPositionSeconds}"
-                                    Margin="8,0" IsSnapToTickEnabled="False"
-                                    HorizontalAlignment="Stretch"
-                                    Classes="Player PlayerDark" />
+                                            </vela:VelaGlassCard>
+                                        </ThemeVariantScope>
+                                    </Flyout>
+                                </Button.Flyout>
+                                <Panel>
+                                    <kc:KugouIcon Path="/Assets/VolumeUp.svg"
+                                                  Foreground="White"
+                                                  Width="18"
+                                                  Height="18"
+                                                  Opacity="0.86"
+                                                  IsVisible="{Binding !Player.IsMuted}" />
+                                    <kc:KugouIcon Path="/Assets/VolumeOff.svg"
+                                                  Foreground="White"
+                                                  Width="18"
+                                                  Height="18"
+                                                  Opacity="0.65"
+                                                  IsVisible="{Binding Player.IsMuted}" />
+                                </Panel>
+                            </Button>
                         </Grid>
-                    </Grid>
-                </Grid>
-            </StackPanel>
-        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
 
-            <lyrics:LyricView x:Name="LyricScrollView"
-                          Grid.Column="{Binding LyricsGridColumn}"
-                          Grid.ColumnSpan="{Binding LyricsGridColumnSpan}"
-                          Lines="{Binding Player.RenderLyricLines}"
-                          Position="{Binding Player.CurrentPosition}"
-                          IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
-                          SeekCommand="{Binding Player.SeekToLyricLineCommand}"
-                          IsActive="{Binding IsOpen}"
-                          Preset="AppleMusicClassic"
-                          UseLightweightScrollAnimation="{Binding UseLightweightLyricScroll}"
-                          Margin="{Binding LyricsMargin}"
-                          ShowTranslation="{Binding IsTranslationVisible}"
-                          ShowRomanization="{Binding IsRomanizationVisible}"
-                          FontFamily="{Binding LyricFontFamily}"
-                          TextAlignment="{Binding LyricTextAlignment}"
-                          PrimaryFontSize="{Binding LyricFontSize}"
-                          TranslationFontSize="{Binding TranslationFontSize}"
-                          RomanizationFontSize="{Binding TranslationFontSize}"
-                          PrimaryForeground="{Binding LyricForeground}"
-                          PrimaryPlayedForeground="{Binding LyricForeground}"
-                          TranslationForeground="{Binding TranslationLineForeground}"
-                          TranslationPlayedForeground="{Binding TranslationWordForeground}"
-                          RomanizationForeground="{Binding TranslationLineForeground}"
-                          Opacity="{Binding Player.NowPlayingLyricsOpacity}">
-            <lyrics:LyricView.RenderTransform>
-                <TranslateTransform Y="{Binding Player.NowPlayingLyricsTranslateY}">
-                    <TranslateTransform.Transitions>
-                        <Transitions>
-                            <DoubleTransition Property="Y" Duration="0:0:0.32" Easing="CubicEaseOut" />
-                        </Transitions>
-                    </TranslateTransform.Transitions>
-                </TranslateTransform>
-            </lyrics:LyricView.RenderTransform>
-            </lyrics:LyricView>
+                <lyrics:LyricView x:Name="LyricScrollView"
+                                  Grid.Column="{Binding LyricsGridColumn}"
+                                  Grid.ColumnSpan="{Binding LyricsGridColumnSpan}"
+                                  Lines="{Binding Player.RenderLyricLines}"
+                                  Position="{Binding Player.CurrentPosition}"
+                                  IsPositionClockRunning="{Binding Player.IsPlayingAudio}"
+                                  SeekCommand="{Binding Player.SeekToLyricLineCommand}"
+                                  IsActive="{Binding IsOpen}"
+                                  Preset="AppleMusicClassic"
+                                  UseLightweightScrollAnimation="{Binding UseLightweightLyricScroll}"
+                                  Margin="{Binding LyricsMargin}"
+                                  ShowTranslation="{Binding IsTranslationVisible}"
+                                  ShowRomanization="{Binding IsRomanizationVisible}"
+                                  FontFamily="{Binding LyricFontFamily}"
+                                  TextAlignment="{Binding LyricTextAlignment}"
+                                  PrimaryFontSize="{Binding LyricFontSize}"
+                                  TranslationFontSize="{Binding TranslationFontSize}"
+                                  RomanizationFontSize="{Binding TranslationFontSize}"
+                                  PrimaryForeground="{Binding LyricForeground}"
+                                  PrimaryPlayedForeground="{Binding LyricForeground}"
+                                  TranslationForeground="{Binding TranslationLineForeground}"
+                                  TranslationPlayedForeground="{Binding TranslationWordForeground}"
+                                  RomanizationForeground="{Binding TranslationLineForeground}"
+                                  Opacity="{Binding Player.NowPlayingLyricsOpacity}">
+                    <lyrics:LyricView.RenderTransform>
+                        <TranslateTransform Y="{Binding Player.NowPlayingLyricsTranslateY}">
+                            <TranslateTransform.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Y" Duration="0:0:0.32" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </TranslateTransform.Transitions>
+                        </TranslateTransform>
+                    </lyrics:LyricView.RenderTransform>
+                </lyrics:LyricView>
 
-            <TextBlock Grid.Column="{Binding LyricsGridColumn}"
-                       Grid.ColumnSpan="{Binding LyricsGridColumnSpan}"
-                       Text="暂无歌词"
-                       IsVisible="{Binding !Player.LyricLines.Count}"
-                       Foreground="White" Opacity="0.5" FontSize="24" FontWeight="ExtraLight"
-                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="{Binding LyricsGridColumn}"
+                           Grid.ColumnSpan="{Binding LyricsGridColumnSpan}"
+                           Text="暂无歌词"
+                           IsVisible="{Binding !Player.LyricLines.Count}"
+                           Foreground="White"
+                           Opacity="0.5"
+                           FontSize="24"
+                           FontWeight="ExtraLight"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+            </Grid>
+
+            <!-- 右下角 VelaGlassMenu：原位毛玻璃形变菜单（歌词模式子菜单 / 歌手跳转子菜单 / 写真模式 / 添加到歌单） -->
+            <vela:VelaGlassMenu x:Name="MoreGlassMenu"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Margin="0,0,28,26"
+                                TriggerSize="44"
+                                MenuWidth="236"
+                                MenuCornerRadius="18"
+                                BlurRadius="44"
+                                TintLevel="Standard"
+                                ToolTip.Tip="更多操作" />
         </Grid>
-    </Grid>
+    </ThemeVariantScope>
 </UserControl>

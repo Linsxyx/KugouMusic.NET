@@ -16,6 +16,9 @@
             <Setter Property="Margin" Value="0,0,12,12" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
+        <Style Selector="Button.PlaylistCard /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
 
         <Style Selector="Button.PlaylistCard Border.Chrome">
             <Setter Property="Background" Value="{DynamicResource SukiPrimaryColorLow}" />

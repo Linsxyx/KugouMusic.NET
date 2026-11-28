@@ -82,6 +82,9 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
     </Style>
+    <Style Selector="Button.SongActionButton /template/ Border#PART_StateLayer">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
     <Style Selector="Button.SongActionButton:pointerover">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource VelaForegroundBrush}" />

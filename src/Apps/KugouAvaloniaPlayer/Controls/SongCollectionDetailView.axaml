@@ -61,6 +61,10 @@
             <Setter Property="BorderBrush" Value="{DynamicResource CollectionHeroButtonBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
+        <Style Selector="Button.HeroIconButton /template/ Border#PART_StateLayer,
+                         Button.HeroPrimaryButton /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
         <Style Selector="Button.HeroIconButton:pointerover">
             <Setter Property="Background" Value="{DynamicResource CollectionHeroIconButtonHoverBrush}" />
         </Style>
@@ -85,8 +89,10 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
-        <Style Selector=":is(ComboBox).HeroDropdown:pointerover">
+        <Style Selector=":is(ComboBox).HeroDropdown:pointerover /template/ Border#Background,
+                         :is(ComboBox).HeroDropdown:dropdownopen /template/ Border#Background">
             <Setter Property="Background" Value="{DynamicResource CollectionHeroActionHoverBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CollectionHeroActionBorderBrush}" />
         </Style>
         <Style Selector=":is(ComboBox).HeroDropdown TextBlock">
             <Setter Property="FontWeight" Value="SemiBold" />

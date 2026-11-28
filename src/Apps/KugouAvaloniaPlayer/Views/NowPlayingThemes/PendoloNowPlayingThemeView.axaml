@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
@@ -7,169 +8,185 @@
              x:DataType="vm:NowPlayingViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Border.PendoloGlass">
-            <Setter Property="Background" Value="#E50A1420" />
-            <Setter Property="BorderBrush" Value="#355FA8C9" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="20" />
-            <Setter Property="BoxShadow" Value="0 18 50 0 #66000000" />
-        </Style>
         <Style Selector="TextBlock.PendoloSettingsLabel">
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontSize" Value="12.5" />
             <Setter Property="Foreground" Value="#DDE6F5FF" />
         </Style>
         <Style Selector="TextBlock.PendoloSettingsValue">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontFamily" Value="Monospace" />
-            <Setter Property="Foreground" Value="#C067B9DB" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontFeatures" Value="+tnum" />
+            <Setter Property="Foreground" Value="#C867B9DB" />
         </Style>
-        <Style Selector="Button.PendoloSegment">
-            <Setter Property="Background" Value="#14FFFFFF" />
-            <Setter Property="Foreground" Value="#DDE6F5FF" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="12,7" />
+        <Style Selector="Button.ThemeGearTrigger">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
         </Style>
-        <Style Selector="Button.PendoloSegment:pointerover">
-            <Setter Property="Background" Value="#2867B9DB" />
+        <Style Selector="Button.ThemeGearTrigger /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Button.ThemeGearTrigger:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+        </Style>
+        <Style Selector="Button.ThemeGearTrigger:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.95)" />
         </Style>
     </UserControl.Styles>
 
-    <Grid ClipToBounds="True">
-        <controls:PendoloVisualizerControl
-            Player="{Binding Player}"
-            IsActive="{Binding IsOpen}"
-            ShowTranslation="{Binding IsTranslationVisible}"
-            ShowRomanization="{Binding IsRomanizationVisible}"
-            LyricFontFamily="{Binding LyricFontFamily}"
-            LyricColor="{Binding LyricColor}"
-            TranslationColor="{Binding TranslationColor}"
-            ParallaxEnabled="{Binding PendoloParallaxTuning.Enabled}"
-            ParallaxMaxTilt="{Binding PendoloParallaxTuning.MaxTilt}"
-            ParallaxResponse="{Binding PendoloParallaxTuning.Response}"
-            ParallaxOriginX="{Binding PendoloParallaxTuning.OriginX}"
-            ParallaxOriginY="{Binding PendoloParallaxTuning.OriginY}" />
+    <ThemeVariantScope RequestedThemeVariant="Dark">
+        <Grid ClipToBounds="True">
+            <controls:PendoloVisualizerControl
+                Player="{Binding Player}"
+                IsActive="{Binding IsOpen}"
+                ShowTranslation="{Binding IsTranslationVisible}"
+                ShowRomanization="{Binding IsRomanizationVisible}"
+                LyricFontFamily="{Binding LyricFontFamily}"
+                LyricColor="{Binding LyricColor}"
+                TranslationColor="{Binding TranslationColor}"
+                ParallaxEnabled="{Binding PendoloParallaxTuning.Enabled}"
+                ParallaxMaxTilt="{Binding PendoloParallaxTuning.MaxTilt}"
+                ParallaxResponse="{Binding PendoloParallaxTuning.Response}"
+                ParallaxOriginX="{Binding PendoloParallaxTuning.OriginX}"
+                ParallaxOriginY="{Binding PendoloParallaxTuning.OriginY}" />
 
-        <controls:FloatingPlayerBar Classes="Pendolo"
-                                    Margin="0,0,0,26"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Bottom" />
+            <controls:FloatingPlayerBar Classes="Pendolo"
+                                        Margin="0,0,0,26"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Bottom" />
 
-        <Button Classes="Basic"
-                Cursor="Hand"
-                Width="48"
-                Height="48"
-                Margin="0,0,28,26"
-                Padding="0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom">
-            <Button.Flyout>
-                <Flyout Placement="TopEdgeAlignedRight">
-                    <Border Classes="PendoloGlass"
-                            Width="336"
-                            Padding="18">
-                        <StackPanel Spacing="16">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="Pendolo 视差"
-                                               FontSize="16"
-                                               FontWeight="SemiBold"
-                                               Foreground="#FFE6F5FF" />
-                                    <TextBlock Text="鼠标倾斜、响应与视觉中心"
-                                               FontSize="11"
-                                               Foreground="#8FE6F5FF" />
+            <Button Classes="ThemeGearTrigger"
+                    Margin="0,0,28,26"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    ToolTip.Tip="Pendolo 视差参数">
+                <Button.Flyout>
+                    <Flyout Placement="TopEdgeAlignedRight"
+                            VerticalOffset="-10"
+                            FlyoutPresenterTheme="{StaticResource TransparentFlyoutPresenterTheme}">
+                        <ThemeVariantScope RequestedThemeVariant="Dark">
+                            <vela:VelaGlassCard Width="336"
+                                                CornerRadius="20"
+                                                Padding="18"
+                                                BlurRadius="44"
+                                                TintLevel="HighContrast">
+                                <StackPanel Spacing="14">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="Pendolo 视差"
+                                                       FontSize="15.5"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#FFE6F5FF" />
+                                            <TextBlock Text="鼠标倾斜、响应与视觉中心"
+                                                       FontSize="11.5"
+                                                       Foreground="#8FE6F5FF" />
+                                        </StackPanel>
+                                        <vela:VelaButton Grid.Column="1"
+                                                         Variant="Secondary"
+                                                         Size="Small"
+                                                         Command="{Binding PendoloParallaxTuning.ResetCommand}"
+                                                         Content="恢复默认"
+                                                         IsEnabled="{Binding PendoloParallaxTuning.Enabled}" />
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Classes="PendoloSettingsLabel"
+                                                   Text="启用视差效果"
+                                                   VerticalAlignment="Center" />
+                                        <vela:VelaSwitch Grid.Column="1"
+                                                         IsChecked="{Binding PendoloParallaxTuning.Enabled, Mode=TwoWay}" />
+                                    </Grid>
+
+                                    <Border IsEnabled="{Binding PendoloParallaxTuning.Enabled}">
+                                        <StackPanel Spacing="12">
+                                            <StackPanel Spacing="4">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Classes="PendoloSettingsLabel" Text="最大倾斜角度" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Classes="PendoloSettingsValue"
+                                                               Text="{Binding PendoloParallaxTuning.MaxTilt, StringFormat={}{0:F0}°}" />
+                                                </Grid>
+                                                <vela:VelaElasticSlider Classes="Inline MediaDark"
+                                                                        Minimum="0"
+                                                                        Maximum="30"
+                                                                        Step="1"
+                                                                        ValueSuffix="°"
+                                                                        Value="{Binding PendoloParallaxTuning.MaxTilt, Mode=TwoWay}" />
+                                            </StackPanel>
+
+                                            <StackPanel Spacing="4">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Classes="PendoloSettingsLabel" Text="响应速度" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Classes="PendoloSettingsValue"
+                                                               Text="{Binding PendoloParallaxTuning.Response, StringFormat={}{0:F1}}" />
+                                                </Grid>
+                                                <vela:VelaElasticSlider Classes="Inline MediaDark"
+                                                                        Minimum="0.5"
+                                                                        Maximum="20"
+                                                                        Step="0.5"
+                                                                        Value="{Binding PendoloParallaxTuning.Response, Mode=TwoWay}" />
+                                            </StackPanel>
+
+                                            <StackPanel Spacing="4">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Classes="PendoloSettingsLabel" Text="中心 X" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Classes="PendoloSettingsValue"
+                                                               Text="{Binding PendoloParallaxTuning.OriginX, StringFormat={}{0:P0}}" />
+                                                </Grid>
+                                                <vela:VelaElasticSlider Classes="InlinePercent MediaDark"
+                                                                        Minimum="0"
+                                                                        Maximum="1"
+                                                                        Step="0.01"
+                                                                        Value="{Binding PendoloParallaxTuning.OriginX, Mode=TwoWay}" />
+                                            </StackPanel>
+
+                                            <StackPanel Spacing="4">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <TextBlock Classes="PendoloSettingsLabel" Text="中心 Y" />
+                                                    <TextBlock Grid.Column="1"
+                                                               Classes="PendoloSettingsValue"
+                                                               Text="{Binding PendoloParallaxTuning.OriginY, StringFormat={}{0:P0}}" />
+                                                </Grid>
+                                                <vela:VelaElasticSlider Classes="InlinePercent MediaDark"
+                                                                        Minimum="0"
+                                                                        Maximum="1"
+                                                                        Step="0.01"
+                                                                        Value="{Binding PendoloParallaxTuning.OriginY, Mode=TwoWay}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
-                                <Button Grid.Column="1"
-                                        Classes="Basic PendoloSegment"
-                                        Command="{Binding PendoloParallaxTuning.ResetCommand}"
-                                        Content="恢复默认"
-                                        Cursor="Hand"
-                                        IsEnabled="{Binding PendoloParallaxTuning.Enabled}" />
-                            </Grid>
+                            </vela:VelaGlassCard>
+                        </ThemeVariantScope>
+                    </Flyout>
+                </Button.Flyout>
 
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                <TextBlock Classes="PendoloSettingsLabel"
-                                           Text="启用视差效果"
-                                           VerticalAlignment="Center" />
-                                <ToggleSwitch Grid.Column="1"
-                                              IsChecked="{Binding PendoloParallaxTuning.Enabled, Mode=TwoWay}" />
-                            </Grid>
-
-                            <Border IsEnabled="{Binding PendoloParallaxTuning.Enabled}">
-                                <StackPanel Spacing="16">
-                                    <StackPanel Spacing="7">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Classes="PendoloSettingsLabel" Text="最大倾斜角度" />
-                                            <TextBlock Grid.Column="1"
-                                                       Classes="PendoloSettingsValue"
-                                                       Text="{Binding PendoloParallaxTuning.MaxTilt, StringFormat={}{0:F0}°}" />
-                                        </Grid>
-                                        <Slider Minimum="0"
-                                                Maximum="30"
-                                                TickFrequency="1"
-                                                Value="{Binding PendoloParallaxTuning.MaxTilt}"
-                                                Classes="Player PlayerDark PlayerCompact" />
-                                    </StackPanel>
-
-                                    <StackPanel Spacing="7">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Classes="PendoloSettingsLabel" Text="响应速度" />
-                                            <TextBlock Grid.Column="1"
-                                                       Classes="PendoloSettingsValue"
-                                                       Text="{Binding PendoloParallaxTuning.Response, StringFormat={}{0:F1}}" />
-                                        </Grid>
-                                        <Slider Minimum="0.5"
-                                                Maximum="20"
-                                                TickFrequency="0.5"
-                                                Value="{Binding PendoloParallaxTuning.Response}"
-                                                Classes="Player PlayerDark PlayerCompact" />
-                                    </StackPanel>
-
-                                    <StackPanel Spacing="7">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Classes="PendoloSettingsLabel" Text="中心 X" />
-                                            <TextBlock Grid.Column="1"
-                                                       Classes="PendoloSettingsValue"
-                                                       Text="{Binding PendoloParallaxTuning.OriginX, StringFormat={}{0:P0}}" />
-                                        </Grid>
-                                        <Slider Minimum="0"
-                                                Maximum="1"
-                                                TickFrequency="0.01"
-                                                Value="{Binding PendoloParallaxTuning.OriginX}"
-                                                Classes="Player PlayerDark PlayerCompact" />
-                                    </StackPanel>
-
-                                    <StackPanel Spacing="7">
-                                        <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Classes="PendoloSettingsLabel" Text="中心 Y" />
-                                            <TextBlock Grid.Column="1"
-                                                       Classes="PendoloSettingsValue"
-                                                       Text="{Binding PendoloParallaxTuning.OriginY, StringFormat={}{0:P0}}" />
-                                        </Grid>
-                                        <Slider Minimum="0"
-                                                Maximum="1"
-                                                TickFrequency="0.01"
-                                                Value="{Binding PendoloParallaxTuning.OriginY}"
-                                                Classes="Player PlayerDark PlayerCompact" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-                </Flyout>
-            </Button.Flyout>
-
-            <Border Width="48"
-                    Height="48"
-                    CornerRadius="24"
-                    Background="Transparent">
-                <kc:KugouIcon Path="/Assets/gear-svgrepo-com.svg"
-                     Foreground="#E6F5FF"
-                     Width="18"
-                     Height="18"
-                     Opacity="0.92"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            </Border>
-        </Button>
-    </Grid>
+                <vela:VelaGlassCard Width="44"
+                                    Height="44"
+                                    CornerRadius="22"
+                                    Padding="0"
+                                    BlurRadius="36"
+                                    TintLevel="Standard">
+                    <PathIcon Data="{DynamicResource VelaIconSliders}"
+                              Foreground="#E6F5FF"
+                              Width="17"
+                              Height="17"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+                </vela:VelaGlassCard>
+            </Button>
+        </Grid>
+    </ThemeVariantScope>
 </UserControl>

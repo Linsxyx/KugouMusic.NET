@@ -10,23 +10,6 @@
              x:DataType="vm:MainWindowViewModel"
              Name="PlaybackControlPanel">
 
-    <UserControl.Resources>
-        <ControlTheme x:Key="TransparentFlyoutPresenterTheme" TargetType="FlyoutPresenter">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="CornerRadius" Value="0" />
-            <Setter Property="MinWidth" Value="0" />
-            <Setter Property="MinHeight" Value="0" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}" />
-                </ControlTemplate>
-            </Setter>
-        </ControlTheme>
-    </UserControl.Resources>
-
     <UserControl.Styles>
         <Style Selector="vela|VelaLiquidGlass#MiniPlayer">
             <Setter Property="Opacity" Value="1" />
@@ -215,15 +198,15 @@
                             Width="44"
                             TextAlignment="Right"
                             VerticalAlignment="Center" />
-                        <Slider Grid.Column="1"
-                                Minimum="0"
-                                Maximum="{Binding Player.TotalDurationSeconds}"
-                                Value="{Binding Player.CurrentPositionSeconds}"
-                                Margin="10,0"
-                                IsSnapToTickEnabled="False"
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Center"
-                                Classes="Player" />
+                        <vela:VelaElasticSlider Grid.Column="1"
+                                                Minimum="0"
+                                                Maximum="{Binding Player.TotalDurationSeconds}"
+                                                Value="{Binding Player.CurrentPositionSeconds, Mode=TwoWay}"
+                                                Step="0.1"
+                                                Margin="4,0"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                Classes="MediaProgress" />
                         <TextBlock Grid.Column="2"
                                    Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                                    FontSize="11"

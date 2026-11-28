@@ -24,7 +24,7 @@
             <localControls:SettingsRow ColumnDefinitions="*,Auto">
                 <TextBlock Classes="RowTitle" Text="字号" />
                 <StackPanel Grid.Column="1" Classes="RowSlider">
-                    <Slider Minimum="18" Maximum="42" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding PlayPageLyricFontSize, Mode=TwoWay}" />
+                    <vela:VelaElasticSlider Classes="Inline" Minimum="18" Maximum="42" Step="1" ValueSuffix=" px" Value="{Binding PlayPageLyricFontSize, Mode=TwoWay}" />
                     <TextBlock Classes="RowValue" Text="{Binding PlayPageLyricFontSizeDisplay}" />
                 </StackPanel>
             </localControls:SettingsRow>

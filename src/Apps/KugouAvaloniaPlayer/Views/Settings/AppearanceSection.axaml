@@ -63,7 +63,7 @@
                     <TextBlock Classes="RowHint" Text="开启自定义背景后可调节。" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="RowSlider">
-                    <Slider Minimum="0.1" Maximum="1" TickFrequency="0.05" Value="{Binding CustomBackgroundImageOpacity, Mode=TwoWay}" />
+                    <vela:VelaElasticSlider Classes="InlinePercent" Minimum="0.1" Maximum="1" Step="0.05" Value="{Binding CustomBackgroundImageOpacity, Mode=TwoWay}" />
                     <TextBlock Classes="RowValue" Text="{Binding CustomBackgroundImageOpacityDisplay}" />
                 </StackPanel>
             </localControls:SettingsRow>
@@ -95,7 +95,7 @@
                     <TextBlock Classes="RowHint" Text="数值越大越柔和，0 为不模糊。" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="RowSlider">
-                    <Slider Minimum="0" Maximum="80" TickFrequency="5" Value="{Binding NowPlayingBackgroundBlurRadius, Mode=TwoWay}" />
+                    <vela:VelaElasticSlider Classes="Inline" Minimum="0" Maximum="80" Step="5" ValueSuffix=" px" Value="{Binding NowPlayingBackgroundBlurRadius, Mode=TwoWay}" />
                     <TextBlock Classes="RowValue" Text="{Binding NowPlayingBackgroundBlurRadiusDisplay}" />
                 </StackPanel>
             </localControls:SettingsRow>

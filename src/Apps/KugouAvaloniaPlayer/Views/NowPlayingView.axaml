@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:chrome="clr-namespace:Avalonia.Controls.Chrome;assembly=Avalonia.Controls"
@@ -40,6 +41,53 @@
                     <DoubleTransition Property="Opacity" Duration="0:0:0.7" Easing="CubicEaseOut" />
                 </Transitions>
             </Setter>
+        </Style>
+
+        <Style Selector="Button.NowPlayingHudCircle">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="19" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.NowPlayingHudCircle /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Button.NowPlayingHudCircle:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+        </Style>
+        <Style Selector="Button.NowPlayingHudCircle:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.95)" />
+        </Style>
+
+        <Style Selector="Button.NowPlayingWinBtn">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.NowPlayingWinBtn /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Button.NowPlayingWinBtn:pointerover">
+            <Setter Property="Background" Value="#24FFFFFF" />
+        </Style>
+        <Style Selector="Button.NowPlayingWinBtn.Close:pointerover">
+            <Setter Property="Background" Value="{DynamicResource VelaDangerBrush}" />
         </Style>
 
     </UserControl.Styles>
@@ -142,80 +190,93 @@
                 VerticalAlignment="Top"
                 Background="Transparent"
                 chrome:WindowDecorationProperties.ElementRole="TitleBar" />
-        <Grid x:Name="NowPlayingForeground"
-              Classes.open="{Binding IsOpen}"
-              RowDefinitions="Auto, *"
-              Margin="40">
-            <Grid Grid.Row="0"
-                  ColumnDefinitions="Auto,*"
-                  Margin="0,10,0,0">
-                <StackPanel Orientation="Horizontal"
-                            Spacing="12"
-                            HorizontalAlignment="Left">
-                    <!-- 尺寸需与主题选择器 (Trigger 34 + 上下边框 1 = 高 36, 圆角 18) 和写真模式按钮 (45x36) 保持一致 -->
-                    <Button Cursor="Hand"
-                            Command="{Binding CloseCommand}"
-                            Classes="Basic"
-                            Padding="0"
-                            Margin="0"
+        <ThemeVariantScope RequestedThemeVariant="Dark">
+            <Grid x:Name="NowPlayingForeground"
+                  Classes.open="{Binding IsOpen}"
+                  RowDefinitions="Auto, *"
+                  Margin="40">
+                <Grid Grid.Row="0"
+                      ColumnDefinitions="Auto,*"
+                      Margin="0,10,0,0">
+                    <!-- 38x38 GPU 毛玻璃收起按钮，与右侧 VelaGlassMenu 主题选择器同高对齐 -->
+                    <Button Command="{Binding CloseCommand}"
+                            Classes="NowPlayingHudCircle"
+                            ToolTip.Tip="收起播放页"
+                            HorizontalAlignment="Left"
                             VerticalAlignment="Top">
-                        <Border Classes="NowPlayingGlass" Width="45" Height="36">
-                            <Panel>
-                                <Border Classes="NowPlayingGlassHighlight" />
-                                <PathIcon Data="{x:Static kc:KugouIcons.ChevronDown}" Foreground="White" Width="15" Height="15"
-                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Panel>
-                        </Border>
+                        <vela:VelaGlassCard Width="38"
+                                            Height="38"
+                                            CornerRadius="19"
+                                            Padding="0"
+                                            BlurRadius="36"
+                                            TintLevel="Standard">
+                            <PathIcon Data="{x:Static kc:KugouIcons.ChevronDown}"
+                                      Foreground="White"
+                                      Width="15"
+                                      Height="15"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center" />
+                        </vela:VelaGlassCard>
                     </Button>
-                </StackPanel>
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            Margin="0,-100,-25,0"
-                            HorizontalAlignment="Right">
-                    <Button Classes="Basic"
-                            Cursor="Hand"
-                            Command="{Binding RequestWindowToggleFullScreenCommand}">
-                        <PathIcon Data="{x:Static kc:KugouIcons.WindowFullScreen}"
-                                  Foreground="White"
-                                  Width="13"
-                                  Height="13" />
-                    </Button>
-                    <Button Classes="Basic"
-                            Cursor="Hand"
-                            Command="{Binding RequestWindowMinimizeCommand}">
-                        <PathIcon Data="{x:Static kc:KugouIcons.WindowMinimize}"
-                                  Foreground="White"
-                                  Width="13"
-                                  Height="13"
-                                  Margin="0,0,0,4" />
-                    </Button>
-                    <Button Classes="Basic"
-                            Cursor="Hand"
-                            Command="{Binding RequestWindowToggleMaximizeCommand}">
-                        <PathIcon Data="{x:Static kc:KugouIcons.WindowMaximize}"
-                                  Foreground="White"
-                                  Width="13"
-                                  Height="13" />
-                    </Button>
-                    <Button Classes="Basic"
-                            Cursor="Hand"
-                            Command="{Binding RequestWindowCloseCommand}">
-                        <PathIcon Data="{x:Static kc:KugouIcons.WindowClose}"
-                                  Foreground="White"
-                                  Width="13"
-                                  Height="13" />
-                    </Button>
-                </StackPanel>
+                    <!-- 右上角毛玻璃窗口控制胶囊 -->
+                    <vela:VelaGlassCard Grid.Column="1"
+                                        CornerRadius="18"
+                                        Height="36"
+                                        Padding="4,0"
+                                        BlurRadius="32"
+                                        TintLevel="Standard"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="0,-32,-24,0">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="2"
+                                    VerticalAlignment="Center">
+                            <Button Classes="NowPlayingWinBtn"
+                                    ToolTip.Tip="全屏"
+                                    Command="{Binding RequestWindowToggleFullScreenCommand}">
+                                <PathIcon Data="{x:Static kc:KugouIcons.WindowFullScreen}"
+                                          Foreground="White"
+                                          Width="12"
+                                          Height="12" />
+                            </Button>
+                            <Button Classes="NowPlayingWinBtn"
+                                    ToolTip.Tip="最小化"
+                                    Command="{Binding RequestWindowMinimizeCommand}">
+                                <PathIcon Data="{x:Static kc:KugouIcons.WindowMinimize}"
+                                          Foreground="White"
+                                          Width="12"
+                                          Height="12"
+                                          Margin="0,0,0,4" />
+                            </Button>
+                            <Button Classes="NowPlayingWinBtn"
+                                    ToolTip.Tip="最大化"
+                                    Command="{Binding RequestWindowToggleMaximizeCommand}">
+                                <PathIcon Data="{x:Static kc:KugouIcons.WindowMaximize}"
+                                          Foreground="White"
+                                          Width="12"
+                                          Height="12" />
+                            </Button>
+                            <Button Classes="NowPlayingWinBtn Close"
+                                    ToolTip.Tip="关闭"
+                                    Command="{Binding RequestWindowCloseCommand}">
+                                <PathIcon Data="{x:Static kc:KugouIcons.WindowClose}"
+                                          Foreground="White"
+                                          Width="12"
+                                          Height="12" />
+                            </Button>
+                        </StackPanel>
+                    </vela:VelaGlassCard>
+                </Grid>
+
+                <!-- 顶栏 VelaGlassMenu 主题选择器（直接原位弹簧展开，无布局抖动） -->
+                <controls:NowPlayingThemePicker Grid.RowSpan="2"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Top"
+                                                Margin="50,10,0,0"
+                                                IsEnabled="{Binding IsOpen}"
+                                                SelectedPreset="{Binding SelectedThemePreset, Mode=TwoWay}" />
             </Grid>
-
-            <controls:NowPlayingThemePicker Grid.RowSpan="2"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Top"
-                                            Margin="57,10,0,0"
-                                            IsEnabled="{Binding IsOpen}"
-                                            SelectedPreset="{Binding SelectedThemePreset, Mode=TwoWay}" />
-        </Grid>
+        </ThemeVariantScope>
     </Grid>
 </UserControl>

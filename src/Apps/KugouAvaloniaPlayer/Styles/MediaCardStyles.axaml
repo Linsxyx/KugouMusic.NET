@@ -8,6 +8,10 @@
         <Setter Property="RenderTransform" Value="scale(1)" />
     </Style>
 
+    <Style Selector="Button.MediaCardButton /template/ Border#PART_StateLayer">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
     <Style Selector="Button.MediaCardButton:pointerover">
         <Setter Property="RenderTransform" Value="scale(1.03)" />
     </Style>

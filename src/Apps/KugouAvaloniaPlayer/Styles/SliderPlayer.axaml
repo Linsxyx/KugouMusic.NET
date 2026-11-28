@@ -1,184 +1,328 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vela="using:Vela.Avalonia.Controls">
 
     <Styles.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.ThemeDictionaries>
-                <ResourceDictionary x:Key="Light">
-                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#240F172A" />
-                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#0EA5E9" />
-                    <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#1F0F172A" />
-                </ResourceDictionary>
-                <ResourceDictionary x:Key="Dark">
-                    <SolidColorBrush x:Key="PlayerSliderTrackBrush" Color="#2CFFFFFF" />
-                    <SolidColorBrush x:Key="PlayerSliderFillBrush" Color="#38BDF8" />
-                    <SolidColorBrush x:Key="PlayerSliderThumbBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="PlayerSliderThumbBorderBrush" Color="#44FFFFFF" />
-                </ResourceDictionary>
-            </ResourceDictionary.ThemeDictionaries>
-
-            <SolidColorBrush x:Key="PlayerSliderLightTrackBrush" Color="#240F172A" />
-            <SolidColorBrush x:Key="PlayerSliderLightFillBrush" Color="#444450" />
-            <SolidColorBrush x:Key="PlayerSliderLightThumbBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="PlayerSliderLightThumbBorderBrush" Color="#444450" />
             <SolidColorBrush x:Key="PlayerSliderDarkTrackBrush" Color="#38FFFFFF" />
             <SolidColorBrush x:Key="PlayerSliderDarkFillBrush" Color="#F2FFFFFF" />
-            <SolidColorBrush x:Key="PlayerSliderDarkThumbBrush" Color="#FFFFFF" />
-            <SolidColorBrush x:Key="PlayerSliderDarkThumbBorderBrush" Color="#F2FFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderDarkThumbBrush" Color="#FFFFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderDarkBubbleBgBrush" Color="#F2FFFFFF" />
+            <SolidColorBrush x:Key="PlayerSliderDarkBubbleFgBrush" Color="#FF111827" />
         </ResourceDictionary>
     </Styles.Resources>
 
-    <!-- 现代音频进度条 (Vela 风格：细轨 + 悬浮加粗 + 柔影圆钮) -->
-    <Style Selector="Slider.Player">
-        <Setter Property="Background" Value="{DynamicResource PlayerSliderTrackBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource PlayerSliderFillBrush}" />
-        <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="MinHeight" Value="24" />
+    <!-- =========================================================================
+         VelaElasticSlider: Inline Settings Variant (no header row; preserves
+         elastic rubber-band overscroll, spring track thicken & tilted value bubble)
+         ========================================================================= -->
+    <Style Selector="vela|VelaElasticSlider.Inline">
+        <Setter Property="ShowValue" Value="False" />
+        <Setter Property="ClipToBounds" Value="False" />
         <Setter Property="Template">
             <ControlTemplate>
-                <DataValidationErrors>
-                    <Grid Name="GridRoot" Background="Transparent" Height="24">
-                        <!-- 底层完整轨道，确保左右圆角无缝衔接 -->
-                        <Border Name="PART_FullTrack"
-                                Height="4"
-                                CornerRadius="3"
-                                Background="{TemplateBinding Background}"
-                                VerticalAlignment="Center">
-                            <Border.Transitions>
-                                <Transitions>
-                                    <DoubleTransition Property="Height" Duration="0:0:0.15" Easing="CubicEaseOut" />
-                                </Transitions>
-                            </Border.Transitions>
+                <Grid x:Name="PART_HitArea"
+                      Height="28"
+                      Background="Transparent"
+                      Cursor="Hand"
+                      ClipToBounds="False">
+
+                    <Border x:Name="PART_Bubble"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="0,-30,0,0"
+                            MinHeight="26"
+                            Padding="10,0"
+                            CornerRadius="{StaticResource VelaRadiusPill}"
+                            Background="{DynamicResource VelaForegroundBrush}"
+                            BoxShadow="{DynamicResource VelaShadowRaised}"
+                            IsHitTestVisible="False"
+                            ZIndex="20">
+                        <TextBlock Text="{TemplateBinding FormattedValue}"
+                                   Foreground="{DynamicResource VelaBackgroundBrush}"
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   FontFeatures="+tnum"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+
+                    <Grid Margin="12,0" Height="6" VerticalAlignment="Center" ClipToBounds="False">
+                        <Border x:Name="PART_Track"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlTrackBrush}"
+                                ClipToBounds="True">
+                            <Border x:Name="PART_Fill"
+                                    HorizontalAlignment="Left"
+                                    CornerRadius="{StaticResource VelaRadiusPill}"
+                                    Background="{DynamicResource VelaControlFillBrush}" />
                         </Border>
-
-                        <Track Name="PART_Track"
-                               IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
-                               Orientation="Horizontal"
-                               Height="24">
-                            <Track.DecreaseButton>
-                                <RepeatButton Name="PART_DecreaseButton"
-                                              Background="{TemplateBinding Foreground}"
-                                              HorizontalAlignment="Stretch"
-                                              VerticalAlignment="Stretch"
-                                              Focusable="False">
-                                    <RepeatButton.Template>
-                                        <ControlTemplate>
-                                            <Border Name="PART_DecreaseBorder"
-                                                    Height="4"
-                                                    CornerRadius="3"
-                                                    Background="{TemplateBinding Background}"
-                                                    VerticalAlignment="Center">
-                                                <Border.Transitions>
-                                                    <Transitions>
-                                                        <DoubleTransition Property="Height" Duration="0:0:0.15" Easing="CubicEaseOut" />
-                                                    </Transitions>
-                                                </Border.Transitions>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </RepeatButton.Template>
-                                </RepeatButton>
-                            </Track.DecreaseButton>
-
-                            <Track.IncreaseButton>
-                                <RepeatButton Name="PART_IncreaseButton"
-                                              Background="Transparent"
-                                              HorizontalAlignment="Stretch"
-                                              VerticalAlignment="Stretch"
-                                              Focusable="False">
-                                    <RepeatButton.Template>
-                                        <ControlTemplate>
-                                            <Border Background="Transparent" />
-                                        </ControlTemplate>
-                                    </RepeatButton.Template>
-                                </RepeatButton>
-                            </Track.IncreaseButton>
-
-                            <Track.Thumb>
-                                <Thumb Name="thumb"
-                                       Width="12" Height="12"
-                                       Background="{DynamicResource PlayerSliderThumbBrush}"
-                                       BorderBrush="{DynamicResource PlayerSliderThumbBorderBrush}"
-                                       BorderThickness="1"
-                                       DataContext="{TemplateBinding Value}">
-                                    <Thumb.Template>
-                                        <ControlTemplate>
-                                            <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="999"
-                                                    BoxShadow="0 1 4 0 #38000000" />
-                                        </ControlTemplate>
-                                    </Thumb.Template>
-                                </Thumb>
-                            </Track.Thumb>
-                        </Track>
+                        <Canvas x:Name="PART_Ticks" IsHitTestVisible="False" />
                     </Grid>
-                </DataValidationErrors>
+
+                    <!-- Outer 24x24 matches VelaElasticSlider.ThumbSize so center aligns pixel-for-pixel with track ends -->
+                    <Border x:Name="PART_Thumb"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Width="24"
+                            Height="24"
+                            Background="Transparent"
+                            IsHitTestVisible="False">
+                        <Border x:Name="PART_ThumbVisual"
+                                Width="18"
+                                Height="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlThumbBrush}"
+                                BoxShadow="{DynamicResource VelaControlThumbShadow}" />
+                    </Border>
+                </Grid>
             </ControlTemplate>
         </Setter>
     </Style>
 
-    <Style Selector="Slider.Player /template/ Thumb#thumb">
-        <Setter Property="Opacity" Value="0.88" />
-        <Setter Property="RenderTransform" Value="scale(0.88)" />
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
-                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
-            </Transitions>
+    <!-- Inline percentage bubble variant (0..1 -> 0%..100%) -->
+    <Style Selector="vela|VelaElasticSlider.InlinePercent">
+        <Setter Property="ShowValue" Value="False" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid x:Name="PART_HitArea"
+                      Height="28"
+                      Background="Transparent"
+                      Cursor="Hand"
+                      ClipToBounds="False">
+
+                    <Border x:Name="PART_Bubble"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="0,-30,0,0"
+                            MinHeight="26"
+                            Padding="10,0"
+                            CornerRadius="{StaticResource VelaRadiusPill}"
+                            Background="{DynamicResource VelaForegroundBrush}"
+                            BoxShadow="{DynamicResource VelaShadowRaised}"
+                            IsHitTestVisible="False"
+                            ZIndex="20">
+                        <TextBlock Text="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, StringFormat='{}{0:P0}'}"
+                                   Foreground="{DynamicResource VelaBackgroundBrush}"
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   FontFeatures="+tnum"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+
+                    <Grid Margin="12,0" Height="6" VerticalAlignment="Center" ClipToBounds="False">
+                        <Border x:Name="PART_Track"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlTrackBrush}"
+                                ClipToBounds="True">
+                            <Border x:Name="PART_Fill"
+                                    HorizontalAlignment="Left"
+                                    CornerRadius="{StaticResource VelaRadiusPill}"
+                                    Background="{DynamicResource VelaControlFillBrush}" />
+                        </Border>
+                        <Canvas x:Name="PART_Ticks" IsHitTestVisible="False" />
+                    </Grid>
+
+                    <Border x:Name="PART_Thumb"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Width="24"
+                            Height="24"
+                            Background="Transparent"
+                            IsHitTestVisible="False">
+                        <Border x:Name="PART_ThumbVisual"
+                                Width="18"
+                                Height="18"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlThumbBrush}"
+                                BoxShadow="{DynamicResource VelaControlThumbShadow}" />
+                    </Border>
+                </Grid>
+            </ControlTemplate>
         </Setter>
     </Style>
 
-    <Style Selector="Slider.Player:pointerover /template/ Border#PART_FullTrack">
-        <Setter Property="Height" Value="6" />
-    </Style>
-    <Style Selector="Slider.Player:pointerover /template/ RepeatButton#PART_DecreaseButton /template/ Border#PART_DecreaseBorder">
-        <Setter Property="Height" Value="6" />
-    </Style>
-    <Style Selector="Slider.Player:pointerover /template/ Thumb#thumb">
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="RenderTransform" Value="scale(1.12)" />
+    <!-- =========================================================================
+         VelaElasticSlider: Media Playback Progress Bar (elastic stretch + mm:ss bubble)
+         ========================================================================= -->
+    <Style Selector="vela|VelaElasticSlider.MediaProgress">
+        <Setter Property="ShowValue" Value="False" />
+        <Setter Property="Step" Value="0.1" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid x:Name="PART_HitArea"
+                      Height="24"
+                      Background="Transparent"
+                      Cursor="Hand"
+                      ClipToBounds="False">
+
+                    <Border x:Name="PART_Bubble"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="0,-30,0,0"
+                            MinHeight="24"
+                            Padding="9,0"
+                            CornerRadius="{StaticResource VelaRadiusPill}"
+                            Background="{DynamicResource VelaForegroundBrush}"
+                            BoxShadow="{DynamicResource VelaShadowRaised}"
+                            IsHitTestVisible="False"
+                            ZIndex="20">
+                        <TextBlock x:Name="PART_BubbleText"
+                                   Text="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource SecondsToTimeConverter}}"
+                                   Foreground="{DynamicResource VelaBackgroundBrush}"
+                                   FontSize="11.5"
+                                   FontWeight="SemiBold"
+                                   FontFeatures="+tnum"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+
+                    <Grid Margin="12,0" Height="5" VerticalAlignment="Center" ClipToBounds="False">
+                        <Border x:Name="PART_Track"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlTrackBrush}"
+                                ClipToBounds="True">
+                            <Border x:Name="PART_Fill"
+                                    HorizontalAlignment="Left"
+                                    CornerRadius="{StaticResource VelaRadiusPill}"
+                                    Background="{DynamicResource VelaControlFillBrush}" />
+                        </Border>
+                        <Canvas x:Name="PART_Ticks" IsHitTestVisible="False" />
+                    </Grid>
+
+                    <Border x:Name="PART_Thumb"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Width="24"
+                            Height="24"
+                            Background="Transparent"
+                            IsHitTestVisible="False">
+                        <Border x:Name="PART_ThumbVisual"
+                                Width="14"
+                                Height="14"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlThumbBrush}"
+                                BoxShadow="{DynamicResource VelaControlThumbShadow}" />
+                    </Border>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
     </Style>
 
-    <Style Selector="Slider.Player:pressed /template/ Border#PART_FullTrack">
-        <Setter Property="Height" Value="6" />
-    </Style>
-    <Style Selector="Slider.Player:pressed /template/ RepeatButton#PART_DecreaseButton /template/ Border#PART_DecreaseBorder">
-        <Setter Property="Height" Value="6" />
-    </Style>
-    <Style Selector="Slider.Player:pressed /template/ Thumb#thumb">
-        <Setter Property="Opacity" Value="1" />
-        <Setter Property="RenderTransform" Value="scale(1.22)" />
+    <!-- =========================================================================
+         VelaElasticSlider: Horizontal Media Volume Bar (elastic stretch + % bubble)
+         ========================================================================= -->
+    <Style Selector="vela|VelaElasticSlider.MediaVolume">
+        <Setter Property="ShowValue" Value="False" />
+        <Setter Property="Minimum" Value="0" />
+        <Setter Property="Maximum" Value="1" />
+        <Setter Property="Step" Value="0.01" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid x:Name="PART_HitArea"
+                      Height="24"
+                      Background="Transparent"
+                      Cursor="Hand"
+                      ClipToBounds="False">
+
+                    <Border x:Name="PART_Bubble"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            Margin="0,-30,0,0"
+                            MinHeight="24"
+                            Padding="9,0"
+                            CornerRadius="{StaticResource VelaRadiusPill}"
+                            Background="{DynamicResource VelaForegroundBrush}"
+                            BoxShadow="{DynamicResource VelaShadowRaised}"
+                            IsHitTestVisible="False"
+                            ZIndex="20">
+                        <TextBlock x:Name="PART_BubbleText"
+                                   Text="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, StringFormat='{}{0:P0}'}"
+                                   Foreground="{DynamicResource VelaBackgroundBrush}"
+                                   FontSize="11.5"
+                                   FontWeight="SemiBold"
+                                   FontFeatures="+tnum"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+
+                    <Grid Margin="12,0" Height="5" VerticalAlignment="Center" ClipToBounds="False">
+                        <Border x:Name="PART_Track"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlTrackBrush}"
+                                ClipToBounds="True">
+                            <Border x:Name="PART_Fill"
+                                    HorizontalAlignment="Left"
+                                    CornerRadius="{StaticResource VelaRadiusPill}"
+                                    Background="{DynamicResource VelaControlFillBrush}" />
+                        </Border>
+                        <Canvas x:Name="PART_Ticks" IsHitTestVisible="False" />
+                    </Grid>
+
+                    <Border x:Name="PART_Thumb"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Width="24"
+                            Height="24"
+                            Background="Transparent"
+                            IsHitTestVisible="False">
+                        <Border x:Name="PART_ThumbVisual"
+                                Width="14"
+                                Height="14"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                CornerRadius="{StaticResource VelaRadiusPill}"
+                                Background="{DynamicResource VelaControlThumbBrush}"
+                                BoxShadow="{DynamicResource VelaControlThumbShadow}" />
+                    </Border>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
     </Style>
 
-    <Style Selector="Slider.Player.PlayerLight">
-        <Setter Property="Background" Value="{StaticResource PlayerSliderLightTrackBrush}" />
-        <Setter Property="Foreground" Value="{StaticResource PlayerSliderLightFillBrush}" />
-    </Style>
-    <Style Selector="Slider.Player.PlayerLight /template/ Thumb#thumb">
-        <Setter Property="Background" Value="{StaticResource PlayerSliderLightThumbBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource PlayerSliderLightThumbBorderBrush}" />
-    </Style>
-
-    <Style Selector="Slider.Player.PlayerDark">
+    <!-- High-contrast light-on-dark glass modifier for immersive NowPlaying surfaces -->
+    <Style Selector="vela|VelaElasticSlider.MediaDark /template/ Border#PART_Track">
         <Setter Property="Background" Value="{StaticResource PlayerSliderDarkTrackBrush}" />
-        <Setter Property="Foreground" Value="{StaticResource PlayerSliderDarkFillBrush}" />
     </Style>
-    <Style Selector="Slider.Player.PlayerDark /template/ Thumb#thumb">
+    <Style Selector="vela|VelaElasticSlider.MediaDark /template/ Border#PART_Fill">
+        <Setter Property="Background" Value="{StaticResource PlayerSliderDarkFillBrush}" />
+    </Style>
+    <Style Selector="vela|VelaElasticSlider.MediaDark /template/ Border#PART_ThumbVisual">
         <Setter Property="Background" Value="{StaticResource PlayerSliderDarkThumbBrush}" />
-        <Setter Property="BorderBrush" Value="{StaticResource PlayerSliderDarkThumbBorderBrush}" />
+    </Style>
+    <Style Selector="vela|VelaElasticSlider.MediaDark /template/ Border#PART_Bubble">
+        <Setter Property="Background" Value="{StaticResource PlayerSliderDarkBubbleBgBrush}" />
+    </Style>
+    <Style Selector="vela|VelaElasticSlider.MediaDark /template/ TextBlock#PART_BubbleText">
+        <Setter Property="Foreground" Value="{StaticResource PlayerSliderDarkBubbleFgBrush}" />
     </Style>
 
-    <Style Selector="Slider.Player.PlayerCompact">
-        <Setter Property="MinHeight" Value="20" />
+    <!-- Compact modifier (Tray panel & tight popovers: suppress floating bubble to avoid window edge clipping) -->
+    <Style Selector="vela|VelaElasticSlider.Compact /template/ Border#PART_Bubble">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="vela|VelaElasticSlider.Compact /template/ Border#PART_ThumbVisual">
+        <Setter Property="Width" Value="12" />
+        <Setter Property="Height" Value="12" />
     </Style>
 
-    <!-- 竖向胶囊音量条（macOS Control Center / Apple Music 风格） -->
+    <!-- =========================================================================
+         Vertical Volume Capsule Slider (Vela semantic tokens for vertical flyout)
+         ========================================================================= -->
     <Style Selector="Slider.VolumeCapsule">
         <Setter Property="Orientation" Value="Vertical" />
-        <Setter Property="Background" Value="{DynamicResource PlayerSliderTrackBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource PlayerSliderFillBrush}" />
+        <Setter Property="Background" Value="{DynamicResource VelaControlTrackBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource VelaControlFillBrush}" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Width" Value="28" />
         <Setter Property="Height" Value="112" />
@@ -228,17 +372,13 @@
                             <Track.Thumb>
                                 <Thumb Name="thumb"
                                        Width="15" Height="15"
-                                       Background="{DynamicResource PlayerSliderThumbBrush}"
-                                       BorderBrush="{DynamicResource PlayerSliderThumbBorderBrush}"
-                                       BorderThickness="1"
+                                       Background="{DynamicResource VelaControlThumbBrush}"
                                        DataContext="{TemplateBinding Value}">
                                     <Thumb.Template>
                                         <ControlTemplate>
                                             <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
                                                     CornerRadius="999"
-                                                    BoxShadow="0 2 6 0 #3A000000" />
+                                                    BoxShadow="{DynamicResource VelaControlThumbShadow}" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -259,9 +399,10 @@
         </Setter>
     </Style>
     <Style Selector="Slider.VolumeCapsule:pointerover /template/ Thumb#thumb">
-        <Setter Property="RenderTransform" Value="scale(1.1)" />
+        <Setter Property="RenderTransform" Value="scale(1.06)" />
     </Style>
     <Style Selector="Slider.VolumeCapsule:pressed /template/ Thumb#thumb">
-        <Setter Property="RenderTransform" Value="scale(1.18)" />
+        <Setter Property="RenderTransform" Value="scale(1.16)" />
     </Style>
+
 </Styles>

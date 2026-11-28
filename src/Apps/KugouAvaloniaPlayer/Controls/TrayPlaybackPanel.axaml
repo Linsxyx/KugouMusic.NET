@@ -53,6 +53,11 @@
         <Style Selector="Button.TrayHeaderCard:pointerover">
             <Setter Property="Background" Value="{DynamicResource VelaSurfaceMutedBrush}" />
         </Style>
+        <Style Selector="Button.TrayIconAction /template/ Border#PART_StateLayer,
+                         Button.TrayPlayPrimary /template/ Border#PART_StateLayer,
+                         Button.TrayHeaderCard /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
     </UserControl.Styles>
 
     <StackPanel Spacing="10" Margin="2,2,2,4">
@@ -118,14 +123,14 @@
                        FontFeatures="+tnum"
                        Foreground="{DynamicResource VelaTextMutedBrush}"
                        VerticalAlignment="Center" />
-            <Slider Grid.Column="1"
-                    Minimum="0"
-                    Maximum="{Binding Player.TotalDurationSeconds}"
-                    Value="{Binding Player.CurrentPositionSeconds}"
-                    IsSnapToTickEnabled="False"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Center"
-                    Classes="Player PlayerCompact" />
+            <vela:VelaElasticSlider Grid.Column="1"
+                                    Minimum="0"
+                                    Maximum="{Binding Player.TotalDurationSeconds}"
+                                    Value="{Binding Player.CurrentPositionSeconds, Mode=TwoWay}"
+                                    Step="0.1"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center"
+                                    Classes="MediaProgress Compact" />
             <TextBlock Grid.Column="2"
                        Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                        FontSize="10.5"
@@ -246,14 +251,13 @@
                     </Panel>
                 </Button>
 
-                <Slider Grid.Column="1"
-                        Minimum="0"
-                        Maximum="1"
-                        SmallChange="0.05"
-                        LargeChange="0.1"
-                        Value="{Binding Player.MusicVolume}"
-                        Classes="Player PlayerCompact"
-                        VerticalAlignment="Center" />
+                <vela:VelaElasticSlider Grid.Column="1"
+                                        Minimum="0"
+                                        Maximum="1"
+                                        Step="0.01"
+                                        Value="{Binding Player.MusicVolume, Mode=TwoWay}"
+                                        Classes="MediaVolume Compact"
+                                        VerticalAlignment="Center" />
 
                 <TextBlock Grid.Column="2"
                            Text="{Binding Player.MusicVolume, StringFormat='{}{0:P0}'}"

@@ -51,6 +51,9 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
+        <Style Selector="Button.DiscoverScrollButton /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
         <Style Selector="Button.DiscoverScrollButton:pointerover">
             <Setter Property="Background" Value="{DynamicResource DiscoverScrollButtonHoverBrush}" />
         </Style>
@@ -60,9 +63,22 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.TopRecommendCard /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="Button.TopRecommendCard:pointerover">
-            <Setter Property="RenderTransform" Value="translateY(-3px)" />
+            <Setter Property="RenderTransform" Value="scale(1.02)" />
+        </Style>
+        <Style Selector="Button.TopRecommendCard:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.985)" />
         </Style>
 
         <Style Selector="Button.RankFeatureCard">
@@ -71,9 +87,22 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.RankFeatureCard /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="Button.RankFeatureCard:pointerover">
-            <Setter Property="RenderTransform" Value="translateY(-2px)" />
+            <Setter Property="RenderTransform" Value="scale(1.015)" />
+        </Style>
+        <Style Selector="Button.RankFeatureCard:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.99)" />
         </Style>
     </UserControl.Styles>
 

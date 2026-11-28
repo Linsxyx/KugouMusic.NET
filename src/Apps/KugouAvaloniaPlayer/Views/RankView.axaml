@@ -16,7 +16,7 @@
             <Setter Property="Margin" Value="0,0,14,14" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="RenderTransformOrigin" Value="50%,50%" />
-            <Setter Property="RenderTransform" Value="translateY(0px) scale(1)" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
             <Setter Property="Transitions">
                 <Transitions>
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" />
@@ -24,12 +24,16 @@
             </Setter>
         </Style>
 
+        <Style Selector="Button.RankCompactCard /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
         <Style Selector="Button.RankCompactCard:pointerover">
-            <Setter Property="RenderTransform" Value="translateY(-3px) scale(1.03)" />
+            <Setter Property="RenderTransform" Value="scale(1.025)" />
         </Style>
 
         <Style Selector="Button.RankCompactCard:pressed">
-            <Setter Property="RenderTransform" Value="translateY(0px) scale(0.98)" />
+            <Setter Property="RenderTransform" Value="scale(0.98)" />
         </Style>
     </UserControl.Styles>
 

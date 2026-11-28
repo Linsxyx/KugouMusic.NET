@@ -27,7 +27,7 @@
                     <TextBlock Classes="RowHint" Text="负值左移，正值右移；方向键每次调整 1 像素。" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="RowSlider">
-                    <Slider Minimum="-200" Maximum="200" TickFrequency="1" SmallChange="1" LargeChange="20" IsSnapToTickEnabled="True" Value="{Binding TaskbarLyricsHorizontalOffset, Mode=TwoWay}" />
+                    <vela:VelaElasticSlider Classes="Inline" Minimum="-200" Maximum="200" Step="1" ValueSuffix=" px" Value="{Binding TaskbarLyricsHorizontalOffset, Mode=TwoWay}" />
                     <TextBlock Classes="RowValue" Text="{Binding TaskbarLyricsHorizontalOffset, StringFormat={}{0} px}" />
                 </StackPanel>
             </localControls:SettingsRow>

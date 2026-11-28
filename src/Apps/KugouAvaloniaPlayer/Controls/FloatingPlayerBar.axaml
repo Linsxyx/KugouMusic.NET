@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
@@ -99,6 +100,10 @@
             <Setter Property="Background" Value="#25FFFFFF" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.BarBtn /template/ Border#PART_StateLayer,
+                         Button.BarPlayBtn /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
         </Style>
         <Style Selector="Button.BarPlayBtn:pointerover">
             <Setter Property="Background" Value="#38FFFFFF" />
@@ -322,14 +327,14 @@
                            FontFamily="Monospace"
                            Classes="BarTime"
                            VerticalAlignment="Center" />
-                <Slider x:Name="ProgressSlider"
-                        Grid.Column="1"
-                        Minimum="0"
-                        Maximum="{Binding Player.TotalDurationSeconds}"
-                        Value="{Binding Player.CurrentPositionSeconds}"
-                        IsSnapToTickEnabled="False"
-                        Classes="Player PlayerDark PlayerCompact"
-                        VerticalAlignment="Center" />
+                <vela:VelaElasticSlider x:Name="ProgressSlider"
+                                        Grid.Column="1"
+                                        Minimum="0"
+                                        Maximum="{Binding Player.TotalDurationSeconds}"
+                                        Value="{Binding Player.CurrentPositionSeconds, Mode=TwoWay}"
+                                        Step="0.1"
+                                        Classes="MediaProgress MediaDark"
+                                        VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2"
                            Text="{Binding Player.TotalDurationSeconds, Converter={StaticResource SecondsToTimeConverter}}"
                            FontSize="11"

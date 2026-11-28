@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media;
 using AvaloniaSilkEffects;
 using KugouAvaloniaPlayer.Models;
 
@@ -51,9 +50,5 @@ public partial class SilkNowPlayingThemeShell : UserControl
         ControlBar.Classes.Add(style);
         SettingsTitle.Text = title;
         ToolTip.SetTip(SettingsButton, title);
-        SettingsGlass.Background = SettingsButtonGlass.Background =
-            Brush.Parse(Preset == NowPlayingThemePreset.Tempera ? "#E509090B" : "#E5121928");
-        LatentSelectionDot.Background = CoverSelectionDot.Background =
-            Brush.Parse(Preset == NowPlayingThemePreset.Tempera ? "#FFF4F4F5" : "#FF8EA0C6");
     }
 }

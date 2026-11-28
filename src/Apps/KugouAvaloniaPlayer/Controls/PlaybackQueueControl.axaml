@@ -65,6 +65,10 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Foreground" Value="{DynamicResource VelaTextSecondaryBrush}" />
         </Style>
+        <Style Selector="Button.QueueAction /template/ Border#PART_StateLayer,
+                         Button.QueueClearButton /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
         <Style Selector="Button.QueueClearButton:pointerover">
             <Setter Property="Background" Value="{DynamicResource VelaDangerSubtleBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource VelaDangerBrush}" />

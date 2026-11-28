@@ -116,6 +116,12 @@
         <Style Selector="Button.fm-inline-icon:pointerover">
             <Setter Property="Background" Value="#2EFFFFFF" />
         </Style>
+        <Style Selector="Button.fm-glass-icon /template/ Border#PART_StateLayer,
+                         Button.fm-pool-toggle /template/ Border#PART_StateLayer,
+                         Button.fm-play-fab /template/ Border#PART_StateLayer,
+                         Button.fm-inline-icon /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
     </UserControl.Styles>
 
     <Grid Margin="15">

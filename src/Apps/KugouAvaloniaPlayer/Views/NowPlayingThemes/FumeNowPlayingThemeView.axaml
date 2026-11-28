@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
@@ -7,378 +8,362 @@
              x:DataType="vm:NowPlayingViewModel">
 
     <UserControl.Styles>
-        <Style Selector="Border.FumeGlass">
-            <Setter Property="Background" Value="#E5121928" />
-            <Setter Property="BorderBrush" Value="#28F2EBDD" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="24" />
-            <Setter Property="BoxShadow" Value="0 18 50 0 #66000000" />
-        </Style>
         <Style Selector="TextBlock.FumeSettingsLabel">
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontSize" Value="12.5" />
             <Setter Property="Foreground" Value="#DDF2EBDD" />
         </Style>
         <Style Selector="TextBlock.FumeSettingsValue">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontFamily" Value="Monospace" />
-            <Setter Property="Foreground" Value="#B8D6A91F" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontFeatures" Value="+tnum" />
+            <Setter Property="Foreground" Value="#C8D6A91F" />
         </Style>
-        <Style Selector="Button.FumeSegment">
-            <Setter Property="Background" Value="#14FFFFFF" />
-            <Setter Property="Foreground" Value="#DDF2EBDD" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="12,7" />
+        <Style Selector="Button.ThemeGearTrigger">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
         </Style>
-        <Style Selector="Button.FumeSegment:pointerover">
-            <Setter Property="Background" Value="#25D6A91F" />
+        <Style Selector="Button.ThemeGearTrigger /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Button.ThemeGearTrigger:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+        </Style>
+        <Style Selector="Button.ThemeGearTrigger:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.95)" />
         </Style>
     </UserControl.Styles>
 
-    <Grid ClipToBounds="True">
-        <!-- The shared latent GL layer owns material and darkening. -->
+    <ThemeVariantScope RequestedThemeVariant="Dark">
+        <Grid ClipToBounds="True">
+            <!-- The shared latent GL layer owns material and darkening. -->
 
-        <controls:NativeResolutionHost IsHitTestVisible="False">
-            <controls:FumeVisualizerControl
-                x:Name="FumeSurface"
-                Player="{Binding Player}"
-                IsActive="{Binding IsOpen}"
-                LyricFontFamily="{Binding LyricFontFamily}"
-                LyricColor="{Binding LyricColor}"
-                BackgroundObjectOpacity="{Binding FumeTuning.BackgroundObjectOpacity}"
-                TextHoldRatio="{Binding FumeTuning.TextHoldRatio}"
-                CameraTrackingMode="{Binding FumeTuning.CameraTrackingMode}"
-                CameraSpeed="{Binding FumeTuning.CameraSpeed}"
-                GlowIntensity="{Binding FumeTuning.GlowIntensity}"
-                HeroScale="{Binding FumeTuning.HeroScale}"
-                ParallaxEnabled="{Binding FumeParallaxTuning.Enabled}"
-                ParallaxMaxTilt="{Binding FumeParallaxTuning.MaxTilt}"
-                ParallaxResponse="{Binding FumeParallaxTuning.Response}"
-                ParallaxOriginX="{Binding FumeParallaxTuning.OriginX}"
-                ParallaxOriginY="{Binding FumeParallaxTuning.OriginY}"
-                IsHitTestVisible="False" />
-        </controls:NativeResolutionHost>
+            <controls:NativeResolutionHost IsHitTestVisible="False">
+                <controls:FumeVisualizerControl
+                    x:Name="FumeSurface"
+                    Player="{Binding Player}"
+                    IsActive="{Binding IsOpen}"
+                    LyricFontFamily="{Binding LyricFontFamily}"
+                    LyricColor="{Binding LyricColor}"
+                    BackgroundObjectOpacity="{Binding FumeTuning.BackgroundObjectOpacity}"
+                    TextHoldRatio="{Binding FumeTuning.TextHoldRatio}"
+                    CameraTrackingMode="{Binding FumeTuning.CameraTrackingMode}"
+                    CameraSpeed="{Binding FumeTuning.CameraSpeed}"
+                    GlowIntensity="{Binding FumeTuning.GlowIntensity}"
+                    HeroScale="{Binding FumeTuning.HeroScale}"
+                    ParallaxEnabled="{Binding FumeParallaxTuning.Enabled}"
+                    ParallaxMaxTilt="{Binding FumeParallaxTuning.MaxTilt}"
+                    ParallaxResponse="{Binding FumeParallaxTuning.Response}"
+                    ParallaxOriginX="{Binding FumeParallaxTuning.OriginX}"
+                    ParallaxOriginY="{Binding FumeParallaxTuning.OriginY}" />
+            </controls:NativeResolutionHost>
 
-        <TextBlock Text="{Binding #FumeSurface.LastError}"
-                   Foreground="#FFFFD4C4"
-                   Background="#E0201010"
-                   TextWrapping="Wrap"
-                   MaxWidth="720"
-                   Margin="24"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Top"
-                   IsHitTestVisible="False" />
+            <TextBlock Text="{Binding #FumeSurface.LastError}"
+                       Foreground="#FFFFD4C4"
+                       Background="#E0201010"
+                       TextWrapping="Wrap"
+                       MaxWidth="720"
+                       Margin="24"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Top"
+                       IsHitTestVisible="False" />
 
-        <TextBlock Text="等待歌词排版"
-                   FontSize="16"
-                   Foreground="#88F2EBDD"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   IsVisible="{Binding !Player.RenderLyricLines.Count}" />
+            <TextBlock Text="等待歌词排版"
+                       FontSize="16"
+                       Foreground="#88F2EBDD"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding !Player.RenderLyricLines.Count}" />
 
-        <!-- Fume keeps the article itself non-interactive; translation stays in a quiet subtitle rail.
-             Auto rows keep the subtitle 10 px above the bar throughout its height animation. -->
-        <Grid RowDefinitions="Auto,Auto"
-              Margin="0,0,0,26"
-              HorizontalAlignment="Center"
-              VerticalAlignment="Bottom">
-            <Grid Margin="0,0,0,10">
-                <Border Classes="FumeGlass"
-                        Padding="18,10"
-                        MaxWidth="680"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Bottom"
-                        IsVisible="{Binding IsTranslationVisible}">
-                    <TextBlock Text="{Binding Player.CurrentLyricLine.Translation}"
-                               FontSize="14"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap"
-                               Foreground="#D0D6A91F" />
-                </Border>
+            <!-- Fume keeps the article itself non-interactive; translation stays in a quiet subtitle rail.
+                 Auto rows keep the subtitle 10 px above the bar throughout its height animation. -->
+            <Grid RowDefinitions="Auto,Auto"
+                  Margin="0,0,0,26"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Bottom">
+                <Grid Margin="0,0,0,10">
+                    <vela:VelaGlassCard CornerRadius="16"
+                                        Padding="18,10"
+                                        BlurRadius="32"
+                                        TintLevel="Standard"
+                                        MaxWidth="680"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Bottom"
+                                        IsVisible="{Binding IsTranslationVisible}">
+                        <TextBlock Text="{Binding Player.CurrentLyricLine.Translation}"
+                                   FontSize="14"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Foreground="#D0D6A91F" />
+                    </vela:VelaGlassCard>
 
-                <Border Classes="FumeGlass"
-                        Padding="18,10"
-                        MaxWidth="680"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Bottom"
-                        IsVisible="{Binding IsRomanizationVisible}">
-                    <TextBlock Text="{Binding Player.CurrentLyricLine.Romanization}"
-                               FontSize="14"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap"
-                               Foreground="#D0D6A91F" />
-                </Border>
+                    <vela:VelaGlassCard CornerRadius="16"
+                                        Padding="18,10"
+                                        BlurRadius="32"
+                                        TintLevel="Standard"
+                                        MaxWidth="680"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Bottom"
+                                        IsVisible="{Binding IsRomanizationVisible}">
+                        <TextBlock Text="{Binding Player.CurrentLyricLine.Romanization}"
+                                   FontSize="14"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Foreground="#D0D6A91F" />
+                    </vela:VelaGlassCard>
+                </Grid>
+
+                <controls:FloatingPlayerBar Grid.Row="1"
+                                            Classes="Fume"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Bottom" />
             </Grid>
 
-            <controls:FloatingPlayerBar Grid.Row="1"
-                                        Classes="Fume"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Bottom" />
+            <Button Classes="ThemeGearTrigger"
+                    Margin="0,0,28,26"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    ToolTip.Tip="Fume 参数">
+                <Button.Flyout>
+                    <Flyout Placement="TopEdgeAlignedRight"
+                            VerticalOffset="-10"
+                            FlyoutPresenterTheme="{StaticResource TransparentFlyoutPresenterTheme}">
+                        <ThemeVariantScope RequestedThemeVariant="Dark">
+                            <vela:VelaGlassCard Width="344"
+                                                MaxHeight="640"
+                                                CornerRadius="20"
+                                                Padding="18"
+                                                BlurRadius="44"
+                                                TintLevel="HighContrast">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel Spacing="14">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="Fume 参数"
+                                                           FontSize="15.5"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#FFF2EBDD" />
+                                                <TextBlock Text="摄影机、辉光、排版与视差"
+                                                           FontSize="11.5"
+                                                           Foreground="#8FF2EBDD" />
+                                            </StackPanel>
+                                            <vela:VelaButton Grid.Column="1"
+                                                             Variant="Secondary"
+                                                             Size="Small"
+                                                             Command="{Binding FumeTuning.ResetCommand}"
+                                                             Content="恢复默认" />
+                                        </Grid>
+
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Classes="FumeSettingsLabel" Text="背景材质" />
+                                            <vela:VelaSegmentedControl HorizontalAlignment="Stretch"
+                                                                       SelectedIndex="{Binding FoliaBackgroundModeIndex, Mode=TwoWay}">
+                                                <vela:VelaSegmentedItem Content="动态材质" />
+                                                <vela:VelaSegmentedItem Content="模糊封面" />
+                                            </vela:VelaSegmentedControl>
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="世界物体透明度" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeTuning.BackgroundObjectOpacity, StringFormat={}{0:P0}}" />
+                                            </Grid>
+                                            <vela:VelaElasticSlider Classes="InlinePercent MediaDark"
+                                                                    Minimum="0"
+                                                                    Maximum="1"
+                                                                    Step="0.05"
+                                                                    Value="{Binding FumeTuning.BackgroundObjectOpacity, Mode=TwoWay}" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="文字停留比例" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeTuning.TextHoldRatio, StringFormat={}{0:P0}}" />
+                                            </Grid>
+                                            <vela:VelaElasticSlider Classes="InlinePercent MediaDark"
+                                                                    Minimum="0"
+                                                                    Maximum="1"
+                                                                    Step="0.05"
+                                                                    Value="{Binding FumeTuning.TextHoldRatio, Mode=TwoWay}" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Classes="FumeSettingsLabel" Text="摄影机追焦方式" />
+                                            <vela:VelaSegmentedControl HorizontalAlignment="Stretch"
+                                                                       SelectedIndex="{Binding FumeTuning.CameraTrackingModeIndex, Mode=TwoWay}">
+                                                <vela:VelaSegmentedItem Content="定格" />
+                                                <vela:VelaSegmentedItem Content="平滑" />
+                                            </vela:VelaSegmentedControl>
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="摄影机移动速度" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeTuning.CameraSpeed, StringFormat={}{0:F2}x}" />
+                                            </Grid>
+                                            <vela:VelaElasticSlider Classes="Inline MediaDark"
+                                                                    Minimum="0.55"
+                                                                    Maximum="1.85"
+                                                                    Step="0.05"
+                                                                    ValueSuffix="x"
+                                                                    Value="{Binding FumeTuning.CameraSpeed, Mode=TwoWay}" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="当前句辉光强度" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeTuning.GlowIntensity, StringFormat={}{0:F2}x}" />
+                                            </Grid>
+                                            <vela:VelaElasticSlider Classes="Inline MediaDark"
+                                                                    Minimum="0"
+                                                                    Maximum="1.8"
+                                                                    Step="0.05"
+                                                                    ValueSuffix="x"
+                                                                    Value="{Binding FumeTuning.GlowIntensity, Mode=TwoWay}" />
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="FumeSettingsLabel" Text="大标题比例" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="FumeSettingsValue"
+                                                           Text="{Binding FumeTuning.HeroScale, StringFormat={}{0:F2}x}" />
+                                            </Grid>
+                                            <vela:VelaElasticSlider Classes="Inline MediaDark"
+                                                                    Minimum="0.82"
+                                                                    Maximum="1.32"
+                                                                    Step="0.02"
+                                                                    ValueSuffix="x"
+                                                                    Value="{Binding FumeTuning.HeroScale, Mode=TwoWay}" />
+                                        </StackPanel>
+
+                                        <Border Height="1" Background="{DynamicResource VelaGlassDividerBrush}" Margin="0,2" />
+
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="鼠标视差"
+                                                           FontSize="14"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#FFF2EBDD" />
+                                                <TextBlock Text="倾斜、响应与视觉中心"
+                                                           FontSize="11.5"
+                                                           Foreground="#8FF2EBDD" />
+                                            </StackPanel>
+                                            <vela:VelaButton Grid.Column="1"
+                                                             Variant="Secondary"
+                                                             Size="Small"
+                                                             Command="{Binding FumeParallaxTuning.ResetCommand}"
+                                                             Content="恢复默认"
+                                                             IsEnabled="{Binding FumeParallaxTuning.Enabled}" />
+                                        </Grid>
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock Classes="FumeSettingsLabel"
+                                                       Text="启用视差效果"
+                                                       VerticalAlignment="Center" />
+                                            <vela:VelaSwitch Grid.Column="1"
+                                                             IsChecked="{Binding FumeParallaxTuning.Enabled, Mode=TwoWay}" />
+                                        </Grid>
+
+                                        <Border IsEnabled="{Binding FumeParallaxTuning.Enabled}">
+                                            <StackPanel Spacing="12">
+                                                <StackPanel Spacing="4">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="FumeSettingsLabel" Text="最大倾斜角度" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="FumeSettingsValue"
+                                                                   Text="{Binding FumeParallaxTuning.MaxTilt, StringFormat={}{0:F0}°}" />
+                                                    </Grid>
+                                                    <vela:VelaElasticSlider Classes="Inline MediaDark"
+                                                                            Minimum="0"
+                                                                            Maximum="30"
+                                                                            Step="1"
+                                                                            ValueSuffix="°"
+                                                                            Value="{Binding FumeParallaxTuning.MaxTilt, Mode=TwoWay}" />
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="4">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="FumeSettingsLabel" Text="响应速度" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="FumeSettingsValue"
+                                                                   Text="{Binding FumeParallaxTuning.Response, StringFormat={}{0:F1}}" />
+                                                    </Grid>
+                                                    <vela:VelaElasticSlider Classes="Inline MediaDark"
+                                                                            Minimum="0.5"
+                                                                            Maximum="20"
+                                                                            Step="0.5"
+                                                                            Value="{Binding FumeParallaxTuning.Response, Mode=TwoWay}" />
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="4">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="FumeSettingsLabel" Text="中心 X" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="FumeSettingsValue"
+                                                                   Text="{Binding FumeParallaxTuning.OriginX, StringFormat={}{0:P0}}" />
+                                                    </Grid>
+                                                    <vela:VelaElasticSlider Classes="InlinePercent MediaDark"
+                                                                            Minimum="0"
+                                                                            Maximum="1"
+                                                                            Step="0.01"
+                                                                            Value="{Binding FumeParallaxTuning.OriginX, Mode=TwoWay}" />
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="4">
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <TextBlock Classes="FumeSettingsLabel" Text="中心 Y" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="FumeSettingsValue"
+                                                                   Text="{Binding FumeParallaxTuning.OriginY, StringFormat={}{0:P0}}" />
+                                                    </Grid>
+                                                    <vela:VelaElasticSlider Classes="InlinePercent MediaDark"
+                                                                            Minimum="0"
+                                                                            Maximum="1"
+                                                                            Step="0.01"
+                                                                            Value="{Binding FumeParallaxTuning.OriginY, Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </vela:VelaGlassCard>
+                        </ThemeVariantScope>
+                    </Flyout>
+                </Button.Flyout>
+
+                <vela:VelaGlassCard Width="44"
+                                    Height="44"
+                                    CornerRadius="22"
+                                    Padding="0"
+                                    BlurRadius="36"
+                                    TintLevel="Standard">
+                    <PathIcon Data="{DynamicResource VelaIconSliders}"
+                              Foreground="#F2EBDD"
+                              Width="17"
+                              Height="17"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+                </vela:VelaGlassCard>
+            </Button>
         </Grid>
-
-        <Button Classes="Basic"
-                Cursor="Hand"
-                Width="48"
-                Height="48"
-                Margin="0,0,28,26"
-                Padding="0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                ToolTip.Tip="Fume 参数">
-            <Button.Flyout>
-                <Flyout Placement="TopEdgeAlignedRight">
-                    <Border Classes="FumeGlass"
-                            Width="336"
-                            MaxHeight="650"
-                            Padding="18">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel Spacing="16">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <StackPanel Spacing="3">
-                                        <TextBlock Text="Fume 参数"
-                                                   FontSize="16"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#FFF2EBDD" />
-                                        <TextBlock Text="摄影机、辉光、排版与视差"
-                                                   FontSize="11"
-                                                   Foreground="#8FF2EBDD" />
-                                    </StackPanel>
-                                    <Button Grid.Column="1"
-                                            Classes="Basic FumeSegment"
-                                            Command="{Binding FumeTuning.ResetCommand}"
-                                            Content="恢复默认"
-                                            Cursor="Hand" />
-                                </Grid>
-
-                                <StackPanel Spacing="8">
-                                    <TextBlock Classes="FumeSettingsLabel" Text="背景材质" />
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                        <Button Classes="FumeSegment"
-                                                Command="{Binding UseLatentMaterialBackgroundCommand}"
-                                                Cursor="Hand">
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <Border Width="6"
-                                                        Height="6"
-                                                        CornerRadius="3"
-                                                        Background="#FFD6A91F"
-                                                        IsVisible="{Binding IsLatentMaterialBackground}" />
-                                                <TextBlock Text="动态材质" />
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Grid.Column="1"
-                                                Classes="FumeSegment"
-                                                Command="{Binding UseBlurredCoverBackgroundCommand}"
-                                                Cursor="Hand">
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <Border Width="6"
-                                                        Height="6"
-                                                        CornerRadius="3"
-                                                        Background="#FFD6A91F"
-                                                        IsVisible="{Binding IsBlurredCoverBackground}" />
-                                                <TextBlock Text="模糊封面" />
-                                            </StackPanel>
-                                        </Button>
-                                    </Grid>
-                                </StackPanel>
-
-                                <StackPanel Spacing="7">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Classes="FumeSettingsLabel" Text="世界物体透明度" />
-                                        <TextBlock Grid.Column="1"
-                                                   Classes="FumeSettingsValue"
-                                                   Text="{Binding FumeTuning.BackgroundObjectOpacity, StringFormat={}{0:P0}}" />
-                                    </Grid>
-                                    <Slider Minimum="0"
-                                            Maximum="1"
-                                            TickFrequency="0.05"
-                                            Value="{Binding FumeTuning.BackgroundObjectOpacity}" />
-                                </StackPanel>
-
-                                <StackPanel Spacing="7">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Classes="FumeSettingsLabel" Text="文字停留比例" />
-                                        <TextBlock Grid.Column="1"
-                                                   Classes="FumeSettingsValue"
-                                                   Text="{Binding FumeTuning.TextHoldRatio, StringFormat={}{0:P0}}" />
-                                    </Grid>
-                                    <Slider Minimum="0"
-                                            Maximum="1"
-                                            TickFrequency="0.05"
-                                            Value="{Binding FumeTuning.TextHoldRatio}" />
-                                </StackPanel>
-
-                                <StackPanel Spacing="8">
-                                    <TextBlock Classes="FumeSettingsLabel" Text="摄影机追焦方式" />
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                        <Button Classes="FumeSegment"
-                                                Command="{Binding FumeTuning.UseSteppedCameraCommand}"
-                                                Cursor="Hand">
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <Border Width="6"
-                                                        Height="6"
-                                                        CornerRadius="3"
-                                                        Background="#FFD6A91F"
-                                                        IsVisible="{Binding FumeTuning.IsSteppedCamera}" />
-                                                <TextBlock Text="定格" />
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Grid.Column="1"
-                                                Classes="FumeSegment"
-                                                Command="{Binding FumeTuning.UseSmoothCameraCommand}"
-                                                Cursor="Hand">
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <Border Width="6"
-                                                        Height="6"
-                                                        CornerRadius="3"
-                                                        Background="#FFD6A91F"
-                                                        IsVisible="{Binding FumeTuning.IsSmoothCamera}" />
-                                                <TextBlock Text="平滑" />
-                                            </StackPanel>
-                                        </Button>
-                                    </Grid>
-                                </StackPanel>
-
-                                <StackPanel Spacing="7">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Classes="FumeSettingsLabel" Text="摄影机移动速度" />
-                                        <TextBlock Grid.Column="1"
-                                                   Classes="FumeSettingsValue"
-                                                   Text="{Binding FumeTuning.CameraSpeed, StringFormat={}{0:F2}x}" />
-                                    </Grid>
-                                    <Slider Minimum="0.55"
-                                            Maximum="1.85"
-                                            TickFrequency="0.05"
-                                            Value="{Binding FumeTuning.CameraSpeed}" />
-                                </StackPanel>
-
-                                <StackPanel Spacing="7">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Classes="FumeSettingsLabel" Text="当前句辉光强度" />
-                                        <TextBlock Grid.Column="1"
-                                                   Classes="FumeSettingsValue"
-                                                   Text="{Binding FumeTuning.GlowIntensity, StringFormat={}{0:F2}x}" />
-                                    </Grid>
-                                    <Slider Minimum="0"
-                                            Maximum="1.8"
-                                            TickFrequency="0.05"
-                                            Value="{Binding FumeTuning.GlowIntensity}" />
-                                </StackPanel>
-
-                                <StackPanel Spacing="7">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Classes="FumeSettingsLabel" Text="大标题比例" />
-                                        <TextBlock Grid.Column="1"
-                                                   Classes="FumeSettingsValue"
-                                                   Text="{Binding FumeTuning.HeroScale, StringFormat={}{0:F2}x}" />
-                                    </Grid>
-                                    <Slider Minimum="0.82"
-                                            Maximum="1.32"
-                                            TickFrequency="0.02"
-                                            Value="{Binding FumeTuning.HeroScale}" />
-                                </StackPanel>
-
-                                <Border Height="1" Background="#20F2EBDD" Margin="0,2" />
-
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <StackPanel Spacing="3">
-                                        <TextBlock Text="鼠标视差"
-                                                   FontSize="14"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#FFF2EBDD" />
-                                        <TextBlock Text="倾斜、响应与视觉中心"
-                                                   FontSize="11"
-                                                   Foreground="#8FF2EBDD" />
-                                    </StackPanel>
-                                    <Button Grid.Column="1"
-                                            Classes="Basic FumeSegment"
-                                            Command="{Binding FumeParallaxTuning.ResetCommand}"
-                                            Content="恢复默认"
-                                            Cursor="Hand"
-                                            IsEnabled="{Binding FumeParallaxTuning.Enabled}" />
-                                </Grid>
-
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                    <TextBlock Classes="FumeSettingsLabel"
-                                               Text="启用视差效果"
-                                               VerticalAlignment="Center" />
-                                    <ToggleSwitch Grid.Column="1"
-                                                  IsChecked="{Binding FumeParallaxTuning.Enabled, Mode=TwoWay}" />
-                                </Grid>
-
-                                <Border IsEnabled="{Binding FumeParallaxTuning.Enabled}">
-                                    <StackPanel Spacing="16">
-                                        <StackPanel Spacing="7">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Classes="FumeSettingsLabel" Text="最大倾斜角度" />
-                                                <TextBlock Grid.Column="1"
-                                                           Classes="FumeSettingsValue"
-                                                           Text="{Binding FumeParallaxTuning.MaxTilt, StringFormat={}{0:F0}°}" />
-                                            </Grid>
-                                            <Slider Minimum="0"
-                                                    Maximum="30"
-                                                    TickFrequency="1"
-                                                    Value="{Binding FumeParallaxTuning.MaxTilt}" />
-                                        </StackPanel>
-
-                                        <StackPanel Spacing="7">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Classes="FumeSettingsLabel" Text="响应速度" />
-                                                <TextBlock Grid.Column="1"
-                                                           Classes="FumeSettingsValue"
-                                                           Text="{Binding FumeParallaxTuning.Response, StringFormat={}{0:F1}}" />
-                                            </Grid>
-                                            <Slider Minimum="0.5"
-                                                    Maximum="20"
-                                                    TickFrequency="0.5"
-                                                    Value="{Binding FumeParallaxTuning.Response}" />
-                                        </StackPanel>
-
-                                        <StackPanel Spacing="7">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Classes="FumeSettingsLabel" Text="中心 X" />
-                                                <TextBlock Grid.Column="1"
-                                                           Classes="FumeSettingsValue"
-                                                           Text="{Binding FumeParallaxTuning.OriginX, StringFormat={}{0:P0}}" />
-                                            </Grid>
-                                            <Slider Minimum="0"
-                                                    Maximum="1"
-                                                    TickFrequency="0.01"
-                                                    Value="{Binding FumeParallaxTuning.OriginX}" />
-                                        </StackPanel>
-
-                                        <StackPanel Spacing="7">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Classes="FumeSettingsLabel" Text="中心 Y" />
-                                                <TextBlock Grid.Column="1"
-                                                           Classes="FumeSettingsValue"
-                                                           Text="{Binding FumeParallaxTuning.OriginY, StringFormat={}{0:P0}}" />
-                                            </Grid>
-                                            <Slider Minimum="0"
-                                                    Maximum="1"
-                                                    TickFrequency="0.01"
-                                                    Value="{Binding FumeParallaxTuning.OriginY}" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Border>
-                </Flyout>
-            </Button.Flyout>
-
-            <Border Width="48"
-                    Height="48"
-                    CornerRadius="24"
-                    Background="#E5121928"
-                    BorderBrush="#35D6A91F"
-                    BorderThickness="1">
-                <kc:KugouIcon Path="/Assets/gear-svgrepo-com.svg"
-                     Foreground="#F2EBDD"
-                     Width="18"
-                     Height="18"
-                     Opacity="0.92"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
-            </Border>
-        </Button>
-    </Grid>
+    </ThemeVariantScope>
 </UserControl>

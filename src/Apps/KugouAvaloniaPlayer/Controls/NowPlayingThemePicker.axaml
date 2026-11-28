@@ -1,113 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:controls="using:KugouAvaloniaPlayer.Controls"
-             x:Class="KugouAvaloniaPlayer.Controls.NowPlayingThemePicker"
-             Width="96">
-    <UserControl.Transitions>
-        <Transitions>
-            <DoubleTransition Property="Width" Duration="0:0:0.28" Easing="CubicEaseOut" />
-        </Transitions>
-    </UserControl.Transitions>
-    <UserControl.Styles>
-        <Style Selector="Button.ThemePickerButton">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#E8FFFFFF" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Padding" Value="12,0" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}" CornerRadius="10"
-                            Padding="{TemplateBinding Padding}">
-                        <Border.Transitions>
-                            <Transitions>
-                                <BrushTransition Property="Background" Duration="0:0:0.16" />
-                            </Transitions>
-                        </Border.Transitions>
-                        <ContentPresenter Content="{TemplateBinding Content}"
-                                          VerticalAlignment="Center"
-                                          HorizontalContentAlignment="Stretch" />
-                    </Border>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        <Style Selector="Button.ThemePickerButton.selected">
-            <Setter Property="Background" Value="#24E5B96B" />
-            <Setter Property="Foreground" Value="#FFE5B96B" />
-        </Style>
-        <Style Selector="Button.ThemePickerButton:pointerover, Button.ThemePickerButton:focus-visible">
-            <Setter Property="Background" Value="#1FFFFFFF" />
-        </Style>
-        <Style Selector="Button.ThemePickerButton:pressed">
-            <Setter Property="Background" Value="#36E5B96B" />
-        </Style>
-        <Style Selector="Border#PickerBody">
-            <Setter Property="Opacity" Value="0" />
-            <Setter Property="RenderTransform" Value="translateY(-8px)" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <DoubleTransition Property="Height" Duration="0:0:0.28" Easing="CubicEaseOut" />
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.18" Easing="CubicEaseOut" />
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.28" Easing="CubicEaseOut" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="controls|NowPlayingThemePicker:expanded Border#PickerBody">
-            <Setter Property="Opacity" Value="1" />
-            <Setter Property="RenderTransform" Value="translateY(0px)" />
-        </Style>
-        <Style Selector="PathIcon#Chevron">
-            <Setter Property="RenderTransform" Value="rotate(0deg)" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.25" Easing="CubicEaseOut" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="controls|NowPlayingThemePicker:expanded PathIcon#Chevron">
-            <Setter Property="RenderTransform" Value="rotate(180deg)" />
-        </Style>
-        <Style Selector="Border#GlassTint">
-            <Setter Property="Background" Value="#00101218" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.24" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="controls|NowPlayingThemePicker:expanded Border#GlassTint">
-            <Setter Property="Background" Value="#99101218" />
-        </Style>
-    </UserControl.Styles>
-
-    <!-- 毛玻璃外观：材质定义在 Styles/NowPlayingGlassStyles.axaml，与关闭/写真模式按钮共用；
-         展开后叠加深色染色层保证列表文字可读 -->
-    <Border Classes="NowPlayingGlass">
-        <Panel>
-            <Border x:Name="GlassTint" IsHitTestVisible="False" />
-            <Border Classes="NowPlayingGlassHighlight" />
-        <StackPanel>
-            <Button x:Name="Trigger" Classes="ThemePickerButton" Height="34"
-                    Click="OnTriggerClick" AutomationProperties.Name="选择播放主题">
-                <Grid ColumnDefinitions="14,*,10">
-                    <kc:KugouIcon Path="/Assets/gear-svgrepo-com.svg"
-                         Foreground="#E5B96B" Width="14" Height="14" />
-                    <TextBlock x:Name="CurrentName" Grid.Column="1" Margin="9,0"
-                               FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <PathIcon x:Name="Chevron" Grid.Column="2" Data="{x:Static kc:KugouIcons.ChevronDown}"
-                              Width="9" Height="9" Foreground="#E5B96B" RenderTransformOrigin="50%,50%" />
-                </Grid>
-            </Button>
-            <Border x:Name="PickerBody" Height="0" ClipToBounds="True" IsEnabled="False">
-                <StackPanel Margin="6,0,6,8" VerticalAlignment="Top">
-                    <Border Height="1" Background="#26FFFFFF" Margin="8,0,8,0" />
-                    <TextBlock Text="播放主题" FontSize="10" Foreground="#80FFFFFF" Margin="12,8,0,6" />
-                    <StackPanel x:Name="Options" Spacing="2" />
-                </StackPanel>
-            </Border>
-        </StackPanel>
-        </Panel>
-    </Border>
+             xmlns:vela="using:Vela.Avalonia.Controls"
+             x:Class="KugouAvaloniaPlayer.Controls.NowPlayingThemePicker">
+    <ThemeVariantScope RequestedThemeVariant="Dark">
+        <vela:VelaGlassMenu x:Name="ThemeGlassMenu"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            TriggerSize="38"
+                            TriggerIcon="{DynamicResource VelaIconSparkles}"
+                            MenuWidth="196"
+                            MenuCornerRadius="18"
+                            BlurRadius="44"
+                            TintLevel="Standard" />
+    </ThemeVariantScope>
 </UserControl>

@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:KugouAvaloniaPlayer.Controls"
              xmlns:effects="using:AvaloniaSilkEffects"
@@ -6,132 +7,130 @@
              x:Class="KugouAvaloniaPlayer.Views.NowPlayingThemes.SilkNowPlayingThemeShell"
              x:DataType="vm:NowPlayingViewModel"
              ClipToBounds="True">
+
     <UserControl.Styles>
-        <Style Selector="Border.SilkThemeGlass">
-            <Setter Property="BorderBrush" Value="#28FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="20" />
-            <Setter Property="BoxShadow" Value="0 18 50 0 #66000000" />
-        </Style>
         <Style Selector="TextBlock.SilkThemeSettingsLabel">
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontSize" Value="12.5" />
             <Setter Property="Foreground" Value="#DDE8ECF3" />
         </Style>
-        <Style Selector="Button.SilkThemeSegment">
-            <Setter Property="Background" Value="#14FFFFFF" />
-            <Setter Property="Foreground" Value="#DDE8ECF3" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="10,7" />
+        <Style Selector="Button.ThemeGearTrigger">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="22" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="CubicEaseOut" />
+                </Transitions>
+            </Setter>
         </Style>
-        <Style Selector="Button.SilkThemeSegment:pointerover">
-            <Setter Property="Background" Value="#25FFFFFF" />
+        <Style Selector="Button.ThemeGearTrigger /template/ Border#PART_StateLayer">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Button.ThemeGearTrigger:pointerover">
+            <Setter Property="RenderTransform" Value="scale(1.06)" />
+        </Style>
+        <Style Selector="Button.ThemeGearTrigger:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.95)" />
         </Style>
     </UserControl.Styles>
-    <Grid x:Name="EffectViewport" ClipToBounds="True">
-        <controls:NativeResolutionHost>
-            <effects:SilkEffectControl x:Name="EffectSurface"
-                                       HorizontalAlignment="Stretch"
-                                       VerticalAlignment="Stretch"
-                                       ClipToBounds="True"
-                                       ClearColor="#00000000"
-                                       RenderMode="Continuous"
-                                       TargetFrameRate="60" />
-        </controls:NativeResolutionHost>
 
-        <Border x:Name="DiagnosticOverlayControl"
-                Margin="40"
-                Padding="18,14"
-                MaxWidth="440"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                Background="#D9141720"
-                BorderBrush="#55FFFFFF"
-                BorderThickness="1"
-                CornerRadius="12"
-                IsHitTestVisible="False">
-            <TextBlock x:Name="DiagnosticTextControl"
-                       Text="正在初始化"
-                       Foreground="White"
-                       TextAlignment="Center"
-                       TextWrapping="Wrap" />
-        </Border>
+    <ThemeVariantScope RequestedThemeVariant="Dark">
+        <Grid x:Name="EffectViewport" ClipToBounds="True">
+            <controls:NativeResolutionHost>
+                <effects:SilkEffectControl x:Name="EffectSurface"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch"
+                                           ClipToBounds="True"
+                                           ClearColor="#00000000"
+                                           RenderMode="Continuous"
+                                           TargetFrameRate="60" />
+            </controls:NativeResolutionHost>
 
-        <controls:FloatingPlayerBar x:Name="ControlBar"
-                                    Margin="0,0,0,26"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Bottom" />
-
-        <Button x:Name="SettingsButton" Classes="Basic"
-                Cursor="Hand"
-                Width="48"
-                Height="48"
-                Margin="0,0,28,26"
-                Padding="0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Bottom"
-                ToolTip.Tip="绘光 背景">
-            <Button.Flyout>
-                <Flyout Placement="TopEdgeAlignedRight">
-                    <Border x:Name="SettingsGlass" Classes="SilkThemeGlass"
-                            Width="300"
-                            Padding="18">
-                        <StackPanel Spacing="14">
-                            <StackPanel Spacing="3">
-                                <TextBlock x:Name="SettingsTitle" Text="绘光 背景"
-                                           FontSize="16"
-                                           FontWeight="SemiBold"
-                                           Foreground="#FFE8ECF3" />
-                                <TextBlock Text="选择动态材质或原来的模糊封面"
-                                           FontSize="11"
-                                           Foreground="#8FE8ECF3" />
-                            </StackPanel>
-                            <StackPanel Spacing="8">
-                                <TextBlock Classes="SilkThemeSettingsLabel" Text="背景材质" />
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                    <Button Classes="SilkThemeSegment"
-                                            Command="{Binding UseLatentMaterialBackgroundCommand}"
-                                            Cursor="Hand">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Border x:Name="LatentSelectionDot" Width="6"
-                                                    Height="6"
-                                                    CornerRadius="3"
-                                                    Background="#FF8EA0C6"
-                                                    IsVisible="{Binding IsLatentMaterialBackground}" />
-                                            <TextBlock Text="动态材质" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Grid.Column="1"
-                                            Classes="SilkThemeSegment"
-                                            Command="{Binding UseBlurredCoverBackgroundCommand}"
-                                            Cursor="Hand">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Border x:Name="CoverSelectionDot" Width="6"
-                                                    Height="6"
-                                                    CornerRadius="3"
-                                                    Background="#FF8EA0C6"
-                                                    IsVisible="{Binding IsBlurredCoverBackground}" />
-                                            <TextBlock Text="模糊封面" />
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </Flyout>
-            </Button.Flyout>
-
-            <Border x:Name="SettingsButtonGlass" Width="48"
-                    Height="48"
-                    CornerRadius="24"
-                    Background="#E5121928"
-                    BorderBrush="#35FFFFFF"
-                    BorderThickness="1">
-                <TextBlock Text="⚙"
-                           FontSize="18"
-                           Foreground="#E8ECF3"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center" />
+            <Border x:Name="DiagnosticOverlayControl"
+                    Margin="40"
+                    Padding="18,14"
+                    MaxWidth="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#D9141720"
+                    BorderBrush="#55FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    IsHitTestVisible="False">
+                <TextBlock x:Name="DiagnosticTextControl"
+                           Text="正在初始化"
+                           Foreground="White"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
             </Border>
-        </Button>
-    </Grid>
+
+            <controls:FloatingPlayerBar x:Name="ControlBar"
+                                        Margin="0,0,0,26"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Bottom" />
+
+            <Button x:Name="SettingsButton"
+                    Classes="ThemeGearTrigger"
+                    Margin="0,0,28,26"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    ToolTip.Tip="绘光 背景">
+                <Button.Flyout>
+                    <Flyout Placement="TopEdgeAlignedRight"
+                            VerticalOffset="-10"
+                            FlyoutPresenterTheme="{StaticResource TransparentFlyoutPresenterTheme}">
+                        <ThemeVariantScope RequestedThemeVariant="Dark">
+                            <vela:VelaGlassCard Width="304"
+                                                CornerRadius="20"
+                                                Padding="18"
+                                                BlurRadius="44"
+                                                TintLevel="HighContrast">
+                                <StackPanel Spacing="14">
+                                    <StackPanel Spacing="3">
+                                        <TextBlock x:Name="SettingsTitle"
+                                                   Text="绘光 背景"
+                                                   FontSize="15.5"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#FFE8ECF3" />
+                                        <TextBlock Text="选择动态材质或原来的模糊封面"
+                                                   FontSize="11.5"
+                                                   Foreground="#8FE8ECF3" />
+                                    </StackPanel>
+
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Classes="SilkThemeSettingsLabel" Text="背景材质" />
+                                        <vela:VelaSegmentedControl HorizontalAlignment="Stretch"
+                                                                   SelectedIndex="{Binding FoliaBackgroundModeIndex, Mode=TwoWay}">
+                                            <vela:VelaSegmentedItem Content="动态材质" />
+                                            <vela:VelaSegmentedItem Content="模糊封面" />
+                                        </vela:VelaSegmentedControl>
+                                    </StackPanel>
+                                </StackPanel>
+                            </vela:VelaGlassCard>
+                        </ThemeVariantScope>
+                    </Flyout>
+                </Button.Flyout>
+
+                <vela:VelaGlassCard Width="44"
+                                    Height="44"
+                                    CornerRadius="22"
+                                    Padding="0"
+                                    BlurRadius="36"
+                                    TintLevel="Standard">
+                    <PathIcon Data="{DynamicResource VelaIconSliders}"
+                              Foreground="#E8ECF3"
+                              Width="17"
+                              Height="17"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+                </vela:VelaGlassCard>
+            </Button>
+        </Grid>
+    </ThemeVariantScope>
 </UserControl>

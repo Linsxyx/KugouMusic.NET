@@ -140,6 +140,7 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(IsFoliaBlurredCoverActive))]
     [NotifyPropertyChangedFor(nameof(IsLatentMaterialBackground))]
     [NotifyPropertyChangedFor(nameof(IsBlurredCoverBackground))]
+    [NotifyPropertyChangedFor(nameof(FoliaBackgroundModeIndex))]
     public partial FoliaVisualizerBackgroundMode FoliaBackgroundMode { get; set; } =
         FoliaVisualizerBackgroundMode.LatentMaterial;
 
@@ -257,6 +258,14 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
     public bool IsBlurredCoverBackground =>
         FoliaBackgroundMode == FoliaVisualizerBackgroundMode.BlurredCover;
 
+    public int FoliaBackgroundModeIndex
+    {
+        get => IsBlurredCoverBackground ? 1 : 0;
+        set => FoliaBackgroundMode = value == 1
+            ? FoliaVisualizerBackgroundMode.BlurredCover
+            : FoliaVisualizerBackgroundMode.LatentMaterial;
+    }
+
     public bool IsStandardLayoutVisible => IsStandardTheme && !IsPortraitModeEnabled;
 
     public string CurrentThemePresetName =>
@@ -351,6 +360,12 @@ public partial class NowPlayingViewModel : ViewModelBase, IDisposable
             NowPlayingLyricDisplayMode.LyricsOnly => NowPlayingLyricDisplayMode.LyricsWithRomanization,
             _ => NowPlayingLyricDisplayMode.LyricsWithTranslation
         };
+    }
+
+    [RelayCommand]
+    private void SetLyricDisplayMode(NowPlayingLyricDisplayMode mode)
+    {
+        NowPlayingLyricDisplayMode = mode;
     }
 
     [RelayCommand]
