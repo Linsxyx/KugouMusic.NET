@@ -15,13 +15,48 @@ namespace KugouAvaloniaPlayer.ViewModels;
 
 public partial class PlayerViewModel
 {
+    public bool CanReorderDisplayPlaybackQueue => !IsPersonalFmSessionActive && DisplayPlaybackQueue.Count > 1;
+
     private void OnPlaybackQueueCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         if (IsPersonalFmSessionActive)
             return;
 
+        if (e.Action == NotifyCollectionChangedAction.Move &&
+            e.OldStartingIndex >= 0 &&
+            e.NewStartingIndex >= 0 &&
+            e.OldItems?.Count == 1)
+        {
+            SyncDisplayPlaybackQueueMove(e.OldStartingIndex, e.NewStartingIndex);
+            SchedulePlaybackQueueCacheSave();
+            return;
+        }
+
         SyncDisplayPlaybackQueue();
         SchedulePlaybackQueueCacheSave();
+    }
+
+    private void SyncDisplayPlaybackQueueMove(int oldIndex, int newIndex)
+    {
+        void Update()
+        {
+            if (IsPersonalFmSessionActive ||
+                DisplayPlaybackQueue.Count != _queueManager.PlaybackQueue.Count ||
+                oldIndex < 0 || oldIndex >= DisplayPlaybackQueue.Count ||
+                newIndex < 0 || newIndex >= DisplayPlaybackQueue.Count)
+            {
+                SyncDisplayPlaybackQueue();
+                return;
+            }
+
+            if (oldIndex != newIndex)
+                DisplayPlaybackQueue.Move(oldIndex, newIndex);
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+            Update();
+        else
+            Dispatcher.UIThread.Post(Update);
     }
 
     private void SyncDisplayPlaybackQueue()
@@ -36,12 +71,33 @@ public partial class PlayerViewModel
 
             OnPropertyChanged(nameof(DisplayPlaybackQueueCount));
             OnPropertyChanged(nameof(HasDisplayPlaybackQueue));
+            OnPropertyChanged(nameof(CanReorderDisplayPlaybackQueue));
         }
 
         if (Dispatcher.UIThread.CheckAccess())
             Update();
         else
             Dispatcher.UIThread.Post(Update);
+    }
+
+    public bool MoveQueueItem(int oldIndex, int newIndex)
+    {
+        if (IsPersonalFmSessionActive)
+            return false;
+
+        var previousUpcoming = GetUpcomingSong();
+        if (!_queueManager.Move(oldIndex, newIndex))
+            return false;
+
+        var currentUpcoming = GetUpcomingSong();
+        if (!ReferenceEquals(previousUpcoming, currentUpcoming))
+        {
+            ResetTransitionPipeline(true);
+            if (_loadCancellation is { IsCancellationRequested: false } cts)
+                _ = EnsurePreparedNextTrackAsync(_playRequestVersion, cts.Token);
+        }
+
+        return true;
     }
 
     private void AddLoadedSongsToQueue(IReadOnlyList<SongItem> songs)

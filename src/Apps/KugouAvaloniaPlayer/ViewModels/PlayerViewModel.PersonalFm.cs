@@ -141,6 +141,7 @@ public partial class PlayerViewModel
         Dispatcher.UIThread.Post(() =>
         {
             OnPropertyChanged(nameof(IsPersonalFmSessionActive));
+            OnPropertyChanged(nameof(CanReorderDisplayPlaybackQueue));
             OnPropertyChanged(nameof(CurrentPersonalFmMode));
             OnPropertyChanged(nameof(CurrentPersonalFmSongPoolId));
             PersonalFmStateChanged?.Invoke();

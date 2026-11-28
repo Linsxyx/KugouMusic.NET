@@ -46,7 +46,7 @@ public partial class BottomPlaybackControl : UserControl
             Title = "播放列表",
             Side = VelaDrawerSide.Right,
             Width = 380,
-            Material = VelaSurfaceMaterial.LiquidGlass,
+            Material = VelaSurfaceMaterial.GlassCard,
             ShowHeader = true,
             WrapInScrollViewer = false,
             BodyPadding = new Thickness(0),

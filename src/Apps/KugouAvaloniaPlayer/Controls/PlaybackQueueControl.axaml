@@ -19,6 +19,23 @@
             <Setter Property="IsSelected" Value="{Binding IsPlaying, Mode=OneWay}" />
         </Style>
 
+        <Style Selector="vela|VelaListBox.QueueList vela|VelaListBoxItem.dragging">
+            <Setter Property="Opacity" Value="0.28" />
+        </Style>
+
+        <Style Selector="PathIcon.QueueDragHandle">
+            <Setter Property="Opacity" Value="0.24" />
+            <Setter Property="Foreground" Value="{DynamicResource VelaTextMutedBrush}" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.14" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="vela|VelaListBox.QueueList vela|VelaListBoxItem:pointerover PathIcon.QueueDragHandle">
+            <Setter Property="Opacity" Value="0.78" />
+        </Style>
+
         <Style Selector="Button.QueueAction">
             <Setter Property="Width" Value="28" />
             <Setter Property="Height" Value="28" />
@@ -37,7 +54,7 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="vela|VelaListBox.QueueList vela|VelaListBoxItem:pointerover Button.QueueAction">
+        <Style Selector="vela|VelaListBox.QueueList:not(.is-dragging) vela|VelaListBoxItem:pointerover Button.QueueAction">
             <Setter Property="Opacity" Value="1" />
         </Style>
         <Style Selector="Button.QueueAction:pointerover">
@@ -111,93 +128,172 @@
             </Button>
         </Grid>
 
-        <!-- 虚拟化队列列表 -->
-        <vela:VelaListBox Grid.Row="1"
-                          Classes="QueueList"
-                          Variant="Plain"
-                          ShowSelectionIndicator="True"
-                          EmptyContent="播放队列为空"
-                          ItemsSource="{Binding Player.DisplayPlaybackQueue}"
-                          Padding="10,2,10,16">
-            <vela:VelaListBox.ItemTemplate>
-                <DataTemplate DataType="vm:SongItem">
-                    <Border x:Name="QueueItemRoot"
-                            Padding="10,6"
-                            MinHeight="52"
-                            Background="Transparent"
-                            ContextRequested="QueueItemRoot_OnContextRequested"
-                            behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}">
-                    <Grid ColumnDefinitions="Auto, *, Auto">
+        <!-- 虚拟化队列列表 + 拖拽重排浮层 -->
+        <Panel Grid.Row="1"
+               x:Name="QueueListHost"
+               ClipToBounds="True">
+            <vela:VelaListBox x:Name="QueueListBox"
+                              Classes="QueueList"
+                              Variant="Plain"
+                              ShowSelectionIndicator="True"
+                              EmptyContent="播放队列为空"
+                              ItemsSource="{Binding Player.DisplayPlaybackQueue}"
+                              Padding="10,2,10,16">
+                <vela:VelaListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:SongItem">
+                        <Border x:Name="QueueItemRoot"
+                                Padding="8,6,10,6"
+                                MinHeight="52"
+                                Background="Transparent"
+                                ContextRequested="QueueItemRoot_OnContextRequested"
+                                behaviors:InteractionBehaviors.DoubleTappedCommand="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}">
+                            <Grid ColumnDefinitions="Auto, Auto, *, Auto">
+                                <PathIcon Grid.Column="0"
+                                          Classes="QueueDragHandle"
+                                          Data="{x:Static kc:KugouIcons.DragHandle}"
+                                          Width="13"
+                                          Height="13"
+                                          Margin="0,0,5,0"
+                                          VerticalAlignment="Center"
+                                          IsVisible="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.CanReorderDisplayPlaybackQueue}" />
 
-                        <Panel Grid.Column="0"
-                               Width="24"
-                               VerticalAlignment="Center"
-                               Margin="0,0,10,0">
-                            <Border Width="22"
-                                    Height="22"
-                                    CornerRadius="11"
-                                    Background="{DynamicResource VelaAccentSubtleBrush}"
-                                    IsVisible="{Binding IsPlaying}">
-                                <PathIcon Data="{x:Static kc:KugouIcons.NavMusic}"
-                                          Width="12"
-                                          Height="12"
-                                          Foreground="{DynamicResource VelaAccentBrush}"
-                                          HorizontalAlignment="Center"
-                                          VerticalAlignment="Center" />
-                            </Border>
+                                <Panel Grid.Column="1"
+                                       Width="24"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,10,0">
+                                    <Border Width="22"
+                                            Height="22"
+                                            CornerRadius="11"
+                                            Background="{DynamicResource VelaAccentSubtleBrush}"
+                                            IsVisible="{Binding IsPlaying}">
+                                        <PathIcon Data="{x:Static kc:KugouIcons.NavMusic}"
+                                                  Width="12"
+                                                  Height="12"
+                                                  Foreground="{DynamicResource VelaAccentBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center" />
+                                    </Border>
+                                    <PathIcon Data="{x:Static kc:KugouIcons.NavMusic}"
+                                              Width="12"
+                                              Height="12"
+                                              Opacity="0.35"
+                                              Foreground="{DynamicResource VelaTextMutedBrush}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              IsVisible="{Binding !IsPlaying}" />
+                                </Panel>
+
+                                <StackPanel Grid.Column="2"
+                                            VerticalAlignment="Center"
+                                            Spacing="2">
+                                    <TextBlock Text="{Binding Name}"
+                                               Classes="QueueTitle"
+                                               Classes.NowPlaying="{Binding IsPlaying}"
+                                               FontSize="13"
+                                               FontWeight="Medium"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Singer}"
+                                               FontSize="11.5"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="{DynamicResource VelaTextSecondaryBrush}" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="3"
+                                            Orientation="Horizontal"
+                                            Spacing="2"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,0,0">
+                                    <Button Classes="QueueAction"
+                                            ToolTip.Tip="播放"
+                                            Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
+                                            CommandParameter="{Binding .}">
+                                        <PathIcon Data="{x:Static kc:KugouIcons.Play}"
+                                                  Width="12"
+                                                  Height="12"
+                                                  Foreground="{Binding $parent[Button].Foreground}" />
+                                    </Button>
+                                    <Button Classes="QueueAction Danger"
+                                            ToolTip.Tip="移除"
+                                            Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
+                                            CommandParameter="{Binding .}">
+                                        <PathIcon Data="{x:Static kc:KugouIcons.WindowClose}"
+                                                  Width="11"
+                                                  Height="11"
+                                                  Foreground="{Binding $parent[Button].Foreground}" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </vela:VelaListBox.ItemTemplate>
+            </vela:VelaListBox>
+
+            <Canvas x:Name="DragOverlayCanvas"
+                    IsHitTestVisible="False">
+                <Grid x:Name="DropIndicator"
+                      ColumnDefinitions="Auto, *"
+                      Height="6"
+                      IsVisible="False">
+                    <Ellipse Width="6"
+                             Height="6"
+                             Fill="{DynamicResource VelaAccentBrush}"
+                             VerticalAlignment="Center" />
+                    <Border Grid.Column="1"
+                            Height="2"
+                            CornerRadius="1"
+                            Margin="-1,0,0,0"
+                            Background="{DynamicResource VelaAccentBrush}"
+                            VerticalAlignment="Center" />
+                </Grid>
+
+                <Border x:Name="DragPreviewCard"
+                        IsVisible="False"
+                        CornerRadius="10"
+                        Padding="8,6,10,6"
+                        MinHeight="52"
+                        Background="{DynamicResource VelaSurfaceRaisedBrush}"
+                        BorderBrush="{DynamicResource VelaAccentBrush}"
+                        BorderThickness="1"
+                        BoxShadow="{DynamicResource VelaShadowFloating}"
+                        Opacity="0.95">
+                    <Grid ColumnDefinitions="Auto, Auto, *">
+                        <PathIcon Grid.Column="0"
+                                  Data="{x:Static kc:KugouIcons.DragHandle}"
+                                  Width="13"
+                                  Height="13"
+                                  Margin="0,0,5,0"
+                                  Foreground="{DynamicResource VelaAccentBrush}"
+                                  VerticalAlignment="Center" />
+                        <Border Grid.Column="1"
+                                Width="22"
+                                Height="22"
+                                CornerRadius="11"
+                                Margin="0,0,10,0"
+                                Background="{DynamicResource VelaAccentSubtleBrush}"
+                                VerticalAlignment="Center">
                             <PathIcon Data="{x:Static kc:KugouIcons.NavMusic}"
                                       Width="12"
                                       Height="12"
-                                      Opacity="0.35"
-                                      Foreground="{DynamicResource VelaTextMutedBrush}"
+                                      Foreground="{DynamicResource VelaAccentBrush}"
                                       HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      IsVisible="{Binding !IsPlaying}" />
-                        </Panel>
-
-                        <StackPanel Grid.Column="1"
+                                      VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="2"
                                     VerticalAlignment="Center"
                                     Spacing="2">
-                            <TextBlock Text="{Binding Name}"
-                                       Classes="QueueTitle"
-                                       Classes.NowPlaying="{Binding IsPlaying}"
+                            <TextBlock x:Name="DragPreviewTitle"
                                        FontSize="13"
-                                       FontWeight="Medium"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource VelaForegroundBrush}"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Singer}"
+                            <TextBlock x:Name="DragPreviewSinger"
                                        FontSize="11.5"
-                                       TextTrimming="CharacterEllipsis"
-                                       Foreground="{DynamicResource VelaTextSecondaryBrush}" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="2"
-                                    Orientation="Horizontal"
-                                    Spacing="2"
-                                    VerticalAlignment="Center"
-                                    Margin="8,0,0,0">
-                            <Button Classes="QueueAction"
-                                    ToolTip.Tip="播放"
-                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.PlaySongCommand}"
-                                    CommandParameter="{Binding .}">
-                                <PathIcon Data="{x:Static kc:KugouIcons.Play}"
-                                          Width="12"
-                                          Height="12"
-                                          Foreground="{Binding $parent[Button].Foreground}" />
-                            </Button>
-                            <Button Classes="QueueAction Danger"
-                                    ToolTip.Tip="移除"
-                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).Player.RemoveFromQueueCommand}"
-                                    CommandParameter="{Binding .}">
-                                <PathIcon Data="{x:Static kc:KugouIcons.WindowClose}"
-                                          Width="11"
-                                          Height="11"
-                                          Foreground="{Binding $parent[Button].Foreground}" />
-                            </Button>
+                                       Foreground="{DynamicResource VelaTextSecondaryBrush}"
+                                       TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                     </Grid>
-                    </Border>
-                </DataTemplate>
-            </vela:VelaListBox.ItemTemplate>
-        </vela:VelaListBox>
+                </Border>
+            </Canvas>
+        </Panel>
     </Grid>
 </UserControl>

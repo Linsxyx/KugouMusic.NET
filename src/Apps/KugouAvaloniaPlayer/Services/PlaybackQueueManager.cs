@@ -115,6 +115,37 @@ public class PlaybackQueueManager
         OriginalQueue.Remove(song);
     }
 
+    public bool Move(int oldIndex, int newIndex)
+    {
+        if (oldIndex < 0 || oldIndex >= PlaybackQueue.Count ||
+            newIndex < 0 || newIndex >= PlaybackQueue.Count ||
+            oldIndex == newIndex)
+        {
+            return false;
+        }
+
+        PlaybackQueue.Move(oldIndex, newIndex);
+
+        if (!IsShuffleMode)
+        {
+            if (OriginalQueue.Count == PlaybackQueue.Count &&
+                oldIndex < OriginalQueue.Count &&
+                newIndex < OriginalQueue.Count)
+            {
+                var item = OriginalQueue[oldIndex];
+                OriginalQueue.RemoveAt(oldIndex);
+                OriginalQueue.Insert(newIndex, item);
+            }
+            else
+            {
+                OriginalQueue.Clear();
+                OriginalQueue.AddRange(PlaybackQueue);
+            }
+        }
+
+        return true;
+    }
+
     public void Clear()
     {
         PlaybackQueue.Clear();
