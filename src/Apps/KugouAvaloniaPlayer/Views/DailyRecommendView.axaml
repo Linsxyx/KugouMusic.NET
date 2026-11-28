@@ -206,12 +206,13 @@
                                         <Button Classes="fm-glass-icon"
                                                 Width="28"
                                                 Height="28"
+                                                ToolTip.Tip="切换电台模式"
                                                 IsEnabled="{Binding CanEditFmConfiguration}"
                                                 Command="{Binding CyclePersonalFmModeCommand}">
-                                            <kc:KugouIcon Classes="ThemeSvgIcon"
-                                                 Path="/Assets/switch-up.svg"
-                                                 Width="15"
-                                                 Height="15" />
+                                            <kc:KugouIcon Path="/Assets/switch-up.svg"
+                                                          Foreground="White"
+                                                          Width="14"
+                                                          Height="14" />
                                         </Button>
                                     </StackPanel>
 

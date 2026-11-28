@@ -218,7 +218,6 @@ internal static class KugouIconRegistry
                 new("M 272,262.391 L 307.188,138.688 L 240,249.609 L 248,272 Z", true, false, 0, false, 1, 0, 0, 1, 0, 0),
             ]),
             ["/Assets/switch-up.svg"] = new(new Rect(0, 0, 48, 48), [
-                new("M 0,0 H 48 V 48 H 0 Z", true, false, 0, false, 1, 0, 0, 1, 0, 0),
                 new("M19 6L19 42", false, true, 4, true, 6.12323e-17, 1, -1, 6.12323e-17, 48, 0),
                 new("M7 17.8995L19 5.89949", false, true, 4, true, 6.12323e-17, 1, -1, 6.12323e-17, 48, 0),
                 new("M29 42.1005L29 6.10051", false, true, 4, true, 6.12323e-17, 1, -1, 6.12323e-17, 48, 0),
