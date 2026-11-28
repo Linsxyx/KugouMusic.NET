@@ -24,7 +24,6 @@
             <Setter Property="FontFamily" Value="{DynamicResource AppDefaultFontFamily}" />
         </Style>
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SliderPlayer.axaml" />
-        <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SegmentedStyles.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/GorgeousThemeSwitch.axaml" />
         <StyleInclude Source="avares://AvaloniaLyrics/Themes/AvaloniaLyrics.axaml" />
         <StyleInclude Source="avares://KugouAvaloniaPlayer/Styles/SongListStyles.axaml" />

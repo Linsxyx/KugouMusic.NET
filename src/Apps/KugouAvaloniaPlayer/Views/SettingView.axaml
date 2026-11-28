@@ -45,11 +45,10 @@
                             </StackPanel>
                         </Button>
                     </Grid>
-                    <Border Classes="SettingsTabs" IsVisible="{Binding IsLyricsSection}">
-                        <ListBox Classes="SettingsTabs" ItemsSource="{Binding LyricSections}" SelectedItem="{Binding SelectedLyricSection}">
-                            <ListBox.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Classes="TabText" Text="{Binding .}" /></DataTemplate></ListBox.ItemTemplate>
-                        </ListBox>
-                    </Border>
+                    <vela:VelaSegmentedControl IsVisible="{Binding IsLyricsSection}"
+                                               HorizontalAlignment="Left"
+                                               ItemsSource="{Binding LyricSections}"
+                                               SelectedItem="{Binding SelectedLyricSection, Mode=TwoWay}" />
                 </StackPanel>
                 <ScrollViewer Grid.Row="1" x:Name="ContentScroll" HorizontalScrollBarVisibility="Disabled" Padding="0,0,8,8">
                     <StackPanel>

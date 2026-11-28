@@ -40,7 +40,24 @@ public partial class SearchViewModel(
     private string _currentPlaylistGlobalId = "";
     private string _currentPlaylistName = "";
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedSearchTypeIndex))]
     public partial SearchType CurrentSearchType { get; set; } = SearchType.Song;
+
+    public int SelectedSearchTypeIndex
+    {
+        get => (int)CurrentSearchType;
+        set
+        {
+            if (value < 0 || value > (int)SearchType.Singer)
+                return;
+
+            var target = (SearchType)value;
+            if (target == CurrentSearchType)
+                return;
+
+            SwitchSearchType(target.ToString());
+        }
+    }
 
     [ObservableProperty]
     public partial string? DetailCover { get; set; }

@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
@@ -18,10 +19,12 @@
 
     <StackPanel Spacing="15" Margin="20">
         <!-- 顶部切换选项 -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20" Margin="0,0,0,10">
-            <RadioButton Classes="Segmented" Content="扫码登录" IsChecked="{Binding IsQrLoginSelected}" />
-            <RadioButton Classes="Segmented" Content="手机号登录" IsChecked="{Binding !IsQrLoginSelected}" />
-        </StackPanel>
+        <vela:VelaSegmentedControl HorizontalAlignment="Center"
+                                   Margin="0,0,0,10"
+                                   SelectedIndex="{Binding SelectedLoginModeIndex, Mode=TwoWay}">
+            <vela:VelaSegmentedItem Content="扫码登录" />
+            <vela:VelaSegmentedItem Content="手机号登录" />
+        </vela:VelaSegmentedControl>
 
         <!-- 二维码登录面板 -->
         <StackPanel IsVisible="{Binding IsQrLoginSelected}" Spacing="15" Margin="0,10">

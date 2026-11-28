@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:vela="using:Vela.Avalonia.Controls"
              xmlns:kc="clr-namespace:KugouAvaloniaPlayer.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:KugouAvaloniaPlayer.ViewModels"
@@ -45,48 +46,26 @@
                 </Button>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" Spacing="15" Margin="0,0,0,12">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Disabled">
-                    <ItemsRepeater Classes="MainTagList"
-                                   ItemsSource="{Binding Categories}">
-                        <ItemsRepeater.Layout>
-                            <StackLayout Orientation="Horizontal" Spacing="6" />
-                        </ItemsRepeater.Layout>
-                        <ItemsRepeater.ItemTemplate>
-                            <DataTemplate DataType="vm:DiscoverPlaylistTagGroup">
-                                <RadioButton Classes="Segmented"
-                                             GroupName="DiscoverMainTags"
-                                             IsChecked="{Binding #DiscoverTagRoot.((vm:DiscoverTagViewModel)DataContext).SelectedMainIndex, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding Index}}"
-                                             Command="{Binding #DiscoverTagRoot.((vm:DiscoverTagViewModel)DataContext).SelectMainCategoryCommand}"
-                                             CommandParameter="{Binding Index}">
-                                    <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
-                                </RadioButton>
-                            </DataTemplate>
-                        </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
-                </ScrollViewer>
+            <StackPanel Grid.Row="1" Spacing="10" Margin="0,0,0,12">
+                <vela:VelaSegmentedControl ItemsSource="{Binding Categories}"
+                                           SelectedIndex="{Binding SelectedMainIndex, Mode=TwoWay}"
+                                           HorizontalAlignment="Stretch">
+                    <vela:VelaSegmentedControl.ItemTemplate>
+                        <DataTemplate DataType="vm:DiscoverPlaylistTagGroup">
+                            <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </vela:VelaSegmentedControl.ItemTemplate>
+                </vela:VelaSegmentedControl>
 
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Disabled">
-                    <ItemsRepeater Classes="SubTagList"
-                                   ItemsSource="{Binding CurrentSubCategories}">
-                        <ItemsRepeater.Layout>
-                            <StackLayout Orientation="Horizontal" Spacing="6" />
-                        </ItemsRepeater.Layout>
-                        <ItemsRepeater.ItemTemplate>
-                            <DataTemplate DataType="vm:DiscoverPlaylistTag">
-                                <RadioButton Classes="Segmented"
-                                             GroupName="DiscoverSubTags"
-                                             IsChecked="{Binding #DiscoverTagRoot.((vm:DiscoverTagViewModel)DataContext).SelectedSubIndex, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={Binding Index}}"
-                                             Command="{Binding #DiscoverTagRoot.((vm:DiscoverTagViewModel)DataContext).SelectSubCategoryCommand}"
-                                             CommandParameter="{Binding Index}">
-                                    <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
-                                </RadioButton>
-                            </DataTemplate>
-                        </ItemsRepeater.ItemTemplate>
-                    </ItemsRepeater>
-                </ScrollViewer>
+                <vela:VelaSegmentedControl ItemsSource="{Binding CurrentSubCategories}"
+                                           SelectedIndex="{Binding SelectedSubIndex, Mode=TwoWay}"
+                                           HorizontalAlignment="Stretch">
+                    <vela:VelaSegmentedControl.ItemTemplate>
+                        <DataTemplate DataType="vm:DiscoverPlaylistTag">
+                            <TextBlock Text="{Binding TagName}" VerticalAlignment="Center" />
+                        </DataTemplate>
+                    </vela:VelaSegmentedControl.ItemTemplate>
+                </vela:VelaSegmentedControl>
             </StackPanel>
 
             <Grid Grid.Row="2">

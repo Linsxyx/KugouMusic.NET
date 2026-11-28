@@ -162,60 +162,6 @@
         <Setter Property="Foreground" Value="{DynamicResource SukiPrimaryColor}" />
     </Style>
 
-    <!-- Lyrics sub-page switcher. -->
-    <Style Selector="Border.SettingsTabs">
-        <Setter Property="Background" Value="{DynamicResource SettingsCardBackground}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource SettingsCardBorder}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="11" />
-        <Setter Property="Padding" Value="3" />
-        <Setter Property="HorizontalAlignment" Value="Left" />
-    </Style>
-    <Style Selector="ListBox.SettingsTabs">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="ItemsPanel">
-            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
-        </Setter>
-    </Style>
-    <Style Selector="ListBox.SettingsTabs ListBoxItem">
-        <Setter Property="Theme"><ControlTheme TargetType="ListBoxItem" /></Setter>
-        <Setter Property="Padding" Value="18,6" />
-        <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Panel>
-                    <Border Name="Fill" CornerRadius="8" Background="{DynamicResource SukiPrimaryColor}" Opacity="0">
-                        <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.15" /></Transitions></Border.Transitions>
-                    </Border>
-                    <Border Name="Hover" CornerRadius="8" Background="{DynamicResource SukiText}" Opacity="0" />
-                    <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Foreground="{TemplateBinding Foreground}" Margin="{TemplateBinding Padding}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
-                </Panel>
-            </ControlTemplate>
-        </Setter>
-    </Style>
-    <Style Selector="ListBox.SettingsTabs ListBoxItem:pointerover /template/ Border#Hover">
-        <Setter Property="Opacity" Value="0.05" />
-    </Style>
-    <Style Selector="ListBox.SettingsTabs ListBoxItem:selected /template/ Border#Fill">
-        <Setter Property="Opacity" Value="1" />
-    </Style>
-    <Style Selector="ListBox.SettingsTabs ListBoxItem:selected /template/ Border#Hover">
-        <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="ListBox.SettingsTabs TextBlock.TabText">
-        <Setter Property="FontSize" Value="13" />
-        <Setter Property="Foreground" Value="{DynamicResource SukiLowText}" />
-    </Style>
-    <Style Selector="ListBox.SettingsTabs ListBoxItem:pointerover TextBlock.TabText">
-        <Setter Property="Foreground" Value="{DynamicResource SukiText}" />
-    </Style>
-    <Style Selector="ListBox.SettingsTabs ListBoxItem:selected TextBlock.TabText">
-        <Setter Property="Foreground" Value="White" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-
     <Style Selector=":is(ComboBox).SettingsCategoryPicker">
         <Setter Property="CornerRadius" Value="10" />
         <Setter Property="FontWeight" Value="Normal" />

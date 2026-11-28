@@ -29,7 +29,15 @@ public partial class LoginViewModel(
 
     [ObservableProperty] public partial bool IsQrExpired { get; set; }
 
-    [ObservableProperty] public partial bool IsQrLoginSelected { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedLoginModeIndex))]
+    public partial bool IsQrLoginSelected { get; set; }
+
+    public int SelectedLoginModeIndex
+    {
+        get => IsQrLoginSelected ? 0 : 1;
+        set => IsQrLoginSelected = value == 0;
+    }
 
     [ObservableProperty] public partial bool IsSendingCode { get; set; }
 
